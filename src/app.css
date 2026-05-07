@@ -1,0 +1,67 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+    html {
+        padding-top: env(safe-area-inset-top);
+        padding-left: env(safe-area-inset-left);
+        padding-right: env(safe-area-inset-right);
+    }
+
+    body {
+        font-family: 'Lato', sans-serif;
+        position: relative;
+    }
+
+    button,
+    input,
+    select,
+    textarea {
+        min-height: 44px;
+    }
+
+    @media (min-width: 768px) {
+        button,
+        input,
+        select,
+        textarea {
+            min-height: unset;
+        }
+    }
+
+    body::before {
+        content: '';
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        z-index: 9999;
+        opacity: 0.03;
+    }
+
+    [data-theme='dark'] body::before {
+        opacity: 0.02;
+    }
+
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6,
+    .font-heading {
+        font-family: 'PT Serif', serif;
+    }
+
+    h1 {
+        @apply text-4xl font-bold tracking-tight;
+    }
+
+    h2 {
+        @apply text-2xl font-semibold;
+    }
+
+    h3 {
+        @apply text-xl font-semibold;
+    }
+}
