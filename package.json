@@ -19,7 +19,8 @@
         "release": "commit-and-tag-version",
         "release:minor": "commit-and-tag-version --release-as minor",
         "release:major": "commit-and-tag-version --release-as major",
-        "release:first": "commit-and-tag-version --first-release"
+        "release:first": "commit-and-tag-version --first-release",
+        "start": "node build/index.js"
     },
     "devDependencies": {
         "@eslint/compat": "^2.0.5",
