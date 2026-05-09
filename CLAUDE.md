@@ -81,6 +81,14 @@ SvelteKit full-stack app (Svelte 5 with runes). Node adapter for Railway deploym
 - App version injected at build time via Vite `define` (`__APP_VERSION__` from package.json)
 - Release workflow: `bun run release` (patch), `release:minor`, `release:major`, `release:first`
 
+### Deployment
+
+- **Railway** with Node adapter. Internal Postgres at `postgres.railway.internal`
+- Build: `vite build` (DB is not reachable during build — Railway internal DNS is runtime-only)
+- Predeploy command (Railway setting): `drizzle-kit migrate` — runs migrations before the server starts
+- Start: `node build/index.js`
+- DB migrations are idempotent — Drizzle tracks applied migrations and skips them on subsequent deploys
+
 ## Mobile-first guidelines
 
 The app is fully responsive with a `md:` (768px) breakpoint separating mobile and desktop layouts. Follow these rules to keep mobile working:
