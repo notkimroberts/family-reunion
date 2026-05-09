@@ -14,6 +14,7 @@ function getAuth() {
     if (!_auth) {
         dbg.auth('initializing better-auth with social providers')
         _auth = betterAuth({
+            baseURL: env.BETTER_AUTH_URL,
             database: drizzleAdapter(getDb(), {
                 provider: 'pg',
                 schema,

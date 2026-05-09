@@ -8,6 +8,13 @@
       "when": 1778123417286,
       "tag": "0000_even_scorpion",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1778362292641,
+      "tag": "0001_nebulous_chimera",
+      "breakpoints": true
     }
   ]
 }
