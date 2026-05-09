@@ -4,7 +4,7 @@
     "type": "module",
     "scripts": {
         "dev": "bun run clean && vite dev",
-        "build": "vite build && bun run db:migrate",
+        "build": "vite build",
         "preview": "vite preview",
         "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
         "clean": "rm -rf .svelte-kit && rm -rf build && rm -rf node_modules/.vite",
