@@ -6,6 +6,7 @@ import { getRequestEvent } from '$app/server'
 import { env } from '$env/dynamic/private'
 import { getDb } from '$lib/server/db'
 import * as schema from '$lib/server/db/schema'
+import { userProfiles } from '$lib/server/db/schema'
 import { dbg } from '$lib/server/debug'
 
 let _auth: any
@@ -34,6 +35,22 @@ function getAuth() {
                 },
             },
             plugins: [admin(), sveltekitCookies(getRequestEvent)],
+            databaseHooks: {
+                user: {
+                    create: {
+                        after: async (user) => {
+                            dbg.auth(
+                                'creating user_profile for new user=%s (%s)',
+                                user.email,
+                                user.id,
+                            )
+                            await getDb().insert(userProfiles).values({
+                                userId: user.id,
+                            })
+                        },
+                    },
+                },
+            },
             session: {
                 cookieCache: {
                     enabled: true,
