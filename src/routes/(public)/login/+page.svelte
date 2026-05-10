@@ -27,10 +27,7 @@ function signInWithFacebook() {
 
         <main class="bg-base-100 grid lg:grid-cols-2 rounded-box overflow-hidden shadow-xl">
             <figure class="bg-base-300 pointer-events-none object-cover max-lg:hidden">
-                <img
-                    src="https://picsum.photos/id/283/1200/1200"
-                    alt="Family reunion"
-                    class="h-full w-full object-cover" />
+                <img src="/pfr25.png" alt="Family reunion" class="h-full w-full object-cover" />
             </figure>
 
             <div class="flex flex-col justify-center gap-4 px-10 py-12 lg:px-16">
