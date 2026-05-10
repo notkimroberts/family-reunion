@@ -1,3 +1,4 @@
+import typography from '@tailwindcss/typography'
 import daisyui from 'daisyui'
 import { LIGHT_THEME, DARK_THEME } from './src/lib/general/constants/THEMES.ts'
 
@@ -12,7 +13,7 @@ export default {
             },
         },
     },
-    plugins: [daisyui],
+    plugins: [typography, daisyui],
     daisyui: {
         themes: [LIGHT_THEME, DARK_THEME],
     },
