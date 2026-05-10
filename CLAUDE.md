@@ -47,6 +47,7 @@ SvelteKit full-stack app (Svelte 5 with runes). Node adapter for Railway deploym
 ### Storage & Email
 
 - **Cloudflare R2** for photo uploads (`$lib/server/storage`)
+- In dev mode, uploads save to `static/uploads/` (served by Vite) instead of hitting R2 — no R2 credentials needed locally
 - **Resend** for transactional emails (`$lib/server/email`)
 
 ### Family Tree
