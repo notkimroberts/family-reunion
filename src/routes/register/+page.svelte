@@ -80,7 +80,7 @@ let total = $derived(
         <div class="card bg-base-100 shadow-md">
             <div class="card-body">
                 <h2 class="card-title">Select Event</h2>
-                <select class="select select-bordered w-full" bind:value={selectedEventId}>
+                <select class="select w-full" bind:value={selectedEventId}>
                     {#each data.events as event}
                         <option value={event.id}>{event.title} ({event.year})</option>
                     {/each}
@@ -136,26 +136,26 @@ let total = $derived(
 
                 <div
                     class="mt-4 grid grid-cols-1 gap-3 md:grid-cols-[1fr_auto_auto_auto_auto] md:items-end">
-                    <div class="form-control">
-                        <label class="label"><span class="label-text">Name</span></label>
+                    <fieldset class="fieldset">
+                        <legend class="fieldset-legend">Name</legend>
                         <input
                             type="text"
-                            class="input input-bordered input-sm"
+                            class="input input-sm w-full"
                             bind:value={newName}
                             placeholder="Full name" />
-                    </div>
-                    <div class="form-control">
-                        <label class="label"><span class="label-text">Birth Year</span></label>
+                    </fieldset>
+                    <fieldset class="fieldset">
+                        <legend class="fieldset-legend">Birth Year</legend>
                         <input
                             type="number"
-                            class="input input-bordered input-sm"
+                            class="input input-sm w-full"
                             bind:value={newBirthYear}
                             min="1900"
                             max={new Date().getFullYear()} />
-                    </div>
-                    <div class="form-control">
-                        <label class="label"><span class="label-text">Month</span></label>
-                        <select class="select select-bordered select-sm" bind:value={newBirthMonth}>
+                    </fieldset>
+                    <fieldset class="fieldset">
+                        <legend class="fieldset-legend">Month</legend>
+                        <select class="select select-sm w-full" bind:value={newBirthMonth}>
                             <option value={null}>—</option>
                             {#each Array.from({ length: 12 }, (_, i) => i + 1) as m}
                                 <option value={m}
@@ -164,17 +164,17 @@ let total = $derived(
                                     })}</option>
                             {/each}
                         </select>
-                    </div>
-                    <div class="form-control">
-                        <label class="label"><span class="label-text">Day</span></label>
+                    </fieldset>
+                    <fieldset class="fieldset">
+                        <legend class="fieldset-legend">Day</legend>
                         <input
                             type="number"
-                            class="input input-bordered input-sm"
+                            class="input input-sm w-full"
                             bind:value={newBirthDay}
                             min="1"
                             max="31"
                             placeholder="—" />
-                    </div>
+                    </fieldset>
                     <button type="button" class="btn btn-primary btn-sm" onclick={addMember}
                         >Add</button>
                 </div>

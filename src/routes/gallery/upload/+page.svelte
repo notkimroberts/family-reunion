@@ -22,35 +22,34 @@ let { data, form } = $props()
         </div>
     {:else}
         <form method="POST" enctype="multipart/form-data" use:enhance class="space-y-4">
-            <div class="form-control w-full">
-                <label class="label"><span class="label-text">Event</span></label>
-                <select name="eventId" class="select select-bordered" required>
+            <fieldset class="fieldset w-full">
+                <legend class="fieldset-legend">Event</legend>
+                <select name="eventId" class="select w-full" required>
                     {#each data.events as event}
                         <option value={event.id}>{event.title} ({event.year})</option>
                     {/each}
                 </select>
-            </div>
+            </fieldset>
 
-            <div class="form-control w-full">
-                <label class="label"><span class="label-text">Photo</span></label>
+            <fieldset class="fieldset w-full">
+                <legend class="fieldset-legend">Photo</legend>
                 <input
                     name="photo"
                     type="file"
-                    class="file-input file-input-bordered w-full"
+                    class="file-input w-full"
                     accept="image/jpeg,image/png,image/webp,image/gif"
                     required />
-                <label class="label"
-                    ><span class="label-text-alt">Max 10MB. JPEG, PNG, WebP, or GIF.</span></label>
-            </div>
+                <p class="fieldset-label">Max 10MB. JPEG, PNG, WebP, or GIF.</p>
+            </fieldset>
 
-            <div class="form-control w-full">
-                <label class="label"><span class="label-text">Caption (optional)</span></label>
+            <fieldset class="fieldset w-full">
+                <legend class="fieldset-legend">Caption (optional)</legend>
                 <input
                     name="caption"
                     type="text"
-                    class="input input-bordered"
+                    class="input w-full"
                     placeholder="Describe this photo..." />
-            </div>
+            </fieldset>
 
             <button type="submit" class="btn btn-primary w-full">Upload</button>
         </form>

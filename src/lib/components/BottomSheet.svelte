@@ -29,9 +29,9 @@ function handleSignOut() {
 </script>
 
 {#if open}
-    <div class="fixed inset-0 z-[60] md:hidden">
+    <div class="fixed inset-0 z-60 md:hidden">
         <button
-            class="absolute inset-0 bg-black/40 backdrop-blur-sm"
+            class="absolute inset-0 bg-black/40 backdrop-blur-xs"
             onclick={onClose}
             aria-label="Close menu">
         </button>

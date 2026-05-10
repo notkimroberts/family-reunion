@@ -17,7 +17,7 @@ let filteredPhotos = $derived(
     <div class="flex justify-between items-center mb-6 flex-wrap gap-4">
         <h1 class="text-3xl font-bold">Photo Gallery</h1>
         <div class="flex gap-3 items-center">
-            <select class="select select-bordered select-sm" bind:value={selectedEventId}>
+            <select class="select select-sm" bind:value={selectedEventId}>
                 <option value="all">All Years</option>
                 {#each data.events as event}
                     <option value={event.id}>{event.title} ({event.year})</option>
@@ -36,7 +36,7 @@ let filteredPhotos = $derived(
         <div class="columns-1 sm:columns-2 md:columns-3 gap-4 space-y-4">
             {#each filteredPhotos as photo}
                 <div class="break-inside-avoid">
-                    <div class="card bg-base-100 shadow-sm overflow-hidden">
+                    <div class="card bg-base-100 shadow-xs overflow-hidden">
                         <figure>
                             <img
                                 src={photo.url}

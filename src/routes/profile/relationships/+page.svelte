@@ -32,30 +32,28 @@ function getTypeLabel(type: string) {
             <div class="card-body">
                 <h2 class="card-title">First, create your family profile</h2>
                 <form method="POST" action="?/create_member" use:enhance>
-                    <div class="form-control w-full">
-                        <label class="label"><span class="label-text">Your Name</span></label>
+                    <fieldset class="fieldset w-full">
+                        <legend class="fieldset-legend">Your Name</legend>
                         <input
                             name="name"
                             type="text"
-                            class="input input-bordered"
+                            class="input w-full"
                             value={data.user.name}
                             required />
-                    </div>
-                    <div class="form-control w-full">
-                        <label class="label"
-                            ><span class="label-text">Birth Year (optional)</span></label>
+                    </fieldset>
+                    <fieldset class="fieldset w-full">
+                        <legend class="fieldset-legend">Birth Year (optional)</legend>
                         <input
                             name="birthYear"
                             type="number"
-                            class="input input-bordered"
+                            class="input w-full"
                             min="1900"
                             max="2030" />
-                    </div>
+                    </fieldset>
                     <div class="flex gap-4">
-                        <div class="form-control w-full">
-                            <label class="label"
-                                ><span class="label-text">Birth Month (optional)</span></label>
-                            <select name="birthMonth" class="select select-bordered">
+                        <fieldset class="fieldset w-full">
+                            <legend class="fieldset-legend">Birth Month (optional)</legend>
+                            <select name="birthMonth" class="select w-full">
                                 <option value="">—</option>
                                 <option value="1">January</option>
                                 <option value="2">February</option>
@@ -70,17 +68,16 @@ function getTypeLabel(type: string) {
                                 <option value="11">November</option>
                                 <option value="12">December</option>
                             </select>
-                        </div>
-                        <div class="form-control w-full">
-                            <label class="label"
-                                ><span class="label-text">Birth Day (optional)</span></label>
+                        </fieldset>
+                        <fieldset class="fieldset w-full">
+                            <legend class="fieldset-legend">Birth Day (optional)</legend>
                             <input
                                 name="birthDay"
                                 type="number"
-                                class="input input-bordered"
+                                class="input w-full"
                                 min="1"
                                 max="31" />
-                        </div>
+                        </fieldset>
                     </div>
                     <button type="submit" class="btn btn-primary mt-4">Create Profile</button>
                 </form>
@@ -95,24 +92,24 @@ function getTypeLabel(type: string) {
                     action="?/add_relationship"
                     use:enhance
                     class="flex flex-col gap-3">
-                    <div class="form-control w-full">
-                        <label class="label"><span class="label-text">I am the...</span></label>
-                        <select name="type" class="select select-bordered" required>
+                    <fieldset class="fieldset w-full">
+                        <legend class="fieldset-legend">I am the...</legend>
+                        <select name="type" class="select w-full" required>
                             <option value="" disabled selected>Select relationship</option>
                             {#each relationshipTypes as type}
                                 <option value={type.value}>{type.label}</option>
                             {/each}
                         </select>
-                    </div>
-                    <div class="form-control w-full">
-                        <label class="label"><span class="label-text">...of</span></label>
-                        <select name="toMemberId" class="select select-bordered" required>
+                    </fieldset>
+                    <fieldset class="fieldset w-full">
+                        <legend class="fieldset-legend">...of</legend>
+                        <select name="toMemberId" class="select w-full" required>
                             <option value="" disabled selected>Select family member</option>
                             {#each data.allMembers as member}
                                 <option value={member.id}>{member.name}</option>
                             {/each}
                         </select>
-                    </div>
+                    </fieldset>
                     <button type="submit" class="btn btn-primary btn-sm w-fit"
                         >Add Relationship</button>
                 </form>

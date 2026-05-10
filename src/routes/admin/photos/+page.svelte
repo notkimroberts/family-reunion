@@ -16,7 +16,7 @@ let { data } = $props()
     {:else}
         <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
             {#each data.photos as photo}
-                <div class="card bg-base-100 shadow-sm">
+                <div class="card bg-base-100 shadow-xs">
                     <figure>
                         <img
                             src={photo.url}

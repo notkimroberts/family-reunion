@@ -15,10 +15,10 @@ let filtered = $derived(
 <div class="max-w-4xl mx-auto p-6">
     <h1 class="text-3xl font-bold mb-6">Family Members</h1>
 
-    <div class="form-control w-full max-w-sm mb-6">
+    <div class="mb-6">
         <input
             type="text"
-            class="input input-bordered"
+            class="input w-full max-w-sm"
             placeholder="Search by name..."
             bind:value={search} />
     </div>
@@ -28,9 +28,9 @@ let filtered = $derived(
     {:else}
         <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
             {#each filtered as member}
-                <div class="card bg-base-100 shadow-sm">
+                <div class="card bg-base-100 shadow-xs">
                     <div class="card-body items-center text-center p-4">
-                        <div class="avatar placeholder mb-2">
+                        <div class="avatar avatar-placeholder mb-2">
                             <div class="w-16 rounded-full bg-primary text-primary-content">
                                 {#if member.profilePhotoUrl}
                                     <img src={member.profilePhotoUrl} alt={member.name} />

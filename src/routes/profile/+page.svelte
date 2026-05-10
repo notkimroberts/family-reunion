@@ -16,82 +16,79 @@ let { data } = $props()
             <h2 class="card-title">Personal Information</h2>
 
             <form method="POST" action="?/update_profile" use:enhance>
-                <div class="form-control w-full">
-                    <label class="label" for="name"><span class="label-text">Name</span></label>
+                <fieldset class="fieldset w-full">
+                    <legend class="fieldset-legend">Name</legend>
                     <input
                         id="name"
                         name="name"
                         type="text"
-                        class="input input-bordered w-full"
+                        class="input w-full"
                         value={data.user.name ?? ''} />
-                </div>
+                </fieldset>
 
-                <div class="form-control w-full">
-                    <label class="label" for="email"><span class="label-text">Email</span></label>
+                <fieldset class="fieldset w-full">
+                    <legend class="fieldset-legend">Email</legend>
                     <input
                         id="email"
                         type="email"
-                        class="input input-bordered w-full"
+                        class="input w-full"
                         value={data.user.email ?? ''}
                         disabled />
-                    <label class="label"
-                        ><span class="label-text-alt">Email is managed by your SSO provider</span
-                        ></label>
-                </div>
+                    <p class="fieldset-label">Email is managed by your SSO provider</p>
+                </fieldset>
 
-                <div class="form-control w-full">
-                    <label class="label" for="phone"><span class="label-text">Phone</span></label>
+                <fieldset class="fieldset w-full">
+                    <legend class="fieldset-legend">Phone</legend>
                     <input
                         id="phone"
                         name="phone"
                         type="tel"
-                        class="input input-bordered w-full"
+                        class="input w-full"
                         value={data.profile?.phone ?? ''} />
-                </div>
+                </fieldset>
 
                 <div class="divider">Mailing Address</div>
 
-                <div class="form-control w-full">
-                    <label class="label" for="street"><span class="label-text">Street</span></label>
+                <fieldset class="fieldset w-full">
+                    <legend class="fieldset-legend">Street</legend>
                     <input
                         id="street"
                         name="street"
                         type="text"
-                        class="input input-bordered w-full"
+                        class="input w-full"
                         value={data.profile?.mailingAddress?.street ?? ''} />
-                </div>
+                </fieldset>
 
                 <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-                    <div class="form-control w-full">
-                        <label class="label" for="city"><span class="label-text">City</span></label>
+                    <fieldset class="fieldset w-full">
+                        <legend class="fieldset-legend">City</legend>
                         <input
                             id="city"
                             name="city"
                             type="text"
-                            class="input input-bordered w-full"
+                            class="input w-full"
                             value={data.profile?.mailingAddress?.city ?? ''} />
-                    </div>
-                    <div class="form-control w-full">
-                        <label class="label" for="state"
-                            ><span class="label-text">State</span></label>
+                    </fieldset>
+                    <fieldset class="fieldset w-full">
+                        <legend class="fieldset-legend">State</legend>
                         <input
                             id="state"
                             name="state"
                             type="text"
-                            class="input input-bordered w-full"
+                            class="input w-full"
                             value={data.profile?.mailingAddress?.state ?? ''} />
-                    </div>
+                    </fieldset>
                 </div>
 
-                <div class="form-control w-full max-w-xs">
-                    <label class="label" for="zip"><span class="label-text">ZIP Code</span></label>
+                <fieldset class="fieldset w-full max-w-xs">
+                    <legend class="fieldset-legend">ZIP Code</legend>
                     <input
                         id="zip"
                         name="zip"
                         type="text"
-                        class="input input-bordered w-full"
+                        class="input w-full"
                         value={data.profile?.mailingAddress?.zip ?? ''} />
-                </div>
+                </fieldset>
 
                 <div class="card-actions justify-end mt-4">
                     <button type="submit" class="btn btn-primary">Save Profile</button>

@@ -21,41 +21,38 @@ let { data, form } = $props()
     <div class="card bg-base-100 shadow-md">
         <div class="card-body">
             <form method="POST" use:enhance class="space-y-4">
-                <div class="form-control w-full">
-                    <label class="label"><span class="label-text">External Shop URL</span></label>
+                <fieldset class="fieldset w-full">
+                    <legend class="fieldset-legend">External Shop URL</legend>
                     <input
                         name="externalShopUrl"
                         type="url"
-                        class="input input-bordered"
+                        class="input w-full"
                         value={data.config?.externalShopUrl ?? ''}
                         placeholder="https://your-shop.com"
                         required />
-                </div>
+                </fieldset>
 
-                <div class="form-control">
+                <div>
                     <label class="label cursor-pointer justify-start gap-2">
                         <input
                             name="isActive"
                             type="checkbox"
                             class="toggle toggle-primary"
                             checked={data.config?.isActive ?? true} />
-                        <span class="label-text">Shop page visible</span>
+                        <span>Shop page visible</span>
                     </label>
                 </div>
 
-                <div class="form-control w-full">
-                    <label class="label">
-                        <span class="label-text">Product Previews (JSON array)</span>
-                    </label>
-                    <label class="label">
-                        <span class="label-text-alt"
-                            >[{`{"name":"Reunion Tee","imageUrl":"...","description":"..."}`}]</span>
-                    </label>
-                    <textarea name="products" class="textarea textarea-bordered h-32"
+                <fieldset class="fieldset w-full">
+                    <legend class="fieldset-legend">Product Previews (JSON array)</legend>
+                    <p class="fieldset-label">
+                        [{`{"name":"Reunion Tee","imageUrl":"...","description":"..."}`}]
+                    </p>
+                    <textarea name="products" class="textarea h-32 w-full"
                         >{data.config?.products
                             ? JSON.stringify(data.config.products, null, 2)
                             : ''}</textarea>
-                </div>
+                </fieldset>
 
                 <button type="submit" class="btn btn-primary">Save Settings</button>
             </form>

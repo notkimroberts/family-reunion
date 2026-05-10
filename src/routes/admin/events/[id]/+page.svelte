@@ -76,41 +76,41 @@ let { data } = $props()
                 action="?/add_tier"
                 use:enhance
                 class="grid grid-cols-2 gap-3 md:grid-cols-[1fr_auto_auto_auto_auto] md:items-end">
-                <div class="form-control col-span-2 md:col-span-1">
-                    <label class="label"><span class="label-text">Label</span></label>
+                <fieldset class="fieldset col-span-2 md:col-span-1">
+                    <legend class="fieldset-legend">Label</legend>
                     <input
                         name="label"
                         type="text"
-                        class="input input-bordered input-sm"
+                        class="input input-sm w-full"
                         placeholder="Adult"
                         required />
-                </div>
-                <div class="form-control">
-                    <label class="label"><span class="label-text">Min Age</span></label>
+                </fieldset>
+                <fieldset class="fieldset">
+                    <legend class="fieldset-legend">Min Age</legend>
                     <input
                         name="minAge"
                         type="number"
-                        class="input input-bordered input-sm"
+                        class="input input-sm w-full"
                         value="0"
                         required />
-                </div>
-                <div class="form-control">
-                    <label class="label"><span class="label-text">Max Age</span></label>
+                </fieldset>
+                <fieldset class="fieldset">
+                    <legend class="fieldset-legend">Max Age</legend>
                     <input
                         name="maxAge"
                         type="number"
-                        class="input input-bordered input-sm"
+                        class="input input-sm w-full"
                         placeholder="∞" />
-                </div>
-                <div class="form-control">
-                    <label class="label"><span class="label-text">Price ($)</span></label>
+                </fieldset>
+                <fieldset class="fieldset">
+                    <legend class="fieldset-legend">Price ($)</legend>
                     <input
                         name="price"
                         type="number"
                         step="0.01"
-                        class="input input-bordered input-sm"
+                        class="input input-sm w-full"
                         required />
-                </div>
+                </fieldset>
                 <button type="submit" class="btn btn-primary btn-sm col-span-2 md:col-span-1"
                     >Add Tier</button>
             </form>
@@ -122,76 +122,69 @@ let { data } = $props()
             <h2 class="card-title">Program Details</h2>
             <form method="POST" action="?/update_event" use:enhance class="space-y-4">
                 <div class="divider">Venue</div>
-                <div class="form-control w-full">
-                    <label class="label"><span class="label-text">Venue Name</span></label>
+                <fieldset class="fieldset w-full">
+                    <legend class="fieldset-legend">Venue Name</legend>
                     <input
                         name="venueName"
                         type="text"
-                        class="input input-bordered"
+                        class="input w-full"
                         value={data.event.venue?.name ?? ''} />
-                </div>
-                <div class="form-control w-full">
-                    <label class="label"><span class="label-text">Venue Address</span></label>
+                </fieldset>
+                <fieldset class="fieldset w-full">
+                    <legend class="fieldset-legend">Venue Address</legend>
                     <input
                         name="venueAddress"
                         type="text"
-                        class="input input-bordered"
+                        class="input w-full"
                         value={data.event.venue?.address ?? ''} />
-                </div>
-                <div class="form-control w-full">
-                    <label class="label"><span class="label-text">Venue Description</span></label>
-                    <textarea name="venueDescription" class="textarea textarea-bordered"
+                </fieldset>
+                <fieldset class="fieldset w-full">
+                    <legend class="fieldset-legend">Venue Description</legend>
+                    <textarea name="venueDescription" class="textarea w-full"
                         >{data.event.venue?.description ?? ''}</textarea>
-                </div>
+                </fieldset>
 
                 <div class="divider">Menu & Drinks</div>
-                <div class="form-control w-full">
-                    <label class="label"
-                        ><span class="label-text">Menu (one item per line)</span></label>
-                    <textarea name="menu" class="textarea textarea-bordered h-24"
+                <fieldset class="fieldset w-full">
+                    <legend class="fieldset-legend">Menu (one item per line)</legend>
+                    <textarea name="menu" class="textarea h-24 w-full"
                         >{data.event.menu?.join('\n') ?? ''}</textarea>
-                </div>
-                <div class="form-control w-full">
-                    <label class="label"
-                        ><span class="label-text">Drinks (one item per line)</span></label>
-                    <textarea name="drinks" class="textarea textarea-bordered h-24"
+                </fieldset>
+                <fieldset class="fieldset w-full">
+                    <legend class="fieldset-legend">Drinks (one item per line)</legend>
+                    <textarea name="drinks" class="textarea h-24 w-full"
                         >{data.event.drinks?.join('\n') ?? ''}</textarea>
-                </div>
+                </fieldset>
 
                 <div class="divider">Schedule & Recommendations</div>
-                <div class="form-control w-full">
-                    <label class="label">
-                        <span class="label-text">Schedule (JSON array)</span>
-                        <span class="label-text-alt"
-                            >[{`{"day":"Sat","time":"9am","activity":"Breakfast"}`}]</span>
-                    </label>
-                    <textarea name="schedule" class="textarea textarea-bordered h-24"
+                <fieldset class="fieldset w-full">
+                    <legend class="fieldset-legend">Schedule (JSON array)</legend>
+                    <p class="fieldset-label">
+                        [{`{"day":"Sat","time":"9am","activity":"Breakfast"}`}]
+                    </p>
+                    <textarea name="schedule" class="textarea h-24 w-full"
                         >{data.event.schedule
                             ? JSON.stringify(data.event.schedule, null, 2)
                             : ''}</textarea>
-                </div>
-                <div class="form-control w-full">
-                    <label class="label">
-                        <span class="label-text">Recommended Sites (JSON array)</span>
-                        <span class="label-text-alt"
-                            >[{`{"name":"Park","description":"Nice!"}`}]</span>
-                    </label>
-                    <textarea name="recommendedSites" class="textarea textarea-bordered h-24"
+                </fieldset>
+                <fieldset class="fieldset w-full">
+                    <legend class="fieldset-legend">Recommended Sites (JSON array)</legend>
+                    <p class="fieldset-label">[{`{"name":"Park","description":"Nice!"}`}]</p>
+                    <textarea name="recommendedSites" class="textarea h-24 w-full"
                         >{data.event.recommendedSites
                             ? JSON.stringify(data.event.recommendedSites, null, 2)
                             : ''}</textarea>
-                </div>
-                <div class="form-control w-full">
-                    <label class="label">
-                        <span class="label-text">Recommended Activities (JSON array)</span>
-                        <span class="label-text-alt"
-                            >[{`{"name":"Hiking","description":"Trail nearby"}`}]</span>
-                    </label>
-                    <textarea name="recommendedActivities" class="textarea textarea-bordered h-24"
+                </fieldset>
+                <fieldset class="fieldset w-full">
+                    <legend class="fieldset-legend">Recommended Activities (JSON array)</legend>
+                    <p class="fieldset-label">
+                        [{`{"name":"Hiking","description":"Trail nearby"}`}]
+                    </p>
+                    <textarea name="recommendedActivities" class="textarea h-24 w-full"
                         >{data.event.recommendedActivities
                             ? JSON.stringify(data.event.recommendedActivities, null, 2)
                             : ''}</textarea>
-                </div>
+                </fieldset>
 
                 <button type="submit" class="btn btn-primary">Save Program</button>
             </form>

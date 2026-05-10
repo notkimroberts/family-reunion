@@ -80,9 +80,9 @@ onMount(async () => {
                 const name = `${d.data.data['first name']} ${d.data.data['last name']}`.trim()
                 const photo = d.data.data.photoUrl
                     ? `<div class="avatar"><div class="w-8 rounded-full"><img src="${d.data.data.photoUrl}" alt="" /></div></div>`
-                    : `<div class="avatar placeholder"><div class="w-8 rounded-full bg-neutral text-neutral-content"><span class="text-xs">${getInitials(name)}</span></div></div>`
+                    : `<div class="avatar avatar-placeholder"><div class="w-8 rounded-full bg-neutral text-neutral-content"><span class="text-xs">${getInitials(name)}</span></div></div>`
                 return `
-						<div class="card card-compact bg-base-300 shadow-md border border-base-300 w-48">
+						<div class="card card-sm bg-base-300 shadow-md border border-base-300 w-48">
 							<div class="card-body p-3 flex-row items-center gap-3">
 								${photo}
 								<div class="min-w-0">
@@ -131,7 +131,7 @@ onDestroy(() => {
                             </div>
                         </div>
                     {:else}
-                        <div class="avatar placeholder">
+                        <div class="avatar avatar-placeholder">
                             <div class="w-10 rounded-full bg-neutral text-neutral-content">
                                 <span class="text-sm">{getInitials(member.name)}</span>
                             </div>

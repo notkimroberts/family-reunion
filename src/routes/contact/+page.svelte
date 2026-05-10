@@ -25,35 +25,21 @@ let { form } = $props()
     <div class="card bg-base-100 shadow-md">
         <div class="card-body">
             <form method="POST" use:enhance class="space-y-4">
-                <div class="form-control w-full">
-                    <label class="label" for="name"><span class="label-text">Name</span></label>
-                    <input
-                        id="name"
-                        name="name"
-                        type="text"
-                        class="input input-bordered"
-                        required />
-                </div>
+                <fieldset class="fieldset w-full">
+                    <legend class="fieldset-legend">Name</legend>
+                    <input id="name" name="name" type="text" class="input w-full" required />
+                </fieldset>
 
-                <div class="form-control w-full">
-                    <label class="label" for="email"><span class="label-text">Email</span></label>
-                    <input
-                        id="email"
-                        name="email"
-                        type="email"
-                        class="input input-bordered"
-                        required />
-                </div>
+                <fieldset class="fieldset w-full">
+                    <legend class="fieldset-legend">Email</legend>
+                    <input id="email" name="email" type="email" class="input w-full" required />
+                </fieldset>
 
-                <div class="form-control w-full">
-                    <label class="label" for="message"
-                        ><span class="label-text">Message</span></label>
-                    <textarea
-                        id="message"
-                        name="message"
-                        class="textarea textarea-bordered h-32"
-                        required></textarea>
-                </div>
+                <fieldset class="fieldset w-full">
+                    <legend class="fieldset-legend">Message</legend>
+                    <textarea id="message" name="message" class="textarea h-32 w-full" required
+                    ></textarea>
+                </fieldset>
 
                 <!-- Honeypot -->
                 <div class="hidden" aria-hidden="true">

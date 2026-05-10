@@ -43,7 +43,7 @@ let editingId = $state<string | null>(null)
                                 <input
                                     name="phone"
                                     type="text"
-                                    class="input input-bordered input-sm w-full"
+                                    class="input input-sm w-full"
                                     value={profile.phone ?? ''} />
                                 <div class="mt-2 flex gap-2">
                                     <button type="submit" class="btn btn-primary btn-sm flex-1"
@@ -96,7 +96,7 @@ let editingId = $state<string | null>(null)
                                         <input
                                             name="phone"
                                             type="text"
-                                            class="input input-bordered input-xs"
+                                            class="input input-xs"
                                             value={profile.phone ?? ''} />
                                         <button type="submit" class="btn btn-primary btn-xs mt-1"
                                             >Save</button>

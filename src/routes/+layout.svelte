@@ -31,7 +31,7 @@ function handleMenuClose() {
 </script>
 
 <div class="flex min-h-screen flex-col">
-    <nav class="navbar hidden bg-base-200 shadow-sm md:flex">
+    <nav class="navbar hidden bg-base-200 shadow-xs md:flex">
         <div class="navbar-start">
             <a href="/" class="btn btn-ghost text-xl font-heading font-bold text-primary"
                 >{APP_NAME}</a>
@@ -41,7 +41,7 @@ function handleMenuClose() {
             <ul class="menu menu-horizontal px-1">
                 {#each navLinks as link}
                     <li>
-                        <a href={link.href} class:active={page.url.pathname === link.href}
+                        <a href={link.href} class:menu-active={page.url.pathname === link.href}
                             >{link.label}</a>
                     </li>
                 {/each}
@@ -56,7 +56,7 @@ function handleMenuClose() {
                     <div
                         tabindex="0"
                         role="button"
-                        class="btn btn-ghost btn-circle avatar placeholder">
+                        class="btn btn-ghost btn-circle avatar avatar-placeholder">
                         <div class="w-8 rounded-full bg-primary text-primary-content">
                             <span class="text-sm font-bold"
                                 >{getInitials(data.user.name ?? '?')}</span>
@@ -64,7 +64,7 @@ function handleMenuClose() {
                     </div>
                     <ul
                         tabindex="0"
-                        class="menu menu-sm dropdown-content mt-3 z-[1] p-2 shadow bg-base-100 rounded-box w-52">
+                        class="menu menu-sm dropdown-content mt-3 z-1 p-2 shadow-sm bg-base-100 rounded-box w-52">
                         <li><a href="/profile">Profile</a></li>
                         <li><a href="/register">Register</a></li>
                         {#if data.user.role === 'admin'}

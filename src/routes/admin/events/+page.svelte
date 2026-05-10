@@ -20,24 +20,24 @@ let { data } = $props()
                 action="?/create_event"
                 use:enhance
                 class="grid grid-cols-1 gap-3 md:grid-cols-[1fr_auto_auto] md:items-end">
-                <div class="form-control">
-                    <label class="label"><span class="label-text">Title</span></label>
+                <fieldset class="fieldset">
+                    <legend class="fieldset-legend">Title</legend>
                     <input
                         name="title"
                         type="text"
-                        class="input input-bordered"
+                        class="input w-full"
                         placeholder="Family Reunion 2026"
                         required />
-                </div>
-                <div class="form-control">
-                    <label class="label"><span class="label-text">Year</span></label>
+                </fieldset>
+                <fieldset class="fieldset">
+                    <legend class="fieldset-legend">Year</legend>
                     <input
                         name="year"
                         type="number"
-                        class="input input-bordered"
+                        class="input w-full"
                         value={new Date().getFullYear()}
                         required />
-                </div>
+                </fieldset>
                 <button type="submit" class="btn btn-primary">Create</button>
             </form>
         </div>
@@ -63,7 +63,7 @@ let { data } = $props()
                                     <input type="hidden" name="eventId" value={event.id} />
                                     <select
                                         name="status"
-                                        class="select select-bordered select-sm"
+                                        class="select select-sm"
                                         onchange={(e) => e.currentTarget.form?.submit()}>
                                         {#each EVENT_STATUSES as s}
                                             <option value={s} selected={event.status === s}
@@ -105,7 +105,7 @@ let { data } = $props()
                                             <input type="hidden" name="eventId" value={event.id} />
                                             <select
                                                 name="status"
-                                                class="select select-bordered select-xs"
+                                                class="select select-xs"
                                                 onchange={(e) => e.currentTarget.form?.submit()}>
                                                 {#each EVENT_STATUSES as s}
                                                     <option value={s} selected={event.status === s}
