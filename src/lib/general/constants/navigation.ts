@@ -3,32 +3,43 @@ type NavLink = {
     label: string
 }
 
-type MobileTab = {
+type SidebarLink = {
     href: string
     label: string
     icon: string
 }
 
-export const navLinks: NavLink[] = [
-    { href: '/', label: 'Home' },
-    { href: '/program', label: 'Program' },
-    { href: '/gallery', label: 'Gallery' },
-    { href: '/family-tree', label: 'Family Tree' },
-    { href: '/members', label: 'Members' },
-    { href: '/shop', label: 'Shop' },
-    { href: '/contact', label: 'Contact' },
+type SidebarGroup = {
+    label: string
+    icon: string
+    children: NavLink[]
+}
+
+export type SidebarItem = SidebarLink | SidebarGroup
+
+export function isSidebarGroup(item: SidebarItem): item is SidebarGroup {
+    return 'children' in item
+}
+
+export const sidebarLinks: SidebarItem[] = [
+    { href: '/', label: 'Home', icon: 'mdi/home' },
+    { href: '/gallery', label: 'Gallery', icon: 'mdi/image-multiple' },
+    { href: '/family-tree', label: 'Family Tree', icon: 'mdi/family-tree' },
+    { href: '/members', label: 'Members', icon: 'mdi/account-group' },
+    { href: '/program', label: 'Program', icon: 'mdi/calendar-clock' },
+    { href: '/shop', label: 'Shop', icon: 'mdi/shopping' },
+    { href: '/register', label: 'Register', icon: 'mdi/clipboard-edit' },
+    { href: '/contact', label: 'Contact', icon: 'mdi/email' },
 ]
 
-export const mobileTabs: MobileTab[] = [
-    { href: '/', label: 'Home', icon: '🏠' },
-    { href: '/gallery', label: 'Gallery', icon: '🖼️' },
-    { href: '/family-tree', label: 'Tree', icon: '🌳' },
-    { href: '/members', label: 'Members', icon: '👥' },
-]
-
-export const mobileMenuItems: NavLink[] = [
-    { href: '/program', label: 'Program' },
-    { href: '/shop', label: 'Shop' },
-    { href: '/contact', label: 'Contact' },
-    { href: '/register', label: 'Register' },
-]
+export const adminSidebarGroup: SidebarGroup = {
+    label: 'Admin',
+    icon: 'mdi/shield-crown',
+    children: [
+        { href: '/admin', label: 'Overview' },
+        { href: '/admin/events', label: 'Events' },
+        { href: '/admin/users', label: 'Users' },
+        { href: '/admin/photos', label: 'Photos' },
+        { href: '/admin/storefront', label: 'Storefront' },
+    ],
+}

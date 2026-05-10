@@ -112,7 +112,7 @@ The app is fully responsive with a `md:` (768px) breakpoint separating mobile an
 - Use camelCase for variable and function names
 - Use PascalCase for Svelte components
 - Avoid use of inline styles, prefer Tailwind CSS classes
-- Avoid using `any` type in Typescript or casting with as
+- Avoid using `any` type in Typescript or casting with `as`
 - Declare constant values and objects using `const`
 - Constant values that are objects, do not use CAPS for the variable name, use camelCase instead suffixed with 'Value'
 - Event handlers should be named with the `handle` prefix (e.g. `handleClick`)
