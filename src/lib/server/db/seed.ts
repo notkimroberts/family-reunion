@@ -296,6 +296,8 @@ async function seed() {
                 year: 2026,
                 title: 'Roberts Family Reunion 2026',
                 status: 'open' as const,
+                startDate: new Date('2027-07-23T16:00:00'),
+                endDate: new Date('2027-07-25T12:00:00'),
                 venue: {
                     name: 'Mountain View Resort',
                     address: '789 Summit Way, Blue Ridge, GA 30513',

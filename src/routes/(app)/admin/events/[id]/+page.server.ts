@@ -30,6 +30,8 @@ export const actions: Actions = {
         dbg.admin('update_event id=%s', event.params.id)
         const data = await event.request.formData()
 
+        const startDateRaw = data.get('startDate') as string
+        const endDateRaw = data.get('endDate') as string
         const venueName = data.get('venueName') as string
         const venueAddress = data.get('venueAddress') as string
         const venueDescription = data.get('venueDescription') as string
@@ -38,6 +40,9 @@ export const actions: Actions = {
         const scheduleRaw = data.get('schedule') as string
         const sitesRaw = data.get('recommendedSites') as string
         const activitiesRaw = data.get('recommendedActivities') as string
+
+        const startDate = startDateRaw ? new Date(startDateRaw) : null
+        const endDate = endDateRaw ? new Date(endDateRaw) : null
 
         const venue = venueName
             ? { name: venueName, address: venueAddress || '', description: venueDescription || '' }
@@ -76,6 +81,8 @@ export const actions: Actions = {
         await db
             .update(reunionEvents)
             .set({
+                startDate,
+                endDate,
                 venue,
                 menu,
                 drinks,

@@ -124,6 +124,32 @@ let { data } = $props()
         <h2 class="card-title">Program Details</h2>
         <form method="POST" action="?/update_event" use:enhance class="space-y-4">
             <hr class="border-base-content/5 my-4 border-t-2" />
+            <h3 class="text-sm font-bold text-base-content/50">Event Dates</h3>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <fieldset class="fieldset w-full">
+                    <label class="label">Start Date</label>
+                    <input
+                        name="startDate"
+                        type="datetime-local"
+                        class="input w-full"
+                        value={data.event.startDate
+                            ? new Date(data.event.startDate).toISOString().slice(0, 16)
+                            : ''} />
+                </fieldset>
+                <fieldset class="fieldset w-full">
+                    <label class="label">End Date</label>
+                    <input
+                        name="endDate"
+                        type="datetime-local"
+                        class="input w-full"
+                        value={data.event.endDate
+                            ? new Date(data.event.endDate).toISOString().slice(0, 16)
+                            : ''} />
+                </fieldset>
+            </div>
+
+            <hr class="border-base-content/5 my-4 border-t-2" />
             <h3 class="text-sm font-bold text-base-content/50">Venue</h3>
 
             <fieldset class="fieldset w-full">

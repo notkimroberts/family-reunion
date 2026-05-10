@@ -102,6 +102,8 @@ export const reunionEvents = pgTable('reunion_events', {
     year: integer('year').notNull(),
     title: text('title').notNull(),
     status: eventStatusEnum('status').notNull().default('draft'),
+    startDate: timestamp('start_date'),
+    endDate: timestamp('end_date'),
     venue: jsonb('venue').$type<{
         name: string
         address: string
