@@ -1,4 +1,5 @@
 <script lang="ts">
+import { createChart } from 'family-chart'
 import 'family-chart/styles/family-chart.css'
 import { onDestroy, onMount } from 'svelte'
 import { getAge, getInitials } from '$lib/utils'
@@ -31,8 +32,6 @@ let chartInstance: { destroy?: () => void } | null = null
 
 onMount(async () => {
     try {
-        const { createChart } = await import('family-chart')
-
         const nodes = data.members.map((m) => {
             const rels = data.relationships.filter((r) => r.from === m.id || r.to === m.id)
             const spouses = [

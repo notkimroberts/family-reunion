@@ -4,3 +4,4 @@ build
 drizzle
 package-lock.json
 bun.lock
+.claude

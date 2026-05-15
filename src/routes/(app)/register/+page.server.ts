@@ -61,7 +61,7 @@ export const actions: Actions = {
         const tierMap = new Map(tiers.map((t) => [t.id, t]))
 
         let totalCents = 0
-        const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] = []
+        const lineItems: NonNullable<Stripe.Checkout.SessionCreateParams['line_items']> = []
 
         for (const member of members) {
             const tier = tierMap.get(member.tierId)
