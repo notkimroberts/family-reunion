@@ -1,4 +1,15 @@
 <script lang="ts">
+import { Avatar, AvatarFallback, AvatarImage } from '$lib/components/ui/avatar'
+import { Card } from '$lib/components/ui/card'
+import { Input } from '$lib/components/ui/input'
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from '$lib/components/ui/table'
 import { getInitials } from '$lib/utils'
 import { getAge } from '$lib/utils/age'
 
@@ -11,37 +22,32 @@ let filtered = $derived(
 </script>
 
 <section class="col-span-12">
-    <input
-        type="text"
-        class="input w-full max-w-sm"
-        placeholder="Search by name..."
-        bind:value={search} />
+    <Input type="text" class="max-w-sm" placeholder="Search by name..." bind:value={search} />
 </section>
 
 {#if filtered.length === 0}
     <section class="col-span-12">
-        <p class="text-base-content/60">No family members found.</p>
+        <p class="text-muted-foreground">No family members found.</p>
     </section>
 {:else}
     <!-- Mobile cards -->
     <section class="col-span-12 lg:hidden">
         <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
             {#each filtered as member}
-                <div class="card bg-base-100 shadow-xs">
-                    <div class="card-body flex-row items-center gap-4 p-4">
-                        <div class="avatar avatar-placeholder">
-                            <div class="w-12 rounded-full bg-primary text-primary-content">
-                                {#if member.profilePhotoUrl}
-                                    <img src={member.profilePhotoUrl} alt={member.name} />
-                                {:else}
-                                    <span class="text-lg">{getInitials(member.name)}</span>
-                                {/if}
-                            </div>
-                        </div>
+                <Card class="p-4">
+                    <div class="flex items-center gap-4">
+                        <Avatar class="w-12 h-12 shrink-0">
+                            {#if member.profilePhotoUrl}
+                                <AvatarImage src={member.profilePhotoUrl} alt={member.name} />
+                            {/if}
+                            <AvatarFallback class="bg-primary text-primary-foreground text-lg">
+                                {getInitials(member.name)}
+                            </AvatarFallback>
+                        </Avatar>
                         <div>
                             <h3 class="font-semibold">{member.name}</h3>
                             {#if member.birthYear}
-                                <p class="text-sm text-base-content/60">
+                                <p class="text-sm text-muted-foreground">
                                     Age {getAge(
                                         member.birthYear,
                                         member.birthMonth,
@@ -51,51 +57,55 @@ let filtered = $derived(
                             {/if}
                         </div>
                     </div>
-                </div>
+                </Card>
             {/each}
         </div>
     </section>
 
     <!-- Desktop table -->
-    <section class="card bg-base-100 col-span-12 shadow-xs overflow-hidden hidden lg:block">
-        <div class="overflow-x-auto">
-            <table class="table table-zebra">
-                <thead>
-                    <tr>
-                        <th>Name</th>
-                        <th>Age</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {#each filtered as member}
-                        <tr>
-                            <td>
-                                <div class="flex items-center gap-4">
-                                    <div class="avatar avatar-placeholder">
-                                        <div
-                                            class="w-10 rounded-full bg-primary text-primary-content">
+    <section class="col-span-12 hidden lg:block overflow-hidden">
+        <Card>
+            <div class="overflow-x-auto">
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>Name</TableHead>
+                            <TableHead>Age</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {#each filtered as member}
+                            <TableRow>
+                                <TableCell>
+                                    <div class="flex items-center gap-4">
+                                        <Avatar class="w-10 h-10 shrink-0">
                                             {#if member.profilePhotoUrl}
-                                                <img
+                                                <AvatarImage
                                                     src={member.profilePhotoUrl}
                                                     alt={member.name} />
-                                            {:else}
-                                                <span class="text-sm"
-                                                    >{getInitials(member.name)}</span>
                                             {/if}
-                                        </div>
+                                            <AvatarFallback
+                                                class="bg-primary text-primary-foreground text-sm">
+                                                {getInitials(member.name)}
+                                            </AvatarFallback>
+                                        </Avatar>
+                                        <span class="font-medium">{member.name}</span>
                                     </div>
-                                    <span class="font-medium">{member.name}</span>
-                                </div>
-                            </td>
-                            <td>
-                                {#if member.birthYear}
-                                    {getAge(member.birthYear, member.birthMonth, member.birthDay)}
-                                {/if}
-                            </td>
-                        </tr>
-                    {/each}
-                </tbody>
-            </table>
-        </div>
+                                </TableCell>
+                                <TableCell>
+                                    {#if member.birthYear}
+                                        {getAge(
+                                            member.birthYear,
+                                            member.birthMonth,
+                                            member.birthDay,
+                                        )}
+                                    {/if}
+                                </TableCell>
+                            </TableRow>
+                        {/each}
+                    </TableBody>
+                </Table>
+            </div>
+        </Card>
     </section>
 {/if}

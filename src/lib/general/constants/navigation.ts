@@ -11,20 +11,20 @@ type NavGroup = {
 }
 
 export const primaryNavLinks: NavLink[] = [
-    { href: '/gallery', label: 'Gallery', icon: 'mdi/image-multiple' },
-    { href: '/family-tree', label: 'Family Tree', icon: 'mdi/family-tree' },
-    { href: '/members', label: 'Members', icon: 'mdi/account-group' },
+    { href: '/gallery', label: 'Gallery', icon: 'images' },
+    { href: '/family-tree', label: 'Family Tree', icon: 'network' },
+    { href: '/members', label: 'Members', icon: 'users' },
 ]
 
 export const secondaryNavLinks: NavLink[] = [
-    { href: '/program', label: 'Program', icon: 'mdi/calendar-clock' },
-    { href: '/shop', label: 'Shop', icon: 'mdi/shopping' },
-    { href: '/register', label: 'Register', icon: 'mdi/clipboard-edit' },
+    { href: '/program', label: 'Program', icon: 'calendar-clock' },
+    { href: '/shop', label: 'Shop', icon: 'shopping-bag' },
+    { href: '/register', label: 'Register', icon: 'clipboard-pen' },
 ]
 
 export const adminNavGroup: NavGroup = {
     label: 'Admin',
-    icon: 'mdi/shield-crown',
+    icon: 'shield-check',
     children: [
         { href: '/admin', label: 'Overview' },
         { href: '/admin/events', label: 'Events' },

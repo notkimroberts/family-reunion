@@ -1,6 +1,14 @@
 <script lang="ts">
 import { page } from '$app/state'
 import { authClient } from '$lib/auth-client'
+import { Avatar, AvatarFallback } from '$lib/components/ui/avatar'
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from '$lib/components/ui/dropdown-menu'
 import { APP_NAME, primaryNavLinks, secondaryNavLinks } from '$lib/general/constants'
 import { getInitials } from '$lib/utils'
 import ThemeToggle from './ThemeToggle.svelte'
@@ -27,7 +35,7 @@ function handleSignOut() {
 }
 </script>
 
-<header class="sticky top-0 z-30 bg-base-300/90 backdrop-blur-md border-b border-base-300">
+<header class="sticky top-0 z-30 bg-background/90 backdrop-blur-md border-b">
     <!-- Desktop: 3-column grid so logo is truly centered -->
     <div
         class="hidden md:grid grid-cols-[1fr_auto_1fr] items-center h-24 mx-auto max-w-6xl px-6 gap-4">
@@ -37,9 +45,7 @@ function handleSignOut() {
                 <a
                     href={link.href}
                     class="px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors
-                        {active
-                        ? 'bg-primary/15 text-primary'
-                        : 'text-base-content hover:bg-base-content/10'}">
+                        {active ? 'bg-primary/15 text-primary' : 'text-foreground hover:bg-muted'}">
                     {link.label}
                 </a>
             {/each}
@@ -47,15 +53,13 @@ function handleSignOut() {
 
         <a href="/" class="flex flex-col items-center gap-1 shrink-0 px-12 py-2 group">
             <span
-                class="font-heading text-[10px] tracking-[0.2em] uppercase text-primary/70 transition-colors group-hover:text-primary">
+                class="text-[10px] tracking-[0.2em] uppercase text-primary/70 transition-colors group-hover:text-primary">
                 {APP_NAME}
             </span>
-            <div class="avatar">
-                <div
-                    class="w-14 rounded-full ring-2 ring-primary ring-offset-2 ring-offset-base-100 transition-all duration-300 group-hover:ring-4 group-hover:shadow-lg group-hover:shadow-primary/30 group-hover:scale-105">
-                    <img src="/will_and_roxie_favicon_64.png" alt={APP_NAME} class="object-cover" />
-                </div>
-            </div>
+            <img
+                src="/will_and_roxie_favicon_64.png"
+                alt={APP_NAME}
+                class="w-14 h-14 rounded-full object-cover ring-2 ring-primary ring-offset-2 ring-offset-background transition-all duration-300 group-hover:ring-4 group-hover:shadow-lg group-hover:shadow-primary/30 group-hover:scale-105" />
         </a>
 
         <nav class="flex items-center gap-0.5">
@@ -66,36 +70,36 @@ function handleSignOut() {
                     class="px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors
                         {active
                         ? 'bg-primary/15 text-primary'
-                        : 'text-base-content/70 hover:text-base-content hover:bg-base-content/10'}">
+                        : 'text-muted-foreground hover:text-foreground hover:bg-muted'}">
                     {link.label}
                 </a>
             {/each}
             {#if user}
-                <div class="dropdown dropdown-end z-10">
-                    <div
-                        tabindex="0"
-                        role="button"
-                        class="btn btn-circle btn-ghost avatar avatar-placeholder">
-                        <div class="w-9 rounded-full bg-primary text-primary-content">
-                            <span class="text-sm font-bold">{getInitials(user.name ?? '?')}</span>
-                        </div>
-                    </div>
-                    <ul
-                        tabindex="0"
-                        class="menu dropdown-content rounded-box bg-base-100 mt-3 w-52 p-2 shadow-2xl">
-                        <li><a href="/profile">Profile</a></li>
+                <DropdownMenu>
+                    <DropdownMenuTrigger>
+                        <Avatar class="w-9 h-9 cursor-pointer">
+                            <AvatarFallback
+                                class="bg-primary text-primary-foreground text-sm font-bold">
+                                {getInitials(user.name ?? '?')}
+                            </AvatarFallback>
+                        </Avatar>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" class="w-52">
+                        <DropdownMenuItem
+                            ><a href="/profile" class="w-full">Profile</a></DropdownMenuItem>
                         {#if isAdmin}
-                            <li><a href="/admin">Admin</a></li>
+                            <DropdownMenuItem
+                                ><a href="/admin" class="w-full">Admin</a></DropdownMenuItem>
                         {/if}
-                        <li>
-                            <div class="flex items-center justify-between">
-                                <span>Theme</span>
-                                <ThemeToggle size="sm" />
-                            </div>
-                        </li>
-                        <li><button onclick={handleSignOut}>Sign Out</button></li>
-                    </ul>
-                </div>
+                        <DropdownMenuSeparator />
+                        <div class="flex items-center justify-between px-2 py-1.5">
+                            <span class="text-sm">Theme</span>
+                            <ThemeToggle size="sm" />
+                        </div>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onclick={handleSignOut}>Sign Out</DropdownMenuItem>
+                    </DropdownMenuContent>
+                </DropdownMenu>
             {/if}
         </nav>
     </div>
@@ -108,35 +112,35 @@ function handleSignOut() {
                 alt={APP_NAME}
                 class="w-9 h-9 rounded-full object-cover" />
         </a>
-        <span class="flex-1 text-center text-sm font-medium text-base-content/60 truncate px-2">
+        <span class="flex-1 text-center text-sm font-medium text-muted-foreground truncate px-2">
             {title}
         </span>
         {#if user}
-            <div class="dropdown dropdown-end z-10 shrink-0">
-                <div
-                    tabindex="0"
-                    role="button"
-                    class="btn btn-circle btn-ghost avatar avatar-placeholder">
-                    <div class="w-9 rounded-full bg-primary text-primary-content">
-                        <span class="text-sm font-bold">{getInitials(user.name ?? '?')}</span>
-                    </div>
-                </div>
-                <ul
-                    tabindex="0"
-                    class="menu dropdown-content rounded-box bg-base-100 mt-3 w-52 p-2 shadow-2xl">
-                    <li><a href="/profile">Profile</a></li>
+            <DropdownMenu>
+                <DropdownMenuTrigger>
+                    <Avatar class="w-9 h-9 cursor-pointer shrink-0">
+                        <AvatarFallback
+                            class="bg-primary text-primary-foreground text-sm font-bold">
+                            {getInitials(user.name ?? '?')}
+                        </AvatarFallback>
+                    </Avatar>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" class="w-52">
+                    <DropdownMenuItem
+                        ><a href="/profile" class="w-full">Profile</a></DropdownMenuItem>
                     {#if isAdmin}
-                        <li><a href="/admin">Admin</a></li>
+                        <DropdownMenuItem
+                            ><a href="/admin" class="w-full">Admin</a></DropdownMenuItem>
                     {/if}
-                    <li>
-                        <div class="flex items-center justify-between">
-                            <span>Theme</span>
-                            <ThemeToggle size="sm" />
-                        </div>
-                    </li>
-                    <li><button onclick={handleSignOut}>Sign Out</button></li>
-                </ul>
-            </div>
+                    <DropdownMenuSeparator />
+                    <div class="flex items-center justify-between px-2 py-1.5">
+                        <span class="text-sm">Theme</span>
+                        <ThemeToggle size="sm" />
+                    </div>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onclick={handleSignOut}>Sign Out</DropdownMenuItem>
+                </DropdownMenuContent>
+            </DropdownMenu>
         {/if}
     </div>
 </header>

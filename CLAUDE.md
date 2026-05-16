@@ -58,16 +58,20 @@ SvelteKit full-stack app (Svelte 5 with runes). Node adapter for Railway deploym
 
 ### Icons
 
-- **unplugin-icons** with full `@iconify/json` collection — only used icons are bundled
-- Import as Svelte components: `import MdiHome from 'virtual:icons/mdi/home'`
-- Browse available icons at icones.js.org; path format is `virtual:icons/{collection}/{icon-name}`
+- **@lucide/svelte** for all icons — import as named components: `import { Home, Users } from '@lucide/svelte'`
+- Browse available icons at lucide.dev; use PascalCase component names (e.g. `CalendarClock`, `ShoppingBag`)
+- Do **not** use unplugin-icons or `virtual:icons/*` imports — those have been removed
 
 ### Styling
 
-- **Tailwind CSS + DaisyUI** with custom light/dark themes defined in `tailwind.config.js`
-- Theme constants (`LIGHT_THEME`, `DARK_THEME`) in `$lib/general/constants/THEMES.ts`
+- **Tailwind CSS v4 + shadcn-svelte** (vega preset, neutral base color). No DaisyUI.
+- Dark mode via `.dark` class on `<html>` (not `data-theme` attribute)
+- Theme constants (`LIGHT_THEME = 'light'`, `DARK_THEME = 'dark'`) in `$lib/general/constants/THEMES.ts`
 - Theme toggle persisted in localStorage via `$lib/stores/theme`
-- **Fonts**: PT Serif (headings) + Lato (body), loaded via Google Fonts in `app.html`
+- CSS variables defined in `src/app.css` — use semantic tokens (`bg-background`, `text-foreground`, `text-muted-foreground`, `bg-card`, `text-primary`, `bg-destructive`, etc.)
+- **Fonts**: Inter (system font, shadcn default) — Google Fonts removed
+- shadcn components live in `$lib/components/ui/` — import them directly: `import { Button } from '$lib/components/ui/button'`
+- `cn()` utility (clsx + tailwind-merge) available from `$lib/utils`
 
 ### Mobile Navigation
 
@@ -129,7 +133,8 @@ The app is fully responsive with a `md:` (768px) breakpoint separating mobile an
 - **Utilities** (`$lib/utils`): `formatPrice`, `getAge`, `getInitials` — import from barrel `$lib/utils`
 - **Constants** (`$lib/general/constants`): `APP_NAME`, `THEMES`, `EVENT_STATUSES`, `navigation` — import from barrel `$lib/general/constants`
 - **Components** (`$lib/components`): `BottomSheet`, `BottomTabBar`, `Divider`, `PageTitle`, `ThemeToggle` — import from barrel `$lib/components`
-- Use `unplugin-icons` for all icons (not inline SVGs): `import MdiMenu from 'virtual:icons/mdi/menu'`
+- **shadcn-svelte UI components** (`$lib/components/ui/`): `Button`, `Badge`, `Card`, `Input`, `Textarea`, `Select`, `Table`, `Alert`, `Avatar`, `Separator`, `Dialog`, `DropdownMenu`, `Sheet`, `Tooltip`, `Breadcrumb`, `Pagination`, `Calendar`, `Sonner` — import directly from the component path
+- Use `@lucide/svelte` for all icons (not inline SVGs or unplugin-icons): `import { Home } from '@lucide/svelte'`
 - Price formatting always uses `formatPrice(cents)` from `$lib/utils`, never inline `(x / 100).toFixed(2)`
 
 # Workflow
@@ -145,5 +150,10 @@ The app is fully responsive with a `md:` (768px) breakpoint separating mobile an
 
 # LLM
 
-- DaisyUI: https://daisyui.com/llms.txt
+- shadcn-svelte: https://shadcn-svelte.com/llms.txt
 - Svelte & SvelteKit: https://svelte.dev/llms-full.txt
+- Bun: https://bun.sh/llms.txt
+
+## Runtime, Package Manager, Test
+
+Always use `bun`, not `npm`.

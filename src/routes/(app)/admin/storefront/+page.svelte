@@ -1,5 +1,10 @@
 <script lang="ts">
 import { enhance } from '$app/forms'
+import { Alert, AlertDescription } from '$lib/components/ui/alert'
+import { Button } from '$lib/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card'
+import { Input } from '$lib/components/ui/input'
+import { Textarea } from '$lib/components/ui/textarea'
 
 let { data, form } = $props()
 </script>
@@ -9,52 +14,66 @@ let { data, form } = $props()
 </svelte:head>
 
 {#if form?.success}
-    <div class="alert alert-success col-span-12"><span>Saved!</span></div>
+    <div class="col-span-12">
+        <Alert>
+            <AlertDescription>Saved!</AlertDescription>
+        </Alert>
+    </div>
 {/if}
 {#if form?.error}
-    <div class="alert alert-error col-span-12"><span>{form.error}</span></div>
+    <div class="col-span-12">
+        <Alert variant="destructive">
+            <AlertDescription>{form.error}</AlertDescription>
+        </Alert>
+    </div>
 {/if}
 
-<section class="card bg-base-100 col-span-12 xl:col-span-8 shadow-xs">
-    <div class="card-body">
-        <h2 class="card-title">Storefront Settings</h2>
-        <form method="POST" use:enhance class="space-y-4">
-            <fieldset class="fieldset w-full">
-                <label class="label">External Shop URL</label>
-                <input
-                    name="externalShopUrl"
-                    type="url"
-                    class="input w-full"
-                    value={data.config?.externalShopUrl ?? ''}
-                    placeholder="https://your-shop.com"
-                    required />
-            </fieldset>
+<section class="col-span-12 xl:col-span-8">
+    <Card>
+        <CardHeader>
+            <CardTitle>Storefront Settings</CardTitle>
+        </CardHeader>
+        <CardContent>
+            <form method="POST" use:enhance class="space-y-4">
+                <div class="space-y-2">
+                    <label for="externalShopUrl" class="text-sm font-medium"
+                        >External Shop URL</label>
+                    <Input
+                        id="externalShopUrl"
+                        name="externalShopUrl"
+                        type="url"
+                        value={data.config?.externalShopUrl ?? ''}
+                        placeholder="https://your-shop.com"
+                        required />
+                </div>
 
-            <fieldset class="fieldset w-full">
-                <label class="flex cursor-pointer justify-between py-2">
-                    <span class="label">Shop page visible</span>
+                <div class="flex items-center justify-between py-2">
+                    <label for="isActive" class="text-sm font-medium">Shop page visible</label>
                     <input
+                        id="isActive"
                         name="isActive"
                         type="checkbox"
-                        class="toggle toggle-primary"
+                        class="h-4 w-4 rounded border-input accent-primary cursor-pointer"
                         checked={data.config?.isActive ?? true} />
-                </label>
-            </fieldset>
+                </div>
 
-            <fieldset class="fieldset w-full">
-                <label class="label">Product Previews (JSON array)</label>
-                <p class="text-xs text-base-content/50 mb-1">
-                    [{`{"name":"Reunion Tee","imageUrl":"...","description":"..."}`}]
-                </p>
-                <textarea name="products" class="textarea h-32 w-full"
-                    >{data.config?.products
-                        ? JSON.stringify(data.config.products, null, 2)
-                        : ''}</textarea>
-            </fieldset>
+                <div class="space-y-2">
+                    <label for="products" class="text-sm font-medium"
+                        >Product Previews (JSON array)</label>
+                    <p class="text-xs text-muted-foreground">
+                        [{`{"name":"Reunion Tee","imageUrl":"...","description":"..."}`}]
+                    </p>
+                    <Textarea
+                        id="products"
+                        name="products"
+                        class="h-32"
+                        value={data.config?.products
+                            ? JSON.stringify(data.config.products, null, 2)
+                            : ''} />
+                </div>
 
-            <div class="flex gap-4">
-                <button type="submit" class="btn btn-primary">Save Settings</button>
-            </div>
-        </form>
-    </div>
+                <Button type="submit">Save Settings</Button>
+            </form>
+        </CardContent>
+    </Card>
 </section>

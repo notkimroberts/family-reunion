@@ -2,6 +2,9 @@
 import { createChart } from 'family-chart'
 import 'family-chart/styles/family-chart.css'
 import { onDestroy, onMount } from 'svelte'
+import { Alert, AlertDescription } from '$lib/components/ui/alert'
+import { Avatar, AvatarFallback, AvatarImage } from '$lib/components/ui/avatar'
+import { Button } from '$lib/components/ui/button'
 import { getAge, getInitials } from '$lib/utils'
 
 let { data } = $props()
@@ -77,19 +80,17 @@ onMount(async () => {
             f3Chart.setCardHtml().setCardInnerHtmlCreator((d) => {
                 const name = `${d.data.data['first name']} ${d.data.data['last name']}`.trim()
                 const photo = d.data.data.photoUrl
-                    ? `<div class="avatar"><div class="w-8 rounded-full"><img src="${d.data.data.photoUrl}" alt="" /></div></div>`
-                    : `<div class="avatar avatar-placeholder"><div class="w-8 rounded-full bg-neutral text-neutral-content"><span class="text-xs">${getInitials(name)}</span></div></div>`
+                    ? `<div style="width:2rem;height:2rem;border-radius:9999px;overflow:hidden;flex-shrink:0"><img src="${d.data.data.photoUrl}" alt="" style="width:100%;height:100%;object-fit:cover" /></div>`
+                    : `<div style="width:2rem;height:2rem;border-radius:9999px;background:var(--primary);color:var(--primary-foreground);display:flex;align-items:center;justify-content:center;font-size:0.75rem;font-weight:bold;flex-shrink:0">${getInitials(name)}</div>`
                 return `
-						<div class="card card-sm bg-base-300 shadow-md border border-base-300 w-48">
-							<div class="card-body p-3 flex-row items-center gap-3">
-								${photo}
-								<div class="min-w-0">
-									<h3 class="card-title text-sm truncate text-base-content">${name}</h3>
-									<p class="text-xs text-base-content/60">${d.data.data.age ? `Age ${d.data.data.age}` : ''}</p>
-								</div>
-							</div>
-						</div>
-					`
+                    <div style="background:var(--card);border:1px solid var(--border);border-radius:0.5rem;padding:0.75rem;display:flex;align-items:center;gap:0.75rem;width:12rem;box-shadow:0 1px 3px rgba(0,0,0,0.1)">
+                        ${photo}
+                        <div style="min-width:0">
+                            <div style="font-weight:500;font-size:0.875rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--foreground)">${name}</div>
+                            <div style="font-size:0.75rem;color:var(--muted-foreground)">${d.data.data.age ? `Age ${d.data.data.age}` : ''}</div>
+                        </div>
+                    </div>
+                `
             })
             f3Chart.updateTree({ initial: true })
         }
@@ -112,29 +113,22 @@ onDestroy(() => {
 <section class="col-span-12 lg:hidden">
     {#if data.members.length === 0}
         <div class="text-center py-12">
-            <p class="text-base-content/60 text-lg">No family members have been added yet.</p>
-            <a href="/profile/relationships" class="btn btn-primary mt-4">Add Relationships</a>
+            <p class="text-muted-foreground text-lg">No family members have been added yet.</p>
+            <Button href="/profile/relationships" class="mt-4">Add Relationships</Button>
         </div>
     {:else}
         <div class="space-y-3">
             {#each data.members as member}
-                <div class="card bg-base-100 shadow-xs flex-row items-center gap-3 p-3">
-                    {#if member.photoUrl}
-                        <div class="avatar">
-                            <div class="w-10 rounded-full">
-                                <img src={member.photoUrl} alt={member.name} />
-                            </div>
-                        </div>
-                    {:else}
-                        <div class="avatar avatar-placeholder">
-                            <div class="w-10 rounded-full bg-neutral text-neutral-content">
-                                <span class="text-sm">{getInitials(member.name)}</span>
-                            </div>
-                        </div>
-                    {/if}
+                <div class="flex items-center gap-3 p-3 rounded-lg border bg-card">
+                    <Avatar class="w-10 h-10 shrink-0">
+                        {#if member.photoUrl}
+                            <AvatarImage src={member.photoUrl} alt={member.name} />
+                        {/if}
+                        <AvatarFallback>{getInitials(member.name)}</AvatarFallback>
+                    </Avatar>
                     <div class="min-w-0 flex-1">
                         <p class="font-medium truncate">{member.name}</p>
-                        <div class="flex gap-3 text-sm text-base-content/60">
+                        <div class="flex gap-3 text-sm text-muted-foreground">
                             {#if member.birthYear}
                                 <span>
                                     Age {getAge(
@@ -158,19 +152,21 @@ onDestroy(() => {
     {#if data.members.length === 0}
         <div class="flex items-center justify-center h-full">
             <div class="text-center">
-                <p class="text-base-content/60 text-lg">No family members have been added yet.</p>
-                <a href="/profile/relationships" class="btn btn-primary mt-4">Add Relationships</a>
+                <p class="text-muted-foreground text-lg">No family members have been added yet.</p>
+                <Button href="/profile/relationships" class="mt-4">Add Relationships</Button>
             </div>
         </div>
     {:else if error}
         <div class="flex items-center justify-center h-full">
-            <div class="alert alert-error max-w-md">
-                <span>{error}</span>
-            </div>
+            <Alert variant="destructive" class="max-w-md">
+                <AlertDescription>{error}</AlertDescription>
+            </Alert>
         </div>
     {:else if !loaded}
         <div class="flex items-center justify-center h-full">
-            <span class="loading loading-spinner loading-lg"></span>
+            <div
+                class="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin">
+            </div>
         </div>
     {/if}
 
@@ -192,7 +188,7 @@ onDestroy(() => {
 }
 
 .tree-container :global(.links_view path) {
-    stroke: oklch(var(--bc) / 0.3);
+    stroke: var(--border);
     stroke-width: 1.5;
     fill: none;
 }

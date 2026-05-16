@@ -23,7 +23,7 @@ function createThemeStore() {
                 const next = current === LIGHT_THEME ? DARK_THEME : LIGHT_THEME
                 if (browser) {
                     localStorage.setItem('theme', next)
-                    document.documentElement.setAttribute('data-theme', next)
+                    document.documentElement.classList.toggle('dark', next === DARK_THEME)
                 }
                 return next
             })
@@ -32,7 +32,7 @@ function createThemeStore() {
             if (browser) {
                 const theme = getInitialTheme()
                 set(theme)
-                document.documentElement.setAttribute('data-theme', theme)
+                document.documentElement.classList.toggle('dark', theme === DARK_THEME)
             }
         },
     }

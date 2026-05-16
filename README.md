@@ -10,7 +10,7 @@ A web application for managing family reunions — registration, payments, famil
 - **Payments**: Stripe
 - **Storage**: Cloudflare R2
 - **Email**: Resend
-- **Styling**: Tailwind CSS + DaisyUI
+- **Styling**: Tailwind CSS + Shadcn Svelte
 - **Family Tree**: family-chart
 - **Hosting**: Railway
 

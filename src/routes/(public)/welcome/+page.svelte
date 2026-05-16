@@ -1,4 +1,5 @@
 <script lang="ts">
+import { Button } from '$lib/components/ui/button'
 import { APP_NAME } from '$lib/general/constants'
 </script>
 
@@ -9,15 +10,13 @@ import { APP_NAME } from '$lib/general/constants'
         content="Family reunion management — registration, events, and family tree" />
 </svelte:head>
 
-<div class="hero min-h-[80vh]">
-    <div class="hero-content text-center">
-        <div class="max-w-lg">
-            <h1 class="text-5xl font-bold text-primary">{APP_NAME}</h1>
-            <p class="py-6 text-lg text-base-content/80">
-                Bringing our family together, year after year. Register for the next reunion,
-                explore the family tree, and relive memories through our photo gallery.
-            </p>
-            <a href="/login" class="btn btn-primary">Sign In to Get Started</a>
-        </div>
+<div class="flex min-h-[80vh] items-center justify-center">
+    <div class="text-center max-w-lg px-6">
+        <h1 class="text-5xl font-bold text-primary mb-6">{APP_NAME}</h1>
+        <p class="text-lg text-muted-foreground mb-8">
+            Bringing our family together, year after year. Register for the next reunion, explore
+            the family tree, and relive memories through our photo gallery.
+        </p>
+        <Button href="/login" size="lg">Sign In to Get Started</Button>
     </div>
 </div>

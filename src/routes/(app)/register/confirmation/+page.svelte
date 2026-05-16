@@ -1,4 +1,16 @@
 <script lang="ts">
+import { Button } from '$lib/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card'
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableFooter,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from '$lib/components/ui/table'
+import { formatPrice } from '$lib/utils'
 import { getAge } from '$lib/utils/age'
 
 let { data } = $props()
@@ -9,50 +21,54 @@ let { data } = $props()
     <p class="text-lg mt-2">See you at {data.event.title}!</p>
 </section>
 
-<section class="card bg-base-100 col-span-12 xl:col-span-8 xl:col-start-3 shadow-xs">
-    <div class="card-body">
-        <h2 class="card-title">Registration Summary</h2>
+<section class="col-span-12 xl:col-span-8 xl:col-start-3">
+    <Card>
+        <CardHeader>
+            <CardTitle>Registration Summary</CardTitle>
+        </CardHeader>
+        <CardContent>
+            <div class="overflow-x-auto">
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>Name</TableHead>
+                            <TableHead>Age</TableHead>
+                            <TableHead>Category</TableHead>
+                            <TableHead>Price</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {#each data.members as member}
+                            <TableRow>
+                                <TableCell>{member.name}</TableCell>
+                                <TableCell>
+                                    {getAge(member.birthYear, member.birthMonth, member.birthDay)}
+                                </TableCell>
+                                <TableCell>{member.tierLabel}</TableCell>
+                                <TableCell>${formatPrice(member.priceCents)}</TableCell>
+                            </TableRow>
+                        {/each}
+                    </TableBody>
+                    <TableFooter>
+                        <TableRow>
+                            <TableCell colspan={3} class="text-right font-bold"
+                                >Total Paid:</TableCell>
+                            <TableCell class="font-bold">
+                                ${formatPrice(data.registration.totalAmountCents)}
+                            </TableCell>
+                        </TableRow>
+                    </TableFooter>
+                </Table>
+            </div>
 
-        <div class="overflow-x-auto">
-            <table class="table table-sm">
-                <thead>
-                    <tr>
-                        <th>Name</th>
-                        <th>Age</th>
-                        <th>Category</th>
-                        <th>Price</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {#each data.members as member}
-                        <tr>
-                            <td>{member.name}</td>
-                            <td>
-                                {getAge(member.birthYear, member.birthMonth, member.birthDay)}
-                            </td>
-                            <td>{member.tierLabel}</td>
-                            <td>${(member.priceCents / 100).toFixed(2)}</td>
-                        </tr>
-                    {/each}
-                </tbody>
-                <tfoot>
-                    <tr>
-                        <td colspan="3" class="font-bold text-right">Total Paid:</td>
-                        <td class="font-bold">
-                            ${(data.registration.totalAmountCents / 100).toFixed(2)}
-                        </td>
-                    </tr>
-                </tfoot>
-            </table>
-        </div>
-
-        <p class="text-sm text-base-content/60 mt-4">
-            A confirmation email has been sent to your email address.
-        </p>
-    </div>
+            <p class="text-sm text-muted-foreground mt-4">
+                A confirmation email has been sent to your email address.
+            </p>
+        </CardContent>
+    </Card>
 </section>
 
 <section class="col-span-12 flex gap-4 justify-center">
-    <a href="/program" class="btn btn-primary">View Program</a>
-    <a href="/profile" class="btn btn-ghost">My Profile</a>
+    <Button href="/program">View Program</Button>
+    <Button href="/profile" variant="ghost">My Profile</Button>
 </section>

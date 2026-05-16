@@ -1,4 +1,6 @@
 <script lang="ts">
+import { Button } from '$lib/components/ui/button'
+import { Card, CardContent } from '$lib/components/ui/card'
 import { APP_NAME } from '$lib/general/constants'
 
 let { data } = $props()
@@ -6,45 +8,45 @@ let { data } = $props()
 
 {#if !data.config}
     <section class="col-span-12 text-center py-12">
-        <p class="text-base-content/60 text-lg">The shop is not currently available.</p>
+        <p class="text-muted-foreground text-lg">The shop is not currently available.</p>
     </section>
 {:else}
     <section class="col-span-12">
-        <p class="text-base-content/70">Get your reunion gear! Hats, t-shirts, and more.</p>
+        <p class="text-muted-foreground">Get your reunion gear! Hats, t-shirts, and more.</p>
     </section>
 
     {#if data.config.products && data.config.products.length > 0}
         <section class="col-span-12">
             <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                 {#each data.config.products as product}
-                    <div class="card bg-base-100 shadow-xs">
+                    <Card>
                         {#if product.imageUrl}
-                            <figure>
-                                <img
-                                    src={product.imageUrl}
-                                    alt={product.name}
-                                    class="w-full aspect-square object-cover" />
-                            </figure>
+                            <img
+                                src={product.imageUrl}
+                                alt={product.name}
+                                class="w-full aspect-square object-cover rounded-t-lg" />
                         {/if}
-                        <div class="card-body">
-                            <h3 class="card-title text-base">{product.name}</h3>
+                        <CardContent class="pt-4">
+                            <h3 class="font-semibold text-base">{product.name}</h3>
                             {#if product.description}
-                                <p class="text-sm text-base-content/60">{product.description}</p>
+                                <p class="text-sm text-muted-foreground mt-1">
+                                    {product.description}
+                                </p>
                             {/if}
-                        </div>
-                    </div>
+                        </CardContent>
+                    </Card>
                 {/each}
             </div>
         </section>
     {/if}
 
     <section class="col-span-12 text-center">
-        <a
+        <Button
             href={data.config.externalShopUrl}
             target="_blank"
             rel="noopener noreferrer"
-            class="btn btn-primary btn-lg">
+            size="lg">
             Shop Now &rarr;
-        </a>
+        </Button>
     </section>
 {/if}

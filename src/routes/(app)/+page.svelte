@@ -1,5 +1,6 @@
 <script lang="ts">
 import { onMount, onDestroy } from 'svelte'
+import { Button } from '$lib/components/ui/button'
 import { APP_NAME } from '$lib/general/constants'
 
 let { data } = $props()
@@ -100,11 +101,11 @@ let dateRange = $derived.by(() => {
 
 <!-- Title + Dates -->
 <section class="col-span-12 text-center pt-4 pb-2">
-    <h1 class="font-heading text-4xl lg:text-6xl font-bold mb-3">
+    <h1 class="text-4xl lg:text-6xl font-bold mb-3">
         {data.event?.title ?? `${APP_NAME} Family Reunion`}
     </h1>
     {#if dateRange && eventState !== 'past'}
-        <p class="text-base-content/60 text-lg">{dateRange}</p>
+        <p class="text-muted-foreground text-lg">{dateRange}</p>
     {/if}
 </section>
 
@@ -115,10 +116,10 @@ let dateRange = $derived.by(() => {
             {#if countdown.withinOneDay}
                 {#each [{ label: 'Days', value: countdown.days }, { label: 'Hours', value: countdown.hours }] as unit}
                     <div class="flex flex-col items-center gap-1">
-                        <span class="countdown font-mono text-5xl lg:text-7xl font-bold">
-                            <span style="--value:{unit.value};"></span>
+                        <span class="font-mono text-5xl lg:text-7xl font-bold tabular-nums">
+                            {String(unit.value).padStart(2, '0')}
                         </span>
-                        <span class="text-xs uppercase tracking-widest text-base-content/50">
+                        <span class="text-xs uppercase tracking-widest text-muted-foreground">
                             {unit.label}
                         </span>
                     </div>
@@ -126,10 +127,10 @@ let dateRange = $derived.by(() => {
             {:else}
                 {#each [{ label: 'Years', value: countdown.years }, { label: 'Months', value: countdown.months }, { label: 'Days', value: countdown.days }].filter((u) => u.value > 0 || u.label === 'Days') as unit}
                     <div class="flex flex-col items-center gap-1">
-                        <span class="countdown font-mono text-5xl lg:text-7xl font-bold">
-                            <span style="--value:{unit.value};"></span>
+                        <span class="font-mono text-5xl lg:text-7xl font-bold tabular-nums">
+                            {String(unit.value).padStart(2, '0')}
                         </span>
-                        <span class="text-xs uppercase tracking-widest text-base-content/50">
+                        <span class="text-xs uppercase tracking-widest text-muted-foreground">
                             {unit.label}
                         </span>
                     </div>
@@ -138,29 +139,29 @@ let dateRange = $derived.by(() => {
         </div>
 
         <div class="flex flex-col items-center gap-2">
-            <a href="/register" class="btn btn-primary btn-lg px-10">Register Now</a>
+            <Button href="/register" size="lg" class="px-10">Register Now</Button>
             {#if data.registrantCount > 0}
-                <p class="text-sm text-base-content/50">
+                <p class="text-sm text-muted-foreground">
                     {data.registrantCount}
                     {data.registrantCount === 1 ? 'family' : 'families'} registered
                 </p>
             {/if}
-            <a href="/program" class="link link-hover text-sm text-base-content/50 mt-1">
+            <a href="/program" class="text-sm text-muted-foreground hover:underline mt-1">
                 View full program &rarr;
             </a>
         </div>
     {:else if eventState === 'happening'}
         <div class="text-center">
-            <p class="text-3xl font-bold font-heading text-primary mb-2">It's happening!</p>
-            <p class="text-base-content/60">Enjoy every moment with the family.</p>
+            <p class="text-3xl font-bold text-primary mb-2">It's happening!</p>
+            <p class="text-muted-foreground">Enjoy every moment with the family.</p>
         </div>
     {:else if eventState === 'past'}
         <div class="text-center">
-            <p class="text-2xl font-bold font-heading mb-4">Thanks for an amazing reunion!</p>
-            <a href="/gallery" class="btn btn-primary btn-lg">View Photos</a>
+            <p class="text-2xl font-bold mb-4">Thanks for an amazing reunion!</p>
+            <Button href="/gallery" size="lg">View Photos</Button>
         </div>
     {:else}
-        <p class="text-base-content/50">Stay tuned for the next reunion!</p>
+        <p class="text-muted-foreground">Stay tuned for the next reunion!</p>
     {/if}
 </section>
 
