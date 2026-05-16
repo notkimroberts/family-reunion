@@ -1,7 +1,6 @@
 <script lang="ts">
 import { page } from '$app/state'
-import AppHeader from '$lib/components/AppHeader.svelte'
-import Sidebar from '$lib/components/Sidebar.svelte'
+import { AppHeader, BottomSheet, BottomTabBar, Footer } from '$lib/components'
 
 let { children, data } = $props()
 
@@ -28,22 +27,20 @@ const pageTitles: Record<string, string> = {
 
 let currentTitle = $derived(pageTitles[page.url.pathname] ?? 'Home')
 let isAdmin = $derived(data.user?.role === 'admin')
+let sheetOpen = $state(false)
 </script>
 
-<div class="drawer bg-base-200 lg:drawer-open min-h-screen">
-    <input id="app-drawer" type="checkbox" class="drawer-toggle" />
+<div class="min-h-screen bg-base-200 flex flex-col">
+    <AppHeader title={currentTitle} user={data.user} {isAdmin} />
 
-    <main class="drawer-content">
-        <div class="grid grid-cols-12 grid-rows-[min-content] gap-y-12 p-4 lg:gap-x-12 lg:p-10">
-            <div class="col-span-12">
-                <AppHeader title={currentTitle} user={data.user} />
-            </div>
+    <main class="mx-auto max-w-6xl w-full px-4 py-6 pb-24 md:px-6 md:py-10 md:pb-10 flex-1">
+        <div class="grid grid-cols-12 gap-y-8 md:gap-y-10">
             {@render children()}
         </div>
     </main>
 
-    <aside class="drawer-side z-10">
-        <label for="app-drawer" class="drawer-overlay"></label>
-        <Sidebar {isAdmin} />
-    </aside>
+    <Footer />
+
+    <BottomTabBar onMoreClick={() => (sheetOpen = true)} />
+    <BottomSheet open={sheetOpen} user={data.user} {isAdmin} onClose={() => (sheetOpen = false)} />
 </div>

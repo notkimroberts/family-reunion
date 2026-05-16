@@ -66,7 +66,7 @@ const FIRST_NAMES = [
 ]
 
 const LAST_NAMES = [
-    'Roberts',
+    'Patterson',
     'Johnson',
     'Williams',
     'Davis',
@@ -114,7 +114,7 @@ interface FamilyMember {
 
 function buildFamilyTree(): FamilyMember[] {
     const members: FamilyMember[] = []
-    const familyLastName = 'Roberts'
+    const familyLastName = 'Patterson'
 
     const gen1Couples = [
         { husband: 'James', wife: 'Mary', birthYear: 1940 },
@@ -243,7 +243,7 @@ async function seed() {
         .values([
             {
                 year: 2024,
-                title: 'Roberts Family Reunion 2024',
+                title: 'Patterson Family Reunion 2024',
                 status: 'archived' as const,
                 venue: {
                     name: 'Lakewood Lodge',
@@ -268,7 +268,7 @@ async function seed() {
             },
             {
                 year: 2025,
-                title: 'Roberts Family Reunion 2025',
+                title: 'Patterson Family Reunion 2025',
                 status: 'closed' as const,
                 venue: {
                     name: 'Riverside Park Pavilion',
@@ -293,8 +293,8 @@ async function seed() {
                 ],
             },
             {
-                year: 2026,
-                title: 'Roberts Family Reunion 2026',
+                year: 2027,
+                title: 'Patterson Family Reunion 2027',
                 status: 'open' as const,
                 startDate: new Date('2027-07-23T16:00:00'),
                 endDate: new Date('2027-07-25T12:00:00'),

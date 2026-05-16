@@ -142,3 +142,8 @@ The app is fully responsive with a `md:` (768px) breakpoint separating mobile an
 
 - Ensure to find the latest version of a package before adding it
 - Avoid using deprecated packages or APIs
+
+# LLM
+
+- DaisyUI: https://daisyui.com/llms.txt
+- Svelte & SvelteKit: https://svelte.dev/llms-full.txt

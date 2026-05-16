@@ -1,7 +1,6 @@
 <script lang="ts">
 import { onMount, onDestroy } from 'svelte'
 import { APP_NAME } from '$lib/general/constants'
-import { formatPrice } from '$lib/utils'
 
 let { data } = $props()
 
@@ -37,149 +36,146 @@ let eventState = $derived.by(() => {
 
 let countdown = $derived.by(() => {
     if (!data.event?.startDate || eventState !== 'upcoming') {
-        return { days: 0, hours: 0, minutes: 0, seconds: 0 }
+        return { years: 0, months: 0, days: 0, hours: 0, withinOneDay: false }
     }
-    const diff = new Date(data.event.startDate).getTime() - now
-    const days = Math.floor(diff / (1000 * 60 * 60 * 24))
-    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
-    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
-    const seconds = Math.floor((diff % (1000 * 60)) / 1000)
-    return { days, hours, minutes, seconds }
+
+    const nowDate = new Date(now)
+    const startDate = new Date(data.event.startDate)
+    const nowMidnight = new Date(nowDate.getFullYear(), nowDate.getMonth(), nowDate.getDate())
+    const startMidnight = new Date(
+        startDate.getFullYear(),
+        startDate.getMonth(),
+        startDate.getDate(),
+    )
+    const totalDays = Math.round(
+        (startMidnight.getTime() - nowMidnight.getTime()) / (1000 * 60 * 60 * 24),
+    )
+    const withinOneDay = totalDays <= 1
+
+    if (withinOneDay) {
+        const hours = Math.floor((startDate.getTime() - now) / (1000 * 60 * 60))
+        return { years: 0, months: 0, days: totalDays, hours, withinOneDay: true }
+    }
+
+    let months =
+        (startDate.getFullYear() - nowDate.getFullYear()) * 12 +
+        (startDate.getMonth() - nowDate.getMonth())
+    const dateAfterMonths = new Date(
+        nowDate.getFullYear(),
+        nowDate.getMonth() + months,
+        nowDate.getDate(),
+    )
+    if (dateAfterMonths > startMidnight) {
+        months--
+    }
+    const baseDate = new Date(nowDate.getFullYear(), nowDate.getMonth() + months, nowDate.getDate())
+    const days = Math.round((startMidnight.getTime() - baseDate.getTime()) / (1000 * 60 * 60 * 24))
+    const years = Math.floor(months / 12)
+    const remainingMonths = months % 12
+
+    return { years, months: remainingMonths, days, hours: 0, withinOneDay: false }
+})
+
+let dateRange = $derived.by(() => {
+    if (!data.event?.startDate) {
+        return ''
+    }
+    const start = new Date(data.event.startDate).toLocaleDateString('en-US', {
+        month: 'long',
+        day: 'numeric',
+    })
+    const end = new Date(data.event.endDate ?? data.event.startDate).toLocaleDateString('en-US', {
+        month: 'long',
+        day: 'numeric',
+        year: 'numeric',
+    })
+    return `${start} – ${end}`
 })
 </script>
 
 <svelte:head>
     <title>{APP_NAME} — Home</title>
-    <meta
-        name="description"
-        content="Family reunion management — registration, events, and family tree" />
+    <meta name="description" content="Family reunion — registration, events, and family tree" />
 </svelte:head>
 
-<!-- Hero with background image -->
-<section class="col-span-12 -m-4 lg:-m-10 mb-0 relative overflow-hidden rounded-b-box">
-    <div class="absolute inset-0">
-        <img src="/pfr25.png" alt="" class="w-full h-full object-cover" />
-        <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/50 to-black/30"></div>
-    </div>
-
-    <div class="relative z-10 px-6 py-16 lg:px-16 lg:py-24 text-center text-white">
-        <h1 class="text-4xl lg:text-5xl font-bold font-heading mb-4">
-            {data.event?.title ?? `${APP_NAME} Family Reunion`}
-        </h1>
-
-        {#if eventState === 'upcoming' && data.event?.startDate}
-            <p class="text-lg text-white/80 mb-8">
-                {new Date(data.event.startDate).toLocaleDateString('en-US', {
-                    month: 'long',
-                    day: 'numeric',
-                })} – {new Date(data.event.endDate ?? data.event.startDate).toLocaleDateString(
-                    'en-US',
-                    { month: 'long', day: 'numeric', year: 'numeric' },
-                )}
-            </p>
-
-            <!-- Countdown -->
-            <div class="flex justify-center gap-4 lg:gap-8 mb-10">
-                <div class="flex flex-col items-center">
-                    <span class="text-4xl lg:text-6xl font-bold tabular-nums">
-                        {countdown.days}
-                    </span>
-                    <span class="text-xs lg:text-sm text-white/70 uppercase tracking-wide"
-                        >Days</span>
-                </div>
-                <div class="flex flex-col items-center">
-                    <span class="text-4xl lg:text-6xl font-bold tabular-nums">
-                        {countdown.hours}
-                    </span>
-                    <span class="text-xs lg:text-sm text-white/70 uppercase tracking-wide"
-                        >Hours</span>
-                </div>
-                <div class="flex flex-col items-center">
-                    <span class="text-4xl lg:text-6xl font-bold tabular-nums">
-                        {countdown.minutes}
-                    </span>
-                    <span class="text-xs lg:text-sm text-white/70 uppercase tracking-wide"
-                        >Mins</span>
-                </div>
-                <div class="flex flex-col items-center">
-                    <span class="text-4xl lg:text-6xl font-bold tabular-nums">
-                        {countdown.seconds}
-                    </span>
-                    <span class="text-xs lg:text-sm text-white/70 uppercase tracking-wide"
-                        >Secs</span>
-                </div>
-            </div>
-
-            <a href="/register" class="btn btn-primary btn-lg shadow-lg">Register Now</a>
-            <div class="mt-3">
-                <a href="/program" class="text-sm text-white/70 hover:text-white link-hover">
-                    View full program &rarr;
-                </a>
-            </div>
-        {:else if eventState === 'happening'}
-            <p class="text-2xl lg:text-3xl font-bold text-primary-content mb-4">Happening Now!</p>
-            <p class="text-lg text-white/80">Enjoy every moment with the family.</p>
-        {:else if eventState === 'past'}
-            <p class="text-2xl lg:text-3xl font-bold mb-4">Thanks for an amazing reunion!</p>
-            <a href="/gallery" class="btn btn-primary btn-lg shadow-lg">View Photos</a>
-        {:else}
-            <p class="text-lg text-white/80">Stay tuned for the next reunion!</p>
-        {/if}
-    </div>
+<!-- Title + Dates -->
+<section class="col-span-12 text-center pt-4 pb-2">
+    <h1 class="font-heading text-4xl lg:text-6xl font-bold mb-3">
+        {data.event?.title ?? `${APP_NAME} Family Reunion`}
+    </h1>
+    {#if dateRange && eventState !== 'past'}
+        <p class="text-base-content/60 text-lg">{dateRange}</p>
+    {/if}
 </section>
 
-<!-- Stats + Pricing -->
-{#if data.event && eventState === 'upcoming'}
-    <section
-        class="stats stats-vertical md:stats-horizontal bg-base-100 col-span-12 w-full shadow-xs">
-        <div class="stat">
-            <div class="stat-title">Families Registered</div>
-            <div class="stat-value text-primary">{data.registrantCount}</div>
-            <div class="stat-desc">and counting!</div>
-        </div>
-
-        {#if data.tiers.length > 0}
-            <div class="stat">
-                <div class="stat-title">Pricing</div>
-                <div class="stat-value text-sm font-normal space-y-1">
-                    {#each data.tiers as tier}
-                        <div class="flex justify-between gap-4">
-                            <span class="text-base-content/70">
-                                {tier.label} ({tier.minAge}{tier.maxAge
-                                    ? `–${tier.maxAge}`
-                                    : '+'})</span>
-                            <span class="font-semibold">${formatPrice(tier.priceCents)}</span>
-                        </div>
-                    {/each}
-                </div>
-            </div>
-        {/if}
-    </section>
-{/if}
-
-<!-- Venue Teaser -->
-{#if data.event?.venue && eventState === 'upcoming'}
-    <section class="card bg-base-100 col-span-12 shadow-xs overflow-hidden">
-        <div class="grid grid-cols-1 lg:grid-cols-2">
-            {#if data.event.venue.imageUrl}
-                <figure class="max-lg:h-48 lg:h-full">
-                    <img
-                        src={data.event.venue.imageUrl}
-                        alt={data.event.venue.name}
-                        class="w-full h-full object-cover" />
-                </figure>
+<!-- Countdown + CTA -->
+<section class="col-span-12 flex flex-col items-center gap-8">
+    {#if eventState === 'upcoming'}
+        <div class="flex gap-6 lg:gap-10">
+            {#if countdown.withinOneDay}
+                {#each [{ label: 'Days', value: countdown.days }, { label: 'Hours', value: countdown.hours }] as unit}
+                    <div class="flex flex-col items-center gap-1">
+                        <span class="countdown font-mono text-5xl lg:text-7xl font-bold">
+                            <span style="--value:{unit.value};"></span>
+                        </span>
+                        <span class="text-xs uppercase tracking-widest text-base-content/50">
+                            {unit.label}
+                        </span>
+                    </div>
+                {/each}
+            {:else}
+                {#each [{ label: 'Years', value: countdown.years }, { label: 'Months', value: countdown.months }, { label: 'Days', value: countdown.days }].filter((u) => u.value > 0 || u.label === 'Days') as unit}
+                    <div class="flex flex-col items-center gap-1">
+                        <span class="countdown font-mono text-5xl lg:text-7xl font-bold">
+                            <span style="--value:{unit.value};"></span>
+                        </span>
+                        <span class="text-xs uppercase tracking-widest text-base-content/50">
+                            {unit.label}
+                        </span>
+                    </div>
+                {/each}
             {/if}
-            <div class="card-body">
-                <h2 class="card-title">The Venue</h2>
-                <p class="text-xl font-semibold">{data.event.venue.name}</p>
-                <p class="text-base-content/70">{data.event.venue.address}</p>
-                {#if data.event.venue.description}
-                    <p class="mt-2 text-sm">{data.event.venue.description}</p>
-                {/if}
-                <div class="card-actions mt-4">
-                    <a href="/program" class="btn btn-ghost btn-sm">See full program &rarr;</a>
-                </div>
-            </div>
         </div>
-    </section>
-{/if}
+
+        <div class="flex flex-col items-center gap-2">
+            <a href="/register" class="btn btn-primary btn-lg px-10">Register Now</a>
+            {#if data.registrantCount > 0}
+                <p class="text-sm text-base-content/50">
+                    {data.registrantCount}
+                    {data.registrantCount === 1 ? 'family' : 'families'} registered
+                </p>
+            {/if}
+            <a href="/program" class="link link-hover text-sm text-base-content/50 mt-1">
+                View full program &rarr;
+            </a>
+        </div>
+    {:else if eventState === 'happening'}
+        <div class="text-center">
+            <p class="text-3xl font-bold font-heading text-primary mb-2">It's happening!</p>
+            <p class="text-base-content/60">Enjoy every moment with the family.</p>
+        </div>
+    {:else if eventState === 'past'}
+        <div class="text-center">
+            <p class="text-2xl font-bold font-heading mb-4">Thanks for an amazing reunion!</p>
+            <a href="/gallery" class="btn btn-primary btn-lg">View Photos</a>
+        </div>
+    {:else}
+        <p class="text-base-content/50">Stay tuned for the next reunion!</p>
+    {/if}
+</section>
+
+<!-- Group photo -->
+<section class="col-span-12">
+    <img
+        src="/pfr25.png"
+        alt="Family Reunion"
+        class="w-full rounded-2xl object-cover max-h-[480px]" />
+</section>
+
+<!-- will_and_roxie photo -->
+<section class="col-span-12">
+    <img
+        src="/will_and_roxie_favicon.png"
+        alt="Will and Roxie"
+        class="w-full rounded-2xl object-cover" />
+</section>

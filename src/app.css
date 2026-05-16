@@ -3,12 +3,12 @@
 @plugin '@tailwindcss/typography';
 @plugin 'daisyui' {
     themes:
-        light --default,
-        dark --prefersdark;
+        autumn --default,
+        forest --prefersdark;
 }
 
 @theme {
-    --font-heading: PT Serif, serif;
+    --font-heading: Syne, sans-serif;
     --font-sans: Lato, sans-serif;
 }
 
@@ -20,7 +20,7 @@
   If we ever want to remove these styles, we need to add an explicit border
   color utility to any element that depends on these defaults.
 */
-@layer base {
+/* @layer base {
     *,
     ::after,
     ::before,
@@ -28,7 +28,7 @@
     ::file-selector-button {
         border-color: var(--color-gray-200, currentcolor);
     }
-}
+} */
 
 @layer base {
     html {
@@ -58,19 +58,6 @@
         }
     }
 
-    body::before {
-        content: '';
-        position: fixed;
-        inset: 0;
-        pointer-events: none;
-        z-index: 9999;
-        opacity: 0.03;
-    }
-
-    [data-theme='dark'] body::before {
-        opacity: 0.02;
-    }
-
     h1,
     h2,
     h3,
@@ -78,7 +65,7 @@
     h5,
     h6,
     .font-heading {
-        font-family: 'PT Serif', serif;
+        font-family: 'Syne', sans-serif;
     }
 
     h1 {
