@@ -1,5 +1,5 @@
 <script lang="ts">
-import { ChevronDown, ClipboardPen } from '@lucide/svelte'
+import { ChevronDown, ClipboardPen, Menu } from '@lucide/svelte'
 import { page } from '$app/state'
 import { authClient } from '$lib/auth-client'
 import { Avatar, AvatarFallback } from '$lib/components/ui/avatar'
@@ -19,14 +19,14 @@ import {
 } from '$lib/general/constants'
 import { theme } from '$lib/stores/theme'
 import { getInitials } from '$lib/utils'
+import MobileDrawer from './MobileDrawer.svelte'
 
 type Props = {
-    title: string
     user: { name: string | null; role?: string | null } | null
     isAdmin: boolean
 }
 
-let { title, user, isAdmin }: Props = $props()
+let { user, isAdmin }: Props = $props()
 
 function isActive(href: string): boolean {
     if (href === '/') {
@@ -43,6 +43,7 @@ function handleSignOut() {
 
 let familyActive = $derived(primaryNavLinks.some((l) => isActive(l.href)))
 let reunionActive = $derived(secondaryNavLinks.some((l) => isActive(l.href)))
+let mobileMenuOpen = $state(false)
 </script>
 
 <header class="sticky top-0 z-30 bg-background/90 backdrop-blur-md border-b">
@@ -129,42 +130,22 @@ let reunionActive = $derived(secondaryNavLinks.some((l) => isActive(l.href)))
         </nav>
     </div>
 
-    <!-- Mobile: logo left, title center, avatar right -->
-    <div class="flex md:hidden items-center h-16 px-4 gap-2">
-        <a href="/" class="shrink-0">
+    <!-- Mobile: logo left, hamburger right -->
+    <div class="flex md:hidden items-center h-16 px-4 justify-between">
+        <a href="/" class="flex items-center gap-2.5 shrink-0">
             <img
                 src="/will_and_roxie_favicon_64.png"
                 alt={APP_NAME}
                 class="w-9 h-9 rounded-full object-cover" />
+            <span class="text-sm font-semibold text-foreground/80">{APP_NAME}</span>
         </a>
-        <span class="flex-1 text-center text-sm font-medium text-muted-foreground truncate px-2">
-            {title}
-        </span>
-        {#if user}
-            <DropdownMenu>
-                <DropdownMenuTrigger>
-                    <Avatar class="w-9 h-9 cursor-pointer shrink-0">
-                        <AvatarFallback
-                            class="bg-primary text-primary-foreground text-sm font-bold">
-                            {getInitials(user.name ?? '?')}
-                        </AvatarFallback>
-                    </Avatar>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" class="w-52">
-                    <DropdownMenuItem
-                        ><a href="/profile" class="w-full">Profile</a></DropdownMenuItem>
-                    {#if isAdmin}
-                        <DropdownMenuItem
-                            ><a href="/admin" class="w-full">Admin</a></DropdownMenuItem>
-                    {/if}
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onclick={() => theme.toggle()}>
-                        {$theme === LIGHT_THEME ? 'Switch to Dark' : 'Switch to Light'}
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onclick={handleSignOut}>Sign Out</DropdownMenuItem>
-                </DropdownMenuContent>
-            </DropdownMenu>
-        {/if}
+        <button
+            onclick={() => (mobileMenuOpen = true)}
+            aria-label="Open menu"
+            class="p-2 rounded-lg hover:bg-muted transition-colors">
+            <Menu class="h-5 w-5" />
+        </button>
     </div>
 </header>
+
+<MobileDrawer open={mobileMenuOpen} {user} {isAdmin} onClose={() => (mobileMenuOpen = false)} />
