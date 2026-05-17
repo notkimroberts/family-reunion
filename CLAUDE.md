@@ -18,9 +18,20 @@ bun run db:seed          # Seed database with test data (idempotent)
 bun run db:studio        # Drizzle Studio GUI
 ```
 
-When schema changes cause interactive prompts in `db:generate` (rename vs create), clear the `drizzle/` directory and regenerate fresh — this is a dev-only database.
+### Migration rules
 
-For a clean database reset: `dropdb family_reunion && createdb family_reunion && bun db:migrate && bun db:seed`
+**Never delete or modify existing migration files.** Drizzle tracks applied migrations by file hash; removing or regenerating a file breaks production deploys. Always add new migrations on top of existing ones.
+
+Schema changes must follow this sequence:
+
+1. Edit `src/lib/server/db/schema.ts`
+2. Run `bun run db:generate` — Drizzle diffs the latest snapshot against the schema and produces a new `NNNN_*.sql` file
+3. If the generated SQL would drop data (e.g. dropping a column with existing data, changing a column type), **edit the migration file** to add the safe sequence: add the new column → backfill data → set constraints → drop the old column
+4. Run `bun run db:migrate` locally, then commit both the schema change and the new migration files together
+
+**Do not use `db:push`** in any environment where data must be preserved — it bypasses the migration tracker.
+
+For a clean local database reset (dev only): `dropdb family_reunion && createdb family_reunion && bun run db:migrate && bun run db:seed`
 
 ## Architecture
 
@@ -30,7 +41,7 @@ SvelteKit full-stack app (Svelte 5 with runes). Node adapter for Railway deploym
 
 - **PostgreSQL** via `postgres` driver + **Drizzle ORM** (schema at `src/lib/server/db/schema.ts`)
 - DB connection uses lazy init with SvelteKit's `$env/dynamic/private` — standalone scripts (like seed.ts) must create their own `postgres()` client directly
-- All person records store `birthYear` (required or nullable depending on table) + optional `birthMonth`/`birthDay`; age is always derived via `getAge()` from `$lib/utils/age`
+- All person records store a single `birthDate` (`date` column, ISO string `YYYY-MM-DD`); age is always derived via `getAgeFromDate()` from `$lib/utils/age`
 
 ### Auth
 
@@ -43,12 +54,12 @@ SvelteKit full-stack app (Svelte 5 with runes). Node adapter for Railway deploym
 
 Two-step flow made visually explicit to users:
 
-1. **Step 1** — SSO account creation/sign-in (`/signup` or `/login`)
+1. **Step 1** — SSO account creation/sign-in (`/login`)
 2. **Step 2** — Event registration (`/register`)
 
 Route groups:
 
-- `(auth)` — `/login` only, no nav, full-screen card layout with step indicator. All SSO providers use `callbackURL: '/'`
+- `(auth)` — `/login` only, no nav, full-screen card layout with step indicator. All SSO providers use `callbackURL: '/register'` so new and returning users land directly on event registration after sign-in
 - `(app)` — all authenticated routes including `/register`
 
 ### Forms
@@ -98,9 +109,8 @@ Route groups:
 ### Mobile Navigation
 
 - Top navbar is **hidden on mobile** (`hidden md:flex`) — only shown on desktop
-- **Bottom tab bar** (`BottomTabBar.svelte`) is fixed at the bottom on mobile with 4 tabs (Home, Gallery, Tree, Members) + Menu
-- **Bottom sheet** (`BottomSheet.svelte`) opens from the Menu tab with: Program, Shop, Contact, Register, theme toggle, user account
-- Main content has `pb-16 md:pb-0` to clear the bottom bar on mobile
+- **Side drawer** (`MobileDrawer.svelte`) slides in from the left on mobile, triggered by a hamburger button in `AppHeader`. Contains: app logo/name, Family links, Reunion links, Register CTA, theme toggle, profile/admin/sign-out
+- Main content has no bottom-bar clearance (bottom tab bar was removed)
 
 ### Versioning
 
@@ -124,9 +134,8 @@ The app is fully responsive with a `md:` (768px) breakpoint separating mobile an
 - **Grid layouts must include a mobile breakpoint**: use `grid-cols-1 md:grid-cols-N`, never bare `grid-cols-2` or higher
 - **Data tables need a mobile card view**: show `md:hidden` stacked cards + `hidden md:block` table. Each card should display the key info (name/title + 1-2 secondary details) without horizontal scrolling
 - **Tap targets**: `app.css` enforces 44px min-height on interactive elements below `md:`. Don't override this on mobile
-- **Safe area insets**: handled globally in `app.css` on `html` + bottom bar uses `pb-[env(safe-area-inset-bottom)]`
+- **Safe area insets**: handled globally in `app.css` on `html`
 - **Family tree**: shows a list view on mobile (`md:hidden`), chart on desktop (`hidden md:block`)
-- **Bottom bar clearance**: any page with fixed-bottom elements must account for the tab bar height (4rem / `pb-16`)
 - **Test mobile layouts**: when adding new pages or changing layouts, verify at 375px width (iPhone SE) in dev tools
 
 # Code style
@@ -154,7 +163,7 @@ The app is fully responsive with a `md:` (768px) breakpoint separating mobile an
 
 - **Utilities** (`$lib/utils`): `formatPrice`, `getAge`, `getInitials` — import from barrel `$lib/utils`
 - **Constants** (`$lib/general/constants`): `APP_NAME`, `THEMES`, `EVENT_STATUSES`, `navigation` — import from barrel `$lib/general/constants`
-- **Components** (`$lib/components`): `BottomSheet`, `BottomTabBar`, `Divider`, `PageTitle`, `ThemeToggle` — import from barrel `$lib/components`
+- **Components** (`$lib/components`): `AppHeader`, `MobileDrawer`, `DatePicker`, `Footer`, `Divider`, `PageTitle`, `ThemeToggle` — import from barrel `$lib/components`
 - **shadcn-svelte UI components** (`$lib/components/ui/`): `Button`, `Badge`, `Card`, `Input`, `Textarea`, `Select`, `Table`, `Alert`, `Avatar`, `Separator`, `Dialog`, `DropdownMenu`, `Sheet`, `Tooltip`, `Breadcrumb`, `Pagination`, `Calendar`, `Sonner`, `Field` — import directly from the component path
 - Use `@lucide/svelte` for all icons (not inline SVGs or unplugin-icons): `import { Home } from '@lucide/svelte'`
 - Price formatting always uses `formatPrice(cents)` from `$lib/utils`, never inline `(x / 100).toFixed(2)`

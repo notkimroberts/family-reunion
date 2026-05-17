@@ -40,7 +40,9 @@ CREATE TABLE "party_members" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"registration_id" uuid NOT NULL,
 	"name" text NOT NULL,
-	"birth_date" date NOT NULL,
+	"birth_year" integer NOT NULL,
+	"birth_month" integer,
+	"birth_day" integer,
 	"pricing_tier_id" uuid NOT NULL,
 	"created_at" timestamp DEFAULT now() NOT NULL
 );
@@ -141,7 +143,6 @@ CREATE TABLE "user" (
 CREATE TABLE "user_profiles" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"user_id" text NOT NULL,
-	"birth_date" date,
 	"phone" text,
 	"mailing_address" jsonb,
 	"profile_photo_url" text,

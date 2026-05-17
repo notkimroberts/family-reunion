@@ -1,6 +1,6 @@
 {
-  "id": "659ff474-cc14-4d1b-a6b0-4ef633b1f79e",
-  "prevId": "00000000-0000-0000-0000-000000000000",
+  "id": "4c5ec4f5-f0cc-46ce-b89d-3f4ebc5f072b",
+  "prevId": "7f6f8373-b68e-4f38-82a4-aa49cb78b89e",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -243,23 +243,11 @@
           "primaryKey": false,
           "notNull": true
         },
-        "birth_year": {
-          "name": "birth_year",
-          "type": "integer",
+        "birth_date": {
+          "name": "birth_date",
+          "type": "date",
           "primaryKey": false,
           "notNull": true
-        },
-        "birth_month": {
-          "name": "birth_month",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "birth_day": {
-          "name": "birth_day",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false
         },
         "pricing_tier_id": {
           "name": "pricing_tier_id",
@@ -957,6 +945,12 @@
           "type": "text",
           "primaryKey": false,
           "notNull": true
+        },
+        "birth_date": {
+          "name": "birth_date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
         },
         "phone": {
           "name": "phone",
