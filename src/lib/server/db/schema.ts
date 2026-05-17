@@ -7,6 +7,7 @@ import {
     integer,
     jsonb,
     pgEnum,
+    date,
 } from 'drizzle-orm/pg-core'
 
 export const eventStatusEnum = pgEnum('event_status', ['draft', 'open', 'closed', 'archived'])
@@ -83,6 +84,7 @@ export const verification = pgTable('verification', {
 export const userProfiles = pgTable('user_profiles', {
     id: uuid('id').primaryKey().defaultRandom(),
     userId: text('user_id').notNull().unique(),
+    birthDate: date('birth_date'),
     phone: text('phone'),
     mailingAddress: jsonb('mailing_address').$type<{
         street: string
@@ -152,9 +154,7 @@ export const partyMembers = pgTable('party_members', {
         .notNull()
         .references(() => registrations.id),
     name: text('name').notNull(),
-    birthYear: integer('birth_year').notNull(),
-    birthMonth: integer('birth_month'),
-    birthDay: integer('birth_day'),
+    birthDate: date('birth_date').notNull(),
     pricingTierId: uuid('pricing_tier_id')
         .notNull()
         .references(() => pricingTiers.id),

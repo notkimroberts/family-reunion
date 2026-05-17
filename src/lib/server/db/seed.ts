@@ -494,15 +494,14 @@ async function seed() {
             let totalCents = 0
             const partyData: {
                 name: string
-                birthYear: number
-                birthMonth: number
-                birthDay: number
+                birthDate: string
                 tierId: string
             }[] = []
             for (let p = 0; p < numParty; p++) {
                 const birthYear = new Date().getFullYear() - randInt(2, 70)
                 const birthMonth = randInt(1, 12)
                 const birthDay = randInt(1, 28)
+                const birthDate = `${birthYear}-${String(birthMonth).padStart(2, '0')}-${String(birthDay).padStart(2, '0')}`
                 const age = new Date().getFullYear() - birthYear
                 const tier = eventTiers.find(
                     (t) => age >= t.minAge && (t.maxAge === null || age <= t.maxAge),
@@ -510,9 +509,7 @@ async function seed() {
                 totalCents += tier.priceCents
                 partyData.push({
                     name: `${pick(FIRST_NAMES)} ${familyValues[r % familyValues.length].name.split(' ').pop()}`,
-                    birthYear,
-                    birthMonth,
-                    birthDay,
+                    birthDate,
                     tierId: tier.id,
                 })
             }
@@ -533,9 +530,7 @@ async function seed() {
                 partyData.map((p) => ({
                     registrationId: reg.id,
                     name: p.name,
-                    birthYear: p.birthYear,
-                    birthMonth: p.birthMonth,
-                    birthDay: p.birthDay,
+                    birthDate: p.birthDate,
                     pricingTierId: p.tierId,
                 })),
             )

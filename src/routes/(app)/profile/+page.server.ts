@@ -38,6 +38,7 @@ export const actions: Actions = {
     update_profile: async (event) => {
         const user = requireAuth(event)
         const data = await event.request.formData()
+        const birthDate = (data.get('birthDate') as string) || null
         const phone = data.get('phone') as string
         const street = data.get('street') as string
         const city = data.get('city') as string
@@ -56,6 +57,7 @@ export const actions: Actions = {
             await db
                 .update(userProfiles)
                 .set({
+                    birthDate,
                     phone: phone || null,
                     mailingAddress: { street, city, state, zip },
                     updatedAt: new Date(),
@@ -64,6 +66,7 @@ export const actions: Actions = {
         } else {
             await db.insert(userProfiles).values({
                 userId: user.id,
+                birthDate,
                 phone: phone || null,
                 mailingAddress: { street, city, state, zip },
             })

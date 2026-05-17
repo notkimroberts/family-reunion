@@ -11,7 +11,7 @@ import {
     TableRow,
 } from '$lib/components/ui/table'
 import { formatPrice } from '$lib/utils'
-import { getAge } from '$lib/utils/age'
+import { getAgeFromDate } from '$lib/utils/age'
 
 let { data } = $props()
 </script>
@@ -42,7 +42,7 @@ let { data } = $props()
                             <TableRow>
                                 <TableCell>{member.name}</TableCell>
                                 <TableCell>
-                                    {getAge(member.birthYear, member.birthMonth, member.birthDay)}
+                                    {getAgeFromDate(member.birthDate)}
                                 </TableCell>
                                 <TableCell>{member.tierLabel}</TableCell>
                                 <TableCell>${formatPrice(member.priceCents)}</TableCell>

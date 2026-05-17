@@ -1,4 +1,5 @@
 export { default as AppHeader } from './AppHeader.svelte'
+export { default as DatePicker } from './DatePicker.svelte'
 export { default as Divider } from './Divider.svelte'
 export { default as Footer } from './Footer.svelte'
 export { default as MobileDrawer } from './MobileDrawer.svelte'

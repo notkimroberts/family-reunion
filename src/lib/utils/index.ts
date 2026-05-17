@@ -1,4 +1,4 @@
-export { getAge } from './age'
+export { getAge, getAgeFromDate } from './age'
 export { getInitials } from './initials'
 export { formatPrice } from './price'
 export {

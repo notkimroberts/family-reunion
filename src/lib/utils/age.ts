@@ -23,3 +23,14 @@ export function getAge(
 
     return age
 }
+
+export function getAgeFromDate(birthDate: string | Date): number {
+    const date = typeof birthDate === 'string' ? new Date(birthDate + 'T00:00:00') : birthDate
+    const now = new Date()
+    let age = now.getFullYear() - date.getFullYear()
+    const m = now.getMonth() - date.getMonth()
+    if (m < 0 || (m === 0 && now.getDate() < date.getDate())) {
+        age--
+    }
+    return age
+}

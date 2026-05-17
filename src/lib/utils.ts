@@ -1,4 +1,4 @@
-export { getAge } from './utils/age'
+export { getAge, getAgeFromDate } from './utils/age'
 export { getInitials } from './utils/initials'
 export { formatPrice } from './utils/price'
 export {

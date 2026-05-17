@@ -6,8 +6,15 @@ import { superValidate } from 'sveltekit-superforms/server'
 import { env } from '$env/dynamic/private'
 import { requireAuth } from '$lib/server/auth/guards'
 import { db } from '$lib/server/db'
-import { reunionEvents, pricingTiers, registrations, partyMembers } from '$lib/server/db/schema'
+import {
+    reunionEvents,
+    pricingTiers,
+    registrations,
+    partyMembers,
+    userProfiles,
+} from '$lib/server/db/schema'
 import { dbg } from '$lib/server/debug'
+import { getAgeFromDate } from '$lib/utils/age'
 import type { PageServerLoad, Actions } from './$types'
 import { registrationSchema } from './schema'
 
@@ -25,10 +32,17 @@ export const load: PageServerLoad = async (event) => {
             ? await db.select().from(pricingTiers).where(eq(pricingTiers.eventId, openEvents[0].id))
             : []
 
+    const [profile] = await db
+        .select()
+        .from(userProfiles)
+        .where(eq(userProfiles.userId, user.id))
+        .limit(1)
+
     const form = await superValidate(zod(registrationSchema))
 
     return {
         user,
+        profile: profile ?? null,
         events: openEvents,
         tiers,
         form,
@@ -44,32 +58,65 @@ export const actions: Actions = {
             return fail(400, { form })
         }
 
-        const { eventId, members: membersJson } = form.data
+        const { eventId, selfBirthDate, members: membersJson } = form.data
 
-        const members: {
-            name: string
-            birthYear: number
-            birthMonth: number | null
-            birthDay: number | null
-            tierId: string
-        }[] = JSON.parse(membersJson)
+        const additionalMembers: { name: string; birthDate: string; tierId: string }[] =
+            JSON.parse(membersJson)
 
-        if (members.length === 0) {
+        const tiers = await db.select().from(pricingTiers).where(eq(pricingTiers.eventId, eventId))
+        const tierMap = new Map(tiers.map((t) => [t.id, t]))
+
+        function getTierForBirthDate(birthDate: string) {
+            const age = getAgeFromDate(birthDate)
+            return tiers.find((t) => age >= t.minAge && (t.maxAge === null || age <= t.maxAge))
+        }
+
+        const selfTier = getTierForBirthDate(selfBirthDate)
+        if (!selfTier) {
             return fail(400, { form })
         }
 
-        dbg.register('user=%s eventId=%s members=%d', user.id, eventId, members.length)
+        for (const m of additionalMembers) {
+            if (!tierMap.has(m.tierId)) return fail(400, { form })
+        }
 
-        const tiers = await db.select().from(pricingTiers).where(eq(pricingTiers.eventId, eventId))
+        dbg.register(
+            'user=%s eventId=%s members=%d',
+            user.id,
+            eventId,
+            additionalMembers.length + 1,
+        )
 
-        const tierMap = new Map(tiers.map((t) => [t.id, t]))
+        // Upsert profile birthday
+        const [existingProfile] = await db
+            .select()
+            .from(userProfiles)
+            .where(eq(userProfiles.userId, user.id))
+            .limit(1)
 
-        let totalCents = 0
-        const lineItems: NonNullable<Stripe.Checkout.SessionCreateParams['line_items']> = []
+        if (existingProfile) {
+            await db
+                .update(userProfiles)
+                .set({ birthDate: selfBirthDate, updatedAt: new Date() })
+                .where(eq(userProfiles.userId, user.id))
+        } else {
+            await db.insert(userProfiles).values({ userId: user.id, birthDate: selfBirthDate })
+        }
 
-        for (const member of members) {
-            const tier = tierMap.get(member.tierId)
-            if (!tier) return fail(400, { form })
+        let totalCents = selfTier.priceCents
+        const lineItems: NonNullable<Stripe.Checkout.SessionCreateParams['line_items']> = [
+            {
+                price_data: {
+                    currency: 'usd',
+                    product_data: { name: `${user.name} (${selfTier.label})` },
+                    unit_amount: selfTier.priceCents,
+                },
+                quantity: 1,
+            },
+        ]
+
+        for (const member of additionalMembers) {
+            const tier = tierMap.get(member.tierId)!
             totalCents += tier.priceCents
             lineItems.push({
                 price_data: {
@@ -85,24 +132,23 @@ export const actions: Actions = {
 
         const [registration] = await db
             .insert(registrations)
-            .values({
-                userId: user.id,
-                eventId,
-                totalAmountCents: totalCents,
-                status: 'pending',
-            })
+            .values({ userId: user.id, eventId, totalAmountCents: totalCents, status: 'pending' })
             .returning()
 
-        await db.insert(partyMembers).values(
-            members.map((m) => ({
+        await db.insert(partyMembers).values([
+            {
+                registrationId: registration.id,
+                name: user.name,
+                birthDate: selfBirthDate,
+                pricingTierId: selfTier.id,
+            },
+            ...additionalMembers.map((m) => ({
                 registrationId: registration.id,
                 name: m.name,
-                birthYear: m.birthYear,
-                birthMonth: m.birthMonth,
-                birthDay: m.birthDay,
+                birthDate: m.birthDate,
                 pricingTierId: m.tierId,
             })),
-        )
+        ])
 
         dbg.register('registration created id=%s, creating stripe session', registration.id)
 
@@ -112,9 +158,7 @@ export const actions: Actions = {
             mode: 'payment',
             success_url: `${event.url.origin}/register/confirmation?registration_id=${registration.id}`,
             cancel_url: `${event.url.origin}/register`,
-            metadata: {
-                registrationId: registration.id,
-            },
+            metadata: { registrationId: registration.id },
         })
 
         await db

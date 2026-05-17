@@ -5,7 +5,7 @@ import { db } from '$lib/server/db'
 import { registrations, reunionEvents, partyMembers } from '$lib/server/db/schema'
 import { dbg } from '$lib/server/debug'
 import { sendRegistrationConfirmation } from '$lib/server/email'
-import { getAge } from '$lib/utils/age'
+import { getAgeFromDate } from '$lib/utils/age'
 import type { RequestHandler } from './$types'
 
 function getStripe() {
@@ -66,8 +66,7 @@ export const POST: RequestHandler = async ({ request }) => {
                         name: session.customer_details?.name ?? 'Family Member',
                         eventTitle: reunionEvent.title,
                         partyMembers: members.map(
-                            (m) =>
-                                `${m.name} (age ${getAge(m.birthYear, m.birthMonth, m.birthDay)})`,
+                            (m) => `${m.name} (age ${getAgeFromDate(m.birthDate)})`,
                         ),
                         totalAmount: `$${(registration.totalAmountCents / 100).toFixed(2)}`,
                     })

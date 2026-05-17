@@ -6,15 +6,15 @@ import { Card, CardContent } from '$lib/components/ui/card'
 import { APP_NAME } from '$lib/general/constants'
 
 function signInWithGoogle() {
-    authClient.signIn.social({ provider: 'google', callbackURL: '/' })
+    authClient.signIn.social({ provider: 'google', callbackURL: '/register' })
 }
 
 function signInWithApple() {
-    authClient.signIn.social({ provider: 'apple', callbackURL: '/' })
+    authClient.signIn.social({ provider: 'apple', callbackURL: '/register' })
 }
 
 function signInWithFacebook() {
-    authClient.signIn.social({ provider: 'facebook', callbackURL: '/' })
+    authClient.signIn.social({ provider: 'facebook', callbackURL: '/register' })
 }
 </script>
 
