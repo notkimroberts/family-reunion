@@ -5,47 +5,59 @@ import { Card, CardContent } from '$lib/components/ui/card'
 import { APP_NAME } from '$lib/general/constants'
 
 function signInWithGoogle() {
-    authClient.signIn.social({ provider: 'google', callbackURL: '/' })
+    authClient.signIn.social({ provider: 'google', callbackURL: '/register' })
 }
 
 function signInWithApple() {
-    authClient.signIn.social({ provider: 'apple', callbackURL: '/' })
+    authClient.signIn.social({ provider: 'apple', callbackURL: '/register' })
 }
 
 function signInWithFacebook() {
-    authClient.signIn.social({ provider: 'facebook', callbackURL: '/' })
+    authClient.signIn.social({ provider: 'facebook', callbackURL: '/register' })
 }
 </script>
 
 <svelte:head>
-    <title>Sign In — {APP_NAME}</title>
+    <title>Create Account — {APP_NAME}</title>
 </svelte:head>
 
 <div class="flex min-h-[calc(100vh-4rem)] items-center justify-center p-4">
     <div class="w-full max-w-sm lg:max-w-4xl">
-        <div class="flex items-center justify-center gap-2 p-8">
-            <h1 class="text-lg font-semibold">Sign in to {APP_NAME}</h1>
-        </div>
-
         <Card class="overflow-hidden shadow-xl">
             <CardContent class="p-0">
                 <div class="grid lg:grid-cols-2">
                     <figure class="bg-muted pointer-events-none max-lg:hidden">
                         <img
-                            src="/pfr25.png"
-                            alt="Family reunion"
+                            src="/will_and_roxie_favicon.png"
+                            alt="Will and Roxie"
                             class="h-full w-full object-cover" />
                     </figure>
 
-                    <div class="flex flex-col justify-center gap-4 px-10 py-12 lg:px-16">
-                        <h2 class="text-2xl font-bold text-center mb-2">Welcome Back</h2>
-                        <p class="text-center text-muted-foreground mb-4">
-                            Sign in to manage your reunion registration
-                        </p>
+                    <div class="flex flex-col justify-center gap-6 px-10 py-12 lg:px-16">
+                        <div class="flex items-center gap-2 text-sm">
+                            <span
+                                class="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-xs font-medium text-primary-foreground">
+                                1
+                            </span>
+                            <span class="font-medium">Create account</span>
+                            <span class="text-muted-foreground">→</span>
+                            <span
+                                class="flex h-6 w-6 items-center justify-center rounded-full bg-muted text-xs font-medium text-muted-foreground">
+                                2
+                            </span>
+                            <span class="text-muted-foreground">Register for event</span>
+                        </div>
+
+                        <div>
+                            <h1 class="text-2xl font-bold">Create your account</h1>
+                            <p class="mt-1 text-sm text-muted-foreground">
+                                Once signed in, you'll complete your event registration.
+                            </p>
+                        </div>
 
                         <div class="flex flex-col gap-3">
                             <Button variant="outline" class="gap-2" onclick={signInWithGoogle}>
-                                <svg class="w-5 h-5" viewBox="0 0 24 24">
+                                <svg class="h-5 w-5" viewBox="0 0 24 24">
                                     <path
                                         fill="#4285F4"
                                         d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
@@ -63,7 +75,7 @@ function signInWithFacebook() {
                             </Button>
 
                             <Button variant="outline" class="gap-2" onclick={signInWithApple}>
-                                <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+                                <svg class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
                                     <path
                                         d="M17.05 20.28c-.98.95-2.05.88-3.08.4-1.09-.5-2.08-.48-3.24 0-1.44.62-2.2.44-3.06-.4C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z" />
                                 </svg>
@@ -71,7 +83,7 @@ function signInWithFacebook() {
                             </Button>
 
                             <Button variant="outline" class="gap-2" onclick={signInWithFacebook}>
-                                <svg class="w-5 h-5" viewBox="0 0 24 24" fill="#1877F2">
+                                <svg class="h-5 w-5" viewBox="0 0 24 24" fill="#1877F2">
                                     <path
                                         d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
                                 </svg>
@@ -79,13 +91,12 @@ function signInWithFacebook() {
                             </Button>
                         </div>
 
-                        <div class="flex justify-center mt-4">
-                            <a
-                                class="text-sm text-muted-foreground hover:text-foreground hover:underline"
-                                href="/welcome">
-                                Back to home
+                        <p class="text-center text-sm text-muted-foreground">
+                            Already have an account?
+                            <a href="/login" class="text-foreground underline underline-offset-4">
+                                Sign in
                             </a>
-                        </div>
+                        </p>
                     </div>
                 </div>
             </CardContent>

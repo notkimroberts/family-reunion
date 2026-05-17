@@ -1,12 +1,15 @@
 import { redirect, fail } from '@sveltejs/kit'
 import { eq } from 'drizzle-orm'
 import Stripe from 'stripe'
+import { zod4 as zod } from 'sveltekit-superforms/adapters'
+import { superValidate } from 'sveltekit-superforms/server'
 import { env } from '$env/dynamic/private'
 import { requireAuth } from '$lib/server/auth/guards'
 import { db } from '$lib/server/db'
 import { reunionEvents, pricingTiers, registrations, partyMembers } from '$lib/server/db/schema'
 import { dbg } from '$lib/server/debug'
 import type { PageServerLoad, Actions } from './$types'
+import { registrationSchema } from './schema'
 
 function getStripe() {
     return new Stripe(env.STRIPE_SECRET_KEY!)
@@ -22,25 +25,26 @@ export const load: PageServerLoad = async (event) => {
             ? await db.select().from(pricingTiers).where(eq(pricingTiers.eventId, openEvents[0].id))
             : []
 
+    const form = await superValidate(zod(registrationSchema))
+
     return {
         user,
         events: openEvents,
         tiers,
+        form,
     }
 }
 
 export const actions: Actions = {
     default: async (event) => {
         const user = requireAuth(event)
-        const data = await event.request.formData()
+        const form = await superValidate(event.request, zod(registrationSchema))
 
-        const eventId = data.get('eventId') as string
-        const membersJson = data.get('members') as string
-
-        if (!eventId || !membersJson) {
-            dbg.register('missing required fields')
-            return fail(400, { error: 'Missing required fields' })
+        if (!form.valid) {
+            return fail(400, { form })
         }
+
+        const { eventId, members: membersJson } = form.data
 
         const members: {
             name: string
@@ -51,7 +55,7 @@ export const actions: Actions = {
         }[] = JSON.parse(membersJson)
 
         if (members.length === 0) {
-            return fail(400, { error: 'Add at least one party member' })
+            return fail(400, { form })
         }
 
         dbg.register('user=%s eventId=%s members=%d', user.id, eventId, members.length)
@@ -65,7 +69,7 @@ export const actions: Actions = {
 
         for (const member of members) {
             const tier = tierMap.get(member.tierId)
-            if (!tier) return fail(400, { error: 'Invalid pricing tier' })
+            if (!tier) return fail(400, { form })
             totalCents += tier.priceCents
             lineItems.push({
                 price_data: {

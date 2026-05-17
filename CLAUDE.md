@@ -39,6 +39,29 @@ SvelteKit full-stack app (Svelte 5 with runes). Node adapter for Railway deploym
 - Guards: `requireAuth()` and `requireAdmin()` in `$lib/server/auth/guards.ts`
 - Better Auth manages its own tables (`user`, `session`, `account`) — separate from the app's `user_profiles` table
 
+### Sign-up & Registration Flow
+
+Two-step flow made visually explicit to users:
+
+1. **Step 1** — SSO account creation/sign-in (`/signup` or `/login`)
+2. **Step 2** — Event registration (`/register`)
+
+Route groups:
+
+- `(auth)` — `/signup` and `/login`, no nav, full-screen card layout with step indicator. Sign-up uses `callbackURL: '/register'`; login uses `callbackURL: '/'`
+- `(public)` — `/welcome` only, has app nav
+- `(app)` — all authenticated routes including `/register`
+
+### Forms
+
+- **sveltekit-superforms** + **zod** for server-validated forms. Always use the zod v4 adapters:
+  - Server: `import { superValidate } from 'sveltekit-superforms/server'` and `import { zod4 as zod } from 'sveltekit-superforms/adapters'`
+  - Client: `import { superForm } from 'sveltekit-superforms'` and `import { zod4Client as zodClient } from 'sveltekit-superforms/adapters'`
+  - Never import `superValidate` from the `sveltekit-superforms` barrel on the server — it re-exports `SuperDebug.svelte` which breaks SSR
+- **shadcn-svelte field components** (`$lib/components/ui/field/`) for form field structure: `Field.Group`, `Field.Field`, `Field.Label`, `Field.Error`, `Field.Description`
+- **bits-ui Select** has a `string | string[]` union for `value` — avoid `bind:value` on a `string` variable; use a native `<select>` styled with Tailwind or use `onValueChange` without bind
+- Define zod schemas in a co-located `schema.ts` file next to the route
+
 ### Payments
 
 - **Stripe Checkout** for event registration. Webhook at `/api/webhooks/stripe` handles `checkout.session.completed`
@@ -125,7 +148,7 @@ The app is fully responsive with a `md:` (768px) breakpoint separating mobile an
 - Each file should have line break at the end
 - Try to limit components and modules up to 200 lines and split in to different components to manage complexity
 - Typescript files should be camelCase e.g. myService.ts
-- `if` statements and `for` loops should always use brackets; no inline return statements
+- `if` statements and `for` loops should always use brackets; no inline `return` statements
 - Prefer to put functions, constants, and types into individual files; exported through an index.ts barrel file. Be mindful of circular dependency issues and importing server code onto the client!
 
 ## File organization
@@ -133,7 +156,7 @@ The app is fully responsive with a `md:` (768px) breakpoint separating mobile an
 - **Utilities** (`$lib/utils`): `formatPrice`, `getAge`, `getInitials` — import from barrel `$lib/utils`
 - **Constants** (`$lib/general/constants`): `APP_NAME`, `THEMES`, `EVENT_STATUSES`, `navigation` — import from barrel `$lib/general/constants`
 - **Components** (`$lib/components`): `BottomSheet`, `BottomTabBar`, `Divider`, `PageTitle`, `ThemeToggle` — import from barrel `$lib/components`
-- **shadcn-svelte UI components** (`$lib/components/ui/`): `Button`, `Badge`, `Card`, `Input`, `Textarea`, `Select`, `Table`, `Alert`, `Avatar`, `Separator`, `Dialog`, `DropdownMenu`, `Sheet`, `Tooltip`, `Breadcrumb`, `Pagination`, `Calendar`, `Sonner` — import directly from the component path
+- **shadcn-svelte UI components** (`$lib/components/ui/`): `Button`, `Badge`, `Card`, `Input`, `Textarea`, `Select`, `Table`, `Alert`, `Avatar`, `Separator`, `Dialog`, `DropdownMenu`, `Sheet`, `Tooltip`, `Breadcrumb`, `Pagination`, `Calendar`, `Sonner`, `Field` — import directly from the component path
 - Use `@lucide/svelte` for all icons (not inline SVGs or unplugin-icons): `import { Home } from '@lucide/svelte'`
 - Price formatting always uses `formatPrice(cents)` from `$lib/utils`, never inline `(x / 100).toFixed(2)`
 
