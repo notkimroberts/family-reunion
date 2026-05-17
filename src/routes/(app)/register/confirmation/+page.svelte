@@ -10,11 +10,16 @@ import {
     TableHeader,
     TableRow,
 } from '$lib/components/ui/table'
+import { APP_NAME } from '$lib/general/constants'
 import { formatPrice } from '$lib/utils'
 import { getAgeFromDate } from '$lib/utils/age'
 
 let { data } = $props()
 </script>
+
+<svelte:head>
+    <title>Registration Confirmed — {APP_NAME}</title>
+</svelte:head>
 
 <section class="col-span-12 text-center">
     <h2 class="text-3xl font-bold text-primary">You're Registered!</h2>
@@ -42,7 +47,7 @@ let { data } = $props()
                             <TableRow>
                                 <TableCell>{member.name}</TableCell>
                                 <TableCell>
-                                    {getAgeFromDate(member.birthDate)}
+                                    {member.birthDate ? getAgeFromDate(member.birthDate) : '—'}
                                 </TableCell>
                                 <TableCell>{member.tierLabel}</TableCell>
                                 <TableCell>${formatPrice(member.priceCents)}</TableCell>

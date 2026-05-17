@@ -6,6 +6,10 @@ import { APP_NAME } from '$lib/general/constants'
 let { data } = $props()
 </script>
 
+<svelte:head>
+    <title>Shop — {APP_NAME}</title>
+</svelte:head>
+
 {#if !data.config}
     <section class="col-span-12 text-center py-12">
         <p class="text-muted-foreground text-lg">The shop is not currently available.</p>

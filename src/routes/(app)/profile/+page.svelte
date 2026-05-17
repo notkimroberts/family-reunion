@@ -15,6 +15,7 @@ import {
     TableHeader,
     TableRow,
 } from '$lib/components/ui/table'
+import { APP_NAME } from '$lib/general/constants'
 import { formatPrice, getInitials } from '$lib/utils'
 
 let { data } = $props()
@@ -22,7 +23,9 @@ let { data } = $props()
 let birthDate = $state(data.profile?.birthDate ?? undefined)
 </script>
 
-<!-- Profile header -->
+<svelte:head>
+    <title>Profile — {APP_NAME}</title>
+</svelte:head>
 <section class="col-span-12">
     <Card>
         <CardContent class="pt-6 pb-6">

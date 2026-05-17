@@ -9,6 +9,7 @@ import {
     TableHeader,
     TableRow,
 } from '$lib/components/ui/table'
+import { APP_NAME } from '$lib/general/constants'
 import { formatPrice } from '$lib/utils'
 
 const statusVariant = (status: string) => {
@@ -24,7 +25,9 @@ const statusVariant = (status: string) => {
 let { data } = $props()
 </script>
 
-<!-- Stats -->
+<svelte:head>
+    <title>Admin — {APP_NAME}</title>
+</svelte:head>
 <section class="col-span-12">
     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>

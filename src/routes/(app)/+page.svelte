@@ -168,7 +168,7 @@ let dateRange = $derived.by(() => {
         </div>
 
         <!-- Photo -->
-        <div class="flex flex-shrink-0 flex-col items-center gap-2">
+        <div class="flex shrink-0 flex-col items-center gap-2">
             <img
                 src="/will_and_roxie.png"
                 alt="Will and Roxie"

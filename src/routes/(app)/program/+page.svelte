@@ -10,13 +10,17 @@ import {
     TableHeader,
     TableRow,
 } from '$lib/components/ui/table'
+import { APP_NAME } from '$lib/general/constants'
 
 let { data } = $props()
 </script>
 
+<svelte:head>
+    <title>Program — {APP_NAME}</title>
+</svelte:head>
+
 {#if !data.event}
     <section class="col-span-12 text-center py-12">
-        <h2 class="text-2xl font-bold mb-4">No Active Reunion</h2>
         <p class="text-muted-foreground">Check back soon for details about the next reunion!</p>
     </section>
 {:else}

@@ -5,9 +5,14 @@ import { Button } from '$lib/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card'
 import { Input } from '$lib/components/ui/input'
 import { Textarea } from '$lib/components/ui/textarea'
+import { APP_NAME } from '$lib/general/constants'
 
 let { form } = $props()
 </script>
+
+<svelte:head>
+    <title>Contact — {APP_NAME}</title>
+</svelte:head>
 
 {#if form?.success}
     <div class="col-span-12">

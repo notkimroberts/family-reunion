@@ -4,6 +4,7 @@ import { Button } from '$lib/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card'
 import { Input } from '$lib/components/ui/input'
 import { Separator } from '$lib/components/ui/separator'
+import { APP_NAME } from '$lib/general/constants'
 
 let { data } = $props()
 
@@ -23,6 +24,10 @@ function getTypeLabel(type: string) {
     return relationshipTypes.find((t) => t.value === type)?.label ?? type
 }
 </script>
+
+<svelte:head>
+    <title>Relationships — {APP_NAME}</title>
+</svelte:head>
 
 {#if !data.myFamilyMember}
     <section class="col-span-12 xl:col-span-8">

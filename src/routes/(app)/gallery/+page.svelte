@@ -11,6 +11,7 @@ import {
     DialogFooter,
 } from '$lib/components/ui/dialog'
 import { Input } from '$lib/components/ui/input'
+import { APP_NAME } from '$lib/general/constants'
 
 let { data, form } = $props()
 let selectedEventId = $state(data.events[0]?.id ?? 'all')
@@ -32,7 +33,9 @@ $effect(() => {
 })
 </script>
 
-<!-- Year tabs + desktop upload button -->
+<svelte:head>
+    <title>Gallery — {APP_NAME}</title>
+</svelte:head>
 <section class="col-span-12">
     <div class="flex items-center gap-3">
         <div class="flex gap-2 overflow-x-auto pb-1 flex-1 scrollbar-none">
