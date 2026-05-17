@@ -48,8 +48,7 @@ Two-step flow made visually explicit to users:
 
 Route groups:
 
-- `(auth)` — `/signup` and `/login`, no nav, full-screen card layout with step indicator. Sign-up uses `callbackURL: '/register'`; login uses `callbackURL: '/'`
-- `(public)` — `/welcome` only, has app nav
+- `(auth)` — `/login` only, no nav, full-screen card layout with step indicator. All SSO providers use `callbackURL: '/'`
 - `(app)` — all authenticated routes including `/register`
 
 ### Forms

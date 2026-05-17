@@ -1,4 +1,5 @@
 <script lang="ts">
+import { ArrowLeft } from '@lucide/svelte'
 import { authClient } from '$lib/auth-client'
 import { Button } from '$lib/components/ui/button'
 import { Card, CardContent } from '$lib/components/ui/card'
@@ -21,8 +22,14 @@ function signInWithFacebook() {
     <title>Sign In — {APP_NAME}</title>
 </svelte:head>
 
-<div class="flex min-h-[calc(100vh-4rem)] items-center justify-center p-4">
+<div class="flex min-h-screen items-center justify-center p-4">
     <div class="w-full max-w-sm lg:max-w-4xl">
+        <div class="mb-6 flex justify-center">
+            <Button href="/" variant="outline" class="gap-2">
+                <ArrowLeft class="h-4 w-4" />
+                {APP_NAME}
+            </Button>
+        </div>
         <Card class="overflow-hidden shadow-xl">
             <CardContent class="p-0">
                 <div class="grid lg:grid-cols-2">
@@ -49,9 +56,9 @@ function signInWithFacebook() {
                         </div>
 
                         <div>
-                            <h1 class="text-2xl font-bold">Welcome back</h1>
+                            <h1 class="text-2xl font-bold">Sign in to {APP_NAME}</h1>
                             <p class="mt-1 text-sm text-muted-foreground">
-                                Sign in to manage your reunion registration.
+                                New or returning — just pick your account to get started.
                             </p>
                         </div>
 
@@ -90,13 +97,6 @@ function signInWithFacebook() {
                                 Continue with Facebook
                             </Button>
                         </div>
-
-                        <p class="text-center text-sm text-muted-foreground">
-                            New here?
-                            <a href="/signup" class="text-foreground underline underline-offset-4">
-                                Create an account
-                            </a>
-                        </p>
                     </div>
                 </div>
             </CardContent>
