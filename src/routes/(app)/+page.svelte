@@ -99,84 +99,81 @@ let dateRange = $derived.by(() => {
     <meta name="description" content="Family reunion — registration, events, and family tree" />
 </svelte:head>
 
-<!-- Title + Dates -->
-<section class="col-span-12 text-center pt-4 pb-2">
-    <h1 class="text-4xl lg:text-6xl font-bold mb-3">
-        {data.event?.title ?? `${APP_NAME} Family Reunion`}
-    </h1>
-    {#if dateRange && eventState !== 'past'}
-        <p class="text-muted-foreground text-lg">{dateRange}</p>
-    {/if}
-</section>
+<section class="col-span-12">
+    <div
+        class="flex flex-col items-center gap-10 py-4 lg:flex-row lg:items-center lg:gap-16 lg:py-12">
+        <!-- Content -->
+        <div
+            class="flex flex-1 flex-col items-center gap-8 text-center lg:items-start lg:text-left">
+            <div>
+                <h1 class="mb-3 text-4xl font-bold lg:text-5xl">
+                    {data.event?.title ?? `${APP_NAME} Family Reunion`}
+                </h1>
+                {#if dateRange && eventState !== 'past'}
+                    <p class="text-muted-foreground text-lg">{dateRange}</p>
+                {/if}
+            </div>
 
-<!-- Countdown + CTA -->
-<section class="col-span-12 flex flex-col items-center gap-8">
-    {#if eventState === 'upcoming'}
-        <div class="flex gap-6 lg:gap-10">
-            {#if countdown.withinOneDay}
-                {#each [{ label: 'Days', value: countdown.days }, { label: 'Hours', value: countdown.hours }] as unit}
-                    <div class="flex flex-col items-center gap-1">
-                        <span class="font-mono text-5xl lg:text-7xl font-bold tabular-nums">
-                            {String(unit.value).padStart(2, '0')}
-                        </span>
-                        <span class="text-xs uppercase tracking-widest text-muted-foreground">
-                            {unit.label}
-                        </span>
-                    </div>
-                {/each}
+            {#if eventState === 'upcoming'}
+                <div class="flex gap-6">
+                    {#if countdown.withinOneDay}
+                        {#each [{ label: 'Days', value: countdown.days }, { label: 'Hours', value: countdown.hours }] as unit}
+                            <div class="flex flex-col items-center gap-1">
+                                <span class="font-mono text-4xl font-bold tabular-nums lg:text-5xl">
+                                    {String(unit.value).padStart(2, '0')}
+                                </span>
+                                <span
+                                    class="text-muted-foreground text-xs uppercase tracking-widest">
+                                    {unit.label}
+                                </span>
+                            </div>
+                        {/each}
+                    {:else}
+                        {#each [{ label: 'Years', value: countdown.years }, { label: 'Months', value: countdown.months }, { label: 'Days', value: countdown.days }].filter((u) => u.value > 0 || u.label === 'Days') as unit}
+                            <div class="flex flex-col items-center gap-1">
+                                <span class="font-mono text-4xl font-bold tabular-nums lg:text-5xl">
+                                    {String(unit.value).padStart(2, '0')}
+                                </span>
+                                <span
+                                    class="text-muted-foreground text-xs uppercase tracking-widest">
+                                    {unit.label}
+                                </span>
+                            </div>
+                        {/each}
+                    {/if}
+                </div>
+
+                <div class="flex flex-col items-center gap-2 lg:items-start">
+                    <Button href="/register" size="lg" class="px-10">Register Now</Button>
+                    {#if data.registrantCount > 0}
+                        <p class="text-muted-foreground text-sm">
+                            {data.registrantCount}
+                            {data.registrantCount === 1 ? 'family' : 'families'} registered
+                        </p>
+                    {/if}
+                </div>
+            {:else if eventState === 'happening'}
+                <div>
+                    <p class="text-primary mb-2 text-3xl font-bold">It's happening!</p>
+                    <p class="text-muted-foreground">Enjoy every moment with the family.</p>
+                </div>
+            {:else if eventState === 'past'}
+                <div>
+                    <p class="mb-4 text-2xl font-bold">Thanks for an amazing reunion!</p>
+                    <Button href="/gallery" size="lg">View Photos</Button>
+                </div>
             {:else}
-                {#each [{ label: 'Years', value: countdown.years }, { label: 'Months', value: countdown.months }, { label: 'Days', value: countdown.days }].filter((u) => u.value > 0 || u.label === 'Days') as unit}
-                    <div class="flex flex-col items-center gap-1">
-                        <span class="font-mono text-5xl lg:text-7xl font-bold tabular-nums">
-                            {String(unit.value).padStart(2, '0')}
-                        </span>
-                        <span class="text-xs uppercase tracking-widest text-muted-foreground">
-                            {unit.label}
-                        </span>
-                    </div>
-                {/each}
+                <p class="text-muted-foreground">Stay tuned for the next reunion!</p>
             {/if}
         </div>
 
-        <div class="flex flex-col items-center gap-2">
-            <Button href="/register" size="lg" class="px-10">Register Now</Button>
-            {#if data.registrantCount > 0}
-                <p class="text-sm text-muted-foreground">
-                    {data.registrantCount}
-                    {data.registrantCount === 1 ? 'family' : 'families'} registered
-                </p>
-            {/if}
-            <a href="/program" class="text-sm text-muted-foreground hover:underline mt-1">
-                View full program &rarr;
-            </a>
+        <!-- Photo -->
+        <div class="flex flex-shrink-0 flex-col items-center gap-2">
+            <img
+                src="/will_and_roxie.png"
+                alt="Will and Roxie"
+                class="aspect-square w-64 rounded-3xl object-cover shadow-lg lg:w-80" />
+            <p class="text-muted-foreground/60 text-xs">Will &amp; Roxie Patterson</p>
         </div>
-    {:else if eventState === 'happening'}
-        <div class="text-center">
-            <p class="text-3xl font-bold text-primary mb-2">It's happening!</p>
-            <p class="text-muted-foreground">Enjoy every moment with the family.</p>
-        </div>
-    {:else if eventState === 'past'}
-        <div class="text-center">
-            <p class="text-2xl font-bold mb-4">Thanks for an amazing reunion!</p>
-            <Button href="/gallery" size="lg">View Photos</Button>
-        </div>
-    {:else}
-        <p class="text-muted-foreground">Stay tuned for the next reunion!</p>
-    {/if}
-</section>
-
-<!-- Group photo -->
-<section class="col-span-12">
-    <img
-        src="/pfr25.png"
-        alt="Family Reunion"
-        class="w-full rounded-2xl object-cover max-h-[480px]" />
-</section>
-
-<!-- will_and_roxie photo -->
-<section class="col-span-12">
-    <img
-        src="/will_and_roxie_favicon.png"
-        alt="Will and Roxie"
-        class="w-full rounded-2xl object-cover" />
+    </div>
 </section>

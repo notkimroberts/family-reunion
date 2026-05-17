@@ -35,7 +35,7 @@ function signInWithFacebook() {
                 <div class="grid lg:grid-cols-2">
                     <figure class="bg-muted pointer-events-none max-lg:hidden">
                         <img
-                            src="/will_and_roxie_favicon.png"
+                            src="/will_and_roxie.png"
                             alt="Will and Roxie"
                             class="h-full w-full object-cover" />
                     </figure>
