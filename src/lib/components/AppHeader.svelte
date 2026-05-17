@@ -61,23 +61,25 @@ let mobileMenuOpen = $state(false)
         </a>
 
         <nav class="flex items-center gap-0.5">
-            <DropdownMenu>
-                <DropdownMenuTrigger
-                    class="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer
+            {#if primaryNavLinks.length}
+                <DropdownMenu>
+                    <DropdownMenuTrigger
+                        class="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer
                         {familyActive
-                        ? 'bg-primary/15 text-primary'
-                        : 'text-foreground hover:bg-muted'}">
-                    Family
-                    <ChevronDown class="h-3 w-3 opacity-60" />
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start">
-                    {#each primaryNavLinks as link}
-                        <DropdownMenuItem>
-                            <a href={link.href} class="w-full">{link.label}</a>
-                        </DropdownMenuItem>
-                    {/each}
-                </DropdownMenuContent>
-            </DropdownMenu>
+                            ? 'bg-primary/15 text-primary'
+                            : 'text-foreground hover:bg-muted'}">
+                        Family
+                        <ChevronDown class="h-3 w-3 opacity-60" />
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start">
+                        {#each primaryNavLinks as link}
+                            <DropdownMenuItem>
+                                <a href={link.href} class="w-full">{link.label}</a>
+                            </DropdownMenuItem>
+                        {/each}
+                    </DropdownMenuContent>
+                </DropdownMenu>
+            {/if}
             <DropdownMenu>
                 <DropdownMenuTrigger
                     class="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer
@@ -126,6 +128,12 @@ let mobileMenuOpen = $state(false)
                         <DropdownMenuItem onclick={handleSignOut}>Sign Out</DropdownMenuItem>
                     </DropdownMenuContent>
                 </DropdownMenu>
+            {:else}
+                <a
+                    href="/login"
+                    class="ml-1 flex items-center rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors hover:bg-muted">
+                    Sign In
+                </a>
             {/if}
         </nav>
     </div>

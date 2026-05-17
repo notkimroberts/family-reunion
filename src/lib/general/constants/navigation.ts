@@ -11,13 +11,13 @@ type NavGroup = {
 }
 
 export const primaryNavLinks: NavLink[] = [
-    { href: '/family-tree', label: 'Family Tree', icon: 'network' },
-    { href: '/gallery', label: 'Gallery', icon: 'images' },
+    // { href: '/family-tree', label: 'Family Tree', icon: 'network' },
+    // { href: '/gallery', label: 'Gallery', icon: 'images' },
 ]
 
 export const secondaryNavLinks: NavLink[] = [
     { href: '/program', label: 'Program', icon: 'calendar-clock' },
-    { href: '/shop', label: 'Shop', icon: 'shopping-bag' },
+    // { href: '/shop', label: 'Shop', icon: 'shopping-bag' },
 ]
 
 export const registerNavLink: NavLink = {

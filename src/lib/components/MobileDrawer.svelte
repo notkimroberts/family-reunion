@@ -71,11 +71,12 @@ const linkClass = (active: boolean) =>
                 <Home class="h-4 w-4" />
                 Home
             </a>
-
-            <p
-                class="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest px-3 pt-4 pb-1">
-                Family
-            </p>
+            {#if primaryNavLinks.length}
+                <p
+                    class="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest px-3 pt-4 pb-1">
+                    Family
+                </p>
+            {/if}
             {#each primaryNavLinks as link}
                 {@const Icon = iconMap[link.icon]}
                 <a href={link.href} onclick={onClose} class={linkClass(isActive(link.href))}>
