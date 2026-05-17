@@ -3,9 +3,10 @@ import { superForm } from 'sveltekit-superforms'
 import { zod4Client as zodClient } from 'sveltekit-superforms/adapters'
 import { DatePicker } from '$lib/components'
 import { Alert, AlertDescription } from '$lib/components/ui/alert'
+import { Avatar, AvatarFallback } from '$lib/components/ui/avatar'
 import { Badge } from '$lib/components/ui/badge'
 import { Button } from '$lib/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '$lib/components/ui/card'
 import * as Field from '$lib/components/ui/field'
 import { Input } from '$lib/components/ui/input'
 import { Separator } from '$lib/components/ui/separator'
@@ -17,7 +18,7 @@ import {
     TableHeader,
     TableRow,
 } from '$lib/components/ui/table'
-import { formatPrice, getAgeFromDate } from '$lib/utils'
+import { formatPrice, getAgeFromDate, getInitials } from '$lib/utils'
 import { registrationSchema } from './schema'
 
 let { data } = $props()
@@ -83,6 +84,8 @@ let total = $derived(
 )
 
 let canSubmit = $derived(!!selfBirthDate && !!selfTier)
+
+let selectedEvent = $derived(data.events.find((e) => e.id === $form.eventId))
 </script>
 
 {#if data.events.length === 0}
@@ -94,33 +97,47 @@ let canSubmit = $derived(!!selfBirthDate && !!selfTier)
         </Alert>
     </div>
 {:else}
-    <div class="col-span-12 mb-2">
-        <div class="flex items-center gap-2 text-sm">
-            <span
-                class="flex h-6 w-6 items-center justify-center rounded-full bg-muted text-xs font-medium text-muted-foreground line-through">
-                1
-            </span>
-            <span class="text-muted-foreground line-through">Create account</span>
-            <span class="text-muted-foreground">→</span>
-            <span
-                class="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-xs font-medium text-primary-foreground">
-                2
-            </span>
-            <span class="font-medium">Register for event</span>
-        </div>
-    </div>
+    <!-- Greeting header -->
+    <section class="col-span-12">
+        <Card>
+            <CardContent class="pt-6 pb-6">
+                <div
+                    class="flex flex-col items-center gap-4 text-center sm:flex-row sm:items-center sm:gap-6 sm:text-left">
+                    <Avatar class="h-20 w-20 shrink-0">
+                        <AvatarFallback
+                            class="bg-primary text-primary-foreground text-2xl font-bold">
+                            {getInitials(data.user.name ?? '?')}
+                        </AvatarFallback>
+                    </Avatar>
+                    <div class="flex-1 min-w-0">
+                        <h1 class="text-2xl font-bold">Hi, {data.user.name}</h1>
+                        <p class="text-muted-foreground text-sm mt-0.5">
+                            {#if selectedEvent}
+                                Registering for {selectedEvent.title} ({selectedEvent.year})
+                            {:else}
+                                Select an event below to get started.
+                            {/if}
+                        </p>
+                    </div>
+                </div>
+            </CardContent>
+        </Card>
+    </section>
 
     <form method="POST" use:enhance class="col-span-12 contents">
         <input type="hidden" name="eventId" bind:value={$form.eventId} />
         <input type="hidden" name="selfBirthDate" bind:value={$form.selfBirthDate} />
         <input type="hidden" name="members" bind:value={$form.members} />
 
-        <section class="col-span-12 xl:col-span-7">
+        <!-- Left column -->
+        <div class="col-span-12 lg:col-span-7 flex flex-col gap-6">
+            <!-- Event selection -->
             <Card>
                 <CardHeader>
-                    <CardTitle>Select Event</CardTitle>
+                    <CardTitle>Event</CardTitle>
+                    <CardDescription>Choose the reunion you'd like to attend.</CardDescription>
                 </CardHeader>
-                <CardContent class="space-y-4">
+                <CardContent>
                     <Field.Group>
                         <Field.Field>
                             <Field.Label for="eventId">Event</Field.Label>
@@ -138,151 +155,152 @@ let canSubmit = $derived(!!selfBirthDate && !!selfTier)
                             {/if}
                         </Field.Field>
                     </Field.Group>
+                </CardContent>
+            </Card>
 
-                    <Separator />
-
-                    <div>
-                        <h2 class="font-semibold mb-1">Party Members</h2>
-                        <p class="text-sm text-muted-foreground mb-4">
-                            Add everyone attending in your household.
-                        </p>
-
-                        <!-- Account holder row (locked) -->
-                        <div class="rounded-lg border bg-muted/30 p-3 mb-3">
-                            <div class="flex items-center justify-between mb-2">
-                                <div class="flex items-center gap-2">
-                                    <span class="font-medium text-sm">{data.user.name}</span>
-                                    <Badge variant="secondary" class="text-xs">You</Badge>
-                                </div>
-                                {#if selfPrice}
-                                    <span class="text-sm font-medium">${selfPrice}</span>
-                                {/if}
+            <!-- Party members -->
+            <Card>
+                <CardHeader>
+                    <CardTitle>Party Members</CardTitle>
+                    <CardDescription>Add everyone attending in your household.</CardDescription>
+                </CardHeader>
+                <CardContent class="space-y-4">
+                    <!-- Account holder row (locked) -->
+                    <div class="rounded-lg border bg-muted/30 p-3">
+                        <div class="flex items-center justify-between mb-2">
+                            <div class="flex items-center gap-2">
+                                <span class="font-medium text-sm">{data.user.name}</span>
+                                <Badge variant="secondary" class="text-xs">You</Badge>
                             </div>
-                            <div class="grid grid-cols-1 gap-2 md:grid-cols-2 md:items-end">
-                                <Field.Group>
-                                    <Field.Field>
-                                        <Field.Label for="selfBirthDate" class="text-xs">
-                                            Birthday
-                                        </Field.Label>
-                                        <DatePicker
-                                            id="selfBirthDate"
-                                            bind:value={selfBirthDate}
-                                            placeholder="Your birthday" />
-                                    </Field.Field>
-                                </Field.Group>
-                                {#if selfTier}
-                                    <p class="text-sm text-muted-foreground pb-1">
-                                        Age {getAgeFromDate(selfBirthDate!)} · {selfTier.label}
-                                    </p>
-                                {/if}
-                            </div>
-                            {#if $errors.selfBirthDate?.[0]}
-                                <p class="mt-1 text-xs text-destructive">
-                                    {$errors.selfBirthDate[0]}
+                            {#if selfPrice}
+                                <span class="text-sm font-medium">${selfPrice}</span>
+                            {/if}
+                        </div>
+                        <div class="grid grid-cols-1 gap-2 md:grid-cols-2 md:items-end">
+                            <Field.Group>
+                                <Field.Field>
+                                    <Field.Label for="selfBirthDate" class="text-xs">
+                                        Birthday
+                                    </Field.Label>
+                                    <DatePicker
+                                        id="selfBirthDate"
+                                        bind:value={selfBirthDate}
+                                        placeholder="Your birthday" />
+                                </Field.Field>
+                            </Field.Group>
+                            {#if selfTier}
+                                <p class="text-sm text-muted-foreground pb-1">
+                                    Age {getAgeFromDate(selfBirthDate!)} · {selfTier.label}
                                 </p>
                             {/if}
                         </div>
-
-                        <!-- Add additional member row -->
-                        <div
-                            class="grid grid-cols-1 gap-3 md:grid-cols-[1fr_auto_auto] md:items-end">
-                            <Field.Group>
-                                <Field.Field>
-                                    <Field.Label for="memberName">Add member</Field.Label>
-                                    <Input
-                                        id="memberName"
-                                        type="text"
-                                        bind:value={newName}
-                                        placeholder="Full name" />
-                                </Field.Field>
-                            </Field.Group>
-                            <Field.Group>
-                                <Field.Field>
-                                    <Field.Label for="memberBirthDate">Birthday</Field.Label>
-                                    <DatePicker
-                                        id="memberBirthDate"
-                                        bind:value={newBirthDate}
-                                        placeholder="Pick a date" />
-                                </Field.Field>
-                            </Field.Group>
-                            <Button type="button" size="sm" onclick={handleAddMember}>Add</Button>
-                        </div>
-
-                        {#if $errors.members?.[0]}
-                            <p class="mt-2 text-sm text-destructive">{$errors.members[0]}</p>
-                        {/if}
-
-                        {#if members.length > 0}
-                            <div class="mt-4 space-y-3 md:hidden">
-                                {#each members as member, i}
-                                    <div class="rounded-lg border p-3">
-                                        <div class="flex items-center justify-between">
-                                            <span class="font-medium">{member.name}</span>
-                                            <Button
-                                                type="button"
-                                                variant="ghost"
-                                                size="sm"
-                                                class="text-destructive hover:text-destructive h-6 px-2"
-                                                onclick={() => handleRemoveMember(i)}>✕</Button>
-                                        </div>
-                                        <div class="mt-1 flex gap-4 text-sm text-muted-foreground">
-                                            <span>Age {getAgeFromDate(member.birthDate)}</span>
-                                            <span>{getTierLabel(member.tierId)}</span>
-                                            <span class="ml-auto font-medium text-foreground">
-                                                ${getTierPrice(member.tierId)}
-                                            </span>
-                                        </div>
-                                    </div>
-                                {/each}
-                            </div>
-                            <div class="hidden overflow-x-auto md:block mt-4">
-                                <Table>
-                                    <TableHeader>
-                                        <TableRow>
-                                            <TableHead>Name</TableHead>
-                                            <TableHead>Age</TableHead>
-                                            <TableHead>Category</TableHead>
-                                            <TableHead>Price</TableHead>
-                                            <TableHead></TableHead>
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {#each members as member, i}
-                                            <TableRow>
-                                                <TableCell>{member.name}</TableCell>
-                                                <TableCell
-                                                    >{getAgeFromDate(member.birthDate)}</TableCell>
-                                                <TableCell>{getTierLabel(member.tierId)}</TableCell>
-                                                <TableCell
-                                                    >${getTierPrice(member.tierId)}</TableCell>
-                                                <TableCell>
-                                                    <Button
-                                                        type="button"
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        class="text-destructive hover:text-destructive h-6 px-2"
-                                                        onclick={() => handleRemoveMember(i)}
-                                                        >✕</Button>
-                                                </TableCell>
-                                            </TableRow>
-                                        {/each}
-                                    </TableBody>
-                                </Table>
-                            </div>
+                        {#if $errors.selfBirthDate?.[0]}
+                            <p class="mt-1 text-xs text-destructive">
+                                {$errors.selfBirthDate[0]}
+                            </p>
                         {/if}
                     </div>
+
+                    <Separator />
+
+                    <!-- Add additional member -->
+                    <div class="grid grid-cols-1 gap-3 md:grid-cols-[1fr_auto_auto] md:items-end">
+                        <Field.Group>
+                            <Field.Field>
+                                <Field.Label for="memberName">Add member</Field.Label>
+                                <Input
+                                    id="memberName"
+                                    type="text"
+                                    bind:value={newName}
+                                    placeholder="Full name" />
+                            </Field.Field>
+                        </Field.Group>
+                        <Field.Group>
+                            <Field.Field>
+                                <Field.Label for="memberBirthDate">Birthday</Field.Label>
+                                <DatePicker
+                                    id="memberBirthDate"
+                                    bind:value={newBirthDate}
+                                    placeholder="Pick a date" />
+                            </Field.Field>
+                        </Field.Group>
+                        <Button type="button" size="sm" onclick={handleAddMember}>Add</Button>
+                    </div>
+
+                    {#if $errors.members?.[0]}
+                        <p class="text-sm text-destructive">{$errors.members[0]}</p>
+                    {/if}
+
+                    {#if members.length > 0}
+                        <div class="space-y-3 md:hidden">
+                            {#each members as member, i}
+                                <div class="rounded-lg border p-3">
+                                    <div class="flex items-center justify-between">
+                                        <span class="font-medium">{member.name}</span>
+                                        <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="sm"
+                                            class="text-destructive hover:text-destructive h-6 px-2"
+                                            onclick={() => handleRemoveMember(i)}>✕</Button>
+                                    </div>
+                                    <div class="mt-1 flex gap-4 text-sm text-muted-foreground">
+                                        <span>Age {getAgeFromDate(member.birthDate)}</span>
+                                        <span>{getTierLabel(member.tierId)}</span>
+                                        <span class="ml-auto font-medium text-foreground">
+                                            ${getTierPrice(member.tierId)}
+                                        </span>
+                                    </div>
+                                </div>
+                            {/each}
+                        </div>
+                        <div class="hidden overflow-x-auto md:block">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Name</TableHead>
+                                        <TableHead>Age</TableHead>
+                                        <TableHead>Category</TableHead>
+                                        <TableHead>Price</TableHead>
+                                        <TableHead></TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {#each members as member, i}
+                                        <TableRow>
+                                            <TableCell>{member.name}</TableCell>
+                                            <TableCell
+                                                >{getAgeFromDate(member.birthDate)}</TableCell>
+                                            <TableCell>{getTierLabel(member.tierId)}</TableCell>
+                                            <TableCell>${getTierPrice(member.tierId)}</TableCell>
+                                            <TableCell>
+                                                <Button
+                                                    type="button"
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    class="text-destructive hover:text-destructive h-6 px-2"
+                                                    onclick={() => handleRemoveMember(i)}>✕</Button>
+                                            </TableCell>
+                                        </TableRow>
+                                    {/each}
+                                </TableBody>
+                            </Table>
+                        </div>
+                    {/if}
                 </CardContent>
             </Card>
-        </section>
+        </div>
 
-        <section class="col-span-12 xl:col-span-5 self-start">
+        <!-- Right column: order summary -->
+        <section class="col-span-12 lg:col-span-5 self-start">
             <Card>
                 <CardHeader>
                     <CardTitle>Order Summary</CardTitle>
+                    <CardDescription>Pricing is based on age at time of the event.</CardDescription>
                 </CardHeader>
                 <CardContent class="space-y-4">
                     <div class="space-y-2">
-                        <h3 class="text-sm font-bold text-muted-foreground">Pricing Tiers</h3>
+                        <h3 class="text-sm font-semibold text-muted-foreground">Pricing Tiers</h3>
                         {#each data.tiers as tier}
                             <div class="flex items-center justify-between text-sm">
                                 <span>
@@ -301,9 +319,10 @@ let canSubmit = $derived(!!selfBirthDate && !!selfTier)
                     {#if canSubmit}
                         <div class="space-y-2">
                             <div class="flex items-center justify-between text-sm">
-                                <span
-                                    >{data.user.name}
-                                    <span class="text-muted-foreground">(you)</span></span>
+                                <span>
+                                    {data.user.name}
+                                    <span class="text-muted-foreground">(you)</span>
+                                </span>
                                 <span class="font-mono">${selfPrice}</span>
                             </div>
                             {#each members as member}

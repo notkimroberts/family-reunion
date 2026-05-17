@@ -11,9 +11,8 @@ type NavGroup = {
 }
 
 export const primaryNavLinks: NavLink[] = [
-    { href: '/gallery', label: 'Gallery', icon: 'images' },
     { href: '/family-tree', label: 'Family Tree', icon: 'network' },
-    { href: '/members', label: 'Members', icon: 'users' },
+    { href: '/gallery', label: 'Gallery', icon: 'images' },
 ]
 
 export const secondaryNavLinks: NavLink[] = [

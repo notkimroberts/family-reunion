@@ -2,31 +2,63 @@
 import { createChart } from 'family-chart'
 import 'family-chart/styles/family-chart.css'
 import { onDestroy, onMount } from 'svelte'
+import { goto } from '$app/navigation'
 import { Alert, AlertDescription } from '$lib/components/ui/alert'
 import { Avatar, AvatarFallback, AvatarImage } from '$lib/components/ui/avatar'
 import { Button } from '$lib/components/ui/button'
+import { Card } from '$lib/components/ui/card'
+import { Input } from '$lib/components/ui/input'
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from '$lib/components/ui/table'
 import { getAge, getInitials } from '$lib/utils'
+
+function handleMemberClick(id: string) {
+    goto(`/family-tree/${id}`)
+}
 
 let { data } = $props()
 let treeContainer: HTMLDivElement
 let loaded = $state(false)
 let error = $state('')
+let search = $state('')
+let view = $state<'tree' | 'table'>('tree')
 
-let relationshipLabels = $derived(
+let filtered = $derived(
+    data.members.filter((m) => m.name.toLowerCase().includes(search.toLowerCase())),
+)
+
+let relationshipCounts = $derived(
     new Map(
         data.members.map((m) => {
             const rels = data.relationships.filter((r) => r.from === m.id || r.to === m.id)
-            const types = new Set(rels.map((r) => r.type))
-            if (types.has('parent')) {
-                return [m.id, 'Parent']
+            const spouseCount = new Set(
+                rels
+                    .filter((r) => r.type === 'spouse')
+                    .map((r) => (r.from === m.id ? r.to : r.from)),
+            ).size
+            const childCount = new Set(
+                rels.filter((r) => r.type === 'parent' && r.from === m.id).map((r) => r.to),
+            ).size
+            const parentCount = new Set(
+                rels.filter((r) => r.type === 'child' && r.from === m.id).map((r) => r.to),
+            ).size
+            const parts: string[] = []
+            if (spouseCount > 0) {
+                parts.push(`${spouseCount} ${spouseCount === 1 ? 'spouse' : 'spouses'}`)
             }
-            if (types.has('child')) {
-                return [m.id, 'Child']
+            if (childCount > 0) {
+                parts.push(`${childCount} ${childCount === 1 ? 'child' : 'children'}`)
             }
-            if (types.has('spouse')) {
-                return [m.id, 'Spouse']
+            if (parentCount > 0) {
+                parts.push(`${parentCount} ${parentCount === 1 ? 'parent' : 'parents'}`)
             }
-            return [m.id, '']
+            return [m.id, parts.join(' · ')]
         }),
     ),
 )
@@ -54,7 +86,6 @@ onMount(async () => {
                     rels.filter((r) => r.type === 'child' && r.from === m.id).map((r) => r.to),
                 ),
             ]
-
             return {
                 id: m.id,
                 data: {
@@ -109,46 +140,69 @@ onDestroy(() => {
 })
 </script>
 
-<!-- Mobile list view -->
+<!-- Desktop controls: view toggle + search when in table mode -->
+<section class="col-span-12 hidden lg:flex items-center gap-3">
+    {#if view === 'table'}
+        <Input type="text" class="max-w-sm" placeholder="Search by name..." bind:value={search} />
+    {/if}
+    <div class="ml-auto flex items-center rounded-lg border bg-muted p-1 gap-1">
+        <Button
+            variant={view === 'tree' ? 'default' : 'ghost'}
+            size="sm"
+            onclick={() => (view = 'tree')}>Tree</Button>
+        <Button
+            variant={view === 'table' ? 'default' : 'ghost'}
+            size="sm"
+            onclick={() => (view = 'table')}>Table</Button>
+    </div>
+</section>
+
+<!-- Mobile: search + card grid (always shown on small screens) -->
 <section class="col-span-12 lg:hidden">
+    <Input type="text" class="mb-4 max-w-sm" placeholder="Search by name..." bind:value={search} />
     {#if data.members.length === 0}
         <div class="text-center py-12">
             <p class="text-muted-foreground text-lg">No family members have been added yet.</p>
             <Button href="/profile/relationships" class="mt-4">Add Relationships</Button>
         </div>
+    {:else if filtered.length === 0}
+        <p class="text-muted-foreground">No family members found.</p>
     {:else}
-        <div class="space-y-3">
-            {#each data.members as member}
-                <div class="flex items-center gap-3 p-3 rounded-lg border bg-card">
-                    <Avatar class="w-10 h-10 shrink-0">
-                        {#if member.photoUrl}
-                            <AvatarImage src={member.photoUrl} alt={member.name} />
-                        {/if}
-                        <AvatarFallback>{getInitials(member.name)}</AvatarFallback>
-                    </Avatar>
-                    <div class="min-w-0 flex-1">
-                        <p class="font-medium truncate">{member.name}</p>
-                        <div class="flex gap-3 text-sm text-muted-foreground">
-                            {#if member.birthYear}
-                                <span>
-                                    Age {getAge(
-                                        member.birthYear,
-                                        member.birthMonth,
-                                        member.birthDay,
-                                    )}
-                                </span>
-                            {/if}
-                            <span>{relationshipLabels.get(member.id) ?? ''}</span>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {#each filtered as member}
+                <a href="/family-tree/{member.id}" class="block">
+                    <Card class="p-4 hover:bg-accent transition-colors">
+                        <div class="flex items-center gap-4">
+                            <Avatar class="w-12 h-12 shrink-0">
+                                {#if member.photoUrl}
+                                    <AvatarImage src={member.photoUrl} alt={member.name} />
+                                {/if}
+                                <AvatarFallback class="bg-primary text-primary-foreground text-lg">
+                                    {getInitials(member.name)}
+                                </AvatarFallback>
+                            </Avatar>
+                            <div>
+                                <h3 class="font-semibold">{member.name}</h3>
+                                {#if member.birthYear}
+                                    <p class="text-sm text-muted-foreground">
+                                        Age {getAge(
+                                            member.birthYear,
+                                            member.birthMonth,
+                                            member.birthDay,
+                                        )}
+                                    </p>
+                                {/if}
+                            </div>
                         </div>
-                    </div>
-                </div>
+                    </Card>
+                </a>
             {/each}
         </div>
     {/if}
 </section>
 
-<!-- Desktop chart view -->
-<section class="col-span-12 hidden lg:block family-tree-page">
+<!-- Desktop tree view (always in DOM to preserve chart state) -->
+<section class="col-span-12 desktop-view family-tree-page" class:active={view === 'tree'}>
     {#if data.members.length === 0}
         <div class="flex items-center justify-center h-full">
             <div class="text-center">
@@ -169,11 +223,82 @@ onDestroy(() => {
             </div>
         </div>
     {/if}
-
     <div bind:this={treeContainer} class="tree-container f3"></div>
 </section>
 
+<!-- Desktop table view (always in DOM, CSS-toggled) -->
+<section class="col-span-12 desktop-view" class:active={view === 'table'}>
+    {#if data.members.length === 0}
+        <div class="text-center py-12">
+            <p class="text-muted-foreground text-lg">No family members have been added yet.</p>
+            <Button href="/profile/relationships" class="mt-4">Add Relationships</Button>
+        </div>
+    {:else if filtered.length === 0}
+        <p class="text-muted-foreground">No family members found.</p>
+    {:else}
+        <Card>
+            <div class="overflow-x-auto">
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>Name</TableHead>
+                            <TableHead>Age</TableHead>
+                            <TableHead>Relationships</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {#each filtered as member}
+                            <TableRow
+                                class="cursor-pointer"
+                                onclick={() => handleMemberClick(member.id)}>
+                                <TableCell>
+                                    <div class="flex items-center gap-4">
+                                        <Avatar class="w-10 h-10 shrink-0">
+                                            {#if member.photoUrl}
+                                                <AvatarImage
+                                                    src={member.photoUrl}
+                                                    alt={member.name} />
+                                            {/if}
+                                            <AvatarFallback
+                                                class="bg-primary text-primary-foreground text-sm">
+                                                {getInitials(member.name)}
+                                            </AvatarFallback>
+                                        </Avatar>
+                                        <span class="font-medium">{member.name}</span>
+                                    </div>
+                                </TableCell>
+                                <TableCell>
+                                    {#if member.birthYear}
+                                        {getAge(
+                                            member.birthYear,
+                                            member.birthMonth,
+                                            member.birthDay,
+                                        )}
+                                    {/if}
+                                </TableCell>
+                                <TableCell class="text-muted-foreground text-sm">
+                                    {relationshipCounts.get(member.id) ?? ''}
+                                </TableCell>
+                            </TableRow>
+                        {/each}
+                    </TableBody>
+                </Table>
+            </div>
+        </Card>
+    {/if}
+</section>
+
 <style>
+.desktop-view {
+    display: none;
+}
+
+@media (min-width: 1024px) {
+    .desktop-view.active {
+        display: block;
+    }
+}
+
 .family-tree-page {
     height: calc(100vh - 8rem);
     position: relative;
