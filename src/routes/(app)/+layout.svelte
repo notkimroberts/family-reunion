@@ -33,7 +33,7 @@ let sheetOpen = $state(false)
 <div class="min-h-screen bg-base-200 flex flex-col">
     <AppHeader title={currentTitle} user={data.user} {isAdmin} />
 
-    <main class="mx-auto max-w-6xl w-full px-4 py-6 pb-24 md:px-6 md:py-10 md:pb-10 flex-1">
+    <main class="mx-auto max-w-6xl w-full px-4 py-6 pb-24 md:px-6 md:py-6 md:pb-6 flex-1">
         <div class="grid grid-cols-12 gap-y-8 md:gap-y-10">
             {@render children()}
         </div>

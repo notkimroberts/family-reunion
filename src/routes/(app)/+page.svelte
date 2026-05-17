@@ -99,9 +99,9 @@ let dateRange = $derived.by(() => {
     <meta name="description" content="Family reunion — registration, events, and family tree" />
 </svelte:head>
 
-<section class="col-span-12">
-    <div
-        class="flex flex-col items-center gap-10 py-4 lg:flex-row lg:items-center lg:gap-16 lg:py-12">
+<section
+    class="col-span-12 flex flex-col justify-center min-h-[calc(100svh-12rem)] md:min-h-[calc(100svh-16rem)]">
+    <div class="flex flex-col items-center gap-10 lg:flex-row lg:items-center lg:gap-16">
         <!-- Content -->
         <div
             class="flex flex-1 flex-col items-center gap-8 text-center lg:items-start lg:text-left">
