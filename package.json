@@ -13,6 +13,7 @@
         "db:push": "drizzle-kit push",
         "db:studio": "drizzle-kit studio",
         "db:seed": "bun src/lib/server/db/seed.ts",
+        "db:reseed": "bun src/lib/server/db/seed.ts --reseed",
         "format": "prettier --write .",
         "lint": "prettier --check . && eslint .",
         "prepare": "husky",
@@ -26,6 +27,7 @@
     "devDependencies": {
         "@eslint/compat": "^2.1.0",
         "@eslint/js": "^10.0.1",
+        "@faker-js/faker": "^10.4.0",
         "@internationalized/date": "^3.12.0",
         "@lucide/svelte": "^0.577.0",
         "@sveltejs/adapter-node": "^5.5.4",

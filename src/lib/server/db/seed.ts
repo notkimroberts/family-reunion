@@ -1,227 +1,312 @@
+import { faker } from '@faker-js/faker'
 import { sql } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/postgres-js'
 import postgres from 'postgres'
+import { dbg } from '../debug'
 import * as schema from './schema'
+
+faker.seed(42)
 
 const client = postgres(process.env.DATABASE_URL || 'postgresql://localhost:5432/family_reunion')
 const db = drizzle(client, { schema })
 
-const FIRST_NAMES = [
-    'James',
-    'Mary',
-    'Robert',
-    'Patricia',
-    'John',
-    'Jennifer',
-    'Michael',
-    'Linda',
-    'David',
-    'Elizabeth',
-    'William',
-    'Barbara',
-    'Richard',
-    'Susan',
-    'Joseph',
-    'Jessica',
-    'Thomas',
-    'Sarah',
-    'Charles',
-    'Karen',
-    'Christopher',
-    'Lisa',
-    'Daniel',
-    'Nancy',
-    'Matthew',
-    'Betty',
-    'Anthony',
-    'Margaret',
-    'Mark',
-    'Sandra',
-    'Donald',
-    'Ashley',
-    'Steven',
-    'Dorothy',
-    'Paul',
-    'Kimberly',
-    'Andrew',
-    'Emily',
-    'Joshua',
-    'Donna',
-    'Kenneth',
-    'Michelle',
-    'Kevin',
-    'Carol',
-    'Brian',
-    'Amanda',
-    'George',
-    'Melissa',
-    'Timothy',
-    'Deborah',
-    'Ronald',
-    'Stephanie',
-    'Edward',
-    'Rebecca',
-    'Jason',
-    'Sharon',
+const isReseed = process.argv.includes('--reseed')
+
+const FAMILY_LAST_NAME = 'Patterson'
+
+const SOUTHERN_MENU_ITEMS = [
+    'BBQ ribs',
+    'Fried chicken',
+    'Mac and cheese',
+    'Collard greens',
+    'Cornbread',
+    'Peach cobbler',
+    'Candied yams',
+    'Black-eyed peas',
+    'Potato salad',
+    'Baked beans',
+    'Grilled corn',
+    'Coleslaw',
+    'Banana pudding',
+    'Sweet potato pie',
+    'Fried catfish',
+    'Smoked brisket',
+    'Deviled eggs',
+    'Watermelon',
+    'Red velvet cake',
+    'Lemon pound cake',
 ]
 
-const LAST_NAMES = [
-    'Patterson',
-    'Johnson',
-    'Williams',
-    'Davis',
-    'Thompson',
-    'Martinez',
-    'Anderson',
-    'Clark',
+const DRINKS = [
+    'Sweet tea',
+    'Lemonade',
+    'Fruit punch',
+    'Water',
+    'Juice boxes',
+    'Soda',
+    'Sparkling water',
+    'Arnold Palmer',
 ]
 
-const MALE_NAMES = FIRST_NAMES.filter((_, i) => i % 2 === 0)
-const FEMALE_NAMES = FIRST_NAMES.filter((_, i) => i % 2 === 1)
+const SCHEDULE_ACTIVITIES = [
+    'Registration & Welcome',
+    'Family Photo',
+    'Lunch',
+    'Dinner',
+    'Breakfast',
+    'Family Games',
+    'Talent Show',
+    'Kids Activities',
+    'Group Hike',
+    'Pool Party',
+    'Family Meeting',
+    'Award Ceremony',
+    'Farewell Brunch',
+    'Setup & Early Birds',
+    'Movie Night',
+    'Trivia Night',
+    'Bonfire',
+    'Dance',
+]
 
-function pick<T>(arr: T[]): T {
-    return arr[Math.floor(Math.random() * arr.length)]
-}
+const VENUE_SUFFIXES = ['Lodge', 'Resort', 'Pavilion', 'Park', 'Retreat', 'Estate', 'Gardens']
 
-function randInt(min: number, max: number): number {
-    return Math.floor(Math.random() * (max - min + 1)) + min
-}
-
-function randomPhone(): string {
-    return `(${randInt(200, 999)}) ${randInt(200, 999)}-${randInt(1000, 9999)}`
-}
-
-function randomAddress() {
-    const streets = ['Oak St', 'Maple Ave', 'Cedar Ln', 'Pine Dr', 'Elm Blvd', 'Birch Way']
-    const cities = ['Atlanta', 'Chicago', 'Houston', 'Phoenix', 'Denver', 'Seattle', 'Miami']
-    const states = ['GA', 'IL', 'TX', 'AZ', 'CO', 'WA', 'FL']
-    const idx = randInt(0, cities.length - 1)
-    return {
-        street: `${randInt(100, 9999)} ${pick(streets)}`,
-        city: cities[idx],
-        state: states[idx],
-        zip: `${randInt(10000, 99999)}`,
-    }
-}
+type RelationshipType = (typeof schema.relationshipTypeEnum.enumValues)[number]
 
 interface FamilyMember {
     name: string
     birthYear: number
+    birthMonth: number
+    birthDay: number
     generation: number
     spouseIndex?: number
     parentIndices?: number[]
 }
 
+const ANCESTOR_TYPE_MAP: Record<
+    number,
+    { ancestor: RelationshipType; descendant: RelationshipType }
+> = {
+    1: { ancestor: 'parent', descendant: 'child' },
+    2: { ancestor: 'grandparent', descendant: 'grandchild' },
+    3: { ancestor: 'great_grandparent', descendant: 'great_grandchild' },
+    4: { ancestor: 'great_great_grandparent', descendant: 'great_great_grandchild' },
+    5: {
+        ancestor: 'great_great_great_grandparent',
+        descendant: 'great_great_great_grandchild',
+    },
+    6: {
+        ancestor: 'great_great_great_great_grandparent',
+        descendant: 'great_great_great_great_grandchild',
+    },
+    7: {
+        ancestor: 'great_great_great_great_great_grandparent',
+        descendant: 'great_great_great_great_great_grandchild',
+    },
+}
+
+function randomBirthDate(
+    minYear: number,
+    maxYear: number,
+): {
+    birthYear: number
+    birthMonth: number
+    birthDay: number
+} {
+    const date = faker.date.birthdate({ mode: 'year', min: minYear, max: maxYear })
+    return {
+        birthYear: date.getFullYear(),
+        birthMonth: date.getMonth() + 1,
+        birthDay: date.getDate(),
+    }
+}
+
+function makeMember(
+    firstName: string,
+    lastName: string,
+    minYear: number,
+    maxYear: number,
+    generation: number,
+    extra: Partial<FamilyMember> = {},
+): FamilyMember {
+    return {
+        name: `${firstName} ${lastName}`,
+        ...randomBirthDate(minYear, maxYear),
+        generation,
+        ...extra,
+    }
+}
+
 function buildFamilyTree(): FamilyMember[] {
     const members: FamilyMember[] = []
-    const familyLastName = 'Patterson'
 
-    const gen1Couples = [
-        { husband: 'James', wife: 'Mary', birthYear: 1940 },
-        { husband: 'Robert', wife: 'Patricia', birthYear: 1942 },
-        { husband: 'William', wife: 'Barbara', birthYear: 1938 },
+    function addCouple(
+        gen: number,
+        minYear: number,
+        maxYear: number,
+        parentIndices?: number[],
+    ): [number, number] {
+        const husbandIdx = members.length
+        members.push(
+            makeMember(
+                faker.person.firstName('male'),
+                FAMILY_LAST_NAME,
+                minYear,
+                maxYear,
+                gen,
+                parentIndices ? { parentIndices } : {},
+            ),
+        )
+        const wifeIdx = members.length
+        members.push(
+            makeMember(
+                faker.person.firstName('female'),
+                faker.person.lastName(),
+                minYear,
+                maxYear,
+                gen,
+                {
+                    spouseIndex: husbandIdx,
+                },
+            ),
+        )
+        members[husbandIdx].spouseIndex = wifeIdx
+        return [husbandIdx, wifeIdx]
+    }
+
+    function addChild(
+        gen: number,
+        minYear: number,
+        maxYear: number,
+        parentIndices: number[],
+    ): number {
+        const isMale = faker.datatype.boolean()
+        const idx = members.length
+        members.push(
+            makeMember(
+                faker.person.firstName(isMale ? 'male' : 'female'),
+                FAMILY_LAST_NAME,
+                minYear,
+                maxYear,
+                gen,
+                { parentIndices },
+            ),
+        )
+        return idx
+    }
+
+    // Gen 1: great×5 grandparents — 1 founding couple (~1870)
+    const [g1h, g1w] = addCouple(1, 1865, 1878)
+
+    // Gen 2: great×4 grandparents — 2 couples (~1893-1900), children of gen1
+    const [g2h1, g2w1] = addCouple(2, 1890, 1902, [g1h, g1w])
+    const [g2h2, g2w2] = addCouple(2, 1892, 1904, [g1h, g1w])
+
+    // Gen 3: great×3 grandparents — 4 couples (~1915-1925)
+    const gen3Couples: [number, number][] = []
+    const gen2Parents = [
+        [g2h1, g2w1],
+        [g2h2, g2w2],
     ]
-
-    for (const couple of gen1Couples) {
-        const hIdx = members.length
-        members.push({
-            name: `${couple.husband} ${familyLastName}`,
-            birthYear: couple.birthYear,
-            generation: 1,
-        })
-        members.push({
-            name: `${couple.wife} ${pick(LAST_NAMES)}`,
-            birthYear: couple.birthYear + randInt(-2, 2),
-            generation: 1,
-            spouseIndex: hIdx,
-        })
-        members[hIdx].spouseIndex = hIdx + 1
-    }
-
-    const gen2ParentPairs = [
-        [0, 1],
-        [2, 3],
-        [4, 5],
-    ]
-    const gen2Starts: number[] = []
-
-    for (const [p1, p2] of gen2ParentPairs) {
-        const numChildren = randInt(3, 4)
-        for (let i = 0; i < numChildren; i++) {
-            const isMale = Math.random() > 0.5
-            const firstName = pick(isMale ? MALE_NAMES : FEMALE_NAMES)
-            const childIdx = members.length
-            gen2Starts.push(childIdx)
-            members.push({
-                name: `${firstName} ${familyLastName}`,
-                birthYear: members[p1].birthYear + randInt(20, 30),
-                generation: 2,
-                parentIndices: [p1, p2],
-            })
-            if (Math.random() > 0.2) {
-                const spouseIdx = members.length
-                const spouseFirst = pick(isMale ? FEMALE_NAMES : MALE_NAMES)
-                members.push({
-                    name: `${spouseFirst} ${pick(LAST_NAMES)}`,
-                    birthYear: members[childIdx].birthYear + randInt(-3, 3),
-                    generation: 2,
-                })
-                members[childIdx].spouseIndex = spouseIdx
-                members[spouseIdx].spouseIndex = childIdx
-            }
+    for (const [p1, p2] of gen2Parents) {
+        for (let i = 0; i < 2; i++) {
+            gen3Couples.push(addCouple(3, 1913, 1928, [p1, p2]))
         }
     }
 
-    const gen3Starts: number[] = []
-    for (const idx of gen2Starts) {
-        if (members[idx].spouseIndex === undefined) continue
-        const numChildren = randInt(1, 3)
-        for (let i = 0; i < numChildren; i++) {
-            const isMale = Math.random() > 0.5
-            const firstName = pick(isMale ? MALE_NAMES : FEMALE_NAMES)
-            const childIdx = members.length
-            gen3Starts.push(childIdx)
-            members.push({
-                name: `${firstName} ${familyLastName}`,
-                birthYear: members[idx].birthYear + randInt(22, 32),
-                generation: 3,
-                parentIndices: [idx, members[idx].spouseIndex!],
-            })
+    // Gen 4: great×2 grandparents — 8 couples (~1935-1948)
+    const gen4Couples: [number, number][] = []
+    for (const [p1, p2] of gen3Couples) {
+        for (let i = 0; i < 2; i++) {
+            gen4Couples.push(addCouple(4, 1933, 1950, [p1, p2]))
         }
     }
 
-    let gen3Idx = 0
-    while (members.length < 50 && gen3Idx < gen3Starts.length) {
-        const parentIdx = gen3Starts[gen3Idx]
-        const numChildren = randInt(1, 2)
-        for (let i = 0; i < numChildren && members.length < 50; i++) {
-            const isMale = Math.random() > 0.5
-            const firstName = pick(isMale ? MALE_NAMES : FEMALE_NAMES)
-            members.push({
-                name: `${firstName} ${familyLastName}`,
-                birthYear: members[parentIdx].birthYear + randInt(22, 30),
-                generation: 4,
-                parentIndices: [parentIdx],
-            })
+    // Gen 5: great grandparents — children of gen4 (~1955-1970)
+    const gen5Members: number[] = []
+    for (const [p1, p2] of gen4Couples) {
+        const count = faker.number.int({ min: 1, max: 2 })
+        for (let i = 0; i < count; i++) {
+            gen5Members.push(addChild(5, 1953, 1972, [p1, p2]))
         }
-        gen3Idx++
     }
 
-    while (members.length < 50) {
-        const parentIdx = pick(gen3Starts)
-        members.push({
-            name: `${pick(MALE_NAMES)} ${familyLastName}`,
-            birthYear: members[parentIdx].birthYear + randInt(22, 30),
-            generation: 4,
-            parentIndices: [parentIdx],
-        })
+    // Gen 6: grandparents — children of gen5 (~1972-1987)
+    const gen6Members: number[] = []
+    for (const idx of gen5Members) {
+        const count = faker.number.int({ min: 1, max: 2 })
+        for (let i = 0; i < count; i++) {
+            gen6Members.push(addChild(6, 1970, 1988, [idx]))
+        }
+    }
+
+    // Gen 7: parents — children of gen6 (~1990-2008)
+    const gen7Members: number[] = []
+    for (const idx of gen6Members) {
+        const count = faker.number.int({ min: 1, max: 2 })
+        for (let i = 0; i < count; i++) {
+            gen7Members.push(addChild(7, 1988, 2010, [idx]))
+        }
+    }
+
+    // Gen 8: children — pad total to 100
+    const gen8Parents = [...gen7Members, ...gen6Members]
+    let gen8Idx = 0
+    while (members.length < 100) {
+        const parentIdx = gen8Parents[gen8Idx % gen8Parents.length]
+        addChild(8, 2005, 2022, [parentIdx])
+        gen8Idx++
     }
 
     return members
 }
 
+function randomVenue() {
+    const city = faker.location.city()
+    const state = faker.location.state({ abbreviated: true })
+    const suffix = faker.helpers.arrayElement(VENUE_SUFFIXES)
+    const name = `${faker.word.adjective({ strategy: 'closest' })} ${faker.location.county()} ${suffix}`
+    return {
+        name,
+        address: `${faker.location.streetAddress()}, ${city}, ${state} ${faker.location.zipCode()}`,
+        description: faker.lorem.sentence(),
+    }
+}
+
+function randomMenu(): string[] {
+    return faker.helpers.arrayElements(SOUTHERN_MENU_ITEMS, faker.number.int({ min: 5, max: 8 }))
+}
+
+function randomDrinks(): string[] {
+    return faker.helpers.arrayElements(DRINKS, faker.number.int({ min: 3, max: 5 }))
+}
+
+function randomSchedule(days: string[]): { day: string; time: string; activity: string }[] {
+    const schedule: { day: string; time: string; activity: string }[] = []
+    for (const day of days) {
+        const count = faker.number.int({ min: 3, max: 5 })
+        const activities = faker.helpers.arrayElements(SCHEDULE_ACTIVITIES, count)
+        const hours = [9, 11, 12, 14, 17, 19]
+        for (let i = 0; i < activities.length; i++) {
+            const h = hours[i] ?? 10 + i
+            const time = h < 12 ? `${h}:00 AM` : h === 12 ? '12:00 PM' : `${h - 12}:00 PM`
+            schedule.push({ day, time, activity: activities[i] })
+        }
+    }
+    return schedule
+}
+
 async function seed() {
-    console.log('Truncating all tables...')
+    if (!isReseed) {
+        const existing = await db.select().from(schema.reunionEvents).limit(1)
+        if (existing.length > 0) {
+            dbg.seed('Data already exists, skipping seed. Use db:reseed to force.')
+            await client.end()
+            return
+        }
+    }
+
+    dbg.seed('Truncating all tables...')
     await db.execute(sql`
 		TRUNCATE TABLE
 			contact_submissions,
@@ -237,7 +322,7 @@ async function seed() {
 		CASCADE
 	`)
 
-    console.log('Seeding reunion events...')
+    dbg.seed('Seeding reunion events...')
     const events = await db
         .insert(schema.reunionEvents)
         .values([
@@ -245,52 +330,19 @@ async function seed() {
                 year: 2024,
                 title: 'Patterson Family Reunion 2024',
                 status: 'archived' as const,
-                venue: {
-                    name: 'Lakewood Lodge',
-                    address: '123 Lake Rd, Lakewood, GA 30045',
-                    description: 'Beautiful lakeside venue with cabins and picnic areas',
-                },
-                menu: [
-                    'BBQ ribs',
-                    'Fried chicken',
-                    'Mac and cheese',
-                    'Collard greens',
-                    'Cornbread',
-                    'Peach cobbler',
-                ],
-                drinks: ['Sweet tea', 'Lemonade', 'Water', 'Juice boxes'],
-                schedule: [
-                    { day: 'Saturday', time: '10:00 AM', activity: 'Registration & Welcome' },
-                    { day: 'Saturday', time: '12:00 PM', activity: 'Lunch' },
-                    { day: 'Saturday', time: '2:00 PM', activity: 'Family games' },
-                    { day: 'Saturday', time: '6:00 PM', activity: 'Dinner & Awards' },
-                ],
+                venue: randomVenue(),
+                menu: randomMenu(),
+                drinks: randomDrinks(),
+                schedule: randomSchedule(['Saturday']),
             },
             {
                 year: 2025,
                 title: 'Patterson Family Reunion 2025',
                 status: 'closed' as const,
-                venue: {
-                    name: 'Riverside Park Pavilion',
-                    address: '456 River Dr, Marietta, GA 30060',
-                    description: 'Spacious covered pavilion with playground and river access',
-                },
-                menu: [
-                    'Grilled burgers',
-                    'Hot dogs',
-                    'Potato salad',
-                    'Baked beans',
-                    'Watermelon',
-                    'Banana pudding',
-                ],
-                drinks: ['Sweet tea', 'Lemonade', 'Soda', 'Water'],
-                schedule: [
-                    { day: 'Saturday', time: '9:00 AM', activity: 'Setup & Early Birds' },
-                    { day: 'Saturday', time: '11:00 AM', activity: 'Family Photo' },
-                    { day: 'Saturday', time: '12:00 PM', activity: 'Lunch' },
-                    { day: 'Saturday', time: '3:00 PM', activity: 'Talent Show' },
-                    { day: 'Saturday', time: '5:00 PM', activity: 'Dinner' },
-                ],
+                venue: randomVenue(),
+                menu: randomMenu(),
+                drinks: randomDrinks(),
+                schedule: randomSchedule(['Saturday', 'Sunday']),
             },
             {
                 year: 2027,
@@ -332,33 +384,21 @@ async function seed() {
         ])
         .returning()
 
-    console.log('Seeding pricing tiers...')
+    dbg.seed('Seeding pricing tiers...')
     const allTiers = []
     for (const event of events) {
         const tiers = await db
             .insert(schema.pricingTiers)
             .values([
-                { eventId: event.id, label: 'Child (0-12)', minAge: 0, maxAge: 12, priceCents: 0 },
-                {
-                    eventId: event.id,
-                    label: 'Teen (13-17)',
-                    minAge: 13,
-                    maxAge: 17,
-                    priceCents: 2500,
-                },
-                {
-                    eventId: event.id,
-                    label: 'Adult (18+)',
-                    minAge: 18,
-                    maxAge: null,
-                    priceCents: 5000,
-                },
+                { eventId: event.id, label: 'Child', minAge: 0, maxAge: 12, priceCents: 0 },
+                { eventId: event.id, label: 'Teen', minAge: 13, maxAge: 17, priceCents: 2500 },
+                { eventId: event.id, label: 'Adult', minAge: 18, maxAge: null, priceCents: 5000 },
             ])
             .returning()
         allTiers.push(...tiers)
     }
 
-    console.log('Seeding user profiles...')
+    dbg.seed('Seeding user profiles...')
     const userIds: string[] = []
     const userValues = []
     for (let i = 0; i < 15; i++) {
@@ -366,107 +406,106 @@ async function seed() {
         userIds.push(userId)
         userValues.push({
             userId,
-            phone: randomPhone(),
-            mailingAddress: randomAddress(),
+            phone: faker.phone.number({ style: 'national' }),
+            mailingAddress: {
+                street: faker.location.streetAddress(),
+                city: faker.location.city(),
+                state: faker.location.state({ abbreviated: true }),
+                zip: faker.location.zipCode(),
+            },
             profilePhotoUrl: `https://picsum.photos/seed/user${i + 1}/200/200`,
         })
     }
     await db.insert(schema.userProfiles).values(userValues)
 
-    console.log('Seeding family members...')
+    dbg.seed('Seeding family members...')
     const tree = buildFamilyTree()
     const familyValues = tree.map((member, i) => ({
         userId: i < 15 ? userIds[i] : null,
         name: member.name,
         birthYear: member.birthYear,
-        birthMonth: randInt(1, 12),
-        birthDay: randInt(1, 28),
+        birthMonth: member.birthMonth,
+        birthDay: member.birthDay,
     }))
     const insertedMembers = await db.insert(schema.familyMembers).values(familyValues).returning()
 
-    console.log('Seeding relationships...')
-    const relationshipValues: {
+    dbg.seed('Seeding relationships...')
+
+    type RelRow = {
         fromMemberId: string
         toMemberId: string
-        type: (typeof schema.relationshipTypeEnum.enumValues)[number]
+        type: RelationshipType
         createdByUserId: string
-    }[] = []
+    }
 
+    const relationshipValues: RelRow[] = []
+    const createdBy = userIds[0]
+
+    function addRel(from: string, to: string, type: RelationshipType) {
+        relationshipValues.push({
+            fromMemberId: from,
+            toMemberId: to,
+            type,
+            createdByUserId: createdBy,
+        })
+    }
+
+    // Spouses
     for (let i = 0; i < tree.length; i++) {
-        const member = tree[i]
-        const memberId = insertedMembers[i].id
-
-        if (member.spouseIndex !== undefined && member.spouseIndex > i) {
-            const spouseId = insertedMembers[member.spouseIndex].id
-            relationshipValues.push({
-                fromMemberId: memberId,
-                toMemberId: spouseId,
-                type: 'spouse',
-                createdByUserId: userIds[0],
-            })
-            relationshipValues.push({
-                fromMemberId: spouseId,
-                toMemberId: memberId,
-                type: 'spouse',
-                createdByUserId: userIds[0],
-            })
-        }
-
-        if (member.parentIndices) {
-            for (const parentIdx of member.parentIndices) {
-                const parentId = insertedMembers[parentIdx].id
-                relationshipValues.push({
-                    fromMemberId: parentId,
-                    toMemberId: memberId,
-                    type: 'parent',
-                    createdByUserId: userIds[0],
-                })
-                relationshipValues.push({
-                    fromMemberId: memberId,
-                    toMemberId: parentId,
-                    type: 'child',
-                    createdByUserId: userIds[0],
-                })
-
-                const parentMember = tree[parentIdx]
-                if (parentMember.parentIndices) {
-                    for (const gpIdx of parentMember.parentIndices) {
-                        const gpId = insertedMembers[gpIdx].id
-                        relationshipValues.push({
-                            fromMemberId: gpId,
-                            toMemberId: memberId,
-                            type: 'grandparent',
-                            createdByUserId: userIds[0],
-                        })
-                        relationshipValues.push({
-                            fromMemberId: memberId,
-                            toMemberId: gpId,
-                            type: 'grandchild',
-                            createdByUserId: userIds[0],
-                        })
-                    }
-                }
-            }
+        const m = tree[i]
+        if (m.spouseIndex !== undefined && m.spouseIndex > i) {
+            const aId = insertedMembers[i].id
+            const bId = insertedMembers[m.spouseIndex].id
+            addRel(aId, bId, 'spouse')
+            addRel(bId, aId, 'spouse')
         }
     }
 
+    // Build ancestor index: memberId → array of { id, generation }
+    // For each member, walk up the parent chain and emit typed ancestor relationships
+    function getAncestors(
+        idx: number,
+        depth: number,
+        visited: Set<number>,
+    ): { idx: number; depth: number }[] {
+        if (depth > 7 || visited.has(idx)) {
+            return []
+        }
+        visited.add(idx)
+        const parents = tree[idx].parentIndices ?? []
+        const result: { idx: number; depth: number }[] = parents.map((p) => ({ idx: p, depth }))
+        for (const p of parents) {
+            result.push(...getAncestors(p, depth + 1, visited))
+        }
+        return result
+    }
+
     for (let i = 0; i < tree.length; i++) {
-        if (!tree[i].parentIndices) continue
+        const ancestors = getAncestors(i, 1, new Set())
+        const memberId = insertedMembers[i].id
+        for (const { idx: ancIdx, depth } of ancestors) {
+            const types = ANCESTOR_TYPE_MAP[depth]
+            if (!types) {
+                continue
+            }
+            const ancestorId = insertedMembers[ancIdx].id
+            addRel(ancestorId, memberId, types.ancestor)
+            addRel(memberId, ancestorId, types.descendant)
+        }
+    }
+
+    // Siblings (share same first parent)
+    for (let i = 0; i < tree.length; i++) {
+        if (!tree[i].parentIndices) {
+            continue
+        }
         for (let j = i + 1; j < tree.length; j++) {
-            if (!tree[j].parentIndices) continue
+            if (!tree[j].parentIndices) {
+                continue
+            }
             if (tree[i].parentIndices![0] === tree[j].parentIndices![0]) {
-                relationshipValues.push({
-                    fromMemberId: insertedMembers[i].id,
-                    toMemberId: insertedMembers[j].id,
-                    type: 'sibling',
-                    createdByUserId: userIds[0],
-                })
-                relationshipValues.push({
-                    fromMemberId: insertedMembers[j].id,
-                    toMemberId: insertedMembers[i].id,
-                    type: 'sibling',
-                    createdByUserId: userIds[0],
-                })
+                addRel(insertedMembers[i].id, insertedMembers[j].id, 'sibling')
+                addRel(insertedMembers[j].id, insertedMembers[i].id, 'sibling')
             }
         }
     }
@@ -477,39 +516,38 @@ async function seed() {
             await db.insert(schema.relationships).values(relationshipValues.slice(i, i + batchSize))
         }
     }
+    dbg.seed('Inserted %d relationships', relationshipValues.length)
 
-    console.log('Seeding registrations...')
+    dbg.seed('Seeding registrations...')
     for (const event of events) {
         const eventTiers = allTiers.filter((t) => t.eventId === event.id)
-        const numRegistrations = event.status === 'open' ? randInt(5, 7) : randInt(8, 10)
+        const numRegistrations =
+            event.status === 'open'
+                ? faker.number.int({ min: 5, max: 7 })
+                : faker.number.int({ min: 8, max: 10 })
 
         for (let r = 0; r < numRegistrations; r++) {
             const userId = userIds[r % userIds.length]
-            const numParty = randInt(1, 4)
+            const numParty = faker.number.int({ min: 1, max: 4 })
             const status =
-                event.status === 'open' && Math.random() > 0.5
+                event.status === 'open' && faker.datatype.boolean()
                     ? ('pending' as const)
                     : ('paid' as const)
 
             let totalCents = 0
-            const partyData: {
-                name: string
-                birthDate: string
-                tierId: string
-            }[] = []
+            const partyData: { name: string; birthDate: string; tierId: string }[] = []
+
             for (let p = 0; p < numParty; p++) {
-                const birthYear = new Date().getFullYear() - randInt(2, 70)
-                const birthMonth = randInt(1, 12)
-                const birthDay = randInt(1, 28)
-                const birthDate = `${birthYear}-${String(birthMonth).padStart(2, '0')}-${String(birthDay).padStart(2, '0')}`
-                const age = new Date().getFullYear() - birthYear
+                const birthDate = faker.date.birthdate({ mode: 'age', min: 2, max: 70 })
+                const birthDateStr = birthDate.toISOString().slice(0, 10)
+                const age = new Date().getFullYear() - birthDate.getFullYear()
                 const tier = eventTiers.find(
                     (t) => age >= t.minAge && (t.maxAge === null || age <= t.maxAge),
                 )!
                 totalCents += tier.priceCents
                 partyData.push({
-                    name: `${pick(FIRST_NAMES)} ${familyValues[r % familyValues.length].name.split(' ').pop()}`,
-                    birthDate,
+                    name: faker.person.fullName(),
+                    birthDate: birthDateStr,
                     tierId: tier.id,
                 })
             }
@@ -537,11 +575,11 @@ async function seed() {
         }
     }
 
-    console.log('Seeding photos...')
+    dbg.seed('Seeding photos...')
     const photoValues = []
     for (let eventIdx = 0; eventIdx < 2; eventIdx++) {
         const event = events[eventIdx]
-        const numPhotos = randInt(6, 10)
+        const numPhotos = faker.number.int({ min: 6, max: 10 })
         for (let p = 0; p < numPhotos; p++) {
             const photoId = `${event.year}-${String(p + 1).padStart(3, '0')}`
             photoValues.push({
@@ -549,55 +587,38 @@ async function seed() {
                 uploadedByUserId: userIds[p % userIds.length],
                 r2Key: `photos/event-${event.year}/${photoId}.jpg`,
                 url: `https://picsum.photos/seed/${photoId}/800/600`,
-                caption: p === 0 ? 'Group photo' : null,
+                caption:
+                    p === 0
+                        ? 'Group photo'
+                        : faker.datatype.boolean()
+                          ? faker.lorem.sentence()
+                          : null,
             })
         }
     }
     await db.insert(schema.photos).values(photoValues)
 
-    console.log('Seeding storefront config...')
+    dbg.seed('Seeding storefront config...')
     await db.insert(schema.storefrontConfig).values({
-        externalShopUrl: 'https://roberts-family-store.example.com',
-        products: [
-            {
-                name: 'Family Reunion T-Shirt 2026',
-                imageUrl: 'https://picsum.photos/seed/shirt/400/400',
-                description: 'Official reunion tee in navy blue',
-            },
-            {
-                name: 'Reunion Tote Bag',
-                imageUrl: 'https://picsum.photos/seed/tote/400/400',
-                description: 'Canvas tote with family crest',
-            },
-            {
-                name: 'Photo Book 2025',
-                imageUrl: 'https://picsum.photos/seed/book/400/400',
-                description: "Hardcover book of last year's reunion photos",
-            },
-        ],
+        externalShopUrl: 'https://patterson-family-store.example.com',
+        products: Array.from({ length: 3 }, () => ({
+            name: faker.commerce.productName(),
+            imageUrl: `https://picsum.photos/seed/${faker.string.alphanumeric(8)}/400/400`,
+            description: faker.commerce.productDescription(),
+        })),
         isActive: true,
     })
 
-    console.log('Seeding contact submissions...')
-    await db.insert(schema.contactSubmissions).values([
-        {
-            name: 'Cousin Marcus',
-            email: 'marcus@example.com',
-            message: 'Hey! What time does the reunion start this year?',
-        },
-        {
-            name: 'Aunt Dorothy',
-            email: 'dorothy@example.com',
-            message: 'Can we get a vegetarian option on the menu?',
-        },
-        {
-            name: 'Uncle Steve',
-            email: 'steve@example.com',
-            message: "I'd like to volunteer to help set up Friday evening.",
-        },
-    ])
+    dbg.seed('Seeding contact submissions...')
+    await db.insert(schema.contactSubmissions).values(
+        Array.from({ length: faker.number.int({ min: 5, max: 8 }) }, () => ({
+            name: faker.person.fullName(),
+            email: faker.internet.email(),
+            message: faker.lorem.sentences(2),
+        })),
+    )
 
-    console.log('Seed complete!')
+    dbg.seed('Seed complete!')
     await client.end()
 }
 
