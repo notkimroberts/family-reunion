@@ -9,5 +9,9 @@
       "Bash(bun run lint)",
       "Bash(bun run test)"
     ]
-  }
+  },
+  "enabledMcpjsonServers": [
+    "svelte"
+  ],
+  "enableAllProjectMcpServers": true
 }
