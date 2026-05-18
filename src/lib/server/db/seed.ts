@@ -299,8 +299,8 @@ async function seed() {
                 startDate: new Date('2027-07-23T16:00:00'),
                 endDate: new Date('2027-07-25T12:00:00'),
                 venue: {
-                    name: 'Mountain View Resort',
-                    address: '789 Summit Way, Blue Ridge, GA 30513',
+                    name: 'OakStop',
+                    address: 'Oakland, CA 94617',
                     description: 'Mountain resort with hiking trails, pool, and conference rooms',
                 },
                 menu: ['TBD — voting opens soon!'],
