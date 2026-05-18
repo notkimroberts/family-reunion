@@ -1,5 +1,5 @@
 CREATE TYPE "public"."event_status" AS ENUM('draft', 'open', 'closed', 'archived');--> statement-breakpoint
-CREATE TYPE "public"."registration_status" AS ENUM('pending', 'paid', 'refunded');--> statement-breakpoint
+CREATE TYPE "public"."registration_status" AS ENUM('pending', 'paid', 'refunded', 'waived');--> statement-breakpoint
 CREATE TYPE "public"."relationship_type" AS ENUM('parent', 'child', 'spouse', 'sibling', 'grandparent', 'grandchild', 'aunt_uncle', 'niece_nephew', 'cousin');--> statement-breakpoint
 CREATE TABLE "account" (
 	"id" text PRIMARY KEY NOT NULL,
@@ -25,6 +25,15 @@ CREATE TABLE "contact_submissions" (
 	"created_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
+CREATE TABLE "family_member_edits" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"member_id" uuid NOT NULL,
+	"editor_name" text NOT NULL,
+	"editor_email" text NOT NULL,
+	"snapshot" jsonb NOT NULL,
+	"created_at" timestamp DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
 CREATE TABLE "family_members" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"user_id" text,
@@ -40,9 +49,7 @@ CREATE TABLE "party_members" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"registration_id" uuid NOT NULL,
 	"name" text NOT NULL,
-	"birth_year" integer NOT NULL,
-	"birth_month" integer,
-	"birth_day" integer,
+	"birth_date" date,
 	"pricing_tier_id" uuid NOT NULL,
 	"created_at" timestamp DEFAULT now() NOT NULL
 );
@@ -69,7 +76,9 @@ CREATE TABLE "pricing_tiers" (
 --> statement-breakpoint
 CREATE TABLE "registrations" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-	"user_id" text NOT NULL,
+	"user_id" text,
+	"contact_name" text,
+	"contact_email" text,
 	"event_id" uuid NOT NULL,
 	"stripe_session_id" text,
 	"total_amount_cents" integer NOT NULL,
@@ -143,6 +152,7 @@ CREATE TABLE "user" (
 CREATE TABLE "user_profiles" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"user_id" text NOT NULL,
+	"birth_date" date,
 	"phone" text,
 	"mailing_address" jsonb,
 	"profile_photo_url" text,
@@ -163,6 +173,7 @@ CREATE TABLE "verification" (
 );
 --> statement-breakpoint
 ALTER TABLE "account" ADD CONSTRAINT "account_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "family_member_edits" ADD CONSTRAINT "family_member_edits_member_id_family_members_id_fk" FOREIGN KEY ("member_id") REFERENCES "public"."family_members"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "party_members" ADD CONSTRAINT "party_members_registration_id_registrations_id_fk" FOREIGN KEY ("registration_id") REFERENCES "public"."registrations"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "party_members" ADD CONSTRAINT "party_members_pricing_tier_id_pricing_tiers_id_fk" FOREIGN KEY ("pricing_tier_id") REFERENCES "public"."pricing_tiers"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "photos" ADD CONSTRAINT "photos_event_id_reunion_events_id_fk" FOREIGN KEY ("event_id") REFERENCES "public"."reunion_events"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint

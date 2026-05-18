@@ -5,36 +5,8 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1778436459174,
-      "tag": "0000_overrated_shen",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1778444930151,
-      "tag": "0001_add_event_dates",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1747690000000,
-      "tag": "0002_birth_date",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1779058336999,
-      "tag": "0003_sparkling_ultimo",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "7",
-      "when": 1779059508994,
-      "tag": "0004_wise_black_queen",
+      "when": 1779066608507,
+      "tag": "0000_opposite_santa_claus",
       "breakpoints": true
     }
   ]
