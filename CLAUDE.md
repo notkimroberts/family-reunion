@@ -88,6 +88,7 @@ Route groups:
 - **bits-ui Select** has a `string | string[]` union for `value` — avoid `bind:value` on a `string` variable; use a native `<select>` styled with Tailwind or use `onValueChange` without bind
 - Define zod schemas in a co-located `schema.ts` file next to the route
 - **Initializing `$state` from load data**: don't use `$state(undefined)` + `$effect(() => { x = derived })` — this triggers the `svelte/prefer-writable-derived` lint error. Instead compute the value directly: `let x = $state(computedValue)`. This is intentional for "local copy" edit patterns where the value starts from server data but can be independently modified.
+- **Reactive collections**: use `SvelteMap` and `SvelteSet` from `svelte/reactivity` instead of `Map` and `Set` inside Svelte components — the ESLint rule `svelte/prefer-svelte-reactivity` enforces this and will block commits.
 
 ### Payments
 

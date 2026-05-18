@@ -1,18 +1,48 @@
 <script lang="ts">
-import { Badge } from '$lib/components/ui/badge'
+import { CalendarDays, Compass, MapPin, Utensils, Users } from '@lucide/svelte'
 import { Button } from '$lib/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card'
-import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
-} from '$lib/components/ui/table'
 import { APP_NAME } from '$lib/general/constants'
+import ScheduleCard from './ScheduleCard.svelte'
 
 let { data } = $props()
+
+let dateRange = $derived.by(() => {
+    if (!data.event?.startDate) {
+        return ''
+    }
+    const start = new Date(data.event.startDate).toLocaleDateString('en-US', {
+        month: 'long',
+        day: 'numeric',
+    })
+    const end = new Date(data.event.endDate ?? data.event.startDate).toLocaleDateString('en-US', {
+        month: 'long',
+        day: 'numeric',
+        year: 'numeric',
+    })
+    return `${start} – ${end}`
+})
+
+let venueCity = $derived.by(() => {
+    if (!data.event?.venue?.address) {
+        return ''
+    }
+    const parts = data.event.venue.address.split(',')
+    return parts.slice(-2).join(',').trim()
+})
+
+let mapsUrl = $derived(
+    data.event?.venue?.address
+        ? `https://maps.google.com/?q=${encodeURIComponent(data.event.venue.address)}`
+        : '',
+)
+
+let hasFood = $derived((data.event?.menu?.length ?? 0) > 0 || (data.event?.drinks?.length ?? 0) > 0)
+
+let hasThingsToDo = $derived(
+    (data.event?.recommendedSites?.length ?? 0) > 0 ||
+        (data.event?.recommendedActivities?.length ?? 0) > 0,
+)
 </script>
 
 <svelte:head>
@@ -20,165 +50,188 @@ let { data } = $props()
 </svelte:head>
 
 {#if !data.event}
-    <section class="col-span-12 text-center py-12">
-        <p class="text-muted-foreground">Check back soon for details about the next reunion!</p>
+    <section class="col-span-12 py-16 text-center">
+        <p class="text-muted-foreground text-lg">
+            Check back soon for details about the next reunion!
+        </p>
     </section>
 {:else}
+    <!-- Hero -->
     <section class="col-span-12">
-        <Card class="bg-primary text-primary-foreground">
-            <CardContent class="pt-6">
-                <h2 class="text-2xl font-bold mb-2">{data.event.title}</h2>
-                <Badge variant="secondary">{data.registrantCount} registered households</Badge>
-            </CardContent>
-        </Card>
+        <div class="bg-primary text-primary-foreground rounded-2xl px-6 py-10 md:px-12 md:py-14">
+            <p
+                class="text-primary-foreground/70 mb-3 text-sm font-semibold uppercase tracking-widest">
+                Patterson Family
+            </p>
+            <h1 class="mb-5 text-3xl font-bold leading-tight md:text-4xl lg:text-5xl">
+                {data.event.title}
+            </h1>
+            <div class="mb-6 flex flex-col gap-2">
+                {#if dateRange}
+                    <div class="flex items-center gap-2">
+                        <CalendarDays class="size-4 shrink-0 opacity-70" />
+                        <span class="text-lg font-medium">{dateRange}</span>
+                    </div>
+                {/if}
+                {#if data.event.venue}
+                    <div class="flex items-center gap-2">
+                        <MapPin class="size-4 shrink-0 opacity-70" />
+                        <span class="opacity-90"
+                            >{data.event.venue.name}{venueCity ? ` · ${venueCity}` : ''}</span>
+                    </div>
+                {/if}
+            </div>
+            <div class="flex flex-col items-start gap-3 sm:flex-row sm:items-center">
+                <Button href="/register" size="lg" variant="secondary" class="font-semibold">
+                    Register Now
+                </Button>
+                {#if data.registrantCount > 0}
+                    <div class="text-primary-foreground/70 flex items-center gap-1.5 text-sm">
+                        <Users class="size-4" />
+                        <span>
+                            {data.registrantCount}
+                            {data.registrantCount === 1 ? 'family' : 'families'} registered
+                        </span>
+                    </div>
+                {/if}
+            </div>
+        </div>
     </section>
 
-    {#if data.event.venue}
-        <section class="col-span-12 xl:col-span-6">
-            <Card>
-                <CardHeader>
-                    <CardTitle>Venue</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <p class="text-xl font-semibold">{data.event.venue.name}</p>
-                    <p class="text-muted-foreground">{data.event.venue.address}</p>
-                    {#if data.event.venue.description}
-                        <p class="mt-2">{data.event.venue.description}</p>
-                    {/if}
-                    {#if data.event.venue.imageUrl}
-                        <img
-                            src={data.event.venue.imageUrl}
-                            alt={data.event.venue.name}
-                            class="rounded-lg mt-4 max-h-64 object-cover" />
-                    {/if}
-                </CardContent>
-            </Card>
-        </section>
-    {/if}
-
+    <!-- Schedule -->
     {#if data.event.schedule && data.event.schedule.length > 0}
-        <section class="col-span-12" class:xl:col-span-6={data.event.venue}>
-            <Card>
-                <CardHeader>
-                    <CardTitle>Schedule</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <div class="space-y-3 md:hidden">
-                        {#each data.event.schedule as item}
-                            <div class="rounded-lg border p-3">
-                                <div class="font-medium">{item.activity}</div>
-                                <div class="mt-1 text-sm text-muted-foreground">
-                                    {item.day} &middot; {item.time}
-                                </div>
+        <section class="col-span-12">
+            <ScheduleCard
+                schedule={data.event.schedule}
+                venueName={data.event.venue?.name}
+                startDate={data.event.startDate?.toISOString() ?? undefined} />
+        </section>
+    {/if}
+
+    <!-- Venue + Food & Drinks -->
+    {#if data.event.venue || hasFood}
+        <section class="col-span-12">
+            <div class="grid grid-cols-1 gap-6 xl:grid-cols-2">
+                {#if data.event.venue}
+                    <Card class="h-full">
+                        <CardHeader>
+                            <CardTitle class="flex items-center gap-2">
+                                <MapPin class="size-5" />
+                                Venue
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent class="space-y-3">
+                            <div>
+                                <p class="text-xl font-semibold">{data.event.venue.name}</p>
+                                <p class="text-muted-foreground mt-0.5 text-sm">
+                                    {data.event.venue.address}
+                                </p>
                             </div>
-                        {/each}
-                    </div>
-                    <div class="hidden overflow-x-auto md:block">
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead>Day</TableHead>
-                                    <TableHead>Time</TableHead>
-                                    <TableHead>Activity</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {#each data.event.schedule as item}
-                                    <TableRow>
-                                        <TableCell>{item.day}</TableCell>
-                                        <TableCell>{item.time}</TableCell>
-                                        <TableCell>{item.activity}</TableCell>
-                                    </TableRow>
-                                {/each}
-                            </TableBody>
-                        </Table>
-                    </div>
-                </CardContent>
-            </Card>
+                            {#if data.event.venue.description}
+                                <p class="text-sm">{data.event.venue.description}</p>
+                            {/if}
+                            {#if mapsUrl}
+                                <a
+                                    href={mapsUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    class="text-primary inline-flex items-center gap-1.5 text-sm font-medium hover:underline">
+                                    <MapPin class="size-3.5" />
+                                    Get directions
+                                </a>
+                            {/if}
+                        </CardContent>
+                    </Card>
+                {/if}
+
+                {#if hasFood}
+                    <Card class="h-full">
+                        <CardHeader>
+                            <CardTitle class="flex items-center gap-2">
+                                <Utensils class="size-5" />
+                                Food & Drinks
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent class="space-y-5">
+                            {#if data.event.menu?.length}
+                                <div>
+                                    <p
+                                        class="text-muted-foreground mb-2 text-xs font-semibold uppercase tracking-widest">
+                                        Menu
+                                    </p>
+                                    <div class="flex flex-wrap gap-2">
+                                        {#each data.event.menu as item}
+                                            <span class="bg-muted rounded-full px-3 py-1 text-sm"
+                                                >{item}</span>
+                                        {/each}
+                                    </div>
+                                </div>
+                            {/if}
+                            {#if data.event.drinks?.length}
+                                <div>
+                                    <p
+                                        class="text-muted-foreground mb-2 text-xs font-semibold uppercase tracking-widest">
+                                        Drinks
+                                    </p>
+                                    <div class="flex flex-wrap gap-2">
+                                        {#each data.event.drinks as item}
+                                            <span class="bg-muted rounded-full px-3 py-1 text-sm"
+                                                >{item}</span>
+                                        {/each}
+                                    </div>
+                                </div>
+                            {/if}
+                        </CardContent>
+                    </Card>
+                {/if}
+            </div>
         </section>
     {/if}
 
-    {#if data.event.menu && data.event.menu.length > 0}
-        <section class="col-span-12 xl:col-span-6">
+    <!-- Things To Do -->
+    {#if hasThingsToDo}
+        <section class="col-span-12">
             <Card>
                 <CardHeader>
-                    <CardTitle>Menu</CardTitle>
+                    <CardTitle class="flex items-center gap-2">
+                        <Compass class="size-5" />
+                        Things To Do
+                    </CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <ul class="list-disc list-inside space-y-1">
-                        {#each data.event.menu as item}
-                            <li>{item}</li>
-                        {/each}
-                    </ul>
-                </CardContent>
-            </Card>
-        </section>
-    {/if}
-
-    {#if data.event.drinks && data.event.drinks.length > 0}
-        <section class="col-span-12 xl:col-span-6">
-            <Card>
-                <CardHeader>
-                    <CardTitle>Drinks</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <ul class="list-disc list-inside space-y-1">
-                        {#each data.event.drinks as item}
-                            <li>{item}</li>
-                        {/each}
-                    </ul>
-                </CardContent>
-            </Card>
-        </section>
-    {/if}
-
-    {#if data.event.recommendedSites && data.event.recommendedSites.length > 0}
-        <section class="col-span-12 xl:col-span-6">
-            <Card>
-                <CardHeader>
-                    <CardTitle>Recommended Sites</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <ul class="space-y-2">
-                        {#each data.event.recommendedSites as site}
-                            <li>
+                    <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
+                        {#each data.event.recommendedSites ?? [] as site}
+                            <div class="rounded-lg border p-4">
                                 <p class="font-medium">{site.name}</p>
                                 {#if site.description}
-                                    <p class="text-sm text-muted-foreground">{site.description}</p>
+                                    <p class="text-muted-foreground mt-1 text-sm">
+                                        {site.description}
+                                    </p>
                                 {/if}
-                            </li>
+                            </div>
                         {/each}
-                    </ul>
-                </CardContent>
-            </Card>
-        </section>
-    {/if}
-
-    {#if data.event.recommendedActivities && data.event.recommendedActivities.length > 0}
-        <section class="col-span-12 xl:col-span-6">
-            <Card>
-                <CardHeader>
-                    <CardTitle>Recommended Activities</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <ul class="space-y-2">
-                        {#each data.event.recommendedActivities as activity}
-                            <li>
+                        {#each data.event.recommendedActivities ?? [] as activity}
+                            <div class="rounded-lg border p-4">
                                 <p class="font-medium">{activity.name}</p>
                                 {#if activity.description}
-                                    <p class="text-sm text-muted-foreground">
+                                    <p class="text-muted-foreground mt-1 text-sm">
                                         {activity.description}
                                     </p>
                                 {/if}
-                            </li>
+                            </div>
                         {/each}
-                    </ul>
+                    </div>
                 </CardContent>
             </Card>
         </section>
     {/if}
 
-    <section class="col-span-12 text-center">
-        <Button href="/register" size="lg">Register Now</Button>
+    <!-- Bottom CTA -->
+    <section class="col-span-12">
+        <div class="border-primary/20 bg-primary/5 rounded-2xl border-2 px-6 py-10 text-center">
+            <h2 class="mb-2 text-xl font-bold">Ready to join the family?</h2>
+            <p class="text-muted-foreground mb-6">Secure your spot before registration closes.</p>
+            <Button href="/register" size="lg">Register Now</Button>
+        </div>
     </section>
 {/if}
