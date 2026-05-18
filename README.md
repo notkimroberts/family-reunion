@@ -1,5 +1,8 @@
 # Family Reunion
 
+[![CI](https://github.com/notkimroberts/family-reunion/actions/workflows/ci.yml/badge.svg)](https://github.com/notkimroberts/family-reunion/actions/workflows/ci.yml)
+[![Deploy on Railway](https://railway.com/project/879a5c19-03d9-426a-aee3-207aec98321a/deployments/badge)](https://railway.com/project/879a5c19-03d9-426a-aee3-207aec98321a/service/f968a4a8-5fc2-473c-b4a7-fa737dbe9e17)
+
 A web application for managing family reunions — registration, payments, family tree, photo gallery, and more.
 
 ## Tech Stack

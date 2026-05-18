@@ -3,10 +3,11 @@
     "allow": [
       "WebFetch(domain:github.com)",
       "Bash(bun update *)",
-      "Bash(bun run check)",
       "Bash(bun run build)",
+      "Bash(bun run check)",
+      "Bash(bun run format)",
       "Bash(bun run lint)",
-      "Bash(bun run format)"
+      "Bash(bun run test)"
     ]
   }
 }

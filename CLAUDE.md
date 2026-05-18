@@ -10,6 +10,7 @@ bun run build            # Production build
 bun run check            # Svelte type checking
 bun run lint             # Prettier check + ESLint
 bun run format           # Prettier write (auto-fix formatting)
+bun run test             # Run Vitest unit tests
 
 bun run db:generate      # Generate migration from schema changes
 bun run db:migrate       # Apply pending migrations
@@ -176,6 +177,7 @@ The app is fully responsive with a `md:` (768px) breakpoint separating mobile an
 - Be sure to run `bun run check` when you're done making a series of code changes
 - Use `bun run format` whenever the format is not correct
 - Prefer running single tests, and not the whole test suite, for performance
+- **Tests**: run `bun run test` after any change to logic covered by tests; add or update co-located `.test.ts` files whenever new utility functions or server logic is added or modified. Tests live next to the source file (e.g. `price.test.ts` beside `price.ts`)
 
 # Dependency management
 
