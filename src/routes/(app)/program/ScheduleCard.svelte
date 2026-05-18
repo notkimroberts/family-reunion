@@ -1,7 +1,9 @@
 <script lang="ts">
 import { CalendarDays, Clock } from '@lucide/svelte'
 import { SvelteMap } from 'svelte/reactivity'
+import { slide } from 'svelte/transition'
 import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card'
+import { pickDefaultItem } from './scheduleTime'
 
 interface ScheduleItem {
     day: string
@@ -12,11 +14,17 @@ interface ScheduleItem {
 interface Props {
     schedule: ScheduleItem[]
     venueName?: string
+    startDate?: string
 }
 
-let { schedule, venueName }: Props = $props()
+let { schedule, venueName, startDate }: Props = $props()
 
-let selectedItem = $state<ScheduleItem | null>(null)
+function scrollIntoView(node: HTMLElement) {
+    node.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+    return {}
+}
+
+let selectedItem = $state<ScheduleItem>(pickDefaultItem(schedule, startDate))
 
 let scheduleByDay = $derived.by(() => {
     const days = new SvelteMap<string, ScheduleItem[]>()
@@ -34,12 +42,7 @@ let selectedDayItems = $derived(
 )
 
 function handleSelectItem(item: ScheduleItem) {
-    selectedItem =
-        selectedItem?.day === item.day &&
-        selectedItem?.time === item.time &&
-        selectedItem?.activity === item.activity
-            ? null
-            : item
+    selectedItem = item
 }
 
 function isSelected(item: ScheduleItem) {
@@ -88,14 +91,35 @@ function isSelected(item: ScheduleItem) {
                                     </div>
                                     <span class="font-medium">{item.activity}</span>
                                 </button>
+
+                                {#if isSelected(item)}
+                                    <div
+                                        class="md:hidden px-3 pb-3 pt-1"
+                                        transition:slide={{ duration: 200 }}
+                                        use:scrollIntoView>
+                                        <div class="bg-primary/5 rounded-lg p-4 space-y-1.5">
+                                            <p class="font-semibold">{item.activity}</p>
+                                            <div
+                                                class="text-muted-foreground flex items-center gap-1.5 text-sm">
+                                                <Clock class="size-3.5 shrink-0" />
+                                                <span>{item.time}</span>
+                                            </div>
+                                            {#if venueName}
+                                                <p class="text-muted-foreground text-sm">
+                                                    {venueName}
+                                                </p>
+                                            {/if}
+                                        </div>
+                                    </div>
+                                {/if}
                             {/each}
                         </div>
                     </div>
                 {/each}
             </div>
 
-            <!-- Detail panel -->
-            <div class="p-6">
+            <!-- Detail panel (desktop only) -->
+            <div class="hidden md:block p-6">
                 {#if selectedItem}
                     <div class="space-y-5">
                         <div>

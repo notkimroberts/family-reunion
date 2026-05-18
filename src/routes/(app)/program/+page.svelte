@@ -101,7 +101,10 @@ let hasThingsToDo = $derived(
     <!-- Schedule -->
     {#if data.event.schedule && data.event.schedule.length > 0}
         <section class="col-span-12">
-            <ScheduleCard schedule={data.event.schedule} venueName={data.event.venue?.name} />
+            <ScheduleCard
+                schedule={data.event.schedule}
+                venueName={data.event.venue?.name}
+                startDate={data.event.startDate?.toISOString() ?? undefined} />
         </section>
     {/if}
 

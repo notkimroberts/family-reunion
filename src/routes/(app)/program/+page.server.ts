@@ -1,7 +1,7 @@
 import { redirect } from '@sveltejs/kit'
 import { eq, and, count } from 'drizzle-orm'
 import { db } from '$lib/server/db'
-import { reunionEvents, registrations, photos } from '$lib/server/db/schema'
+import { reunionEvents, registrations } from '$lib/server/db/schema'
 import type { PageServerLoad } from './$types'
 
 export const load: PageServerLoad = async () => {

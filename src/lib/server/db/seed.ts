@@ -352,7 +352,7 @@ async function seed() {
                 endDate: new Date('2027-07-25T12:00:00'),
                 venue: {
                     name: 'OakStop',
-                    address: 'Oakland, CA 94617',
+                    address: '1721 Broadway, Oakland, CA 94612',
                     description: 'Mountain resort with hiking trails, pool, and conference rooms',
                 },
                 menu: ['TBD — voting opens soon!'],
