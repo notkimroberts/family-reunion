@@ -4,19 +4,22 @@ import { DatePicker } from '$lib/components'
 import { Button } from '$lib/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card'
 import { Input } from '$lib/components/ui/input'
+import { SHIRT_SIZES } from '$lib/general/constants'
 import { formatPrice } from '$lib/utils'
 
-let { data, form } = $props()
+const selectClass =
+    'border-input bg-background focus:ring-ring flex h-9 w-full rounded-md border px-3 py-1 text-sm shadow-xs transition-colors focus:outline-none focus:ring-1'
 
-type Tier = (typeof data.tiers)[number]
+let { data, form } = $props()
 
 type Member = {
     name: string
     birthDate: string | undefined
     tierId: string
+    shirtSize: string
 }
 
-const defaultMember = (): Member => ({ name: '', birthDate: undefined, tierId: '' })
+const defaultMember = (): Member => ({ name: '', birthDate: undefined, tierId: '', shirtSize: '' })
 
 let contactName = $state('')
 let contactEmail = $state('')
@@ -30,13 +33,14 @@ let membersJson = $derived(
             name: m.name,
             birthDate: m.birthDate ?? '',
             tierId: m.tierId,
+            shirtSize: m.shirtSize || undefined,
         })),
     ),
 )
 
 let totalCents = $derived(
     members.reduce((sum, m) => {
-        const tier = data.tiers.find((t: Tier) => t.id === m.tierId)
+        const tier = data.tiers.find((t) => t.id === m.tierId)
         return sum + (tier?.priceCents ?? 0)
     }, 0),
 )
@@ -57,6 +61,8 @@ function handleSuccess() {
     submitted = true
     setTimeout(() => (submitted = false), 3000)
 }
+
+const shirtsEnabled = $derived(data.events[0]?.shirtsEnabled ?? false)
 </script>
 
 <svelte:head>
@@ -146,7 +152,7 @@ function handleSuccess() {
                             id="status"
                             name="status"
                             bind:value={status}
-                            class="border-input bg-background focus:ring-ring flex h-9 w-full rounded-md border px-3 py-1 text-sm shadow-xs transition-colors focus:outline-none focus:ring-1 max-w-xs">
+                            class="{selectClass} max-w-xs">
                             <option value="paid">Paid</option>
                             <option value="pending">Not yet paid</option>
                             <option value="waived">Waived</option>
@@ -162,9 +168,12 @@ function handleSuccess() {
                 <CardContent class="space-y-4">
                     {#each members as member, i}
                         <div
-                            class="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_auto_auto] items-end rounded-lg border p-3">
-                            <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                                <div class="space-y-1.5 sm:col-span-1">
+                            class="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_auto] items-end rounded-lg border p-3">
+                            <div
+                                class="grid grid-cols-1 gap-3 sm:grid-cols-2 {shirtsEnabled
+                                    ? 'lg:grid-cols-4'
+                                    : 'lg:grid-cols-3'}">
+                                <div class="space-y-1.5">
                                     <label
                                         for="member-name-{i}"
                                         class="text-xs font-medium text-muted-foreground">
@@ -178,6 +187,24 @@ function handleSuccess() {
                                 </div>
                                 <div class="space-y-1.5">
                                     <label
+                                        for="member-tier-{i}"
+                                        class="text-xs font-medium text-muted-foreground">
+                                        Category <span class="text-destructive">*</span>
+                                    </label>
+                                    <select
+                                        id="member-tier-{i}"
+                                        bind:value={member.tierId}
+                                        class={selectClass}>
+                                        <option value="">Select category…</option>
+                                        {#each data.tiers as tier}
+                                            <option value={tier.id}>
+                                                {tier.label} — ${formatPrice(tier.priceCents)}
+                                            </option>
+                                        {/each}
+                                    </select>
+                                </div>
+                                <div class="space-y-1.5">
+                                    <label
                                         for="member-bday-{i}"
                                         class="text-xs font-medium text-muted-foreground">
                                         Birthday
@@ -188,24 +215,25 @@ function handleSuccess() {
                                         bind:value={member.birthDate}
                                         placeholder="Optional" />
                                 </div>
-                                <div class="space-y-1.5">
-                                    <label
-                                        for="member-tier-{i}"
-                                        class="text-xs font-medium text-muted-foreground">
-                                        Tier <span class="text-destructive">*</span>
-                                    </label>
-                                    <select
-                                        id="member-tier-{i}"
-                                        bind:value={member.tierId}
-                                        class="border-input bg-background focus:ring-ring flex h-9 w-full rounded-md border px-3 py-1 text-sm shadow-xs transition-colors focus:outline-none focus:ring-1">
-                                        <option value="">Select tier…</option>
-                                        {#each data.tiers as tier}
-                                            <option value={tier.id}>
-                                                {tier.label} — ${formatPrice(tier.priceCents)}
-                                            </option>
-                                        {/each}
-                                    </select>
-                                </div>
+                                {#if shirtsEnabled}
+                                    <div class="space-y-1.5">
+                                        <label
+                                            for="member-shirt-{i}"
+                                            class="text-xs font-medium text-muted-foreground">
+                                            T-shirt
+                                            <span class="text-muted-foreground/60">(optional)</span>
+                                        </label>
+                                        <select
+                                            id="member-shirt-{i}"
+                                            bind:value={member.shirtSize}
+                                            class={selectClass}>
+                                            <option value="">Select size…</option>
+                                            {#each SHIRT_SIZES as size}
+                                                <option value={size}>{size}</option>
+                                            {/each}
+                                        </select>
+                                    </div>
+                                {/if}
                             </div>
                             {#if members.length > 1}
                                 <Button

@@ -142,6 +142,7 @@ export const reunionEvents = pgTable('reunion_events', {
     recommendedActivities:
         jsonb('recommended_activities').$type<{ name: string; description?: string }[]>(),
     schedule: jsonb('schedule').$type<{ day: string; time: string; activity: string }[]>(),
+    shirtsEnabled: boolean('shirts_enabled').notNull().default(false),
     createdAt: timestamp('created_at').notNull().defaultNow(),
     updatedAt: timestamp('updated_at').notNull().defaultNow(),
 })
@@ -180,6 +181,7 @@ export const partyMembers = pgTable('party_members', {
         .references(() => registrations.id),
     name: text('name').notNull(),
     birthDate: date('birth_date'),
+    shirtSize: text('shirt_size'),
     pricingTierId: uuid('pricing_tier_id')
         .notNull()
         .references(() => pricingTiers.id),

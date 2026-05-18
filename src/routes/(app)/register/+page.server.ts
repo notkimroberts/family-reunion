@@ -14,7 +14,6 @@ import {
     userProfiles,
 } from '$lib/server/db/schema'
 import { dbg } from '$lib/server/debug'
-import { getAgeFromDate } from '$lib/utils/age'
 import type { PageServerLoad, Actions } from './$types'
 import { registrationSchema } from './schema'
 
@@ -64,20 +63,21 @@ export const actions: Actions = {
             return fail(400, { form })
         }
 
-        const { eventId, selfBirthDate, members: membersJson } = form.data
+        const {
+            eventId,
+            selfTierId,
+            selfBirthDate,
+            selfShirtSize,
+            members: membersJson,
+        } = form.data
 
-        const additionalMembers: { name: string; birthDate: string; tierId: string }[] =
-            JSON.parse(membersJson)
+        type MemberInput = { name: string; tierId: string; birthDate?: string; shirtSize?: string }
+        const additionalMembers: MemberInput[] = JSON.parse(membersJson)
 
         const tiers = await db.select().from(pricingTiers).where(eq(pricingTiers.eventId, eventId))
         const tierMap = new Map(tiers.map((t) => [t.id, t]))
 
-        function getTierForBirthDate(birthDate: string) {
-            const age = getAgeFromDate(birthDate)
-            return tiers.find((t) => age >= t.minAge && (t.maxAge === null || age <= t.maxAge))
-        }
-
-        const selfTier = getTierForBirthDate(selfBirthDate)
+        const selfTier = tierMap.get(selfTierId)
         if (!selfTier) {
             return fail(400, { form })
         }
@@ -93,20 +93,21 @@ export const actions: Actions = {
             additionalMembers.length + 1,
         )
 
-        // Upsert profile birthday
-        const [existingProfile] = await db
-            .select()
-            .from(userProfiles)
-            .where(eq(userProfiles.userId, user.id))
-            .limit(1)
-
-        if (existingProfile) {
-            await db
-                .update(userProfiles)
-                .set({ birthDate: selfBirthDate, updatedAt: new Date() })
+        if (selfBirthDate) {
+            const [existingProfile] = await db
+                .select()
+                .from(userProfiles)
                 .where(eq(userProfiles.userId, user.id))
-        } else {
-            await db.insert(userProfiles).values({ userId: user.id, birthDate: selfBirthDate })
+                .limit(1)
+
+            if (existingProfile) {
+                await db
+                    .update(userProfiles)
+                    .set({ birthDate: selfBirthDate, updatedAt: new Date() })
+                    .where(eq(userProfiles.userId, user.id))
+            } else {
+                await db.insert(userProfiles).values({ userId: user.id, birthDate: selfBirthDate })
+            }
         }
 
         let totalCents = selfTier.priceCents
@@ -145,13 +146,15 @@ export const actions: Actions = {
             {
                 registrationId: registration.id,
                 name: user.name,
-                birthDate: selfBirthDate,
+                birthDate: selfBirthDate || null,
+                shirtSize: selfShirtSize || null,
                 pricingTierId: selfTier.id,
             },
             ...additionalMembers.map((m) => ({
                 registrationId: registration.id,
                 name: m.name,
-                birthDate: m.birthDate,
+                birthDate: m.birthDate || null,
+                shirtSize: m.shirtSize || null,
                 pricingTierId: m.tierId,
             })),
         ])

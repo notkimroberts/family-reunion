@@ -39,6 +39,9 @@ let { data } = $props()
                             <TableHead>Name</TableHead>
                             <TableHead>Age</TableHead>
                             <TableHead>Category</TableHead>
+                            {#if data.members.some((m) => m.shirtSize)}
+                                <TableHead>T-shirt</TableHead>
+                            {/if}
                             <TableHead>Price</TableHead>
                         </TableRow>
                     </TableHeader>
@@ -50,14 +53,18 @@ let { data } = $props()
                                     {member.birthDate ? getAgeFromDate(member.birthDate) : '—'}
                                 </TableCell>
                                 <TableCell>{member.tierLabel}</TableCell>
+                                {#if data.members.some((m) => m.shirtSize)}
+                                    <TableCell>{member.shirtSize || '—'}</TableCell>
+                                {/if}
                                 <TableCell>${formatPrice(member.priceCents)}</TableCell>
                             </TableRow>
                         {/each}
                     </TableBody>
                     <TableFooter>
                         <TableRow>
-                            <TableCell colspan={3} class="text-right font-bold"
-                                >Total Paid:</TableCell>
+                            <TableCell
+                                colspan={data.members.some((m) => m.shirtSize) ? 4 : 3}
+                                class="text-right font-bold">Total Paid:</TableCell>
                             <TableCell class="font-bold">
                                 ${formatPrice(data.registration.totalAmountCents)}
                             </TableCell>
