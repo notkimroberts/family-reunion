@@ -15,7 +15,8 @@ bun run test             # Run Vitest unit tests
 bun run db:generate      # Generate migration from schema changes
 bun run db:migrate       # Apply pending migrations
 bun run db:push          # Push schema directly to DB (dev shortcut)
-bun run db:seed          # Seed database with test data (idempotent)
+bun run db:seed          # Seed database if empty (skips if data already exists)
+bun run db:reseed        # Always truncate all app tables and re-seed
 bun run db:studio        # Drizzle Studio GUI
 ```
 
@@ -40,13 +41,17 @@ Schema changes must follow this sequence:
 
 **Do not use `db:push`** in any environment where data must be preserved — it bypasses the migration tracker.
 
-For a clean local database reset (dev only): `dropdb family_reunion && createdb family_reunion && bun run db:migrate && bun run db:seed`
+> **Never use `dropdb && createdb` to reset local data.** Use `bun run db:reseed` instead — it truncates all app tables and re-seeds without touching the DB itself.
+
+For a clean local data reset (dev only): `bun run db:reseed`
 
 ## Architecture
 
 SvelteKit full-stack app (Svelte 5 with runes). Node adapter for Railway deployment. Bun as package manager and runtime. Please read all the latest documentation for (Svelte Kit)[svelte.dev/llms.txt] and Tailwind CSS to ensure you are familiar with the latest features and best practices before implementing any new features or changes in these areas.
 
-### Data Layer
+### Logging
+
+- Prefer the `dbg` utility (`$lib/server/debug`) over `console.log` for all server-side logging. Add a new namespace to the `dbg` object if one doesn't exist for the area you're working in. Enable output with `DEBUG=reunion:*` (or a specific namespace).
 
 - **PostgreSQL** via `postgres` driver + **Drizzle ORM** (schema at `src/lib/server/db/schema.ts`)
 - DB connection uses lazy init with SvelteKit's `$env/dynamic/private` — standalone scripts (like seed.ts) must create their own `postgres()` client directly

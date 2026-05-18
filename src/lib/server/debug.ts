@@ -12,4 +12,5 @@ export const dbg = {
     upload: Debug('reunion:upload'),
     profile: Debug('reunion:profile'),
     admin: Debug('reunion:admin'),
+    seed: Debug('reunion:seed'),
 }
