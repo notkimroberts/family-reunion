@@ -1,5 +1,5 @@
 import { redirect, fail } from '@sveltejs/kit'
-import { eq } from 'drizzle-orm'
+import { eq, desc } from 'drizzle-orm'
 import Stripe from 'stripe'
 import { zod4 as zod } from 'sveltekit-superforms/adapters'
 import { superValidate } from 'sveltekit-superforms/server'
@@ -25,12 +25,18 @@ function getStripe() {
 export const load: PageServerLoad = async (event) => {
     const user = requireAuth(event)
 
-    const openEvents = await db.select().from(reunionEvents).where(eq(reunionEvents.status, 'open'))
+    const openEvents = await db
+        .select()
+        .from(reunionEvents)
+        .where(eq(reunionEvents.status, 'open'))
+        .orderBy(desc(reunionEvents.year))
+        .limit(1)
 
-    const tiers =
-        openEvents.length > 0
-            ? await db.select().from(pricingTiers).where(eq(pricingTiers.eventId, openEvents[0].id))
-            : []
+    const openEvent = openEvents[0] ?? null
+
+    const tiers = openEvent
+        ? await db.select().from(pricingTiers).where(eq(pricingTiers.eventId, openEvent.id))
+        : []
 
     const [profile] = await db
         .select()
@@ -38,12 +44,12 @@ export const load: PageServerLoad = async (event) => {
         .where(eq(userProfiles.userId, user.id))
         .limit(1)
 
-    const form = await superValidate(zod(registrationSchema))
+    const form = await superValidate({ eventId: openEvent?.id ?? '' }, zod(registrationSchema))
 
     return {
         user,
         profile: profile ?? null,
-        events: openEvents,
+        event: openEvent,
         tiers,
         form,
     }

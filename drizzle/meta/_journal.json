@@ -22,6 +22,20 @@
       "when": 1747690000000,
       "tag": "0002_birth_date",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1779058336999,
+      "tag": "0003_sparkling_ultimo",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1779059508994,
+      "tag": "0004_wise_black_queen",
+      "breakpoints": true
     }
   ]
 }

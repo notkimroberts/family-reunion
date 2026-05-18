@@ -7,6 +7,24 @@ function getResend() {
     return new Resend(env.RESEND_API_KEY)
 }
 
+export async function sendMagicLinkEmail(to: string, url: string) {
+    dbg.email('sendMagicLinkEmail to=%s', to)
+    await getResend().emails.send({
+        from: `${APP_NAME} <noreply@resend.dev>`,
+        to,
+        subject: `Your sign-in link for ${APP_NAME}`,
+        text: [
+            `Click the link below to sign in to ${APP_NAME}:`,
+            '',
+            url,
+            '',
+            'This link expires in 5 minutes.',
+            '',
+            "If you didn't request this, you can safely ignore this email.",
+        ].join('\n'),
+    })
+}
+
 export async function sendContactEmail(from: { name: string; email: string }, message: string) {
     dbg.email('sendContactEmail from=%s', from.email)
     await getResend().emails.send({

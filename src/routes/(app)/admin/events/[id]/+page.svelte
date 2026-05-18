@@ -23,9 +23,14 @@ let { data } = $props()
 </svelte:head>
 
 <section class="col-span-12">
-    <p class="text-muted-foreground">
-        Year: {data.event.year} | Status: {data.event.status}
-    </p>
+    <div class="flex items-center justify-between gap-4 flex-wrap">
+        <p class="text-muted-foreground">
+            Year: {data.event.year} | Status: {data.event.status}
+        </p>
+        {#if data.event.status === 'open'}
+            <Button href="/admin/registrations" size="sm">+ Add Paper Registration</Button>
+        {/if}
+    </div>
 </section>
 
 <section class="col-span-12">

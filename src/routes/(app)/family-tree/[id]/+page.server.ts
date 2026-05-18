@@ -1,8 +1,13 @@
-import { error } from '@sveltejs/kit'
-import { eq, inArray } from 'drizzle-orm'
+import { error, fail } from '@sveltejs/kit'
+import { eq, inArray, desc } from 'drizzle-orm'
 import { db } from '$lib/server/db'
-import { familyMembers, relationships, userProfiles } from '$lib/server/db/schema'
-import type { PageServerLoad } from './$types'
+import {
+    familyMembers,
+    familyMemberEdits,
+    relationships,
+    userProfiles,
+} from '$lib/server/db/schema'
+import type { PageServerLoad, Actions } from './$types'
 
 type Rel = { from: string; to: string; type: string }
 
@@ -98,6 +103,12 @@ export const load: PageServerLoad = async ({ params }) => {
         })
         .filter((m): m is { id: string; name: string } => m !== null)
 
+    const editHistory = await db
+        .select()
+        .from(familyMemberEdits)
+        .where(eq(familyMemberEdits.memberId, id))
+        .orderBy(desc(familyMemberEdits.createdAt))
+
     return {
         member: { ...member, photoUrl: member.photoUrl ?? null },
         relationships: memberRels,
@@ -105,5 +116,84 @@ export const load: PageServerLoad = async ({ params }) => {
             .filter((m) => directRelatedIds.includes(m.id))
             .map((m) => ({ ...m, photoUrl: m.photoUrl ?? null })),
         ancestryChain,
+        editHistory,
     }
+}
+
+export const actions: Actions = {
+    editMember: async ({ params, request }) => {
+        const { id } = params
+        const data = await request.formData()
+        const name = (data.get('name') as string)?.trim()
+        const birthDate = data.get('birthDate') as string | null
+        const editorName = (data.get('editorName') as string)?.trim()
+        const editorEmail = (data.get('editorEmail') as string)?.trim().toLowerCase()
+
+        if (!name) {
+            return fail(400, { error: 'Name is required' })
+        }
+        if (!editorName || !editorEmail) {
+            return fail(400, { error: 'Your name and email are required' })
+        }
+
+        let birthYear: number | null = null
+        let birthMonth: number | null = null
+        let birthDay: number | null = null
+
+        if (birthDate) {
+            const parts = birthDate.split('-').map(Number)
+            birthYear = parts[0] ?? null
+            birthMonth = parts[1] ?? null
+            birthDay = parts[2] ?? null
+        }
+
+        await db
+            .update(familyMembers)
+            .set({ name, birthYear, birthMonth, birthDay, updatedAt: new Date() })
+            .where(eq(familyMembers.id, id))
+
+        await db.insert(familyMemberEdits).values({
+            memberId: id,
+            editorName,
+            editorEmail,
+            snapshot: { name, birthYear, birthMonth, birthDay },
+        })
+
+        return { success: true }
+    },
+
+    restoreSnapshot: async ({ params, request, locals }) => {
+        if (locals.user?.role !== 'admin') {
+            return fail(403, { error: 'Admin only' })
+        }
+
+        const { id } = params
+        const data = await request.formData()
+        const snapshotId = data.get('snapshotId') as string
+
+        const [edit] = await db
+            .select()
+            .from(familyMemberEdits)
+            .where(eq(familyMemberEdits.id, snapshotId))
+
+        if (!edit || edit.memberId !== id) {
+            return fail(404, { error: 'Snapshot not found' })
+        }
+
+        const { name, birthYear, birthMonth, birthDay } = edit.snapshot
+
+        await db
+            .update(familyMembers)
+            .set({ name, birthYear, birthMonth, birthDay, updatedAt: new Date() })
+            .where(eq(familyMembers.id, id))
+
+        await db.insert(familyMemberEdits).values({
+            memberId: id,
+            editorName: locals.user.name,
+            editorEmail: locals.user.email,
+            snapshot: { name, birthYear, birthMonth, birthDay },
+        })
+
+        return { success: true }
+    },
 }

@@ -66,7 +66,8 @@ export const POST: RequestHandler = async ({ request }) => {
                         name: session.customer_details?.name ?? 'Family Member',
                         eventTitle: reunionEvent.title,
                         partyMembers: members.map(
-                            (m) => `${m.name} (age ${getAgeFromDate(m.birthDate)})`,
+                            (m) =>
+                                `${m.name}${m.birthDate ? ` (age ${getAgeFromDate(m.birthDate)})` : ''}`,
                         ),
                         totalAmount: `$${(registration.totalAmountCents / 100).toFixed(2)}`,
                     })

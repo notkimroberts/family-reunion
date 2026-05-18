@@ -2,11 +2,20 @@
 import { createChart } from 'family-chart'
 import 'family-chart/styles/family-chart.css'
 import { onDestroy, onMount } from 'svelte'
+import { enhance } from '$app/forms'
 import { goto } from '$app/navigation'
+import { DatePicker } from '$lib/components'
 import { Alert, AlertDescription } from '$lib/components/ui/alert'
 import { Avatar, AvatarFallback, AvatarImage } from '$lib/components/ui/avatar'
 import { Button } from '$lib/components/ui/button'
 import { Card } from '$lib/components/ui/card'
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogFooter,
+} from '$lib/components/ui/dialog'
 import { Input } from '$lib/components/ui/input'
 import {
     Table,
@@ -16,11 +25,18 @@ import {
     TableHeader,
     TableRow,
 } from '$lib/components/ui/table'
+import { APP_NAME } from '$lib/general/constants'
 import { getAge, getInitials } from '$lib/utils'
+import MemberSelect from './MemberSelect.svelte'
 
 function handleMemberClick(id: string) {
     goto(`/family-tree/${id}`)
 }
+
+let addOpen = $state(false)
+let addBirthDate = $state<string | undefined>(undefined)
+let addRelationshipType = $state('')
+let addRelatedMemberId = $state('')
 
 let { data } = $props()
 let treeContainer: HTMLDivElement
@@ -140,11 +156,14 @@ onDestroy(() => {
 })
 </script>
 
-<!-- Desktop controls: view toggle + search when in table mode -->
+<svelte:head>
+    <title>Family Tree — {APP_NAME}</title>
+</svelte:head>
 <section class="col-span-12 hidden lg:flex items-center gap-3">
     {#if view === 'table'}
         <Input type="text" class="max-w-sm" placeholder="Search by name..." bind:value={search} />
     {/if}
+    <Button variant="outline" size="sm" onclick={() => (addOpen = true)}>+ Add Member</Button>
     <div class="ml-auto flex items-center rounded-lg border bg-muted p-1 gap-1">
         <Button
             variant={view === 'tree' ? 'default' : 'ghost'}
@@ -159,11 +178,13 @@ onDestroy(() => {
 
 <!-- Mobile: search + card grid (always shown on small screens) -->
 <section class="col-span-12 lg:hidden">
-    <Input type="text" class="mb-4 max-w-sm" placeholder="Search by name..." bind:value={search} />
+    <div class="flex items-center gap-3 mb-4">
+        <Input type="text" class="flex-1" placeholder="Search by name..." bind:value={search} />
+        <Button variant="outline" size="sm" onclick={() => (addOpen = true)}>+ Add</Button>
+    </div>
     {#if data.members.length === 0}
         <div class="text-center py-12">
             <p class="text-muted-foreground text-lg">No family members have been added yet.</p>
-            <Button href="/profile/relationships" class="mt-4">Add Relationships</Button>
         </div>
     {:else if filtered.length === 0}
         <p class="text-muted-foreground">No family members found.</p>
@@ -287,6 +308,105 @@ onDestroy(() => {
         </Card>
     {/if}
 </section>
+
+<!-- Add Member dialog -->
+<Dialog bind:open={addOpen}>
+    <DialogContent>
+        <DialogHeader>
+            <DialogTitle>Add Family Member</DialogTitle>
+        </DialogHeader>
+        <form
+            method="POST"
+            action="?/addMember"
+            use:enhance={() => {
+                return ({ result, update }) => {
+                    if (result.type === 'success') {
+                        addOpen = false
+                        addBirthDate = undefined
+                        addRelationshipType = ''
+                        addRelatedMemberId = ''
+                    }
+                    update()
+                }
+            }}
+            class="space-y-4 pt-2">
+            <div class="space-y-2">
+                <label for="addName" class="text-sm font-medium"
+                    >Name <span class="text-destructive">*</span></label>
+                <Input id="addName" name="name" type="text" placeholder="Full name" required />
+            </div>
+            <div class="space-y-2">
+                <label for="addBirthDate" class="text-sm font-medium">Birthday</label>
+                <input type="hidden" name="birthDate" value={addBirthDate ?? ''} />
+                <DatePicker id="addBirthDate" bind:value={addBirthDate} placeholder="Optional" />
+            </div>
+            {#if data.members.length > 0}
+                <div class="border-t pt-4 space-y-3">
+                    <p class="text-xs text-muted-foreground">
+                        Relationship to existing member (optional)
+                    </p>
+                    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                        <div class="space-y-2">
+                            <label for="addRelType" class="text-sm font-medium"
+                                >This person is</label>
+                            <select
+                                id="addRelType"
+                                name="relationshipType"
+                                bind:value={addRelationshipType}
+                                class="border-input bg-background focus:ring-ring flex h-9 w-full rounded-md border px-3 py-1 text-sm shadow-xs transition-colors focus:outline-none focus:ring-1">
+                                <option value="">— no relationship —</option>
+                                <option value="parent">parent of</option>
+                                <option value="child">child of</option>
+                                <option value="spouse">spouse of</option>
+                                <option value="sibling">sibling of</option>
+                                <option value="grandparent">grandparent of</option>
+                                <option value="grandchild">grandchild of</option>
+                                <option value="aunt_uncle">aunt/uncle of</option>
+                                <option value="niece_nephew">niece/nephew of</option>
+                                <option value="cousin">cousin of</option>
+                            </select>
+                        </div>
+                        <div class="space-y-2">
+                            <label for="addRelMember" class="text-sm font-medium">Member</label>
+                            <MemberSelect
+                                members={data.members}
+                                bind:value={addRelatedMemberId}
+                                name="relatedMemberId" />
+                        </div>
+                    </div>
+                </div>
+            {/if}
+            <div class="border-t pt-4 space-y-3">
+                <p class="text-xs text-muted-foreground">Your details (for the edit log)</p>
+                <div class="space-y-2">
+                    <label for="addEditorName" class="text-sm font-medium"
+                        >Your name <span class="text-destructive">*</span></label>
+                    <Input
+                        id="addEditorName"
+                        name="editorName"
+                        type="text"
+                        placeholder="Your name"
+                        required />
+                </div>
+                <div class="space-y-2">
+                    <label for="addEditorEmail" class="text-sm font-medium"
+                        >Your email <span class="text-destructive">*</span></label>
+                    <Input
+                        id="addEditorEmail"
+                        name="editorEmail"
+                        type="email"
+                        placeholder="you@example.com"
+                        required />
+                </div>
+            </div>
+            <DialogFooter>
+                <Button type="button" variant="ghost" onclick={() => (addOpen = false)}
+                    >Cancel</Button>
+                <Button type="submit">Add Member</Button>
+            </DialogFooter>
+        </form>
+    </DialogContent>
+</Dialog>
 
 <style>
 .desktop-view {

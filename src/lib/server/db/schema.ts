@@ -11,7 +11,12 @@ import {
 } from 'drizzle-orm/pg-core'
 
 export const eventStatusEnum = pgEnum('event_status', ['draft', 'open', 'closed', 'archived'])
-export const registrationStatusEnum = pgEnum('registration_status', ['pending', 'paid', 'refunded'])
+export const registrationStatusEnum = pgEnum('registration_status', [
+    'pending',
+    'paid',
+    'refunded',
+    'waived',
+])
 export const relationshipTypeEnum = pgEnum('relationship_type', [
     'parent',
     'child',
@@ -137,7 +142,9 @@ export const pricingTiers = pgTable('pricing_tiers', {
 
 export const registrations = pgTable('registrations', {
     id: uuid('id').primaryKey().defaultRandom(),
-    userId: text('user_id').notNull(),
+    userId: text('user_id'),
+    contactName: text('contact_name'),
+    contactEmail: text('contact_email'),
     eventId: uuid('event_id')
         .notNull()
         .references(() => reunionEvents.id),
@@ -154,7 +161,7 @@ export const partyMembers = pgTable('party_members', {
         .notNull()
         .references(() => registrations.id),
     name: text('name').notNull(),
-    birthDate: date('birth_date').notNull(),
+    birthDate: date('birth_date'),
     pricingTierId: uuid('pricing_tier_id')
         .notNull()
         .references(() => pricingTiers.id),
@@ -203,6 +210,24 @@ export const storefrontConfig = pgTable('storefront_config', {
     products: jsonb('products').$type<{ name: string; imageUrl: string; description?: string }[]>(),
     isActive: boolean('is_active').notNull().default(true),
     updatedAt: timestamp('updated_at').notNull().defaultNow(),
+})
+
+export const familyMemberEdits = pgTable('family_member_edits', {
+    id: uuid('id').primaryKey().defaultRandom(),
+    memberId: uuid('member_id')
+        .notNull()
+        .references(() => familyMembers.id, { onDelete: 'cascade' }),
+    editorName: text('editor_name').notNull(),
+    editorEmail: text('editor_email').notNull(),
+    snapshot: jsonb('snapshot')
+        .$type<{
+            name: string
+            birthYear: number | null
+            birthMonth: number | null
+            birthDay: number | null
+        }>()
+        .notNull(),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
 })
 
 export const contactSubmissions = pgTable('contact_submissions', {
