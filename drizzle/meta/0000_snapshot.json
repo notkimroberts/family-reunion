@@ -1,5 +1,5 @@
 {
-  "id": "659ff474-cc14-4d1b-a6b0-4ef633b1f79e",
+  "id": "34e5963c-825d-4fd8-9fda-05b9e039d002",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -156,6 +156,71 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
+    "public.family_member_edits": {
+      "name": "family_member_edits",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "member_id": {
+          "name": "member_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "editor_name": {
+          "name": "editor_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "editor_email": {
+          "name": "editor_email",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "snapshot": {
+          "name": "snapshot",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "family_member_edits_member_id_family_members_id_fk": {
+          "name": "family_member_edits_member_id_family_members_id_fk",
+          "tableFrom": "family_member_edits",
+          "tableTo": "family_members",
+          "columnsFrom": [
+            "member_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
     "public.family_members": {
       "name": "family_members",
       "schema": "",
@@ -243,21 +308,9 @@
           "primaryKey": false,
           "notNull": true
         },
-        "birth_year": {
-          "name": "birth_year",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "birth_month": {
-          "name": "birth_month",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "birth_day": {
-          "name": "birth_day",
-          "type": "integer",
+        "birth_date": {
+          "name": "birth_date",
+          "type": "date",
           "primaryKey": false,
           "notNull": false
         },
@@ -467,7 +520,19 @@
           "name": "user_id",
           "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
+        },
+        "contact_name": {
+          "name": "contact_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "contact_email": {
+          "name": "contact_email",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
         },
         "event_id": {
           "name": "event_id",
@@ -958,6 +1023,12 @@
           "primaryKey": false,
           "notNull": true
         },
+        "birth_date": {
+          "name": "birth_date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
         "phone": {
           "name": "phone",
           "type": "text",
@@ -1089,7 +1160,8 @@
       "values": [
         "pending",
         "paid",
-        "refunded"
+        "refunded",
+        "waived"
       ]
     },
     "public.relationship_type": {

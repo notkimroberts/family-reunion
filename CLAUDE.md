@@ -21,7 +21,15 @@ bun run db:studio        # Drizzle Studio GUI
 
 ### Migration rules
 
-**Never delete or modify existing migration files.** Drizzle tracks applied migrations by file hash; removing or regenerating a file breaks production deploys. Always add new migrations on top of existing ones.
+> **⚠️ PRODUCTION INCIDENT RISK — READ THIS BEFORE TOUCHING MIGRATION FILES**
+>
+> Drizzle tracks every applied migration by the SHA-256 hash of its SQL file content. If you modify, delete, rename, or regenerate an existing migration file after it has been applied to **any** environment (staging or production), the hashes will no longer match and `drizzle-kit migrate` will **abort on every future deploy** — blocking all deployments until manually repaired. This is not a warning you can work around easily; recovery requires direct DB access and manual surgery on `drizzle.__drizzle_migrations`.
+>
+> **Rules:**
+>
+> - Never edit, rename, or delete a `.sql` file in `drizzle/` once it has been committed to `main`
+> - Never re-run `db:generate` to "redo" an existing migration — always generate a new one on top
+> - Never use `db:push` on any database that has ever had `db:migrate` run on it — it bypasses the migration tracker entirely and will cause the same hash-mismatch problem on the next deploy
 
 Schema changes must follow this sequence:
 
@@ -178,6 +186,7 @@ The app is fully responsive with a `md:` (768px) breakpoint separating mobile an
 - Use `bun run format` whenever the format is not correct
 - Prefer running single tests, and not the whole test suite, for performance
 - **Tests**: run `bun run test` after any change to logic covered by tests; add or update co-located `.test.ts` files whenever new utility functions or server logic is added or modified. Tests live next to the source file (e.g. `price.test.ts` beside `price.ts`)
+- **Commits**: follow [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/). Format: `<type>[optional scope]: <description>`. Common types: `feat`, `fix`, `docs`, `refactor`, `test`, `chore`, `ci`. Breaking changes use `!` before the colon (e.g. `feat!: ...`) or a `BREAKING CHANGE:` footer. This project uses `commit-and-tag-version` for releases which relies on this format to determine version bumps.
 
 # Dependency management
 
