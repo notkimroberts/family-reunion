@@ -46,7 +46,7 @@ export const actions: Actions = {
             return fail(400, { error: 'Invalid payment status' })
         }
 
-        type MemberEntry = { name: string; birthDate: string; tierId: string }
+        type MemberEntry = { name: string; birthDate: string; tierId: string; shirtSize?: string }
         let members: MemberEntry[]
         try {
             members = JSON.parse(membersJson)
@@ -90,6 +90,7 @@ export const actions: Actions = {
                 registrationId: registration.id,
                 name: m.name.trim(),
                 birthDate: m.birthDate || null,
+                shirtSize: m.shirtSize || null,
                 pricingTierId: m.tierId,
             })),
         )

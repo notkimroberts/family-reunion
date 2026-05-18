@@ -15,6 +15,13 @@
       "when": 1779073466837,
       "tag": "0001_ambiguous_umar",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1779120191589,
+      "tag": "0002_useful_black_widow",
+      "breakpoints": true
     }
   ]
 }

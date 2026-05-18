@@ -2,7 +2,9 @@ import { z } from 'zod'
 
 export const registrationSchema = z.object({
     eventId: z.string().min(1, 'Please select an event'),
-    selfBirthDate: z.string().date('Please enter your birthday'),
+    selfTierId: z.string().min(1, 'Please select your pricing tier'),
+    selfBirthDate: z.string().optional(),
+    selfShirtSize: z.string().optional(),
     members: z.string().refine((val) => {
         try {
             const parsed = JSON.parse(val)
@@ -15,8 +17,9 @@ export const registrationSchema = z.object({
 
 export const memberSchema = z.object({
     name: z.string().min(1),
-    birthDate: z.string().date(),
     tierId: z.string().min(1),
+    birthDate: z.string().optional(),
+    shirtSize: z.string().optional(),
 })
 
 export type RegistrationFormData = z.infer<typeof registrationSchema>

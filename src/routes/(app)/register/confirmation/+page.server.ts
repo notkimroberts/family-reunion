@@ -27,6 +27,7 @@ export const load: PageServerLoad = async (event) => {
         .select({
             name: partyMembers.name,
             birthDate: partyMembers.birthDate,
+            shirtSize: partyMembers.shirtSize,
             tierLabel: pricingTiers.label,
             priceCents: pricingTiers.priceCents,
         })

@@ -65,10 +65,14 @@ export const POST: RequestHandler = async ({ request }) => {
                     await sendRegistrationConfirmation(session.customer_email ?? '', {
                         name: session.customer_details?.name ?? 'Family Member',
                         eventTitle: reunionEvent.title,
-                        partyMembers: members.map(
-                            (m) =>
-                                `${m.name}${m.birthDate ? ` (age ${getAgeFromDate(m.birthDate)})` : ''}`,
-                        ),
+                        partyMembers: members.map((m) => {
+                            const parts = [m.name]
+                            if (m.birthDate) parts.push(`age ${getAgeFromDate(m.birthDate)}`)
+                            if (m.shirtSize) parts.push(`shirt ${m.shirtSize}`)
+                            return parts.length > 1
+                                ? `${m.name} (${parts.slice(1).join(', ')})`
+                                : m.name
+                        }),
                         totalAmount: `$${(registration.totalAmountCents / 100).toFixed(2)}`,
                     })
                 }
