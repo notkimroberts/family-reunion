@@ -45,10 +45,12 @@ SvelteKit full-stack app (Svelte 5 with runes). Node adapter for Railway deploym
 
 ### Auth
 
-- **Better Auth** with admin plugin. Social SSO only (Google, Apple, Facebook)
+- **Better Auth** with admin plugin. Social SSO (Google, Apple, Facebook) + magic link email
+- Magic link plugin configured in `src/lib/server/auth/index.ts`; email sent via `sendMagicLinkEmail` in `$lib/server/email`
 - `hooks.server.ts` populates `event.locals.user` per request. In dev mode, falls back to a hardcoded admin user when no session exists
 - Guards: `requireAuth()` and `requireAdmin()` in `$lib/server/auth/guards.ts`
 - Better Auth manages its own tables (`user`, `session`, `account`) — separate from the app's `user_profiles` table
+- **Lazy-init typing**: `betterAuth({...})` returns a concrete parameterized type that TypeScript can't directly assign to `ReturnType<typeof betterAuth>`. To avoid `any`, extract the call into a `createAuthInstance()` function and type the singleton as `ReturnType<typeof createAuthInstance> | undefined`
 
 ### Sign-up & Registration Flow
 
@@ -71,6 +73,7 @@ Route groups:
 - **shadcn-svelte field components** (`$lib/components/ui/field/`) for form field structure: `Field.Group`, `Field.Field`, `Field.Label`, `Field.Error`, `Field.Description`
 - **bits-ui Select** has a `string | string[]` union for `value` — avoid `bind:value` on a `string` variable; use a native `<select>` styled with Tailwind or use `onValueChange` without bind
 - Define zod schemas in a co-located `schema.ts` file next to the route
+- **Initializing `$state` from load data**: don't use `$state(undefined)` + `$effect(() => { x = derived })` — this triggers the `svelte/prefer-writable-derived` lint error. Instead compute the value directly: `let x = $state(computedValue)`. This is intentional for "local copy" edit patterns where the value starts from server data but can be independently modified.
 
 ### Payments
 
