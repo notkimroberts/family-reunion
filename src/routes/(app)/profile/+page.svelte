@@ -2,21 +2,12 @@
 import { enhance } from '$app/forms'
 import { DatePicker } from '$lib/components'
 import { Avatar, AvatarFallback } from '$lib/components/ui/avatar'
-import { Badge } from '$lib/components/ui/badge'
 import { Button } from '$lib/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '$lib/components/ui/card'
 import { Input } from '$lib/components/ui/input'
 import { Separator } from '$lib/components/ui/separator'
-import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
-} from '$lib/components/ui/table'
 import { APP_NAME } from '$lib/general/constants'
-import { formatPrice, getInitials } from '$lib/utils'
+import { getInitials } from '$lib/utils'
 
 let { data } = $props()
 
@@ -39,16 +30,7 @@ let birthDate = $state(data.profile?.birthDate ?? undefined)
                 <div class="flex-1 min-w-0">
                     <h1 class="text-2xl font-bold truncate">{data.user.name}</h1>
                     <p class="text-muted-foreground text-sm">{data.user.email}</p>
-                    {#if data.registrations.length > 0}
-                        <p class="text-muted-foreground text-sm mt-0.5">
-                            {data.registrations.length}
-                            {data.registrations.length === 1 ? 'registration' : 'registrations'}
-                        </p>
-                    {/if}
                 </div>
-                <Button href="/profile/relationships" variant="outline" size="sm" class="shrink-0">
-                    Manage Relationships
-                </Button>
             </div>
         </CardContent>
     </Card>
@@ -147,78 +129,6 @@ let birthDate = $state(data.profile?.birthDate ?? undefined)
                     <Button type="submit">Save changes</Button>
                 </div>
             </form>
-        </CardContent>
-    </Card>
-</section>
-
-<!-- Registration history -->
-<section class="col-span-12">
-    <Card>
-        <CardHeader>
-            <CardTitle>Registration History</CardTitle>
-            <CardDescription>Your past and upcoming reunion registrations.</CardDescription>
-        </CardHeader>
-        <CardContent>
-            {#if data.registrations.length === 0}
-                <div class="flex flex-col items-center gap-3 py-8 text-center">
-                    <p class="text-muted-foreground text-sm">No registrations yet.</p>
-                    <Button href="/register" size="sm">Register for the next reunion</Button>
-                </div>
-            {:else}
-                <div class="space-y-3 md:hidden">
-                    {#each data.registrations as reg}
-                        <div class="rounded-lg border p-4">
-                            <div class="flex items-start justify-between gap-2">
-                                <div>
-                                    <p class="font-medium">{reg.eventTitle}</p>
-                                    <p class="text-muted-foreground text-sm">{reg.eventYear}</p>
-                                </div>
-                                <div class="flex flex-col items-end gap-1 shrink-0">
-                                    <Badge
-                                        variant={reg.status === 'paid' ? 'default' : 'secondary'}>
-                                        {reg.status}
-                                    </Badge>
-                                    <span class="text-sm font-medium">
-                                        ${formatPrice(reg.totalAmountCents)}
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
-                    {/each}
-                </div>
-                <div class="hidden md:block overflow-x-auto">
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Event</TableHead>
-                                <TableHead>Year</TableHead>
-                                <TableHead>Status</TableHead>
-                                <TableHead class="text-right">Amount</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {#each data.registrations as reg}
-                                <TableRow>
-                                    <TableCell class="font-medium">{reg.eventTitle}</TableCell>
-                                    <TableCell class="text-muted-foreground"
-                                        >{reg.eventYear}</TableCell>
-                                    <TableCell>
-                                        <Badge
-                                            variant={reg.status === 'paid'
-                                                ? 'default'
-                                                : 'secondary'}>
-                                            {reg.status}
-                                        </Badge>
-                                    </TableCell>
-                                    <TableCell class="text-right font-mono">
-                                        ${formatPrice(reg.totalAmountCents)}
-                                    </TableCell>
-                                </TableRow>
-                            {/each}
-                        </TableBody>
-                    </Table>
-                </div>
-            {/if}
         </CardContent>
     </Card>
 </section>

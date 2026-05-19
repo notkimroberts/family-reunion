@@ -1,4 +1,6 @@
 <script lang="ts">
+import { onMount } from 'svelte'
+import { toast } from 'svelte-sonner'
 import { superForm } from 'sveltekit-superforms'
 import { zod4Client as zodClient } from 'sveltekit-superforms/adapters'
 import { DatePicker } from '$lib/components'
@@ -15,18 +17,22 @@ import {
     TableHeader,
     TableRow,
 } from '$lib/components/ui/table'
-import { APP_NAME, SHIRT_SIZES } from '$lib/general/constants'
+import { APP_NAME, SHIRT_SIZES, selectClass } from '$lib/general/constants'
 import { formatPrice, getAgeFromDate } from '$lib/utils'
+import RegistrationManager from './RegistrationManager.svelte'
 import { registrationSchema } from './schema'
-
-const selectClass =
-    'border-input bg-background focus:ring-ring flex h-9 w-full rounded-md border px-3 py-1 text-sm shadow-xs transition-colors focus:outline-none focus:ring-1'
 
 let { data } = $props()
 
 const { form, errors, enhance } = superForm(data.form, {
     validators: zodClient(registrationSchema),
     dataType: 'form',
+})
+
+onMount(() => {
+    if (data.memberAdded) {
+        toast.success('Member added successfully!')
+    }
 })
 
 const tiers = data.tiers
@@ -160,6 +166,12 @@ let tableColCount = $derived(data.event?.shirtsEnabled ? 6 : 5)
             <p class="text-muted-foreground text-sm mt-1">Check back soon!</p>
         </div>
     </div>
+{:else if data.existingRegistration}
+    <RegistrationManager
+        registration={data.existingRegistration}
+        members={data.members}
+        tiers={data.tiers}
+        event={data.event} />
 {:else}
     <!-- Event hero header -->
     <section class="col-span-12">

@@ -1,5 +1,6 @@
 <script lang="ts">
 import { AppHeader, Footer } from '$lib/components'
+import { Toaster } from '$lib/components/ui/sonner'
 
 let { children, data } = $props()
 
@@ -17,3 +18,5 @@ let isAdmin = $derived(data.user?.role === 'admin')
 
     <Footer />
 </div>
+
+<Toaster richColors />

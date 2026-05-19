@@ -1,7 +1,7 @@
 import { eq } from 'drizzle-orm'
 import { requireAuth } from '$lib/server/auth/guards'
 import { db } from '$lib/server/db'
-import { userProfiles, registrations, reunionEvents } from '$lib/server/db/schema'
+import { userProfiles } from '$lib/server/db/schema'
 import { dbg } from '$lib/server/debug'
 import type { PageServerLoad, Actions } from './$types'
 
@@ -14,23 +14,9 @@ export const load: PageServerLoad = async (event) => {
         .where(eq(userProfiles.userId, user.id))
         .limit(1)
 
-    const userRegistrations = await db
-        .select({
-            id: registrations.id,
-            status: registrations.status,
-            totalAmountCents: registrations.totalAmountCents,
-            createdAt: registrations.createdAt,
-            eventTitle: reunionEvents.title,
-            eventYear: reunionEvents.year,
-        })
-        .from(registrations)
-        .innerJoin(reunionEvents, eq(registrations.eventId, reunionEvents.id))
-        .where(eq(registrations.userId, user.id))
-
     return {
         user,
         profile: profile ?? null,
-        registrations: userRegistrations,
     }
 }
 
