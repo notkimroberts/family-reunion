@@ -15,6 +15,7 @@ export const load: PageServerLoad = async (event) => {
             url: photos.url,
             caption: photos.caption,
             r2Key: photos.r2Key,
+            eventId: photos.eventId,
             createdAt: photos.createdAt,
             uploadedByUserId: photos.uploadedByUserId,
             eventTitle: reunionEvents.title,

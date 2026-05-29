@@ -263,7 +263,14 @@ function handleRemoveClick(member: Member) {
                 </AlertDialogHeader>
                 <AlertDialogFooter>
                     <Button variant="outline" onclick={() => (removeStep = 1)}>Go back</Button>
-                    <form method="POST" action="?/remove_member" use:enhance>
+                    <form
+                        method="POST"
+                        action="?/remove_member"
+                        use:enhance={() =>
+                            async ({ result, update }) => {
+                                await update()
+                                if (result.type === 'success') removeDialogOpen = false
+                            }}>
                         <input type="hidden" name="memberId" value={removingMember.id} />
                         <AlertDialogAction
                             type="submit"

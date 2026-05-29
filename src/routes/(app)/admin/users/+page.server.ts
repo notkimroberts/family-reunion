@@ -1,15 +1,29 @@
 import { fail } from '@sveltejs/kit'
-import { eq } from 'drizzle-orm'
-import { auth } from '$lib/server/auth'
+import { and, eq, sql } from 'drizzle-orm'
 import { requireAdmin } from '$lib/server/auth/guards'
 import { db } from '$lib/server/db'
-import { userProfiles } from '$lib/server/db/schema'
-import type { PageServerLoad, Actions } from './$types'
+import { registrations, userProfiles } from '$lib/server/db/schema'
+import type { Actions, PageServerLoad } from './$types'
 
 export const load: PageServerLoad = async (event) => {
     requireAdmin(event)
 
-    const profiles = await db.select().from(userProfiles)
+    const profiles = await db
+        .select({
+            id: userProfiles.id,
+            userId: userProfiles.userId,
+            phone: userProfiles.phone,
+            isDeleted: userProfiles.isDeleted,
+            registeredEventIds: sql<
+                string[]
+            >`coalesce(array_agg(${registrations.eventId}) filter (where ${registrations.eventId} is not null), '{}'::uuid[])`,
+        })
+        .from(userProfiles)
+        .leftJoin(
+            registrations,
+            and(eq(registrations.userId, userProfiles.userId), eq(registrations.status, 'paid')),
+        )
+        .groupBy(userProfiles.id)
 
     return { profiles }
 }
@@ -21,7 +35,9 @@ export const actions: Actions = {
         const profileId = data.get('profileId') as string
         const phone = data.get('phone') as string
 
-        if (!profileId) return fail(400, { error: 'Missing profile ID' })
+        if (!profileId) {
+            return fail(400, { error: 'Missing profile ID' })
+        }
 
         await db
             .update(userProfiles)

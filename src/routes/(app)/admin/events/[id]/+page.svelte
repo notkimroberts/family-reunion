@@ -23,8 +23,13 @@ let { data } = $props()
 </svelte:head>
 
 <section class="col-span-12">
+    <div class="flex items-center gap-2 text-sm text-muted-foreground mb-1">
+        <a href="/admin/events" class="hover:text-foreground transition-colors">Events</a>
+        <span>/</span>
+        <span class="text-foreground font-medium">{data.event.title}</span>
+    </div>
     <div class="flex items-center justify-between gap-4 flex-wrap">
-        <p class="text-muted-foreground">
+        <p class="text-muted-foreground text-sm">
             Year: {data.event.year} | Status: {data.event.status}
         </p>
         {#if data.event.status === 'open'}
