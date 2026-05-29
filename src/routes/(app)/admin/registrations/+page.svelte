@@ -1,16 +1,24 @@
 <script lang="ts">
+import { getContext } from 'svelte'
 import { enhance } from '$app/forms'
 import { DatePicker } from '$lib/components'
 import { Button } from '$lib/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card'
 import { Input } from '$lib/components/ui/input'
 import { SHIRT_SIZES } from '$lib/general/constants'
+import type { AdminContext } from '$lib/types/adminContext'
 import { formatPrice } from '$lib/utils'
 
 const selectClass =
     'border-input bg-background focus:ring-ring flex h-9 w-full rounded-md border px-3 py-1 text-sm shadow-xs transition-colors focus:outline-none focus:ring-1'
 
 let { data, form } = $props()
+
+const adminCtx = getContext<AdminContext>('admin')
+
+let targetEventId = $derived(
+    adminCtx.selectedEventId !== 'all' ? adminCtx.selectedEventId : (data.events[0]?.id ?? ''),
+)
 
 type Member = {
     name: string
@@ -111,7 +119,7 @@ const shirtsEnabled = $derived(data.events[0]?.shirtsEnabled ?? false)
                 }
             }}
             class="space-y-6 max-w-2xl">
-            <input type="hidden" name="eventId" value={data.events[0].id} />
+            <input type="hidden" name="eventId" value={targetEventId} />
             <input type="hidden" name="members" value={membersJson} />
 
             <Card>

@@ -4,6 +4,7 @@ import { toast } from 'svelte-sonner'
 import { superForm } from 'sveltekit-superforms'
 import { zod4Client as zodClient } from 'sveltekit-superforms/adapters'
 import { DatePicker } from '$lib/components'
+import { Alert, AlertDescription, AlertTitle } from '$lib/components/ui/alert'
 import { Badge } from '$lib/components/ui/badge'
 import { Button } from '$lib/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '$lib/components/ui/card'
@@ -175,6 +176,15 @@ let tableColCount = $derived(data.event?.shirtsEnabled ? 6 : 5)
 {:else}
     <!-- Event hero header -->
     <section class="col-span-12">
+        {#if data.registrationCancelled}
+            <Alert class="mb-4" variant="destructive">
+                <AlertTitle>Registration cancelled</AlertTitle>
+                <AlertDescription>
+                    Your registration has been cancelled and a refund is on its way. Fill out the
+                    form below to register again.
+                </AlertDescription>
+            </Alert>
+        {/if}
         <div class="rounded-xl border bg-card px-6 py-8 text-center">
             <p class="text-4xl mb-3">🎉</p>
             <h1 class="text-3xl font-bold">{data.event.title}</h1>
@@ -202,7 +212,7 @@ let tableColCount = $derived(data.event?.shirtsEnabled ? 6 : 5)
         </div>
     </section>
 
-    <form method="POST" use:enhance class="col-span-12">
+    <form method="POST" action="?/register" use:enhance class="col-span-12">
         <input type="hidden" name="eventId" bind:value={$form.eventId} />
         <input type="hidden" name="selfTierId" bind:value={$form.selfTierId} />
         <input type="hidden" name="selfBirthDate" bind:value={$form.selfBirthDate} />

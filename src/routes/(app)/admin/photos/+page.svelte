@@ -1,22 +1,36 @@
 <script lang="ts">
+import { getContext } from 'svelte'
 import { enhance } from '$app/forms'
 import { Button } from '$lib/components/ui/button'
+import type { AdminContext } from '$lib/types/adminContext'
 
 let { data } = $props()
+
+const adminCtx = getContext<AdminContext>('admin')
+
+let filteredPhotos = $derived(
+    adminCtx.selectedEventId === 'all'
+        ? data.photos
+        : data.photos.filter((p) => p.eventId === adminCtx.selectedEventId),
+)
 </script>
 
 <svelte:head>
     <title>Manage Photos — Admin</title>
 </svelte:head>
 
-{#if data.photos.length === 0}
+<section class="col-span-12">
+    <h1 class="text-2xl font-bold">Photos</h1>
+</section>
+
+{#if filteredPhotos.length === 0}
     <section class="col-span-12">
-        <p class="text-muted-foreground">No photos uploaded yet.</p>
+        <p class="text-muted-foreground">No photos for the selected year.</p>
     </section>
 {:else}
     <section class="col-span-12">
         <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
-            {#each data.photos as photo}
+            {#each filteredPhotos as photo}
                 <div class="rounded-lg border bg-card overflow-hidden shadow-xs">
                     <figure>
                         <img
