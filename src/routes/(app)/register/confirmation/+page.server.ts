@@ -6,7 +6,7 @@ import { registrations, reunionEvents, partyMembers, pricingTiers } from '$lib/s
 import type { PageServerLoad } from './$types'
 
 export const load: PageServerLoad = async (event) => {
-    requireAuth(event)
+    const user = requireAuth(event)
 
     const registrationId = event.url.searchParams.get('registration_id')
     if (!registrationId) throw error(404)
@@ -17,6 +17,8 @@ export const load: PageServerLoad = async (event) => {
         .where(eq(registrations.id, registrationId))
 
     if (!registration) throw error(404)
+
+    if (registration.userId && registration.userId !== user.id) throw error(403)
 
     const [reunionEvent] = await db
         .select()

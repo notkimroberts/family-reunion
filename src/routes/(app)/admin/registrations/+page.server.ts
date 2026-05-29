@@ -2,7 +2,8 @@ import { fail } from '@sveltejs/kit'
 import { eq } from 'drizzle-orm'
 import { requireAdmin } from '$lib/server/auth/guards'
 import { db } from '$lib/server/db'
-import { reunionEvents, pricingTiers, registrations, partyMembers } from '$lib/server/db/schema'
+import { reunionEvents, pricingTiers } from '$lib/server/db/schema'
+import { createAdminRegistration } from '$lib/server/registrations'
 import type { PageServerLoad, Actions } from './$types'
 
 export const load: PageServerLoad = async (event) => {
@@ -61,40 +62,19 @@ export const actions: Actions = {
             return fail(400, { error: 'Each party member requires a name and pricing tier' })
         }
 
-        const tiers = await db.select().from(pricingTiers).where(eq(pricingTiers.eventId, eventId))
-        const tierMap = new Map(tiers.map((t) => [t.id, t]))
-
-        for (const m of members) {
-            if (!tierMap.has(m.tierId)) {
-                return fail(400, { error: 'Invalid pricing tier' })
-            }
-        }
-
-        const totalAmountCents = members.reduce((sum, m) => {
-            return sum + (tierMap.get(m.tierId)?.priceCents ?? 0)
-        }, 0)
-
-        const [registration] = await db
-            .insert(registrations)
-            .values({
-                eventId,
-                contactName,
-                contactEmail,
-                totalAmountCents,
-                status: status as 'paid' | 'pending' | 'waived',
-            })
-            .returning()
-
-        await db.insert(partyMembers).values(
-            members.map((m) => ({
-                registrationId: registration.id,
-                name: m.name.trim(),
-                birthDate: m.birthDate || null,
-                shirtSize: m.shirtSize || null,
-                pricingTierId: m.tierId,
+        const { registrationId } = await createAdminRegistration({
+            eventId,
+            contactName,
+            contactEmail,
+            status: status as 'paid' | 'pending' | 'waived',
+            members: members.map((m) => ({
+                name: m.name,
+                birthDate: m.birthDate || undefined,
+                tierId: m.tierId,
+                shirtSize: m.shirtSize || undefined,
             })),
-        )
+        })
 
-        return { success: true, registrationId: registration.id }
+        return { success: true, registrationId }
     },
 }
