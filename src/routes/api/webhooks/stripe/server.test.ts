@@ -14,11 +14,15 @@ const { mockWhere, mockSet, mockDb } = vi.hoisted(() => {
         where: mockWhere,
         update: vi.fn(),
         set: mockSet,
+        transaction: vi.fn(),
     }
     chain.select.mockReturnValue(chain)
     chain.from.mockReturnValue(chain)
     chain.update.mockReturnValue(chain)
     mockSet.mockReturnValue(chain)
+    chain.transaction.mockImplementation(async (cb: (tx: typeof chain) => Promise<void>) =>
+        cb(chain),
+    )
     return { mockWhere, mockSet, mockDb: chain }
 })
 
