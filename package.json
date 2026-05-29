@@ -3,7 +3,7 @@
     "version": "0.0.3",
     "type": "module",
     "scripts": {
-        "dev": "NODE_TLS_REJECT_UNAUTHORIZED=0 bun run clean && vite dev",
+        "dev": "bun run clean && NODE_TLS_REJECT_UNAUTHORIZED=0 vite dev",
         "build": "vite build",
         "preview": "vite preview",
         "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
