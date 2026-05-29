@@ -123,3 +123,5 @@ src/
 3. Railway will auto-detect the Node adapter and deploy
 
 Set `DATABASE_URL` to the Railway-provided Postgres connection string.
+
+stripe listen --forward-to localhost:5173/api/webhooks/stripe

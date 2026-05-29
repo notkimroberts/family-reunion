@@ -1,0 +1,1 @@
+ALTER TABLE "party_members" ADD COLUMN "stripe_payment_intent_id" text;

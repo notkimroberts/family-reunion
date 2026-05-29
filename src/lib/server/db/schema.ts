@@ -185,6 +185,7 @@ export const partyMembers = pgTable('party_members', {
     pricingTierId: uuid('pricing_tier_id')
         .notNull()
         .references(() => pricingTiers.id),
+    stripePaymentIntentId: text('stripe_payment_intent_id'),
     createdAt: timestamp('created_at').notNull().defaultNow(),
 })
 

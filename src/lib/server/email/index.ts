@@ -1,16 +1,24 @@
 import { Resend } from 'resend'
 import { env } from '$env/dynamic/private'
-import { APP_NAME } from '$lib/general/constants'
+import { APP_NAME, APP_DOMAIN } from '$lib/general/constants'
 import { dbg } from '$lib/server/debug'
 
 function getResend() {
+    if (!env.RESEND_API_KEY) {
+        dbg.email('RESEND_API_KEY not set, email will be skipped')
+        return null
+    }
     return new Resend(env.RESEND_API_KEY)
 }
 
 export async function sendMagicLinkEmail(to: string, url: string) {
     dbg.email('sendMagicLinkEmail to=%s', to)
-    await getResend().emails.send({
-        from: `${APP_NAME} <noreply@resend.dev>`,
+    const resend = getResend()
+    if (!resend) {
+        return
+    }
+    await resend.emails.send({
+        from: `${APP_NAME} <noreply@${APP_DOMAIN}>`,
         to,
         subject: `Your sign-in link for ${APP_NAME}`,
         text: [
@@ -27,8 +35,12 @@ export async function sendMagicLinkEmail(to: string, url: string) {
 
 export async function sendContactEmail(from: { name: string; email: string }, message: string) {
     dbg.email('sendContactEmail from=%s', from.email)
-    await getResend().emails.send({
-        from: `${APP_NAME} <noreply@resend.dev>`,
+    const resend = getResend()
+    if (!resend) {
+        return
+    }
+    await resend.emails.send({
+        from: `${APP_NAME} <noreply@${APP_DOMAIN}>`,
         to: env.ADMIN_EMAIL!,
         subject: `Contact Form: ${from.name}`,
         text: `From: ${from.name} (${from.email})\n\n${message}`,
@@ -45,8 +57,12 @@ export async function sendRegistrationConfirmation(
         data.eventTitle,
         data.partyMembers.length,
     )
-    await getResend().emails.send({
-        from: `${APP_NAME} <noreply@resend.dev>`,
+    const resend = getResend()
+    if (!resend) {
+        return
+    }
+    await resend.emails.send({
+        from: `${APP_NAME} <noreply@${APP_DOMAIN}>`,
         to,
         subject: `Registration Confirmed: ${data.eventTitle}`,
         text: [
