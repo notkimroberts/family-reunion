@@ -1,4 +1,3 @@
-import type { RequestEvent } from '@sveltejs/kit'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { POST } from './+server'
 
@@ -70,7 +69,7 @@ const validSession = {
     customer_email: null,
 }
 
-function makeRequest(body: string, signature?: string): RequestEvent {
+function makeRequest(body: string, signature?: string): Parameters<typeof POST>[0] {
     const headers: Record<string, string> = {}
     if (signature !== undefined) {
         headers['stripe-signature'] = signature
@@ -81,7 +80,7 @@ function makeRequest(body: string, signature?: string): RequestEvent {
             body,
             headers,
         }),
-    } as unknown as RequestEvent
+    } as unknown as Parameters<typeof POST>[0]
 }
 
 describe('POST /api/webhooks/stripe', () => {

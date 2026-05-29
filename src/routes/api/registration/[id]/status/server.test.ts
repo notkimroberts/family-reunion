@@ -1,5 +1,4 @@
 import { isHttpError } from '@sveltejs/kit'
-import type { RequestEvent } from '@sveltejs/kit'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { GET } from './+server'
 
@@ -25,11 +24,11 @@ vi.mock('$lib/server/auth/guards', () => ({ requireAuth: mockRequireAuth }))
 vi.mock('$lib/server/db', () => ({ db: mockDb }))
 vi.mock('$lib/server/db/schema', () => ({ registrations: {} }))
 
-function makeEvent(registrationId: string): RequestEvent {
+function makeEvent(registrationId: string): Parameters<typeof GET>[0] {
     return {
         locals: {},
         params: { id: registrationId },
-    } as unknown as RequestEvent
+    } as unknown as Parameters<typeof GET>[0]
 }
 
 describe('GET /api/registration/[id]/status', () => {
