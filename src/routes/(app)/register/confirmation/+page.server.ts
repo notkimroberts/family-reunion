@@ -1,8 +1,6 @@
 import { error } from '@sveltejs/kit'
-import { eq } from 'drizzle-orm'
 import { requireAuth } from '$lib/server/auth/guards'
-import { db } from '$lib/server/db'
-import { registrations, reunionEvents, partyMembers, pricingTiers } from '$lib/server/db/schema'
+import { getRegistrationWithEvent, getRegistrationMembers } from '$lib/server/registrations'
 import type { PageServerLoad } from './$types'
 
 export const load: PageServerLoad = async (event) => {
@@ -11,33 +9,14 @@ export const load: PageServerLoad = async (event) => {
     const registrationId = event.url.searchParams.get('registration_id')
     if (!registrationId) throw error(404)
 
-    const [registration] = await db
-        .select()
-        .from(registrations)
-        .where(eq(registrations.id, registrationId))
+    const result = await getRegistrationWithEvent(registrationId)
+    if (!result) throw error(404)
 
-    if (!registration) throw error(404)
+    const { registration, event: reunionEvent } = result
 
     if (registration.userId && registration.userId !== user.id) throw error(403)
 
-    const [reunionEvent] = await db
-        .select()
-        .from(reunionEvents)
-        .where(eq(reunionEvents.id, registration.eventId))
-
-    const members = await db
-        .select({
-            name: partyMembers.name,
-            birthYear: partyMembers.birthYear,
-            birthMonth: partyMembers.birthMonth,
-            birthDay: partyMembers.birthDay,
-            shirtSize: partyMembers.shirtSize,
-            tierLabel: pricingTiers.label,
-            priceCents: pricingTiers.priceCents,
-        })
-        .from(partyMembers)
-        .innerJoin(pricingTiers, eq(partyMembers.pricingTierId, pricingTiers.id))
-        .where(eq(partyMembers.registrationId, registrationId))
+    const members = await getRegistrationMembers(registrationId)
 
     return {
         registration,

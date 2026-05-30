@@ -1,27 +1,16 @@
 import { fail } from '@sveltejs/kit'
-import { eq } from 'drizzle-orm'
 import { requireAdmin } from '$lib/server/auth/guards'
-import { db } from '$lib/server/db'
-import { reunionEvents, pricingTiers } from '$lib/server/db/schema'
-import { createAdminRegistration } from '$lib/server/registrations'
+import { createAdminRegistration, getOpenEvent, getEventTiers } from '$lib/server/registrations'
 import type { PageServerLoad, Actions } from './$types'
 
 export const load: PageServerLoad = async (event) => {
     requireAdmin(event)
 
-    const openEvents = await db.select().from(reunionEvents).where(eq(reunionEvents.status, 'open'))
-
-    const tiers =
-        openEvents.length > 0
-            ? await db
-                  .select()
-                  .from(pricingTiers)
-                  .where(eq(pricingTiers.eventId, openEvents[0].id))
-                  .orderBy(pricingTiers.minAge)
-            : []
+    const openEvent = await getOpenEvent()
+    const tiers = openEvent ? await getEventTiers(openEvent.id) : []
 
     return {
-        events: openEvents,
+        events: openEvent ? [openEvent] : [],
         tiers,
     }
 }
