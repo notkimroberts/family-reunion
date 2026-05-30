@@ -23,7 +23,9 @@ let {
 let step = $state(1)
 
 $effect(() => {
-    if (!open) step = 1
+    if (!open) {
+        step = 1
+    }
 })
 </script>
 

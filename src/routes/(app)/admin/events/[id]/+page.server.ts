@@ -14,7 +14,9 @@ export const load: PageServerLoad = async (event) => {
         .from(reunionEvents)
         .where(eq(reunionEvents.id, event.params.id))
 
-    if (!reunionEvent) throw error(404, 'Event not found')
+    if (!reunionEvent) {
+        throw error(404, 'Event not found')
+    }
 
     const tiers = await db
         .select()
@@ -104,7 +106,9 @@ export const actions: Actions = {
         const maxAge = data.get('maxAge') as string
         const price = data.get('price') as string
 
-        if (!label || !minAge || !price) return fail(400, { error: 'All fields required' })
+        if (!label || !minAge || !price) {
+            return fail(400, { error: 'All fields required' })
+        }
 
         dbg.admin('add_tier eventId=%s label=%s price=%s', event.params.id, label, price)
 
@@ -123,7 +127,9 @@ export const actions: Actions = {
         requireAdmin(event)
         const data = await event.request.formData()
         const tierId = data.get('tierId') as string
-        if (!tierId) return fail(400, { error: 'Missing tier ID' })
+        if (!tierId) {
+            return fail(400, { error: 'Missing tier ID' })
+        }
 
         dbg.admin('delete_tier id=%s', tierId)
         await db.delete(pricingTiers).where(eq(pricingTiers.id, tierId))

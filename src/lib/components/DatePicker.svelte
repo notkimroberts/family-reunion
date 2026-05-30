@@ -24,7 +24,9 @@ let {
 let open = $state(false)
 
 let calendarDate = $derived.by((): DateValue | undefined => {
-    if (!value) return undefined
+    if (!value) {
+        return undefined
+    }
     try {
         return parseDate(value)
     } catch {
