@@ -1,15 +1,4 @@
 <script lang="ts">
-import { enhance } from '$app/forms'
-import {
-    AlertDialog,
-    AlertDialogAction,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
-} from '$lib/components/ui/alert-dialog'
 import { Badge } from '$lib/components/ui/badge'
 import { Button } from '$lib/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card'
@@ -24,7 +13,9 @@ import {
 import { formatPrice } from '$lib/utils'
 import { getAge } from '$lib/utils/age'
 import AddMemberForm from './AddMemberForm.svelte'
+import CancelRegistrationDialog from './CancelRegistrationDialog.svelte'
 import EditMemberDialog from './EditMemberDialog.svelte'
+import RemoveMemberDialog from './RemoveMemberDialog.svelte'
 
 type Member = {
     id: string
@@ -72,16 +63,7 @@ let editingMember = $state<Member | null>(null)
 let editDialogOpen = $state(false)
 let removingMember = $state<Member | null>(null)
 let removeDialogOpen = $state(false)
-let removeStep = $state(1)
 let cancelDialogOpen = $state(false)
-let cancelStep = $state(1)
-
-$effect(() => {
-    if (!removeDialogOpen) removeStep = 1
-})
-$effect(() => {
-    if (!cancelDialogOpen) cancelStep = 1
-})
 
 function handleEditClick(member: Member) {
     editingMember = member
@@ -150,15 +132,11 @@ function handleRemoveClick(member: Member) {
                                 <Button
                                     size="sm"
                                     variant="outline"
-                                    onclick={() => handleEditClick(member)}>
-                                    Edit
-                                </Button>
+                                    onclick={() => handleEditClick(member)}>Edit</Button>
                                 <Button
                                     size="sm"
                                     variant="destructive"
-                                    onclick={() => handleRemoveClick(member)}>
-                                    Remove
-                                </Button>
+                                    onclick={() => handleRemoveClick(member)}>Remove</Button>
                             </div>
                         </div>
                     </div>
@@ -204,15 +182,12 @@ function handleRemoveClick(member: Member) {
                                         <Button
                                             size="sm"
                                             variant="outline"
-                                            onclick={() => handleEditClick(member)}>
-                                            Edit
-                                        </Button>
+                                            onclick={() => handleEditClick(member)}>Edit</Button>
                                         <Button
                                             size="sm"
                                             variant="destructive"
-                                            onclick={() => handleRemoveClick(member)}>
-                                            Remove
-                                        </Button>
+                                            onclick={() => handleRemoveClick(member)}
+                                            >Remove</Button>
                                     </div>
                                 </TableCell>
                             </TableRow>
@@ -249,87 +224,8 @@ function handleRemoveClick(member: Member) {
         bind:open={editDialogOpen} />
 {/if}
 
-<!-- Remove member confirmation -->
 {#if removingMember}
-    <AlertDialog bind:open={removeDialogOpen}>
-        <AlertDialogContent>
-            {#if removeStep === 1}
-                <AlertDialogHeader>
-                    <AlertDialogTitle>Remove {removingMember.name}?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                        A refund of ${formatPrice(removingMember.priceCents)} will be issued to the original
-                        payment method.
-                    </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <Button variant="destructive" onclick={() => (removeStep = 2)}>Continue</Button>
-                </AlertDialogFooter>
-            {:else}
-                <AlertDialogHeader>
-                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                        {removingMember.name} will be permanently removed from your registration. This
-                        cannot be undone.
-                    </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                    <Button variant="outline" onclick={() => (removeStep = 1)}>Go back</Button>
-                    <form
-                        method="POST"
-                        action="?/remove_member"
-                        use:enhance={() =>
-                            async ({ result, update }) => {
-                                await update()
-                                if (result.type === 'success') removeDialogOpen = false
-                            }}>
-                        <input type="hidden" name="memberId" value={removingMember.id} />
-                        <AlertDialogAction
-                            type="submit"
-                            class="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                            Yes, remove
-                        </AlertDialogAction>
-                    </form>
-                </AlertDialogFooter>
-            {/if}
-        </AlertDialogContent>
-    </AlertDialog>
+    <RemoveMemberDialog member={removingMember} bind:open={removeDialogOpen} />
 {/if}
 
-<!-- Cancel registration confirmation -->
-<AlertDialog bind:open={cancelDialogOpen}>
-    <AlertDialogContent>
-        {#if cancelStep === 1}
-            <AlertDialogHeader>
-                <AlertDialogTitle>Cancel your registration?</AlertDialogTitle>
-                <AlertDialogDescription>
-                    Your entire registration will be cancelled and a full refund issued to the
-                    original payment method.
-                </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-                <AlertDialogCancel>Keep registration</AlertDialogCancel>
-                <Button variant="destructive" onclick={() => (cancelStep = 2)}>Continue</Button>
-            </AlertDialogFooter>
-        {:else}
-            <AlertDialogHeader>
-                <AlertDialogTitle>Are you really sure?</AlertDialogTitle>
-                <AlertDialogDescription>
-                    This will permanently cancel your registration and cannot be undone. Everyone in
-                    your party will be removed.
-                </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-                <Button variant="outline" onclick={() => (cancelStep = 1)}>Go back</Button>
-                <form method="POST" action="?/cancel" use:enhance>
-                    <input type="hidden" name="registrationId" value={registration.id} />
-                    <AlertDialogAction
-                        type="submit"
-                        class="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                        Yes, cancel registration
-                    </AlertDialogAction>
-                </form>
-            </AlertDialogFooter>
-        {/if}
-    </AlertDialogContent>
-</AlertDialog>
+<CancelRegistrationDialog registrationId={registration.id} bind:open={cancelDialogOpen} />

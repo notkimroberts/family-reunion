@@ -8,7 +8,6 @@ import { Alert, AlertDescription, AlertTitle } from '$lib/components/ui/alert'
 import { Badge } from '$lib/components/ui/badge'
 import { Button } from '$lib/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '$lib/components/ui/card'
-import { Input } from '$lib/components/ui/input'
 import { Separator } from '$lib/components/ui/separator'
 import {
     Table,
@@ -20,8 +19,10 @@ import {
 } from '$lib/components/ui/table'
 import { APP_NAME, SHIRT_SIZES, selectClass } from '$lib/general/constants'
 import { formatPrice } from '$lib/utils'
-import { getAge, formatBirthDate, parseBirthDate } from '$lib/utils/age'
+import { formatBirthDate } from '$lib/utils/age'
+import MemberFormFields from './MemberFormFields.svelte'
 import RegistrationManager from './RegistrationManager.svelte'
+import { getDefaultTierId, getTierLabel, getTierPrice, getMemberAge } from './pricingUtils'
 import { registrationSchema } from './schema'
 
 let { data } = $props()
@@ -40,13 +41,7 @@ onMount(() => {
 const tiers = data.tiers
 const tierMap = new Map(tiers.map((t) => [t.id, t]))
 
-function getDefaultTierId(birthYear: number | null | undefined): string {
-    if (!birthYear) return ''
-    const age = getAge(birthYear)
-    return tiers.find((t) => age >= t.minAge && (t.maxAge === null || age <= t.maxAge))?.id ?? ''
-}
-
-let selfTierId = $state(getDefaultTierId(data.profile?.birthYear))
+let selfTierId = $state(getDefaultTierId(tiers, data.profile?.birthYear))
 let selfBirthDate = $state(
     formatBirthDate(data.profile?.birthYear, data.profile?.birthMonth, data.profile?.birthDay),
 )
@@ -100,9 +95,7 @@ function handleAddMember() {
 }
 
 function handleRemoveMember(index: number) {
-    if (editIndex === index) {
-        editIndex = null
-    }
+    if (editIndex === index) editIndex = null
     members = members.filter((_, i) => i !== index)
 }
 
@@ -134,33 +127,12 @@ function handleEditCancel() {
     editIndex = null
 }
 
-function getTierLabel(tierId: string) {
-    return tierMap.get(tierId)?.label ?? ''
-}
-
-function getTierPrice(tierId: string) {
-    const tier = tierMap.get(tierId)
-    return tier ? formatPrice(tier.priceCents) : '0.00'
-}
-
-function memberAge(birthDate: string | undefined): number | null {
-    if (!birthDate) return null
-    const parsed = parseBirthDate(birthDate)
-    return parsed ? getAge(parsed.birthYear, parsed.birthMonth, parsed.birthDay) : null
-}
-
 let selfTier = $derived(selfTierId ? tierMap.get(selfTierId) : undefined)
-
 let total = $derived(
     (selfTier?.priceCents ?? 0) +
-        members.reduce((sum, m) => {
-            const tier = tierMap.get(m.tierId)
-            return sum + (tier?.priceCents ?? 0)
-        }, 0),
+        members.reduce((sum, m) => sum + (tierMap.get(m.tierId)?.priceCents ?? 0), 0),
 )
-
 let canSubmit = $derived(!!selfTierId)
-
 let tableColCount = $derived(data.event?.shirtsEnabled ? 6 : 5)
 </script>
 
@@ -231,7 +203,6 @@ let tableColCount = $derived(data.event?.shirtsEnabled ? 6 : 5)
         <div class="grid grid-cols-1 lg:grid-cols-[1fr_minmax(0,22rem)] gap-6">
             <!-- Left column -->
             <div class="flex flex-col gap-6">
-                <!-- Party members -->
                 <Card>
                     <CardHeader>
                         <CardTitle>Your Party</CardTitle>
@@ -250,9 +221,8 @@ let tableColCount = $derived(data.event?.shirtsEnabled ? 6 : 5)
                                     <div
                                         class="flex h-9 items-center gap-1.5 rounded-md border border-input bg-muted/50 px-3 text-sm">
                                         <span class="truncate">{data.user.name}</span>
-                                        <Badge variant="secondary" class="text-xs shrink-0">
-                                            You
-                                        </Badge>
+                                        <Badge variant="secondary" class="text-xs shrink-0"
+                                            >You</Badge>
                                     </div>
                                 </div>
                                 <div class="space-y-1">
@@ -307,66 +277,17 @@ let tableColCount = $derived(data.event?.shirtsEnabled ? 6 : 5)
 
                         <Separator />
 
-                        <!-- Add additional member -->
+                        <!-- Add a guest -->
                         <div class="space-y-2">
                             <p class="text-sm font-medium">Add a guest</p>
-                            <div
-                                class="grid grid-cols-1 gap-2 sm:grid-cols-2 {data.event
-                                    .shirtsEnabled
-                                    ? 'lg:grid-cols-4'
-                                    : 'lg:grid-cols-3'}">
-                                <div class="space-y-1">
-                                    <label for="memberName" class="text-xs font-medium">
-                                        Name <span class="text-destructive">*</span>
-                                    </label>
-                                    <Input
-                                        id="memberName"
-                                        type="text"
-                                        bind:value={newName}
-                                        placeholder="Full name" />
-                                </div>
-                                <div class="space-y-1">
-                                    <label for="newTier" class="text-xs font-medium">
-                                        Category <span class="text-destructive">*</span>
-                                    </label>
-                                    <select id="newTier" bind:value={newTierId} class={selectClass}>
-                                        <option value="">Select category…</option>
-                                        {#each data.tiers as tier}
-                                            <option value={tier.id}>
-                                                {tier.label} — ${formatPrice(tier.priceCents)}
-                                            </option>
-                                        {/each}
-                                    </select>
-                                </div>
-                                <div class="space-y-1">
-                                    <label for="memberBirthDate" class="text-xs font-medium">
-                                        Birthday <span class="text-muted-foreground/70 font-normal"
-                                            >(optional)</span>
-                                    </label>
-                                    <DatePicker
-                                        id="memberBirthDate"
-                                        bind:value={newBirthDate}
-                                        placeholder="Optional" />
-                                </div>
-                                {#if data.event.shirtsEnabled}
-                                    <div class="space-y-1">
-                                        <label for="newShirtSize" class="text-xs font-medium">
-                                            T-shirt <span
-                                                class="text-muted-foreground/70 font-normal"
-                                                >(optional)</span>
-                                        </label>
-                                        <select
-                                            id="newShirtSize"
-                                            bind:value={newShirtSize}
-                                            class={selectClass}>
-                                            <option value="">Select size…</option>
-                                            {#each SHIRT_SIZES as size}
-                                                <option value={size}>{size}</option>
-                                            {/each}
-                                        </select>
-                                    </div>
-                                {/if}
-                            </div>
+                            <MemberFormFields
+                                bind:name={newName}
+                                bind:tierId={newTierId}
+                                bind:birthDate={newBirthDate}
+                                bind:shirtSize={newShirtSize}
+                                {tiers}
+                                shirtsEnabled={data.event.shirtsEnabled}
+                                idPrefix="new-member" />
                             <Button
                                 type="button"
                                 size="sm"
@@ -387,66 +308,14 @@ let tableColCount = $derived(data.event?.shirtsEnabled ? 6 : 5)
                                     <div class="rounded-lg border p-3">
                                         {#if editIndex === i}
                                             <div class="space-y-2">
-                                                <div class="space-y-1">
-                                                    <label
-                                                        for="edit-mob-name"
-                                                        class="text-xs font-medium">Name</label>
-                                                    <Input
-                                                        id="edit-mob-name"
-                                                        bind:value={editName}
-                                                        placeholder="Full name" />
-                                                </div>
-                                                <div class="space-y-1">
-                                                    <label
-                                                        for="edit-mob-tier"
-                                                        class="text-xs font-medium">Category</label>
-                                                    <select
-                                                        id="edit-mob-tier"
-                                                        bind:value={editTierId}
-                                                        class={selectClass}>
-                                                        <option value="">Select category…</option>
-                                                        {#each data.tiers as tier}
-                                                            <option value={tier.id}>
-                                                                {tier.label} — ${formatPrice(
-                                                                    tier.priceCents,
-                                                                )}
-                                                            </option>
-                                                        {/each}
-                                                    </select>
-                                                </div>
-                                                <div class="space-y-1">
-                                                    <label
-                                                        for="edit-mob-bday"
-                                                        class="text-xs font-medium">
-                                                        Birthday <span
-                                                            class="text-muted-foreground/70 font-normal"
-                                                            >(optional)</span>
-                                                    </label>
-                                                    <DatePicker
-                                                        id="edit-mob-bday"
-                                                        bind:value={editBirthDate}
-                                                        placeholder="Optional" />
-                                                </div>
-                                                {#if data.event.shirtsEnabled}
-                                                    <div class="space-y-1">
-                                                        <label
-                                                            for="edit-mob-shirt"
-                                                            class="text-xs font-medium">
-                                                            T-shirt <span
-                                                                class="text-muted-foreground/70 font-normal"
-                                                                >(optional)</span>
-                                                        </label>
-                                                        <select
-                                                            id="edit-mob-shirt"
-                                                            bind:value={editShirtSize}
-                                                            class={selectClass}>
-                                                            <option value="">Select size…</option>
-                                                            {#each SHIRT_SIZES as size}
-                                                                <option value={size}>{size}</option>
-                                                            {/each}
-                                                        </select>
-                                                    </div>
-                                                {/if}
+                                                <MemberFormFields
+                                                    bind:name={editName}
+                                                    bind:tierId={editTierId}
+                                                    bind:birthDate={editBirthDate}
+                                                    bind:shirtSize={editShirtSize}
+                                                    {tiers}
+                                                    shirtsEnabled={data.event.shirtsEnabled}
+                                                    idPrefix="edit-mob" />
                                                 <div class="flex gap-2 pt-1">
                                                     <Button
                                                         type="button"
@@ -468,33 +337,29 @@ let tableColCount = $derived(data.event?.shirtsEnabled ? 6 : 5)
                                                         variant="ghost"
                                                         size="sm"
                                                         class="h-6 px-2 text-xs"
-                                                        onclick={() => handleEditStart(i)}>
-                                                        Edit
-                                                    </Button>
+                                                        onclick={() => handleEditStart(i)}
+                                                        >Edit</Button>
                                                     <Button
                                                         type="button"
                                                         variant="ghost"
                                                         size="sm"
                                                         class="text-destructive hover:text-destructive h-6 px-2"
-                                                        onclick={() => handleRemoveMember(i)}>
-                                                        ✕
-                                                    </Button>
+                                                        onclick={() => handleRemoveMember(i)}
+                                                        >✕</Button>
                                                 </div>
                                             </div>
                                             <div
                                                 class="mt-1 flex flex-wrap gap-x-4 gap-y-0.5 text-sm text-muted-foreground">
                                                 {#if member.birthDate}
-                                                    <span>
-                                                        Age {memberAge(member.birthDate)}
-                                                    </span>
+                                                    <span
+                                                        >Age {getMemberAge(member.birthDate)}</span>
                                                 {/if}
-                                                <span>{getTierLabel(member.tierId)}</span>
+                                                <span>{getTierLabel(tierMap, member.tierId)}</span>
                                                 {#if data.event.shirtsEnabled && member.shirtSize}
                                                     <span>Size {member.shirtSize}</span>
                                                 {/if}
-                                                <span class="ml-auto font-medium text-foreground">
-                                                    ${getTierPrice(member.tierId)}
-                                                </span>
+                                                <span class="ml-auto font-medium text-foreground"
+                                                    >${getTierPrice(tierMap, member.tierId)}</span>
                                             </div>
                                         {/if}
                                     </div>
@@ -521,88 +386,27 @@ let tableColCount = $derived(data.event?.shirtsEnabled ? 6 : 5)
                                             {#if editIndex === i}
                                                 <TableRow class="bg-muted/20">
                                                     <TableCell colspan={tableColCount} class="p-3">
-                                                        <div
-                                                            class="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                                                            <div class="space-y-1">
-                                                                <label
-                                                                    for="edit-desk-name"
-                                                                    class="text-xs font-medium"
-                                                                    >Name</label>
-                                                                <Input
-                                                                    id="edit-desk-name"
-                                                                    bind:value={editName}
-                                                                    placeholder="Full name" />
-                                                            </div>
-                                                            <div class="space-y-1">
-                                                                <label
-                                                                    for="edit-desk-tier"
-                                                                    class="text-xs font-medium"
-                                                                    >Category</label>
-                                                                <select
-                                                                    id="edit-desk-tier"
-                                                                    bind:value={editTierId}
-                                                                    class={selectClass}>
-                                                                    <option value=""
-                                                                        >Select…</option>
-                                                                    {#each data.tiers as tier}
-                                                                        <option value={tier.id}>
-                                                                            {tier.label} — ${formatPrice(
-                                                                                tier.priceCents,
-                                                                            )}
-                                                                        </option>
-                                                                    {/each}
-                                                                </select>
-                                                            </div>
-                                                            <div class="space-y-1">
-                                                                <label
-                                                                    for="edit-desk-bday"
-                                                                    class="text-xs font-medium">
-                                                                    Birthday <span
-                                                                        class="text-muted-foreground/70 font-normal"
-                                                                        >(opt.)</span>
-                                                                </label>
-                                                                <DatePicker
-                                                                    id="edit-desk-bday"
-                                                                    bind:value={editBirthDate}
-                                                                    placeholder="Optional" />
-                                                            </div>
-                                                            {#if data.event.shirtsEnabled}
-                                                                <div class="space-y-1">
-                                                                    <label
-                                                                        for="edit-desk-shirt"
-                                                                        class="text-xs font-medium">
-                                                                        T-shirt <span
-                                                                            class="text-muted-foreground/70 font-normal"
-                                                                            >(opt.)</span>
-                                                                    </label>
-                                                                    <select
-                                                                        id="edit-desk-shirt"
-                                                                        bind:value={editShirtSize}
-                                                                        class={selectClass}>
-                                                                        <option value=""
-                                                                            >Select…</option>
-                                                                        {#each SHIRT_SIZES as size}
-                                                                            <option value={size}
-                                                                                >{size}</option>
-                                                                        {/each}
-                                                                    </select>
-                                                                </div>
-                                                            {/if}
-                                                        </div>
+                                                        <MemberFormFields
+                                                            bind:name={editName}
+                                                            bind:tierId={editTierId}
+                                                            bind:birthDate={editBirthDate}
+                                                            bind:shirtSize={editShirtSize}
+                                                            {tiers}
+                                                            shirtsEnabled={data.event.shirtsEnabled}
+                                                            idPrefix="edit-desk"
+                                                            compact />
                                                         <div class="flex gap-2 mt-2">
                                                             <Button
                                                                 type="button"
                                                                 size="sm"
-                                                                onclick={handleEditSave}>
-                                                                Save
-                                                            </Button>
+                                                                onclick={handleEditSave}
+                                                                >Save</Button>
                                                             <Button
                                                                 type="button"
                                                                 size="sm"
                                                                 variant="ghost"
-                                                                onclick={handleEditCancel}>
-                                                                Cancel
-                                                            </Button>
+                                                                onclick={handleEditCancel}
+                                                                >Cancel</Button>
                                                         </div>
                                                     </TableCell>
                                                 </TableRow>
@@ -611,20 +415,23 @@ let tableColCount = $derived(data.event?.shirtsEnabled ? 6 : 5)
                                                     <TableCell>{member.name}</TableCell>
                                                     <TableCell>
                                                         {member.birthDate
-                                                            ? memberAge(member.birthDate)
+                                                            ? getMemberAge(member.birthDate)
                                                             : '—'}
                                                     </TableCell>
-                                                    <TableCell>
-                                                        {getTierLabel(member.tierId)}
-                                                    </TableCell>
+                                                    <TableCell
+                                                        >{getTierLabel(
+                                                            tierMap,
+                                                            member.tierId,
+                                                        )}</TableCell>
                                                     {#if data.event.shirtsEnabled}
-                                                        <TableCell>
-                                                            {member.shirtSize || '—'}
-                                                        </TableCell>
+                                                        <TableCell
+                                                            >{member.shirtSize || '—'}</TableCell>
                                                     {/if}
-                                                    <TableCell>
-                                                        ${getTierPrice(member.tierId)}
-                                                    </TableCell>
+                                                    <TableCell
+                                                        >${getTierPrice(
+                                                            tierMap,
+                                                            member.tierId,
+                                                        )}</TableCell>
                                                     <TableCell>
                                                         <div class="flex gap-1">
                                                             <Button
@@ -632,18 +439,16 @@ let tableColCount = $derived(data.event?.shirtsEnabled ? 6 : 5)
                                                                 variant="ghost"
                                                                 size="sm"
                                                                 class="h-6 px-2 text-xs"
-                                                                onclick={() => handleEditStart(i)}>
-                                                                Edit
-                                                            </Button>
+                                                                onclick={() => handleEditStart(i)}
+                                                                >Edit</Button>
                                                             <Button
                                                                 type="button"
                                                                 variant="ghost"
                                                                 size="sm"
                                                                 class="text-destructive hover:text-destructive h-6 px-2"
                                                                 onclick={() =>
-                                                                    handleRemoveMember(i)}>
-                                                                ✕
-                                                            </Button>
+                                                                    handleRemoveMember(i)}
+                                                                >✕</Button>
                                                         </div>
                                                     </TableCell>
                                                 </TableRow>
@@ -680,9 +485,8 @@ let tableColCount = $derived(data.event?.shirtsEnabled ? 6 : 5)
                                 {#each members as member}
                                     <div class="flex items-center justify-between text-sm">
                                         <span>{member.name}</span>
-                                        <span class="font-mono">
-                                            ${getTierPrice(member.tierId)}
-                                        </span>
+                                        <span class="font-mono"
+                                            >${getTierPrice(tierMap, member.tierId)}</span>
                                     </div>
                                 {/each}
                             </div>
@@ -703,6 +507,5 @@ let tableColCount = $derived(data.event?.shirtsEnabled ? 6 : 5)
                 </Card>
             </div>
         </div>
-        <!-- end grid -->
     </form>
 {/if}
