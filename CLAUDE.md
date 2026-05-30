@@ -47,7 +47,7 @@ For a clean local data reset (dev only): `bun run db:reseed`
 
 ## Architecture
 
-SvelteKit full-stack app (Svelte 5 with runes). Node adapter for Railway deployment. Bun as package manager and runtime. Please read all the latest documentation for (Svelte Kit)[svelte.dev/llms.txt] and Tailwind CSS to ensure you are familiar with the latest features and best practices before implementing any new features or changes in these areas.
+SvelteKit full-stack app (Svelte 5 with runes). Node adapter for Railway deployment. Bun as package manager and runtime. Please read all the latest documentation for [SvelteKit](https://svelte.dev/llms.txt) and Tailwind CSS to ensure you are familiar with the latest features and best practices before implementing any new features or changes in these areas.
 
 ### Logging
 
@@ -55,14 +55,30 @@ SvelteKit full-stack app (Svelte 5 with runes). Node adapter for Railway deploym
 
 - **PostgreSQL** via `postgres` driver + **Drizzle ORM** (schema at `src/lib/server/db/schema.ts`)
 - DB connection uses lazy init with SvelteKit's `$env/dynamic/private` — standalone scripts (like seed.ts) must create their own `postgres()` client directly
-- All person records store a single `birthDate` (`date` column, ISO string `YYYY-MM-DD`); age is always derived via `getAgeFromDate()` from `$lib/utils/age`
+- All person records store birth date as split integers (`birthYear`, `birthMonth`, `birthDay`); age is always derived via `getAge(birthYear, birthMonth?, birthDay?)` from `$lib/utils/age`
+
+### Server modules
+
+Server logic lives under `src/lib/server/`, one domain per folder. Each exported function has its own file; barrel `index.ts` files expose the public API. Private helpers shared within a folder are prefixed with `_` and not re-exported from the barrel.
+
+| Module        | Path                        | Responsibility                                                                                    |
+| ------------- | --------------------------- | ------------------------------------------------------------------------------------------------- |
+| Registrations | `$lib/server/registrations` | Barrel delegating to `checkout/`, `management/`, `queries/`                                       |
+| — checkout    | `registrations/checkout/`   | Pending registration, add-member checkout, admin direct creation, Stripe fulfillment              |
+| — management  | `registrations/management/` | Post-payment mutations: remove member, cancel, update member details                              |
+| — queries     | `registrations/queries/`    | All registration reads                                                                            |
+| Payments      | `$lib/server/payments`      | Stripe checkout creation, refunds, session retrieval; metadata encode/decode in `stripeMetadata/` |
+| Email         | `$lib/server/email`         | Template rendering in `templates/`; Resend delivery in `send/`                                    |
+| Users         | `$lib/server/users`         | User profile reads and writes                                                                     |
+| Storage       | `$lib/server/storage`       | Cloudflare R2 uploads/deletes; local-dev writes to `static/uploads/`                              |
+| Auth          | `$lib/server/auth`          | Better Auth setup; guards in `guards/`                                                            |
 
 ### Auth
 
 - **Better Auth** with admin plugin. Social SSO (Google, Apple, Facebook) + magic link email
 - Magic link plugin configured in `src/lib/server/auth/index.ts`; email sent via `sendMagicLinkEmail` in `$lib/server/email`
 - `hooks.server.ts` populates `event.locals.user` per request. In dev mode, falls back to a hardcoded admin user when no session exists
-- Guards: `requireAuth()` and `requireAdmin()` in `$lib/server/auth/guards.ts`
+- Guards: `requireAuth()` and `requireAdmin()` in `$lib/server/auth/guards`
 - Better Auth manages its own tables (`user`, `session`, `account`) — separate from the app's `user_profiles` table
 - **Lazy-init typing**: `betterAuth({...})` returns a concrete parameterized type that TypeScript can't directly assign to `ReturnType<typeof betterAuth>`. To avoid `any`, extract the call into a `createAuthInstance()` function and type the singleton as `ReturnType<typeof createAuthInstance> | undefined`
 
@@ -94,12 +110,7 @@ Route groups:
 
 - **Stripe Checkout** for event registration. Webhook at `/api/webhooks/stripe` handles `checkout.session.completed`
 - `party_members` are linked to `pricing_tiers` (age-based); the tier FK is the source of truth for what was charged
-
-### Storage & Email
-
-- **Cloudflare R2** for photo uploads (`$lib/server/storage`)
-- In dev mode, uploads save to `static/uploads/` (served by Vite) instead of hitting R2 — no R2 credentials needed locally
-- **Resend** for transactional emails (`$lib/server/email`)
+- Stripe session metadata is typed via `encodeRegistrationMetadata` / `encodeAddMemberMetadata` / `decodeSessionMetadata` in `$lib/server/payments/stripeMetadata` — never access `session.metadata` keys directly
 
 ### Family Tree
 
@@ -180,7 +191,7 @@ The app is fully responsive with a `md:` (768px) breakpoint separating mobile an
 
 ## File organization
 
-- **Utilities** (`$lib/utils`): `formatPrice`, `getAge`, `getInitials` — import from barrel `$lib/utils`
+- **Utilities** (`$lib/utils`): `formatPrice`, `getAge`, `parseBirthDate`, `formatBirthDate`, `getInitials`, `cn` — import from barrel `$lib/utils`
 - **Constants** (`$lib/general/constants`): `APP_NAME`, `THEMES`, `EVENT_STATUSES`, `navigation` — import from barrel `$lib/general/constants`
 - **Components** (`$lib/components`): `AppHeader`, `MobileDrawer`, `DatePicker`, `Footer`, `Divider`, `PageTitle`, `ThemeToggle` — import from barrel `$lib/components`
 - **shadcn-svelte UI components** (`$lib/components/ui/`): `Button`, `Badge`, `Card`, `Input`, `Textarea`, `Select`, `Table`, `Alert`, `Avatar`, `Separator`, `Dialog`, `DropdownMenu`, `Sheet`, `Tooltip`, `Breadcrumb`, `Pagination`, `Calendar`, `Sonner`, `Field` — import directly from the component path
