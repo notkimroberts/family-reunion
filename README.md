@@ -2,6 +2,7 @@
 
 [![CI](https://github.com/notkimroberts/family-reunion/actions/workflows/ci.yml/badge.svg)](https://github.com/notkimroberts/family-reunion/actions/workflows/ci.yml)
 [![Deploy on Railway](https://railway.com/project/879a5c19-03d9-426a-aee3-207aec98321a/deployments/badge)](https://railway.com/project/879a5c19-03d9-426a-aee3-207aec98321a/service/f968a4a8-5fc2-473c-b4a7-fa737dbe9e17)
+[![Sentry](https://img.shields.io/badge/sentry-monitored-362d59)](https://22aae0d29adf.sentry.io/projects/family-reunion/?project=4511474410061824)
 
 A web application for managing family reunions — registration, payments, family tree, photo gallery, and more.
 
@@ -13,6 +14,7 @@ A web application for managing family reunions — registration, payments, famil
 - **Payments**: Stripe
 - **Storage**: Cloudflare R2
 - **Email**: Resend
+- **Error monitoring**: Sentry
 - **Styling**: Tailwind CSS + Shadcn Svelte
 - **Family Tree**: family-chart
 - **Hosting**: Railway
