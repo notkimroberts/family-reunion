@@ -6,3 +6,6 @@ build
 .DS_Store
 vite.config.ts.timestamp-*
 static/uploads
+
+# Sentry Config File
+.env.sentry-build-plugin
