@@ -147,6 +147,14 @@ Route groups:
 - App version injected at build time via Vite `define` (`__APP_VERSION__` from package.json)
 - Release workflow: `bun run release` (patch), `release:minor`, `release:major`, `release:first`
 
+### Error monitoring
+
+- **Sentry** via `@sentry/sveltekit`. Server init in `src/instrumentation.server.ts`; client init in `src/hooks.client.ts`
+- DSN constant at `$lib/general/constants/SENTRY_DSN.ts`
+- The Vite plugin (`sentrySvelteKit` in `vite.config.ts`) uploads source maps and creates a Sentry release automatically on every production build. Release name is set to `package.json` version; commits are associated automatically via `release.setCommits: { auto: true }` (requires the GitHub repo connected in Sentry → Settings → Integrations)
+- `environment` and `release` are injected into both `Sentry.init()` calls via `import.meta.env.MODE` and `import.meta.env.VITE_SENTRY_RELEASE`
+- Auth token: `SENTRY_AUTH_TOKEN` in `.env` (local) or Railway environment variables (production). `vite.config.ts` uses `loadEnv` to read it — necessary because `vite.config.ts` runs before Vite loads `.env` into `process.env`
+
 ### Deployment
 
 - **Railway** with Node adapter. Internal Postgres at `postgres.railway.internal`
@@ -154,6 +162,7 @@ Route groups:
 - Predeploy command (Railway setting): `drizzle-kit migrate` — runs migrations before the server starts
 - Start: `node build/index.js`
 - DB migrations are idempotent — Drizzle tracks applied migrations and skips them on subsequent deploys
+- Required Railway environment variables: `SENTRY_AUTH_TOKEN`, `SENTRY_ENVIRONMENT=production`
 
 ## Mobile-first guidelines
 

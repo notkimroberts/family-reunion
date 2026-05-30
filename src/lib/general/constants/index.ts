@@ -11,3 +11,4 @@ export {
 export { LIGHT_THEME, DARK_THEME, type Theme } from './THEMES'
 export { SHIRT_SIZES, type ShirtSize } from './SHIRT_SIZES'
 export { selectClass } from './selectClass'
+export { SENTRY_DSN } from './SENTRY_DSN'
