@@ -176,6 +176,7 @@ The app is fully responsive with a `md:` (768px) breakpoint separating mobile an
 - Typescript files should be camelCase e.g. myService.ts
 - `if` statements and `for` loops should always use brackets; no inline `return` statements
 - Prefer to put functions, constants, and types into individual files; exported through an index.ts barrel file. Be mindful of circular dependency issues and importing server code onto the client!
+- Private/internal helpers that are shared within a folder but not part of its public API are prefixed with an underscore (e.g. `_fetchAndValidateTiers.ts`). They are exported for use within the folder but not re-exported from the barrel `index.ts`. The underscore signals "do not import this from outside this folder."
 
 ## File organization
 
