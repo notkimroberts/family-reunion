@@ -1,4 +1,12 @@
 import { getStripe } from '$lib/server/stripe'
+import { encodeRegistrationMetadata, encodeAddMemberMetadata } from './stripeMetadata'
+
+export type {
+    StripeSessionMetadata,
+    RegistrationSessionMetadata,
+    AddMemberSessionMetadata,
+} from './stripeMetadata'
+export { decodeSessionMetadata } from './stripeMetadata'
 
 export type LineItemInput = {
     name: string
@@ -34,7 +42,7 @@ export async function createRegistrationCheckout(params: {
             mode: 'payment',
             success_url: params.successUrl(params.registrationId),
             cancel_url: params.cancelUrl(params.registrationId),
-            metadata: { registrationId: params.registrationId },
+            metadata: encodeRegistrationMetadata(params.registrationId),
         })
     } catch (err: any) {
         console.error(
@@ -75,15 +83,14 @@ export async function createAddMemberCheckout(params: {
         mode: 'payment',
         success_url: params.successUrl,
         cancel_url: params.cancelUrl,
-        metadata: {
-            type: 'add_member',
+        metadata: encodeAddMemberMetadata({
             registrationId: params.registrationId,
             memberName: params.name,
             memberTierId: params.memberTierId,
-            memberBirthDate: params.memberBirthDate ?? '',
-            memberShirtSize: params.memberShirtSize ?? '',
-            memberPriceCents: String(params.priceCents),
-        },
+            memberBirthDate: params.memberBirthDate,
+            memberShirtSize: params.memberShirtSize,
+            memberPriceCents: params.priceCents,
+        }),
     })
     return session.url!
 }

@@ -17,6 +17,7 @@ import {
     createAddMemberCheckout,
     refundPaymentIntent,
     retrieveSessionPaymentIntent,
+    decodeSessionMetadata,
 } from '$lib/server/payments'
 import { formatPrice } from '$lib/utils'
 import { getAge, parseBirthDate } from '$lib/utils/age'
@@ -300,10 +301,16 @@ export async function fulfillCheckout(session: Stripe.Checkout.Session): Promise
     const paymentIntentId =
         typeof session.payment_intent === 'string' ? session.payment_intent : null
 
-    if (session.metadata?.type === 'add_member') {
+    const metadata = decodeSessionMetadata(session.metadata)
+    if (!metadata) {
+        dbg.stripe('checkout.session.completed but no registrationId in metadata')
+        return
+    }
+
+    if (metadata.type === 'add_member') {
         const { registrationId, memberName, memberTierId, memberBirthDate, memberShirtSize } =
-            session.metadata
-        const memberPriceCents = parseInt(session.metadata.memberPriceCents ?? '0', 10)
+            metadata
+        const memberPriceCents = parseInt(metadata.memberPriceCents, 10)
 
         dbg.stripe('add_member registrationId=%s member=%s', registrationId, memberName)
 
@@ -330,11 +337,7 @@ export async function fulfillCheckout(session: Stripe.Checkout.Session): Promise
         return
     }
 
-    const registrationId = session.metadata?.registrationId
-    if (!registrationId) {
-        dbg.stripe('checkout.session.completed but no registrationId in metadata')
-        return
-    }
+    const { registrationId } = metadata
 
     dbg.stripe('checkout.session.completed registrationId=%s', registrationId)
 
