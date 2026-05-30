@@ -22,14 +22,16 @@ import {
     TableRow,
 } from '$lib/components/ui/table'
 import { formatPrice } from '$lib/utils'
-import { getAgeFromDate } from '$lib/utils/age'
+import { getAge } from '$lib/utils/age'
 import AddMemberForm from './AddMemberForm.svelte'
 import EditMemberDialog from './EditMemberDialog.svelte'
 
 type Member = {
     id: string
     name: string
-    birthDate: string | null
+    birthYear: number | null
+    birthMonth: number | null
+    birthDay: number | null
     shirtSize: string | null
     tierLabel: string
     priceCents: number
@@ -129,8 +131,12 @@ function handleRemoveClick(member: Member) {
                                 <p class="font-medium truncate">{member.name}</p>
                                 <p class="text-muted-foreground text-sm">
                                     {member.tierLabel}
-                                    {#if member.birthDate}
-                                        · Age {getAgeFromDate(member.birthDate)}
+                                    {#if member.birthYear}
+                                        · Age {getAge(
+                                            member.birthYear,
+                                            member.birthMonth,
+                                            member.birthDay,
+                                        )}
                                     {/if}
                                     {#if member.shirtSize}
                                         · {member.shirtSize}
@@ -179,7 +185,13 @@ function handleRemoveClick(member: Member) {
                             <TableRow>
                                 <TableCell class="font-medium">{member.name}</TableCell>
                                 <TableCell>
-                                    {member.birthDate ? getAgeFromDate(member.birthDate) : '—'}
+                                    {member.birthYear
+                                        ? getAge(
+                                              member.birthYear,
+                                              member.birthMonth,
+                                              member.birthDay,
+                                          )
+                                        : '—'}
                                 </TableCell>
                                 <TableCell>{member.tierLabel}</TableCell>
                                 {#if event.shirtsEnabled}

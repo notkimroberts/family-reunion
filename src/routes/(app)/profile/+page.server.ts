@@ -3,6 +3,7 @@ import { requireAuth } from '$lib/server/auth/guards'
 import { db } from '$lib/server/db'
 import { userProfiles } from '$lib/server/db/schema'
 import { dbg } from '$lib/server/debug'
+import { parseBirthDate } from '$lib/utils/age'
 import type { PageServerLoad, Actions } from './$types'
 
 export const load: PageServerLoad = async (event) => {
@@ -24,7 +25,8 @@ export const actions: Actions = {
     update_profile: async (event) => {
         const user = requireAuth(event)
         const data = await event.request.formData()
-        const birthDate = (data.get('birthDate') as string) || null
+        const birthDateStr = (data.get('birthDate') as string) || null
+        const parsed = birthDateStr ? parseBirthDate(birthDateStr) : null
         const phone = data.get('phone') as string
         const street = data.get('street') as string
         const city = data.get('city') as string
@@ -43,7 +45,9 @@ export const actions: Actions = {
             await db
                 .update(userProfiles)
                 .set({
-                    birthDate,
+                    birthYear: parsed?.birthYear ?? null,
+                    birthMonth: parsed?.birthMonth ?? null,
+                    birthDay: parsed?.birthDay ?? null,
                     phone: phone || null,
                     mailingAddress: { street, city, state, zip },
                     updatedAt: new Date(),
@@ -52,7 +56,9 @@ export const actions: Actions = {
         } else {
             await db.insert(userProfiles).values({
                 userId: user.id,
-                birthDate,
+                birthYear: parsed?.birthYear ?? null,
+                birthMonth: parsed?.birthMonth ?? null,
+                birthDay: parsed?.birthDay ?? null,
                 phone: phone || null,
                 mailingAddress: { street, city, state, zip },
             })

@@ -20,6 +20,7 @@ import {
     deleteOwnPendingRegistrations,
     type MemberInput,
 } from '$lib/server/registrations'
+import { parseBirthDate } from '$lib/utils/age'
 import type { PageServerLoad, Actions } from './$types'
 import {
     registrationSchema,
@@ -67,7 +68,9 @@ export const load: PageServerLoad = async (event) => {
                 .select({
                     id: partyMembers.id,
                     name: partyMembers.name,
-                    birthDate: partyMembers.birthDate,
+                    birthYear: partyMembers.birthYear,
+                    birthMonth: partyMembers.birthMonth,
+                    birthDay: partyMembers.birthDay,
                     shirtSize: partyMembers.shirtSize,
                     pricingTierId: partyMembers.pricingTierId,
                     stripePaymentIntentId: partyMembers.stripePaymentIntentId,
@@ -217,10 +220,13 @@ export const actions: Actions = {
             throw error(403)
         }
 
+        const parsed = birthDate ? parseBirthDate(birthDate) : null
         await db
             .update(partyMembers)
             .set({
-                birthDate: birthDate || null,
+                birthYear: parsed?.birthYear ?? null,
+                birthMonth: parsed?.birthMonth ?? null,
+                birthDay: parsed?.birthDay ?? null,
                 shirtSize: shirtSize || null,
             })
             .where(eq(partyMembers.id, memberId))

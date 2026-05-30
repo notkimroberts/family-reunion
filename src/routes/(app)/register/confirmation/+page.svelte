@@ -14,7 +14,7 @@ import {
 } from '$lib/components/ui/table'
 import { APP_NAME } from '$lib/general/constants'
 import { formatPrice } from '$lib/utils'
-import { getAgeFromDate } from '$lib/utils/age'
+import { getAge } from '$lib/utils/age'
 
 const POLL_INTERVAL_MS = 2000
 const POLL_TIMEOUT_MS = 30000
@@ -103,7 +103,13 @@ $effect(() => {
                                 <TableRow>
                                     <TableCell>{member.name}</TableCell>
                                     <TableCell>
-                                        {member.birthDate ? getAgeFromDate(member.birthDate) : '—'}
+                                        {member.birthYear
+                                            ? getAge(
+                                                  member.birthYear,
+                                                  member.birthMonth,
+                                                  member.birthDay,
+                                              )
+                                            : '—'}
                                     </TableCell>
                                     <TableCell>{member.tierLabel}</TableCell>
                                     {#if data.members.some((m) => m.shirtSize)}

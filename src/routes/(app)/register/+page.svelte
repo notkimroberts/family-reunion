@@ -19,7 +19,8 @@ import {
     TableRow,
 } from '$lib/components/ui/table'
 import { APP_NAME, SHIRT_SIZES, selectClass } from '$lib/general/constants'
-import { formatPrice, getAgeFromDate } from '$lib/utils'
+import { formatPrice } from '$lib/utils'
+import { getAge, formatBirthDate, parseBirthDate } from '$lib/utils/age'
 import RegistrationManager from './RegistrationManager.svelte'
 import { registrationSchema } from './schema'
 
@@ -39,14 +40,16 @@ onMount(() => {
 const tiers = data.tiers
 const tierMap = new Map(tiers.map((t) => [t.id, t]))
 
-function getDefaultTierId(birthDate: string | null | undefined): string {
-    if (!birthDate) return ''
-    const age = getAgeFromDate(birthDate)
+function getDefaultTierId(birthYear: number | null | undefined): string {
+    if (!birthYear) return ''
+    const age = getAge(birthYear)
     return tiers.find((t) => age >= t.minAge && (t.maxAge === null || age <= t.maxAge))?.id ?? ''
 }
 
-let selfTierId = $state(getDefaultTierId(data.profile?.birthDate))
-let selfBirthDate = $state(data.profile?.birthDate ?? undefined)
+let selfTierId = $state(getDefaultTierId(data.profile?.birthYear))
+let selfBirthDate = $state(
+    formatBirthDate(data.profile?.birthYear, data.profile?.birthMonth, data.profile?.birthDay),
+)
 let selfShirtSize = $state('')
 
 $effect(() => {
@@ -138,6 +141,12 @@ function getTierLabel(tierId: string) {
 function getTierPrice(tierId: string) {
     const tier = tierMap.get(tierId)
     return tier ? formatPrice(tier.priceCents) : '0.00'
+}
+
+function memberAge(birthDate: string | undefined): number | null {
+    if (!birthDate) return null
+    const parsed = parseBirthDate(birthDate)
+    return parsed ? getAge(parsed.birthYear, parsed.birthMonth, parsed.birthDay) : null
 }
 
 let selfTier = $derived(selfTierId ? tierMap.get(selfTierId) : undefined)
@@ -476,7 +485,7 @@ let tableColCount = $derived(data.event?.shirtsEnabled ? 6 : 5)
                                                 class="mt-1 flex flex-wrap gap-x-4 gap-y-0.5 text-sm text-muted-foreground">
                                                 {#if member.birthDate}
                                                     <span>
-                                                        Age {getAgeFromDate(member.birthDate)}
+                                                        Age {memberAge(member.birthDate)}
                                                     </span>
                                                 {/if}
                                                 <span>{getTierLabel(member.tierId)}</span>
@@ -602,7 +611,7 @@ let tableColCount = $derived(data.event?.shirtsEnabled ? 6 : 5)
                                                     <TableCell>{member.name}</TableCell>
                                                     <TableCell>
                                                         {member.birthDate
-                                                            ? getAgeFromDate(member.birthDate)
+                                                            ? memberAge(member.birthDate)
                                                             : '—'}
                                                     </TableCell>
                                                     <TableCell>
