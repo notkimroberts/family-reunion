@@ -23,7 +23,7 @@
         "release:first": "commit-and-tag-version --first-release",
         "start": "node build/index.js",
         "test": "vitest run",
-        "sentry:code-mappings": "sentry-cli code-mappings upload ./sentry-mappings.json"
+        "sentry:code-mappings": "bunx @sentry/cli@^3 code-mappings upload ./sentry-mappings.json"
     },
     "devDependencies": {
         "@eslint/compat": "^2.1.0",
@@ -31,7 +31,6 @@
         "@faker-js/faker": "^10.4.0",
         "@internationalized/date": "^3.12.0",
         "@lucide/svelte": "^0.577.0",
-        "@sentry/cli": "^3",
         "@sveltejs/adapter-node": "^5.5.4",
         "@sveltejs/kit": "^2.60.1",
         "@sveltejs/vite-plugin-svelte": "^7.1.2",
