@@ -152,6 +152,8 @@ Route groups:
 - **Sentry** via `@sentry/sveltekit`. Server init in `src/instrumentation.server.ts`; client init in `src/hooks.client.ts`
 - DSN constant at `$lib/general/constants/SENTRY_DSN.ts`
 - The Vite plugin (`sentrySvelteKit` in `vite.config.ts`) uploads source maps and creates a Sentry release automatically on every production build. Release name is set to `package.json` version; commits are associated automatically via `release.setCommits: { auto: true }` (requires the GitHub repo connected in Sentry → Settings → Integrations)
+- **Source map chain**: adapter-node produces a 3-level chain (`build/` → `.svelte-kit/adapter-node/` → `src/`). The plugin's built-in sorcery flattening only resolves one level, so `sourcemaps.assets` is configured to upload both `build/**` and `.svelte-kit/adapter-node/**` so Sentry can chain through to the TypeScript source. Do not change this without understanding the impact
+- **Code mappings**: uploaded via `bun run sentry:code-mappings` (one-time, not per deploy). Config in `sentry-mappings.json` and `.sentryclirc`. Requires an org-scoped token with `org:ci` scope
 - `environment` and `release` are injected into both `Sentry.init()` calls via `import.meta.env.MODE` and `import.meta.env.VITE_SENTRY_RELEASE`
 - Auth token: `SENTRY_AUTH_TOKEN` in `.env` (local) or Railway environment variables (production). `vite.config.ts` uses `loadEnv` to read it — necessary because `vite.config.ts` runs before Vite loads `.env` into `process.env`
 

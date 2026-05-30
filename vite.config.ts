@@ -18,10 +18,19 @@ export default defineConfig(({ mode }) => {
                 project,
                 // vite.config.ts runs before Vite loads .env into process.env, so loadEnv is needed to read it
                 authToken: env.SENTRY_AUTH_TOKEN ?? process.env.SENTRY_AUTH_TOKEN,
+                // adapter-node produces a 3-level source map chain:
+                //   build/ → .svelte-kit/adapter-node/ → src/
+                // sorcery only resolves one level, so we upload both levels and let Sentry chain them.
+                sourcemaps: {
+                    assets: ['./build/**', './.svelte-kit/adapter-node/**'],
+                },
                 release: {
                     name: pkg.version,
                     deploy: {
                         env: process.env.SENTRY_ENVIRONMENT ?? 'production',
+                    },
+                    setCommits: {
+                        auto: true,
                     },
                 },
             }),
