@@ -44,6 +44,9 @@ export function decodeSessionMetadata(
     if (!raw) {
         return null
     }
+    if (raw.type === 'registration' && raw.registrationId) {
+        return { type: 'registration', registrationId: raw.registrationId }
+    }
     if (raw.type === 'add_member') {
         return {
             type: 'add_member',
@@ -54,10 +57,6 @@ export function decodeSessionMetadata(
             memberShirtSize: raw.memberShirtSize ?? '',
             memberPriceCents: raw.memberPriceCents ?? '0',
         }
-    }
-    // Handles both new sessions (type: 'registration') and legacy sessions (no type field)
-    if (raw.registrationId) {
-        return { type: 'registration', registrationId: raw.registrationId }
     }
     return null
 }

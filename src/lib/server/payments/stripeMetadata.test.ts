@@ -11,11 +11,6 @@ describe('encodeRegistrationMetadata / decode round-trip', () => {
         const decoded = decodeSessionMetadata(encoded)
         expect(decoded).toEqual({ type: 'registration', registrationId: 'reg-123' })
     })
-
-    it('decodes legacy registration metadata (no type field)', () => {
-        const decoded = decodeSessionMetadata({ registrationId: 'reg-old' })
-        expect(decoded).toEqual({ type: 'registration', registrationId: 'reg-old' })
-    })
 })
 
 describe('encodeAddMemberMetadata / decode round-trip', () => {
