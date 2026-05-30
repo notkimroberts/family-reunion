@@ -70,7 +70,7 @@ const mockMember = {
     registrationId: 'reg-123',
 }
 const validSession = {
-    metadata: { registrationId: 'reg-123' },
+    metadata: { type: 'registration', registrationId: 'reg-123' },
     customer_details: { email: 'alice@example.com', name: 'Alice Smith' },
     customer_email: null,
 }
