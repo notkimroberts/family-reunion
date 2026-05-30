@@ -11,12 +11,3 @@ export function requireAuth(event: AuthEvent) {
     }
     return event.locals.user
 }
-
-export function requireAdmin(event: AuthEvent) {
-    const user = requireAuth(event)
-    if (user.role !== 'admin') {
-        dbg.auth('requireAdmin: user %s denied (role=%s)', user.id, user.role)
-        throw redirect(302, '/')
-    }
-    return user
-}
