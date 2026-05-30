@@ -1,10 +1,7 @@
 import { redirect, fail, error } from '@sveltejs/kit'
-import { eq } from 'drizzle-orm'
 import { zod4 as zod } from 'sveltekit-superforms/adapters'
 import { superValidate } from 'sveltekit-superforms/server'
 import { requireAuth } from '$lib/server/auth/guards'
-import { db } from '$lib/server/db'
-import { userProfiles } from '$lib/server/db/schema'
 import { dbg } from '$lib/server/debug'
 import {
     createPendingRegistration,
@@ -19,6 +16,7 @@ import {
     updateMemberDetails,
     type MemberInput,
 } from '$lib/server/registrations'
+import { getUserProfile } from '$lib/server/users'
 import type { PageServerLoad, Actions } from './$types'
 import {
     registrationSchema,
@@ -61,11 +59,7 @@ export const load: PageServerLoad = async (event) => {
         }
     }
 
-    const [profile] = await db
-        .select()
-        .from(userProfiles)
-        .where(eq(userProfiles.userId, user.id))
-        .limit(1)
+    const profile = (await getUserProfile(user.id)) ?? null
 
     const cancelledReg = openEvent
         ? await getRegistration(user.id, openEvent.id, ['refunded'])
