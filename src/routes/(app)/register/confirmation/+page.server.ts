@@ -28,7 +28,9 @@ export const load: PageServerLoad = async (event) => {
     const members = await db
         .select({
             name: partyMembers.name,
-            birthDate: partyMembers.birthDate,
+            birthYear: partyMembers.birthYear,
+            birthMonth: partyMembers.birthMonth,
+            birthDay: partyMembers.birthDay,
             shirtSize: partyMembers.shirtSize,
             tierLabel: pricingTiers.label,
             priceCents: pricingTiers.priceCents,

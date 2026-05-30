@@ -8,10 +8,13 @@ import { Input } from '$lib/components/ui/input'
 import { Separator } from '$lib/components/ui/separator'
 import { APP_NAME } from '$lib/general/constants'
 import { getInitials } from '$lib/utils'
+import { formatBirthDate } from '$lib/utils/age'
 
 let { data } = $props()
 
-let birthDate = $state(data.profile?.birthDate ?? undefined)
+let birthDate = $state(
+    formatBirthDate(data.profile?.birthYear, data.profile?.birthMonth, data.profile?.birthDay),
+)
 </script>
 
 <svelte:head>

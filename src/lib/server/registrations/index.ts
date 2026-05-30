@@ -19,7 +19,7 @@ import {
     retrieveSessionPaymentIntent,
 } from '$lib/server/payments'
 import { formatPrice } from '$lib/utils'
-import { getAgeFromDate } from '$lib/utils/age'
+import { getAge, parseBirthDate } from '$lib/utils/age'
 
 export type MemberInput = {
     name: string
@@ -72,13 +72,16 @@ export async function createPendingRegistration(params: {
     const selfTier = tierMap.get(params.selfTierId)!
 
     if (params.selfBirthDate) {
-        await db
-            .insert(userProfiles)
-            .values({ userId: params.userId, birthDate: params.selfBirthDate })
-            .onConflictDoUpdate({
-                target: userProfiles.userId,
-                set: { birthDate: params.selfBirthDate, updatedAt: new Date() },
-            })
+        const parsed = parseBirthDate(params.selfBirthDate)
+        if (parsed) {
+            await db
+                .insert(userProfiles)
+                .values({ userId: params.userId, ...parsed })
+                .onConflictDoUpdate({
+                    target: userProfiles.userId,
+                    set: { ...parsed, updatedAt: new Date() },
+                })
+        }
     }
 
     const { totalCents, lineItems } = calculateTotal(
@@ -98,21 +101,29 @@ export async function createPendingRegistration(params: {
         })
         .returning()
 
+    const selfParsed = params.selfBirthDate ? parseBirthDate(params.selfBirthDate) : null
     await db.insert(partyMembers).values([
         {
             registrationId: registration.id,
             name: params.userName,
-            birthDate: params.selfBirthDate || null,
+            birthYear: selfParsed?.birthYear ?? null,
+            birthMonth: selfParsed?.birthMonth ?? null,
+            birthDay: selfParsed?.birthDay ?? null,
             shirtSize: params.selfShirtSize || null,
             pricingTierId: selfTier.id,
         },
-        ...params.additionalMembers.map((m) => ({
-            registrationId: registration.id,
-            name: m.name,
-            birthDate: m.birthDate || null,
-            shirtSize: m.shirtSize || null,
-            pricingTierId: m.tierId,
-        })),
+        ...params.additionalMembers.map((m) => {
+            const parsed = m.birthDate ? parseBirthDate(m.birthDate) : null
+            return {
+                registrationId: registration.id,
+                name: m.name,
+                birthYear: parsed?.birthYear ?? null,
+                birthMonth: parsed?.birthMonth ?? null,
+                birthDay: parsed?.birthDay ?? null,
+                shirtSize: m.shirtSize || null,
+                pricingTierId: m.tierId,
+            }
+        }),
     ])
 
     dbg.register('registration created id=%s, creating stripe session', registration.id)
@@ -297,10 +308,13 @@ export async function fulfillCheckout(session: Stripe.Checkout.Session): Promise
         dbg.stripe('add_member registrationId=%s member=%s', registrationId, memberName)
 
         await db.transaction(async (tx) => {
+            const parsed = memberBirthDate ? parseBirthDate(memberBirthDate) : null
             await tx.insert(partyMembers).values({
                 registrationId,
                 name: memberName,
-                birthDate: memberBirthDate || null,
+                birthYear: parsed?.birthYear ?? null,
+                birthMonth: parsed?.birthMonth ?? null,
+                birthDay: parsed?.birthDay ?? null,
                 shirtSize: memberShirtSize || null,
                 pricingTierId: memberTierId,
                 stripePaymentIntentId: paymentIntentId,
@@ -367,7 +381,8 @@ export async function fulfillCheckout(session: Stripe.Checkout.Session): Promise
                 eventTitle: reunionEvent.title,
                 partyMembers: members.map((m) => {
                     const extras: string[] = []
-                    if (m.birthDate) extras.push(`age ${getAgeFromDate(m.birthDate)}`)
+                    if (m.birthYear)
+                        extras.push(`age ${getAge(m.birthYear, m.birthMonth, m.birthDay)}`)
                     if (m.shirtSize) extras.push(`shirt ${m.shirtSize}`)
                     return extras.length > 0 ? `${m.name} (${extras.join(', ')})` : m.name
                 }),
@@ -408,13 +423,18 @@ export async function createAdminRegistration(params: {
         .returning()
 
     await db.insert(partyMembers).values(
-        params.members.map((m) => ({
-            registrationId: registration.id,
-            name: m.name.trim(),
-            birthDate: m.birthDate || null,
-            shirtSize: m.shirtSize || null,
-            pricingTierId: m.tierId,
-        })),
+        params.members.map((m) => {
+            const parsed = m.birthDate ? parseBirthDate(m.birthDate) : null
+            return {
+                registrationId: registration.id,
+                name: m.name.trim(),
+                birthYear: parsed?.birthYear ?? null,
+                birthMonth: parsed?.birthMonth ?? null,
+                birthDay: parsed?.birthDay ?? null,
+                shirtSize: m.shirtSize || null,
+                pricingTierId: m.tierId,
+            }
+        }),
     )
 
     return { registrationId: registration.id }

@@ -51,7 +51,7 @@ vi.mock('$lib/server/db/schema', () => ({
 }))
 vi.mock('$lib/server/debug', () => ({ dbg: { stripe: vi.fn() } }))
 vi.mock('$lib/server/email', () => ({ sendRegistrationConfirmation: mockSendEmail }))
-vi.mock('$lib/utils/age', () => ({ getAgeFromDate: vi.fn().mockReturnValue(30) }))
+vi.mock('$lib/utils/age', () => ({ getAge: vi.fn().mockReturnValue(30), parseBirthDate: vi.fn() }))
 
 const mockRegistration = {
     id: 'reg-123',
@@ -63,7 +63,9 @@ const mockReunionEvent = { id: 'event-456', title: 'Family Reunion 2026' }
 const mockMember = {
     id: 'member-1',
     name: 'Alice',
-    birthDate: '1990-01-01',
+    birthYear: 1990,
+    birthMonth: 1,
+    birthDay: 1,
     shirtSize: 'M',
     registrationId: 'reg-123',
 }

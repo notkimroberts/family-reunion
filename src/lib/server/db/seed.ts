@@ -535,19 +535,29 @@ async function seed() {
                     : ('paid' as const)
 
             let totalCents = 0
-            const partyData: { name: string; birthDate: string; tierId: string }[] = []
+            const partyData: {
+                name: string
+                birthYear: number
+                birthMonth: number
+                birthDay: number
+                tierId: string
+            }[] = []
 
             for (let p = 0; p < numParty; p++) {
                 const birthDate = faker.date.birthdate({ mode: 'age', min: 2, max: 70 })
-                const birthDateStr = birthDate.toISOString().slice(0, 10)
-                const age = new Date().getFullYear() - birthDate.getFullYear()
+                const birthYear = birthDate.getFullYear()
+                const birthMonth = birthDate.getMonth() + 1
+                const birthDay = birthDate.getDate()
+                const age = new Date().getFullYear() - birthYear
                 const tier = eventTiers.find(
                     (t) => age >= t.minAge && (t.maxAge === null || age <= t.maxAge),
                 )!
                 totalCents += tier.priceCents
                 partyData.push({
                     name: faker.person.fullName(),
-                    birthDate: birthDateStr,
+                    birthYear,
+                    birthMonth,
+                    birthDay,
                     tierId: tier.id,
                 })
             }
@@ -568,7 +578,9 @@ async function seed() {
                 partyData.map((p) => ({
                     registrationId: reg.id,
                     name: p.name,
-                    birthDate: p.birthDate,
+                    birthYear: p.birthYear,
+                    birthMonth: p.birthMonth,
+                    birthDay: p.birthDay,
                     pricingTierId: p.tierId,
                 })),
             )

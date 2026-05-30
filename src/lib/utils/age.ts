@@ -24,13 +24,26 @@ export function getAge(
     return age
 }
 
-export function getAgeFromDate(birthDate: string | Date): number {
-    const date = typeof birthDate === 'string' ? new Date(birthDate + 'T00:00:00') : birthDate
-    const now = new Date()
-    let age = now.getFullYear() - date.getFullYear()
-    const m = now.getMonth() - date.getMonth()
-    if (m < 0 || (m === 0 && now.getDate() < date.getDate())) {
-        age--
+export function parseBirthDate(
+    isoDate: string,
+): { birthYear: number; birthMonth: number; birthDay: number } | null {
+    if (!isoDate) {
+        return null
     }
-    return age
+    const parts = isoDate.split('-').map(Number)
+    if (parts.length !== 3 || !parts[0]) {
+        return null
+    }
+    return { birthYear: parts[0], birthMonth: parts[1], birthDay: parts[2] }
+}
+
+export function formatBirthDate(
+    birthYear: number | null | undefined,
+    birthMonth: number | null | undefined,
+    birthDay: number | null | undefined,
+): string | undefined {
+    if (!birthYear || !birthMonth || !birthDay) {
+        return undefined
+    }
+    return `${birthYear}-${String(birthMonth).padStart(2, '0')}-${String(birthDay).padStart(2, '0')}`
 }

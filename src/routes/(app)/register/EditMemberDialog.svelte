@@ -10,11 +10,14 @@ import {
     DialogTitle,
 } from '$lib/components/ui/dialog'
 import { SHIRT_SIZES, selectClass } from '$lib/general/constants'
+import { formatBirthDate } from '$lib/utils/age'
 
 type Member = {
     id: string
     name: string
-    birthDate: string | null
+    birthYear: number | null
+    birthMonth: number | null
+    birthDay: number | null
     shirtSize: string | null
     tierLabel: string
 }
@@ -29,7 +32,7 @@ let {
     open: boolean
 } = $props()
 
-let birthDate = $state(member.birthDate ?? undefined)
+let birthDate = $state(formatBirthDate(member.birthYear, member.birthMonth, member.birthDay))
 let shirtSize = $state(member.shirtSize ?? '')
 </script>
 
