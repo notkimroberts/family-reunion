@@ -1,16 +1,10 @@
 import { redirect, fail, error } from '@sveltejs/kit'
-import { eq, desc, and, inArray } from 'drizzle-orm'
+import { eq } from 'drizzle-orm'
 import { zod4 as zod } from 'sveltekit-superforms/adapters'
 import { superValidate } from 'sveltekit-superforms/server'
 import { requireAuth } from '$lib/server/auth/guards'
 import { db } from '$lib/server/db'
-import {
-    reunionEvents,
-    pricingTiers,
-    registrations,
-    partyMembers,
-    userProfiles,
-} from '$lib/server/db/schema'
+import { userProfiles } from '$lib/server/db/schema'
 import { dbg } from '$lib/server/debug'
 import {
     createPendingRegistration,
@@ -18,9 +12,13 @@ import {
     removeMember,
     cancelRegistration,
     deleteOwnPendingRegistrations,
+    getOpenEvent,
+    getEventTiers,
+    getRegistration,
+    getRegistrationMembers,
+    updateMemberDetails,
     type MemberInput,
 } from '$lib/server/registrations'
-import { parseBirthDate } from '$lib/utils/age'
 import type { PageServerLoad, Actions } from './$types'
 import {
     registrationSchema,
@@ -35,51 +33,17 @@ export const load: PageServerLoad = async (event) => {
 
     const memberAdded = event.url.searchParams.get('member_added') === 'true'
 
-    const openEvents = await db
-        .select()
-        .from(reunionEvents)
-        .where(eq(reunionEvents.status, 'open'))
-        .orderBy(desc(reunionEvents.year))
-        .limit(1)
+    const openEvent = (await getOpenEvent()) ?? null
 
-    const openEvent = openEvents[0] ?? null
-
-    const tiers = openEvent
-        ? await db.select().from(pricingTiers).where(eq(pricingTiers.eventId, openEvent.id))
-        : []
+    const tiers = openEvent ? await getEventTiers(openEvent.id) : []
 
     if (openEvent) {
         await deleteOwnPendingRegistrations(user.id, openEvent.id)
 
-        const [existingReg] = await db
-            .select()
-            .from(registrations)
-            .where(
-                and(
-                    eq(registrations.userId, user.id),
-                    eq(registrations.eventId, openEvent.id),
-                    inArray(registrations.status, ['paid', 'waived']),
-                ),
-            )
-            .limit(1)
+        const existingReg = await getRegistration(user.id, openEvent.id, ['paid', 'waived'])
 
         if (existingReg) {
-            const members = await db
-                .select({
-                    id: partyMembers.id,
-                    name: partyMembers.name,
-                    birthYear: partyMembers.birthYear,
-                    birthMonth: partyMembers.birthMonth,
-                    birthDay: partyMembers.birthDay,
-                    shirtSize: partyMembers.shirtSize,
-                    pricingTierId: partyMembers.pricingTierId,
-                    stripePaymentIntentId: partyMembers.stripePaymentIntentId,
-                    tierLabel: pricingTiers.label,
-                    priceCents: pricingTiers.priceCents,
-                })
-                .from(partyMembers)
-                .innerJoin(pricingTiers, eq(partyMembers.pricingTierId, pricingTiers.id))
-                .where(eq(partyMembers.registrationId, existingReg.id))
+            const members = await getRegistrationMembers(existingReg.id)
 
             const form = await superValidate({ eventId: openEvent.id }, zod(registrationSchema))
 
@@ -103,19 +67,9 @@ export const load: PageServerLoad = async (event) => {
         .where(eq(userProfiles.userId, user.id))
         .limit(1)
 
-    const [cancelledReg] = openEvent
-        ? await db
-              .select({ id: registrations.id })
-              .from(registrations)
-              .where(
-                  and(
-                      eq(registrations.userId, user.id),
-                      eq(registrations.eventId, openEvent.id),
-                      eq(registrations.status, 'refunded'),
-                  ),
-              )
-              .limit(1)
-        : []
+    const cancelledReg = openEvent
+        ? await getRegistration(user.id, openEvent.id, ['refunded'])
+        : undefined
 
     const form = await superValidate({ eventId: openEvent?.id ?? '' }, zod(registrationSchema))
 
@@ -206,30 +160,11 @@ export const actions: Actions = {
 
         const { memberId, birthDate, shirtSize } = form.data
 
-        const [member] = await db
-            .select({
-                id: partyMembers.id,
-                registrationUserId: registrations.userId,
-            })
-            .from(partyMembers)
-            .innerJoin(registrations, eq(partyMembers.registrationId, registrations.id))
-            .where(eq(partyMembers.id, memberId))
-            .limit(1)
-
-        if (!member || member.registrationUserId !== user.id) {
-            throw error(403)
-        }
-
-        const parsed = birthDate ? parseBirthDate(birthDate) : null
-        await db
-            .update(partyMembers)
-            .set({
-                birthYear: parsed?.birthYear ?? null,
-                birthMonth: parsed?.birthMonth ?? null,
-                birthDay: parsed?.birthDay ?? null,
-                shirtSize: shirtSize || null,
-            })
-            .where(eq(partyMembers.id, memberId))
+        await updateMemberDetails(
+            memberId,
+            { birthDate: birthDate || undefined, shirtSize: shirtSize || undefined },
+            user.id,
+        )
 
         dbg.register('update_member memberId=%s', memberId)
         return { success: true }

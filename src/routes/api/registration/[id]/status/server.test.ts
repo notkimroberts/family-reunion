@@ -6,23 +6,14 @@ const { mockRequireAuth } = vi.hoisted(() => ({
     mockRequireAuth: vi.fn().mockReturnValue({ id: 'user-1' }),
 }))
 
-const { mockLimit, mockDb } = vi.hoisted(() => {
-    const mockLimit = vi.fn().mockResolvedValue([])
-    const chain: Record<string, ReturnType<typeof vi.fn>> = {
-        select: vi.fn(),
-        from: vi.fn(),
-        where: vi.fn(),
-        limit: mockLimit,
-    }
-    chain.select.mockReturnValue(chain)
-    chain.from.mockReturnValue(chain)
-    chain.where.mockReturnValue(chain)
-    return { mockLimit, mockDb: chain }
-})
+const { mockGetRegistrationStatus } = vi.hoisted(() => ({
+    mockGetRegistrationStatus: vi.fn().mockResolvedValue(null),
+}))
 
 vi.mock('$lib/server/auth/guards', () => ({ requireAuth: mockRequireAuth }))
-vi.mock('$lib/server/db', () => ({ db: mockDb }))
-vi.mock('$lib/server/db/schema', () => ({ registrations: {} }))
+vi.mock('$lib/server/registrations', () => ({
+    getRegistrationStatus: mockGetRegistrationStatus,
+}))
 
 function makeEvent(registrationId: string): Parameters<typeof GET>[0] {
     return {
@@ -35,7 +26,7 @@ describe('GET /api/registration/[id]/status', () => {
     beforeEach(() => {
         vi.clearAllMocks()
         mockRequireAuth.mockReturnValue({ id: 'user-1' })
-        mockLimit.mockResolvedValue([])
+        mockGetRegistrationStatus.mockResolvedValue(null)
     })
 
     it('redirects to /login when not authenticated', async () => {
@@ -50,7 +41,7 @@ describe('GET /api/registration/[id]/status', () => {
     })
 
     it('returns status for own registration', async () => {
-        mockLimit.mockResolvedValueOnce([{ status: 'paid' }])
+        mockGetRegistrationStatus.mockResolvedValueOnce('paid')
         const res = await GET(makeEvent('reg-123'))
         const body = await res.json()
         expect(res.status).toBe(200)
@@ -58,14 +49,14 @@ describe('GET /api/registration/[id]/status', () => {
     })
 
     it('returns pending status', async () => {
-        mockLimit.mockResolvedValueOnce([{ status: 'pending' }])
+        mockGetRegistrationStatus.mockResolvedValueOnce('pending')
         const res = await GET(makeEvent('reg-123'))
         const body = await res.json()
         expect(body.status).toBe('pending')
     })
 
     it('throws 404 when registration is not found', async () => {
-        mockLimit.mockResolvedValueOnce([])
+        mockGetRegistrationStatus.mockResolvedValueOnce(null)
         let caught: unknown
         try {
             await GET(makeEvent('nonexistent'))
@@ -77,7 +68,7 @@ describe('GET /api/registration/[id]/status', () => {
     })
 
     it('throws 404 when registration belongs to another user', async () => {
-        mockLimit.mockResolvedValueOnce([])
+        mockGetRegistrationStatus.mockResolvedValueOnce(null)
         let caught: unknown
         try {
             await GET(makeEvent('other-users-reg'))
