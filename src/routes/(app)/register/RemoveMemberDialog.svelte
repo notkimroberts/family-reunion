@@ -26,7 +26,9 @@ let {
 let step = $state(1)
 
 $effect(() => {
-    if (!open) step = 1
+    if (!open) {
+        step = 1
+    }
 })
 </script>
 
@@ -59,7 +61,9 @@ $effect(() => {
                     use:enhance={() =>
                         async ({ result, update }) => {
                             await update()
-                            if (result.type === 'success') open = false
+                            if (result.type === 'success') {
+                                open = false
+                            }
                         }}>
                     <input type="hidden" name="memberId" value={member.id} />
                     <AlertDialogAction

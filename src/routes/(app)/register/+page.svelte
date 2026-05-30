@@ -95,7 +95,9 @@ function handleAddMember() {
 }
 
 function handleRemoveMember(index: number) {
-    if (editIndex === index) editIndex = null
+    if (editIndex === index) {
+        editIndex = null
+    }
     members = members.filter((_, i) => i !== index)
 }
 
@@ -109,7 +111,9 @@ function handleEditStart(index: number) {
 }
 
 function handleEditSave() {
-    if (editIndex === null || !editName.trim() || !editTierId) return
+    if (editIndex === null || !editName.trim() || !editTierId) {
+        return
+    }
     members = members.map((m, i) =>
         i === editIndex
             ? {

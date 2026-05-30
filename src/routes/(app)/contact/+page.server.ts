@@ -16,7 +16,9 @@ function isRateLimited(ip: string): boolean {
     const recent = requests.filter((t) => now - t < window)
     rateLimitMap.set(ip, recent)
 
-    if (recent.length >= maxRequests) return true
+    if (recent.length >= maxRequests) {
+        return true
+    }
     recent.push(now)
     rateLimitMap.set(ip, recent)
     return false
