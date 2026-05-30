@@ -22,7 +22,8 @@
         "release:major": "commit-and-tag-version --release-as major",
         "release:first": "commit-and-tag-version --first-release",
         "start": "node build/index.js",
-        "test": "vitest run"
+        "test": "vitest run",
+        "sentry:code-mappings": "bunx @sentry/cli@^3 code-mappings upload ./sentry-mappings.json"
     },
     "devDependencies": {
         "@eslint/compat": "^2.1.0",
