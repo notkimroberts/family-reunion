@@ -51,7 +51,9 @@ export const actions: Actions = {
         const birthMonth = data.get('birthMonth') as string
         const birthDay = data.get('birthDay') as string
 
-        if (!name?.trim()) return fail(400, { error: 'Name is required' })
+        if (!name?.trim()) {
+            return fail(400, { error: 'Name is required' })
+        }
 
         await db.insert(familyMembers).values({
             userId: user.id,
@@ -70,7 +72,9 @@ export const actions: Actions = {
         const toMemberId = data.get('toMemberId') as string
         const type = data.get('type') as string
 
-        if (!toMemberId || !type) return fail(400, { error: 'All fields required' })
+        if (!toMemberId || !type) {
+            return fail(400, { error: 'All fields required' })
+        }
 
         const [myFamilyMember] = await db
             .select()
@@ -78,7 +82,9 @@ export const actions: Actions = {
             .where(eq(familyMembers.userId, user.id))
             .limit(1)
 
-        if (!myFamilyMember) return fail(400, { error: 'Create your profile first' })
+        if (!myFamilyMember) {
+            return fail(400, { error: 'Create your profile first' })
+        }
 
         await db.insert(relationships).values({
             fromMemberId: myFamilyMember.id,
@@ -95,7 +101,9 @@ export const actions: Actions = {
         const data = await event.request.formData()
         const relationshipId = data.get('relationshipId') as string
 
-        if (!relationshipId) return fail(400, { error: 'Missing relationship ID' })
+        if (!relationshipId) {
+            return fail(400, { error: 'Missing relationship ID' })
+        }
 
         await db.delete(relationships).where(eq(relationships.id, relationshipId))
 

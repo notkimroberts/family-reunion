@@ -16,9 +16,9 @@ import { Sheet, SheetContent } from '$lib/components/ui/sheet'
 import {
     APP_NAME,
     LIGHT_THEME,
-    primaryNavLinks,
-    registerNavLink,
-    secondaryNavLinks,
+    PRIMARY_NAV_LINKS,
+    REGISTER_NAV_LINK,
+    SECONDARY_NAV_LINKS,
 } from '$lib/general/constants'
 import { theme } from '$lib/stores/theme'
 
@@ -71,13 +71,13 @@ const linkClass = (active: boolean) =>
                 <Home class="h-4 w-4" />
                 Home
             </a>
-            {#if primaryNavLinks.length}
+            {#if PRIMARY_NAV_LINKS.length}
                 <p
                     class="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest px-3 pt-4 pb-1">
                     Family
                 </p>
             {/if}
-            {#each primaryNavLinks as link}
+            {#each PRIMARY_NAV_LINKS as link}
                 {@const Icon = iconMap[link.icon]}
                 <a href={link.href} onclick={onClose} class={linkClass(isActive(link.href))}>
                     <Icon class="h-4 w-4" />
@@ -89,7 +89,7 @@ const linkClass = (active: boolean) =>
                 class="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest px-3 pt-4 pb-1">
                 Reunion
             </p>
-            {#each secondaryNavLinks as link}
+            {#each SECONDARY_NAV_LINKS as link}
                 {@const Icon = iconMap[link.icon]}
                 <a href={link.href} onclick={onClose} class={linkClass(isActive(link.href))}>
                     <Icon class="h-4 w-4" />
@@ -99,11 +99,11 @@ const linkClass = (active: boolean) =>
 
             <div class="pt-3">
                 <a
-                    href={registerNavLink.href}
+                    href={REGISTER_NAV_LINK.href}
                     onclick={onClose}
                     class="flex items-center justify-center gap-2 w-full rounded-lg bg-primary px-3 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors">
                     <ClipboardPen class="h-4 w-4" />
-                    {registerNavLink.label}
+                    {REGISTER_NAV_LINK.label}
                 </a>
             </div>
         </nav>

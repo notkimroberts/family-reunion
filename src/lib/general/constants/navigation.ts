@@ -10,23 +10,23 @@ type NavGroup = {
     children: Omit<NavLink, 'icon'>[]
 }
 
-export const primaryNavLinks: NavLink[] = [
+export const PRIMARY_NAV_LINKS: NavLink[] = [
     // { href: '/family-tree', label: 'Family Tree', icon: 'network' },
     // { href: '/gallery', label: 'Gallery', icon: 'images' },
 ]
 
-export const secondaryNavLinks: NavLink[] = [
+export const SECONDARY_NAV_LINKS: NavLink[] = [
     { href: '/program', label: 'Program', icon: 'calendar-clock' },
     // { href: '/shop', label: 'Shop', icon: 'shopping-bag' },
 ]
 
-export const registerNavLink: NavLink = {
+export const REGISTER_NAV_LINK: NavLink = {
     href: '/register',
     label: 'Register',
     icon: 'clipboard-pen',
 }
 
-export const adminNavGroup: NavGroup = {
+export const ADMIN_NAV_GROUP: NavGroup = {
     label: 'Admin',
     icon: 'shield-check',
     children: [

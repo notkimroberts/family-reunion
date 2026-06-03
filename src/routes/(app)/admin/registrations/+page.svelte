@@ -5,12 +5,9 @@ import { DatePicker } from '$lib/components'
 import { Button } from '$lib/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card'
 import { Input } from '$lib/components/ui/input'
-import { SHIRT_SIZES } from '$lib/general/constants'
+import { SHIRT_SIZES, SELECT_CLASS } from '$lib/general/constants'
 import type { AdminContext } from '$lib/types/adminContext'
 import { formatPrice } from '$lib/utils'
-
-const selectClass =
-    'border-input bg-background focus:ring-ring flex h-9 w-full rounded-md border px-3 py-1 text-sm shadow-xs transition-colors focus:outline-none focus:ring-1'
 
 let { data, form } = $props()
 
@@ -160,7 +157,7 @@ const shirtsEnabled = $derived(data.events[0]?.shirtsEnabled ?? false)
                             id="status"
                             name="status"
                             bind:value={status}
-                            class="{selectClass} max-w-xs">
+                            class="{SELECT_CLASS} max-w-xs">
                             <option value="paid">Paid</option>
                             <option value="pending">Not yet paid</option>
                             <option value="waived">Waived</option>
@@ -202,7 +199,7 @@ const shirtsEnabled = $derived(data.events[0]?.shirtsEnabled ?? false)
                                     <select
                                         id="member-tier-{i}"
                                         bind:value={member.tierId}
-                                        class={selectClass}>
+                                        class={SELECT_CLASS}>
                                         <option value="">Select category…</option>
                                         {#each data.tiers as tier}
                                             <option value={tier.id}>
@@ -234,7 +231,7 @@ const shirtsEnabled = $derived(data.events[0]?.shirtsEnabled ?? false)
                                         <select
                                             id="member-shirt-{i}"
                                             bind:value={member.shirtSize}
-                                            class={selectClass}>
+                                            class={SELECT_CLASS}>
                                             <option value="">Select size…</option>
                                             {#each SHIRT_SIZES as size}
                                                 <option value={size}>{size}</option>

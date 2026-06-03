@@ -17,7 +17,7 @@ import {
     TableHeader,
     TableRow,
 } from '$lib/components/ui/table'
-import { APP_NAME, SHIRT_SIZES, selectClass } from '$lib/general/constants'
+import { APP_NAME, SHIRT_SIZES, SELECT_CLASS } from '$lib/general/constants'
 import { formatPrice } from '$lib/utils'
 import { formatBirthDate } from '$lib/utils/age'
 import MemberFormFields from './MemberFormFields.svelte'
@@ -236,7 +236,7 @@ let tableColCount = $derived(data.event?.shirtsEnabled ? 6 : 5)
                                     <select
                                         id="selfTier"
                                         bind:value={selfTierId}
-                                        class={selectClass}>
+                                        class={SELECT_CLASS}>
                                         <option value="">Select category…</option>
                                         {#each data.tiers as tier}
                                             <option value={tier.id}>
@@ -265,7 +265,7 @@ let tableColCount = $derived(data.event?.shirtsEnabled ? 6 : 5)
                                         <select
                                             id="selfShirtSize"
                                             bind:value={selfShirtSize}
-                                            class={selectClass}>
+                                            class={SELECT_CLASS}>
                                             <option value="">Select size…</option>
                                             {#each SHIRT_SIZES as size}
                                                 <option value={size}>{size}</option>

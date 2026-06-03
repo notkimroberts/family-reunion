@@ -18,7 +18,9 @@ export const actions: Actions = {
         const title = data.get('title') as string
         const year = data.get('year') as string
 
-        if (!title?.trim() || !year) return fail(400, { error: 'Title and year required' })
+        if (!title?.trim() || !year) {
+            return fail(400, { error: 'Title and year required' })
+        }
 
         await db.insert(reunionEvents).values({
             title: title.trim(),
@@ -35,7 +37,9 @@ export const actions: Actions = {
         const eventId = data.get('eventId') as string
         const status = data.get('status') as string
 
-        if (!eventId || !status) return fail(400, { error: 'Missing fields' })
+        if (!eventId || !status) {
+            return fail(400, { error: 'Missing fields' })
+        }
 
         await db
             .update(reunionEvents)

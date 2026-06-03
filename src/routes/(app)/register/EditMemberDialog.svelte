@@ -9,7 +9,7 @@ import {
     DialogHeader,
     DialogTitle,
 } from '$lib/components/ui/dialog'
-import { SHIRT_SIZES, selectClass } from '$lib/general/constants'
+import { SHIRT_SIZES, SELECT_CLASS } from '$lib/general/constants'
 import { formatBirthDate } from '$lib/utils/age'
 
 type Member = {
@@ -69,7 +69,7 @@ let shirtSize = $state(member.shirtSize ?? '')
                             id="edit-shirtSize"
                             name="shirtSize"
                             bind:value={shirtSize}
-                            class={selectClass}>
+                            class={SELECT_CLASS}>
                             <option value="">No shirt</option>
                             {#each SHIRT_SIZES as size (size)}
                                 <option value={size}>{size}</option>

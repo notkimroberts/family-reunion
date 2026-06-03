@@ -13,9 +13,9 @@ import {
 import {
     APP_NAME,
     LIGHT_THEME,
-    primaryNavLinks,
-    registerNavLink,
-    secondaryNavLinks,
+    PRIMARY_NAV_LINKS,
+    REGISTER_NAV_LINK,
+    SECONDARY_NAV_LINKS,
 } from '$lib/general/constants'
 import { theme } from '$lib/stores/theme'
 import { getInitials } from '$lib/utils'
@@ -41,8 +41,8 @@ function handleSignOut() {
     })
 }
 
-let familyActive = $derived(primaryNavLinks.some((l) => isActive(l.href)))
-let reunionActive = $derived(secondaryNavLinks.some((l) => isActive(l.href)))
+let familyActive = $derived(PRIMARY_NAV_LINKS.some((l) => isActive(l.href)))
+let reunionActive = $derived(SECONDARY_NAV_LINKS.some((l) => isActive(l.href)))
 let mobileMenuOpen = $state(false)
 </script>
 
@@ -61,7 +61,7 @@ let mobileMenuOpen = $state(false)
         </a>
 
         <nav class="flex items-center gap-0.5">
-            {#if primaryNavLinks.length}
+            {#if PRIMARY_NAV_LINKS.length}
                 <DropdownMenu>
                     <DropdownMenuTrigger
                         class="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer
@@ -72,7 +72,7 @@ let mobileMenuOpen = $state(false)
                         <ChevronDown class="h-3 w-3 opacity-60" />
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="start">
-                        {#each primaryNavLinks as link}
+                        {#each PRIMARY_NAV_LINKS as link}
                             <DropdownMenuItem>
                                 <a href={link.href} class="w-full">{link.label}</a>
                             </DropdownMenuItem>
@@ -90,7 +90,7 @@ let mobileMenuOpen = $state(false)
                     <ChevronDown class="h-3 w-3 opacity-60" />
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="start">
-                    {#each secondaryNavLinks as link}
+                    {#each SECONDARY_NAV_LINKS as link}
                         <DropdownMenuItem>
                             <a href={link.href} class="w-full">{link.label}</a>
                         </DropdownMenuItem>
@@ -98,10 +98,10 @@ let mobileMenuOpen = $state(false)
                 </DropdownMenuContent>
             </DropdownMenu>
             <a
-                href={registerNavLink.href}
+                href={REGISTER_NAV_LINK.href}
                 class="ml-1 flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/90">
                 <ClipboardPen class="h-3.5 w-3.5" />
-                {registerNavLink.label}
+                {REGISTER_NAV_LINK.label}
             </a>
             {#if user}
                 <DropdownMenu>
