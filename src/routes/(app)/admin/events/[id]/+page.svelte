@@ -146,7 +146,7 @@ let { data } = $props()
         <CardContent>
             <form method="POST" action="?/update_event" use:enhance class="space-y-4">
                 <Separator />
-                <h3 class="text-sm font-bold text-muted-foreground">Event Dates</h3>
+                <p class="text-sm font-bold text-muted-foreground">Event Dates</p>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div class="space-y-2">
@@ -172,7 +172,7 @@ let { data } = $props()
                 </div>
 
                 <Separator />
-                <h3 class="text-sm font-bold text-muted-foreground">Venue</h3>
+                <p class="text-sm font-bold text-muted-foreground">Venue</p>
 
                 <div class="space-y-2">
                     <label for="venueName" class="text-sm font-medium">Venue Name</label>
@@ -200,7 +200,7 @@ let { data } = $props()
                 </div>
 
                 <Separator />
-                <h3 class="text-sm font-bold text-muted-foreground">Menu & Drinks</h3>
+                <p class="text-sm font-bold text-muted-foreground">Menu & Drinks</p>
 
                 <div class="space-y-2">
                     <label for="menu" class="text-sm font-medium">Menu (one item per line)</label>
@@ -221,7 +221,7 @@ let { data } = $props()
                 </div>
 
                 <Separator />
-                <h3 class="text-sm font-bold text-muted-foreground">Schedule & Recommendations</h3>
+                <p class="text-sm font-bold text-muted-foreground">Schedule & Recommendations</p>
 
                 <div class="space-y-2">
                     <label for="schedule" class="text-sm font-medium">Schedule (JSON array)</label>

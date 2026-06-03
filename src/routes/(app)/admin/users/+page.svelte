@@ -34,7 +34,7 @@ let filteredProfiles = $derived(
 
 <section class="col-span-12">
     <div class="flex items-center gap-3">
-        <h1 class="text-2xl font-bold">Users</h1>
+        <h1>Users</h1>
         <Badge variant="secondary">{filteredProfiles.length}</Badge>
     </div>
 </section>

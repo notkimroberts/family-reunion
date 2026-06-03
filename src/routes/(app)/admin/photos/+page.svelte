@@ -20,7 +20,7 @@ let filteredPhotos = $derived(
 </svelte:head>
 
 <section class="col-span-12">
-    <h1 class="text-2xl font-bold">Photos</h1>
+    <h1>Photos</h1>
 </section>
 
 {#if filteredPhotos.length === 0}

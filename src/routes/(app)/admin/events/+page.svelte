@@ -22,7 +22,7 @@ let { data } = $props()
 </svelte:head>
 
 <section class="col-span-12">
-    <h1 class="text-2xl font-bold">Events</h1>
+    <h1>Events</h1>
 </section>
 
 <section class="col-span-12">

@@ -1,4 +1,5 @@
 <script lang="ts">
+import { Select as BitsSelect } from 'bits-ui'
 import { createChart } from 'family-chart'
 import 'family-chart/styles/family-chart.css'
 import { onDestroy, onMount } from 'svelte'
@@ -17,6 +18,7 @@ import {
     DialogFooter,
 } from '$lib/components/ui/dialog'
 import { Input } from '$lib/components/ui/input'
+import * as Select from '$lib/components/ui/select'
 import {
     Table,
     TableBody,
@@ -203,7 +205,7 @@ onDestroy(() => {
                                 </AvatarFallback>
                             </Avatar>
                             <div>
-                                <h3 class="font-semibold">{member.name}</h3>
+                                <h3>{member.name}</h3>
                                 {#if member.birthYear}
                                     <p class="text-sm text-muted-foreground">
                                         Age {getAge(
@@ -349,22 +351,27 @@ onDestroy(() => {
                         <div class="space-y-2">
                             <label for="addRelType" class="text-sm font-medium"
                                 >This person is</label>
-                            <select
-                                id="addRelType"
-                                name="relationshipType"
-                                bind:value={addRelationshipType}
-                                class="border-input bg-background focus:ring-ring flex h-9 w-full rounded-md border px-3 py-1 text-sm shadow-xs transition-colors focus:outline-none focus:ring-1">
-                                <option value="">— no relationship —</option>
-                                <option value="parent">parent of</option>
-                                <option value="child">child of</option>
-                                <option value="spouse">spouse of</option>
-                                <option value="sibling">sibling of</option>
-                                <option value="grandparent">grandparent of</option>
-                                <option value="grandchild">grandchild of</option>
-                                <option value="aunt_uncle">aunt/uncle of</option>
-                                <option value="niece_nephew">niece/nephew of</option>
-                                <option value="cousin">cousin of</option>
-                            </select>
+                            <Select.Root
+                                type="single"
+                                value={addRelationshipType}
+                                onValueChange={(v) => (addRelationshipType = v)}
+                                name="relationshipType">
+                                <Select.Trigger id="addRelType">
+                                    <BitsSelect.Value placeholder="— no relationship —" />
+                                </Select.Trigger>
+                                <Select.Content>
+                                    <Select.Item value="" label="— no relationship —" />
+                                    <Select.Item value="parent" label="parent of" />
+                                    <Select.Item value="child" label="child of" />
+                                    <Select.Item value="spouse" label="spouse of" />
+                                    <Select.Item value="sibling" label="sibling of" />
+                                    <Select.Item value="grandparent" label="grandparent of" />
+                                    <Select.Item value="grandchild" label="grandchild of" />
+                                    <Select.Item value="aunt_uncle" label="aunt/uncle of" />
+                                    <Select.Item value="niece_nephew" label="niece/nephew of" />
+                                    <Select.Item value="cousin" label="cousin of" />
+                                </Select.Content>
+                            </Select.Root>
                         </div>
                         <div class="space-y-2">
                             <label for="addRelMember" class="text-sm font-medium">Member</label>

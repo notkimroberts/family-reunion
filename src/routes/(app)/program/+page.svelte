@@ -63,10 +63,8 @@ let hasThingsToDo = $derived(
                 class="text-primary-foreground/70 mb-3 text-sm font-semibold uppercase tracking-widest">
                 Patterson Family
             </p>
-            <h1 class="mb-5 text-3xl font-bold leading-tight md:text-4xl lg:text-5xl">
-                {data.event.title}
-            </h1>
-            <div class="mb-6 flex flex-col gap-2">
+            <h1>{data.event.title}</h1>
+            <div class="mb-6 mt-5 flex flex-col gap-2">
                 {#if dateRange}
                     <div class="flex items-center gap-2">
                         <CalendarDays class="size-4 shrink-0 opacity-70" />
@@ -229,7 +227,7 @@ let hasThingsToDo = $derived(
     <!-- Bottom CTA -->
     <section class="col-span-12">
         <div class="border-primary/20 bg-primary/5 rounded-2xl border-2 px-6 py-10 text-center">
-            <h2 class="mb-2 text-xl font-bold">Ready to join the family?</h2>
+            <h2>Ready to join the family?</h2>
             <p class="text-muted-foreground mb-6">Secure your spot before registration closes.</p>
             <Button href="/register" size="lg">Register Now</Button>
         </div>

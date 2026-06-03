@@ -74,7 +74,7 @@ async function handleEmailSubmit(e: SubmitEvent) {
                                         <Mail class="h-7 w-7 text-primary" />
                                     </div>
                                 </div>
-                                <h1 class="text-2xl font-bold">Check your email</h1>
+                                <h1>Check your email</h1>
                                 <p class="text-sm text-muted-foreground">
                                     We sent a sign-in link to<br />
                                     <span class="font-medium text-foreground">{emailSentTo}</span>
@@ -95,7 +95,7 @@ async function handleEmailSubmit(e: SubmitEvent) {
                             </Button>
                         {:else}
                             <div>
-                                <h1 class="text-2xl font-bold">Sign in to {APP_NAME}</h1>
+                                <h1>Sign in to {APP_NAME}</h1>
                                 <p class="mt-1 text-sm text-muted-foreground">
                                     New or returning — just pick your account to get started.
                                 </p>

@@ -31,7 +31,7 @@ let birthDate = $state(
                     </AvatarFallback>
                 </Avatar>
                 <div class="flex-1 min-w-0">
-                    <h1 class="text-2xl font-bold truncate">{data.user.name}</h1>
+                    <h1 class="truncate">{data.user.name}</h1>
                     <p class="text-muted-foreground text-sm">{data.user.email}</p>
                 </div>
             </div>
@@ -85,8 +85,8 @@ let birthDate = $state(
 
                 <Separator />
 
-                <div>
-                    <h3 class="text-sm font-semibold mb-4">Mailing Address</h3>
+                <div class="flex flex-col gap-4">
+                    <p class="text-sm font-semibold">Mailing Address</p>
                     <div class="space-y-4">
                         <div class="space-y-2">
                             <label for="street" class="text-sm font-medium">Street</label>
