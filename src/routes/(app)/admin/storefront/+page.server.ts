@@ -8,7 +8,7 @@ import type { PageServerLoad, Actions } from './$types'
 export const load: PageServerLoad = async (event) => {
     requireAdmin(event)
     const [config] = await db.select().from(storefrontConfig).limit(1)
-    return { config: config ?? null }
+    return { config: config ?? undefined }
 }
 
 export const actions: Actions = {
@@ -19,9 +19,11 @@ export const actions: Actions = {
         const productsRaw = data.get('products') as string
         const isActive = data.get('isActive') === 'on'
 
-        if (!externalShopUrl?.trim()) return fail(400, { error: 'Shop URL required' })
+        if (!externalShopUrl?.trim()) {
+            return fail(400, { error: 'Shop URL required' })
+        }
 
-        let products = null
+        let products: { name: string; imageUrl: string; description?: string }[] | null = null
         if (productsRaw?.trim()) {
             try {
                 products = JSON.parse(productsRaw)

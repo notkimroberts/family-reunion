@@ -4,7 +4,7 @@ import { DatePicker } from '$lib/components'
 import { Button } from '$lib/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card'
 import { Input } from '$lib/components/ui/input'
-import { SHIRT_SIZES, selectClass } from '$lib/general/constants'
+import { SHIRT_SIZES, SELECT_CLASS } from '$lib/general/constants'
 import { formatPrice } from '$lib/utils'
 
 type PricingTier = {
@@ -72,7 +72,7 @@ let submitting = $state(false)
                             id="add-tier"
                             name="tierId"
                             bind:value={tierId}
-                            class={selectClass}
+                            class={SELECT_CLASS}
                             required>
                             <option value="">Select category</option>
                             {#each tiers as tier (tier.id)}
@@ -100,7 +100,7 @@ let submitting = $state(false)
                                 id="add-shirt"
                                 name="shirtSize"
                                 bind:value={shirtSize}
-                                class={selectClass}>
+                                class={SELECT_CLASS}>
                                 <option value="">No shirt</option>
                                 {#each SHIRT_SIZES as size (size)}
                                     <option value={size}>{size}</option>

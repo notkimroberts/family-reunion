@@ -33,7 +33,9 @@ export const actions: Actions = {
         const photoId = data.get('photoId') as string
         const r2Key = data.get('r2Key') as string
 
-        if (!photoId) return fail(400, { error: 'Missing photo ID' })
+        if (!photoId) {
+            return fail(400, { error: 'Missing photo ID' })
+        }
 
         if (r2Key) {
             await deleteFile(r2Key)

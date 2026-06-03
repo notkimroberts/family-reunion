@@ -1,7 +1,7 @@
 <script lang="ts">
 import { DatePicker } from '$lib/components'
 import { Input } from '$lib/components/ui/input'
-import { SHIRT_SIZES, selectClass } from '$lib/general/constants'
+import { SHIRT_SIZES, SELECT_CLASS } from '$lib/general/constants'
 import { formatPrice } from '$lib/utils'
 
 type Tier = { id: string; label: string; priceCents: number }
@@ -43,7 +43,7 @@ const optLabel = $derived(compact ? '(opt.)' : '(optional)')
         <label for="{idPrefix}-tier" class="text-xs font-medium">
             Category <span class="text-destructive">*</span>
         </label>
-        <select id="{idPrefix}-tier" bind:value={tierId} class={selectClass}>
+        <select id="{idPrefix}-tier" bind:value={tierId} class={SELECT_CLASS}>
             <option value="">Select category…</option>
             {#each tiers as tier (tier.id)}
                 <option value={tier.id}>{tier.label} — ${formatPrice(tier.priceCents)}</option>
@@ -61,7 +61,7 @@ const optLabel = $derived(compact ? '(opt.)' : '(optional)')
             <label for="{idPrefix}-shirt" class="text-xs font-medium">
                 T-shirt <span class="text-muted-foreground/70 font-normal">{optLabel}</span>
             </label>
-            <select id="{idPrefix}-shirt" bind:value={shirtSize} class={selectClass}>
+            <select id="{idPrefix}-shirt" bind:value={shirtSize} class={SELECT_CLASS}>
                 <option value="">Select size…</option>
                 {#each SHIRT_SIZES as size (size)}
                     <option value={size}>{size}</option>
