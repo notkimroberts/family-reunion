@@ -5,12 +5,12 @@ import { parseBirthDate } from '$lib/utils/age'
 export async function upsertUserProfile(
     userId: string,
     data: {
-        birthDate: string | null
+        birthDate: string | undefined
         phone: string
         mailingAddress: { street: string; city: string; state: string; zip: string }
     },
 ): Promise<void> {
-    const parsed = data.birthDate ? parseBirthDate(data.birthDate) : null
+    const parsed = data.birthDate ? parseBirthDate(data.birthDate) : undefined
     const values = {
         userId,
         birthYear: parsed?.birthYear ?? null,

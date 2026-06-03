@@ -41,10 +41,10 @@ const adminCtx = getContext<AdminContext>('admin')
 
 type EventMetric = { eventId: string; registrationCount: number; revenueCents: string | null }
 
-let selectedMetrics = $derived<EventMetric | null>(
+let selectedMetrics = $derived<EventMetric | undefined>(
     adminCtx.selectedEventId === 'all'
-        ? null
-        : (data.eventMetrics.find((m) => m.eventId === adminCtx.selectedEventId) ?? null),
+        ? undefined
+        : (data.eventMetrics.find((m) => m.eventId === adminCtx.selectedEventId) ?? undefined),
 )
 
 let allTimeRegistrations = $derived(
@@ -55,31 +55,33 @@ let allTimeRevenue = $derived(
 )
 
 let displayRegistrations = $derived(
-    selectedMetrics !== null ? Number(selectedMetrics.registrationCount) : allTimeRegistrations,
+    selectedMetrics !== undefined
+        ? Number(selectedMetrics.registrationCount)
+        : allTimeRegistrations,
 )
 let displayRevenue = $derived(
-    selectedMetrics !== null ? Number(selectedMetrics.revenueCents ?? 0) : allTimeRevenue,
+    selectedMetrics !== undefined ? Number(selectedMetrics.revenueCents ?? 0) : allTimeRevenue,
 )
 
 let selectedEventIdx = $derived(adminCtx.events.findIndex((e) => e.id === adminCtx.selectedEventId))
-let prevMetrics = $derived<EventMetric | null>(
-    selectedMetrics !== null &&
+let prevMetrics = $derived<EventMetric | undefined>(
+    selectedMetrics !== undefined &&
         selectedEventIdx >= 0 &&
         selectedEventIdx < adminCtx.events.length - 1
         ? (data.eventMetrics.find((m) => m.eventId === adminCtx.events[selectedEventIdx + 1].id) ??
-              null)
-        : null,
+              undefined)
+        : undefined,
 )
 
 let regDelta = $derived(
-    prevMetrics !== null && selectedMetrics !== null
+    prevMetrics !== undefined && selectedMetrics !== undefined
         ? Number(selectedMetrics.registrationCount) - Number(prevMetrics.registrationCount)
-        : null,
+        : undefined,
 )
 let revDelta = $derived(
-    prevMetrics !== null && selectedMetrics !== null
+    prevMetrics !== undefined && selectedMetrics !== undefined
         ? Number(selectedMetrics.revenueCents ?? 0) - Number(prevMetrics.revenueCents ?? 0)
-        : null,
+        : undefined,
 )
 
 let displayEvents = $derived(
@@ -117,7 +119,7 @@ let displayEvents = $derived(
                     <div>
                         <p class="text-sm text-muted-foreground">Paid Registrations</p>
                         <p class="text-3xl font-bold">{displayRegistrations}</p>
-                        {#if regDelta !== null}
+                        {#if regDelta !== undefined}
                             <p
                                 class={cn(
                                     'text-xs mt-0.5',
@@ -139,7 +141,7 @@ let displayEvents = $derived(
                     <div>
                         <p class="text-sm text-muted-foreground">Total Revenue</p>
                         <p class="text-3xl font-bold">${formatPrice(displayRevenue)}</p>
-                        {#if revDelta !== null}
+                        {#if revDelta !== undefined}
                             <p
                                 class={cn(
                                     'text-xs mt-0.5',

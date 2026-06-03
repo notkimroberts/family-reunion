@@ -1,7 +1,9 @@
 <script lang="ts">
+import { Select as BitsSelect } from 'bits-ui'
 import { DatePicker } from '$lib/components'
 import { Input } from '$lib/components/ui/input'
-import { SHIRT_SIZES, SELECT_CLASS } from '$lib/general/constants'
+import * as Select from '$lib/components/ui/select'
+import { SHIRT_SIZES } from '$lib/general/constants'
 import { formatPrice } from '$lib/utils'
 
 type Tier = { id: string; label: string; priceCents: number }
@@ -43,12 +45,18 @@ const optLabel = $derived(compact ? '(opt.)' : '(optional)')
         <label for="{idPrefix}-tier" class="text-xs font-medium">
             Category <span class="text-destructive">*</span>
         </label>
-        <select id="{idPrefix}-tier" bind:value={tierId} class={SELECT_CLASS}>
-            <option value="">Select category…</option>
-            {#each tiers as tier (tier.id)}
-                <option value={tier.id}>{tier.label} — ${formatPrice(tier.priceCents)}</option>
-            {/each}
-        </select>
+        <Select.Root type="single" value={tierId} onValueChange={(v) => (tierId = v)}>
+            <Select.Trigger id="{idPrefix}-tier">
+                <BitsSelect.Value placeholder="Select category…" />
+            </Select.Trigger>
+            <Select.Content>
+                {#each tiers as tier (tier.id)}
+                    <Select.Item
+                        value={tier.id}
+                        label="{tier.label} — ${formatPrice(tier.priceCents)}" />
+                {/each}
+            </Select.Content>
+        </Select.Root>
     </div>
     <div class="space-y-1">
         <label for="{idPrefix}-bday" class="text-xs font-medium">
@@ -61,12 +69,16 @@ const optLabel = $derived(compact ? '(opt.)' : '(optional)')
             <label for="{idPrefix}-shirt" class="text-xs font-medium">
                 T-shirt <span class="text-muted-foreground/70 font-normal">{optLabel}</span>
             </label>
-            <select id="{idPrefix}-shirt" bind:value={shirtSize} class={SELECT_CLASS}>
-                <option value="">Select size…</option>
-                {#each SHIRT_SIZES as size (size)}
-                    <option value={size}>{size}</option>
-                {/each}
-            </select>
+            <Select.Root type="single" value={shirtSize} onValueChange={(v) => (shirtSize = v)}>
+                <Select.Trigger id="{idPrefix}-shirt">
+                    <BitsSelect.Value placeholder="Select size…" />
+                </Select.Trigger>
+                <Select.Content>
+                    {#each SHIRT_SIZES as size (size)}
+                        <Select.Item value={size} label={size} />
+                    {/each}
+                </Select.Content>
+            </Select.Root>
         </div>
     {/if}
 </div>

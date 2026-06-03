@@ -58,12 +58,12 @@ $effect(() => {
 {#if status === 'pending' && !timedOut}
     <section class="col-span-12 text-center">
         <LoaderCircle class="mx-auto mb-4 h-10 w-10 animate-spin text-primary" />
-        <h2 class="text-2xl font-bold">Processing Payment…</h2>
+        <h2>Processing Payment…</h2>
         <p class="text-muted-foreground mt-2">Hang tight, we're confirming your payment.</p>
     </section>
 {:else if timedOut}
     <section class="col-span-12 text-center">
-        <h2 class="text-2xl font-bold">Payment Is Processing</h2>
+        <h2>Payment Is Processing</h2>
         <p class="text-muted-foreground mt-2">
             This is taking longer than expected. You'll receive a confirmation email once your
             payment is confirmed.
@@ -75,7 +75,7 @@ $effect(() => {
     </section>
 {:else}
     <section class="col-span-12 text-center">
-        <h2 class="text-3xl font-bold text-primary">You're Registered!</h2>
+        <p class="text-3xl font-bold text-primary">You're Registered!</p>
         <p class="text-lg mt-2">See you at {data.event.title}!</p>
     </section>
 

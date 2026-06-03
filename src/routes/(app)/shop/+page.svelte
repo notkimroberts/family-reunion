@@ -31,7 +31,7 @@ let { data } = $props()
                                 class="w-full aspect-square object-cover rounded-t-lg" />
                         {/if}
                         <CardContent class="pt-4">
-                            <h3 class="font-semibold text-base">{product.name}</h3>
+                            <h3>{product.name}</h3>
                             {#if product.description}
                                 <p class="text-sm text-muted-foreground mt-1">
                                     {product.description}

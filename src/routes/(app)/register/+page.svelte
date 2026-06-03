@@ -1,4 +1,5 @@
 <script lang="ts">
+import { Select as BitsSelect } from 'bits-ui'
 import { onMount } from 'svelte'
 import { toast } from 'svelte-sonner'
 import { superForm } from 'sveltekit-superforms'
@@ -8,6 +9,7 @@ import { Alert, AlertDescription, AlertTitle } from '$lib/components/ui/alert'
 import { Badge } from '$lib/components/ui/badge'
 import { Button } from '$lib/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '$lib/components/ui/card'
+import * as Select from '$lib/components/ui/select'
 import { Separator } from '$lib/components/ui/separator'
 import {
     Table,
@@ -17,7 +19,7 @@ import {
     TableHeader,
     TableRow,
 } from '$lib/components/ui/table'
-import { APP_NAME, SHIRT_SIZES, SELECT_CLASS } from '$lib/general/constants'
+import { APP_NAME, SHIRT_SIZES } from '$lib/general/constants'
 import { formatPrice } from '$lib/utils'
 import { formatBirthDate } from '$lib/utils/age'
 import MemberFormFields from './MemberFormFields.svelte'
@@ -69,7 +71,7 @@ $effect(() => {
     $form.members = JSON.stringify(members)
 })
 
-let editIndex = $state<number | null>(null)
+let editIndex = $state<number | undefined>(undefined)
 let editName = $state('')
 let editTierId = $state('')
 let editBirthDate = $state<string | undefined>(undefined)
@@ -96,7 +98,7 @@ function handleAddMember() {
 
 function handleRemoveMember(index: number) {
     if (editIndex === index) {
-        editIndex = null
+        editIndex = undefined
     }
     members = members.filter((_, i) => i !== index)
 }
@@ -111,7 +113,7 @@ function handleEditStart(index: number) {
 }
 
 function handleEditSave() {
-    if (editIndex === null || !editName.trim() || !editTierId) {
+    if (editIndex === undefined || !editName.trim() || !editTierId) {
         return
     }
     members = members.map((m, i) =>
@@ -124,11 +126,11 @@ function handleEditSave() {
               }
             : m,
     )
-    editIndex = null
+    editIndex = undefined
 }
 
 function handleEditCancel() {
-    editIndex = null
+    editIndex = undefined
 }
 
 let selfTier = $derived(selfTierId ? tierMap.get(selfTierId) : undefined)
@@ -172,7 +174,7 @@ let tableColCount = $derived(data.event?.shirtsEnabled ? 6 : 5)
         {/if}
         <div class="rounded-xl border bg-card px-6 py-8 text-center">
             <p class="text-4xl mb-3">🎉</p>
-            <h1 class="text-3xl font-bold">{data.event.title}</h1>
+            <h1>{data.event.title}</h1>
             <p class="text-muted-foreground mt-1 text-lg">{data.event.year} Reunion</p>
             {#if data.event.startDate}
                 <p class="text-sm text-muted-foreground mt-2">
@@ -233,17 +235,23 @@ let tableColCount = $derived(data.event?.shirtsEnabled ? 6 : 5)
                                     <label for="selfTier" class="text-xs font-medium">
                                         Category <span class="text-destructive">*</span>
                                     </label>
-                                    <select
-                                        id="selfTier"
-                                        bind:value={selfTierId}
-                                        class={SELECT_CLASS}>
-                                        <option value="">Select category…</option>
-                                        {#each data.tiers as tier}
-                                            <option value={tier.id}>
-                                                {tier.label} — ${formatPrice(tier.priceCents)}
-                                            </option>
-                                        {/each}
-                                    </select>
+                                    <Select.Root
+                                        type="single"
+                                        value={selfTierId}
+                                        onValueChange={(v) => (selfTierId = v)}>
+                                        <Select.Trigger id="selfTier">
+                                            <BitsSelect.Value placeholder="Select category…" />
+                                        </Select.Trigger>
+                                        <Select.Content>
+                                            {#each data.tiers as tier}
+                                                <Select.Item
+                                                    value={tier.id}
+                                                    label="{tier.label} — ${formatPrice(
+                                                        tier.priceCents,
+                                                    )}" />
+                                            {/each}
+                                        </Select.Content>
+                                    </Select.Root>
                                 </div>
                                 <div class="space-y-1">
                                     <label for="selfBirthDate" class="text-xs font-medium">
@@ -262,15 +270,19 @@ let tableColCount = $derived(data.event?.shirtsEnabled ? 6 : 5)
                                                 class="text-muted-foreground/70 font-normal"
                                                 >(optional)</span>
                                         </label>
-                                        <select
-                                            id="selfShirtSize"
-                                            bind:value={selfShirtSize}
-                                            class={SELECT_CLASS}>
-                                            <option value="">Select size…</option>
-                                            {#each SHIRT_SIZES as size}
-                                                <option value={size}>{size}</option>
-                                            {/each}
-                                        </select>
+                                        <Select.Root
+                                            type="single"
+                                            value={selfShirtSize}
+                                            onValueChange={(v) => (selfShirtSize = v)}>
+                                            <Select.Trigger id="selfShirtSize">
+                                                <BitsSelect.Value placeholder="Select size…" />
+                                            </Select.Trigger>
+                                            <Select.Content>
+                                                {#each SHIRT_SIZES as size}
+                                                    <Select.Item value={size} label={size} />
+                                                {/each}
+                                            </Select.Content>
+                                        </Select.Root>
                                     </div>
                                 {/if}
                             </div>

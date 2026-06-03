@@ -127,7 +127,7 @@ function isSelected(item: ScheduleItem) {
                                 class="text-muted-foreground mb-1 text-xs font-semibold uppercase tracking-widest">
                                 {selectedItem.day}
                             </p>
-                            <h3 class="text-2xl font-bold">{selectedItem.activity}</h3>
+                            <p class="text-2xl font-bold">{selectedItem.activity}</p>
                             <div
                                 class="text-muted-foreground mt-1 flex items-center gap-1.5 text-sm">
                                 <Clock class="size-3.5" />

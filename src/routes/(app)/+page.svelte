@@ -105,10 +105,8 @@ let dateRange = $derived.by(() => {
         <!-- Content -->
         <div
             class="flex flex-1 flex-col items-center gap-8 text-center lg:items-start lg:text-left">
-            <div>
-                <h1 class="mb-3 text-4xl font-bold lg:text-5xl">
-                    {data.event?.title ?? `${APP_NAME} Family Reunion`}
-                </h1>
+            <div class="flex flex-col gap-1">
+                <h1>{data.event?.title ?? `${APP_NAME} Family Reunion`}</h1>
                 {#if dateRange && eventState !== 'past'}
                     <p class="text-muted-foreground text-lg">{dateRange}</p>
                 {/if}

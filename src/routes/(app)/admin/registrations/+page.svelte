@@ -1,11 +1,13 @@
 <script lang="ts">
+import { Select as BitsSelect } from 'bits-ui'
 import { getContext } from 'svelte'
 import { enhance } from '$app/forms'
 import { DatePicker } from '$lib/components'
 import { Button } from '$lib/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card'
 import { Input } from '$lib/components/ui/input'
-import { SHIRT_SIZES, SELECT_CLASS } from '$lib/general/constants'
+import * as Select from '$lib/components/ui/select'
+import { SHIRT_SIZES } from '$lib/general/constants'
 import type { AdminContext } from '$lib/types/adminContext'
 import { formatPrice } from '$lib/utils'
 
@@ -75,10 +77,10 @@ const shirtsEnabled = $derived(data.events[0]?.shirtsEnabled ?? false)
 </svelte:head>
 
 <section class="col-span-12">
-    <div class="mb-6">
+    <div class="mb-6 flex flex-col gap-1">
         <a href="/admin" class="text-sm text-muted-foreground hover:text-foreground">← Admin</a>
-        <h1 class="text-2xl font-bold mt-1">Add Paper Registration</h1>
-        <p class="text-muted-foreground text-sm mt-1">
+        <h1>Add Paper Registration</h1>
+        <p class="text-muted-foreground text-sm">
             Manually register someone who submitted on paper.
         </p>
     </div>
@@ -153,15 +155,20 @@ const shirtsEnabled = $derived(data.events[0]?.shirtsEnabled ?? false)
                         <label for="status" class="text-sm font-medium">
                             Payment status <span class="text-destructive">*</span>
                         </label>
-                        <select
-                            id="status"
-                            name="status"
-                            bind:value={status}
-                            class="{SELECT_CLASS} max-w-xs">
-                            <option value="paid">Paid</option>
-                            <option value="pending">Not yet paid</option>
-                            <option value="waived">Waived</option>
-                        </select>
+                        <Select.Root
+                            type="single"
+                            value={status}
+                            onValueChange={(v) => (status = v as typeof status)}
+                            name="status">
+                            <Select.Trigger id="status" class="max-w-xs">
+                                <BitsSelect.Value placeholder="Select status…" />
+                            </Select.Trigger>
+                            <Select.Content>
+                                <Select.Item value="paid" label="Paid" />
+                                <Select.Item value="pending" label="Not yet paid" />
+                                <Select.Item value="waived" label="Waived" />
+                            </Select.Content>
+                        </Select.Root>
                     </div>
                 </CardContent>
             </Card>
@@ -196,17 +203,23 @@ const shirtsEnabled = $derived(data.events[0]?.shirtsEnabled ?? false)
                                         class="text-xs font-medium text-muted-foreground">
                                         Category <span class="text-destructive">*</span>
                                     </label>
-                                    <select
-                                        id="member-tier-{i}"
-                                        bind:value={member.tierId}
-                                        class={SELECT_CLASS}>
-                                        <option value="">Select category…</option>
-                                        {#each data.tiers as tier}
-                                            <option value={tier.id}>
-                                                {tier.label} — ${formatPrice(tier.priceCents)}
-                                            </option>
-                                        {/each}
-                                    </select>
+                                    <Select.Root
+                                        type="single"
+                                        value={member.tierId}
+                                        onValueChange={(v) => (member.tierId = v)}>
+                                        <Select.Trigger id="member-tier-{i}">
+                                            <BitsSelect.Value placeholder="Select category…" />
+                                        </Select.Trigger>
+                                        <Select.Content>
+                                            {#each data.tiers as tier}
+                                                <Select.Item
+                                                    value={tier.id}
+                                                    label="{tier.label} — ${formatPrice(
+                                                        tier.priceCents,
+                                                    )}" />
+                                            {/each}
+                                        </Select.Content>
+                                    </Select.Root>
                                 </div>
                                 <div class="space-y-1.5">
                                     <label
@@ -228,15 +241,20 @@ const shirtsEnabled = $derived(data.events[0]?.shirtsEnabled ?? false)
                                             T-shirt
                                             <span class="text-muted-foreground/60">(optional)</span>
                                         </label>
-                                        <select
-                                            id="member-shirt-{i}"
-                                            bind:value={member.shirtSize}
-                                            class={SELECT_CLASS}>
-                                            <option value="">Select size…</option>
-                                            {#each SHIRT_SIZES as size}
-                                                <option value={size}>{size}</option>
-                                            {/each}
-                                        </select>
+                                        <Select.Root
+                                            type="single"
+                                            value={member.shirtSize}
+                                            onValueChange={(v) => (member.shirtSize = v)}>
+                                            <Select.Trigger id="member-shirt-{i}">
+                                                <BitsSelect.Value placeholder="Select size…" />
+                                            </Select.Trigger>
+                                            <Select.Content>
+                                                <Select.Item value="" label="No shirt" />
+                                                {#each SHIRT_SIZES as size}
+                                                    <Select.Item value={size} label={size} />
+                                                {/each}
+                                            </Select.Content>
+                                        </Select.Root>
                                     </div>
                                 {/if}
                             </div>

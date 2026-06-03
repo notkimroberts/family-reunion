@@ -1,4 +1,5 @@
 <script lang="ts">
+import { Select as BitsSelect } from 'bits-ui'
 import { enhance } from '$app/forms'
 import { DatePicker } from '$lib/components'
 import { Button } from '$lib/components/ui/button'
@@ -9,7 +10,8 @@ import {
     DialogHeader,
     DialogTitle,
 } from '$lib/components/ui/dialog'
-import { SHIRT_SIZES, SELECT_CLASS } from '$lib/general/constants'
+import * as Select from '$lib/components/ui/select'
+import { SHIRT_SIZES } from '$lib/general/constants'
 import { formatBirthDate } from '$lib/utils/age'
 
 type Member = {
@@ -65,16 +67,21 @@ let shirtSize = $state(member.shirtSize ?? '')
                 {#if shirtsEnabled}
                     <div class="space-y-2">
                         <label for="edit-shirtSize" class="text-sm font-medium">T-Shirt Size</label>
-                        <select
-                            id="edit-shirtSize"
-                            name="shirtSize"
-                            bind:value={shirtSize}
-                            class={SELECT_CLASS}>
-                            <option value="">No shirt</option>
-                            {#each SHIRT_SIZES as size (size)}
-                                <option value={size}>{size}</option>
-                            {/each}
-                        </select>
+                        <Select.Root
+                            type="single"
+                            value={shirtSize}
+                            onValueChange={(v) => (shirtSize = v)}
+                            name="shirtSize">
+                            <Select.Trigger id="edit-shirtSize">
+                                <BitsSelect.Value placeholder="No shirt" />
+                            </Select.Trigger>
+                            <Select.Content>
+                                <Select.Item value="" label="No shirt" />
+                                {#each SHIRT_SIZES as size (size)}
+                                    <Select.Item value={size} label={size} />
+                                {/each}
+                            </Select.Content>
+                        </Select.Root>
                     </div>
                 {/if}
             </div>

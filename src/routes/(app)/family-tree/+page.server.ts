@@ -46,7 +46,7 @@ export const load: PageServerLoad = async () => {
             birthYear: m.birthYear,
             birthMonth: m.birthMonth,
             birthDay: m.birthDay,
-            photoUrl: m.profilePhotoUrl ?? null,
+            photoUrl: m.profilePhotoUrl ?? undefined,
         })),
         relationships: rels.map((r) => ({
             from: r.fromMemberId,
@@ -60,11 +60,11 @@ export const actions: Actions = {
     addMember: async ({ request }) => {
         const data = await request.formData()
         const name = (data.get('name') as string)?.trim()
-        const birthDate = data.get('birthDate') as string | null
+        const birthDate = data.get('birthDate') as string | undefined
         const editorName = (data.get('editorName') as string)?.trim()
         const editorEmail = (data.get('editorEmail') as string)?.trim().toLowerCase()
-        const relationshipType = (data.get('relationshipType') as string) || null
-        const relatedMemberId = (data.get('relatedMemberId') as string) || null
+        const relationshipType = (data.get('relationshipType') as string) || undefined
+        const relatedMemberId = (data.get('relatedMemberId') as string) || undefined
 
         if (!name) {
             return fail(400, { error: 'Name is required' })

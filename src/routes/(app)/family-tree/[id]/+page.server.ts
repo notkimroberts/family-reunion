@@ -99,9 +99,9 @@ export const load: PageServerLoad = async ({ params }) => {
     const ancestryChain = chainIds
         .map((cId) => {
             const m = memberMap.get(cId)
-            return m ? { id: cId, name: m.name } : null
+            return m ? { id: cId, name: m.name } : undefined
         })
-        .filter((m): m is { id: string; name: string } => m !== null)
+        .filter((m): m is { id: string; name: string } => m !== undefined)
 
     const editHistory = await db
         .select()
@@ -110,11 +110,11 @@ export const load: PageServerLoad = async ({ params }) => {
         .orderBy(desc(familyMemberEdits.createdAt))
 
     return {
-        member: { ...member, photoUrl: member.photoUrl ?? null },
+        member: { ...member, photoUrl: member.photoUrl ?? undefined },
         relationships: memberRels,
         relatedMembers: fetched
             .filter((m) => directRelatedIds.includes(m.id))
-            .map((m) => ({ ...m, photoUrl: m.photoUrl ?? null })),
+            .map((m) => ({ ...m, photoUrl: m.photoUrl ?? undefined })),
         ancestryChain,
         editHistory,
     }
@@ -125,7 +125,7 @@ export const actions: Actions = {
         const { id } = params
         const data = await request.formData()
         const name = (data.get('name') as string)?.trim()
-        const birthDate = data.get('birthDate') as string | null
+        const birthDate = data.get('birthDate') as string | undefined
         const editorName = (data.get('editorName') as string)?.trim()
         const editorEmail = (data.get('editorEmail') as string)?.trim().toLowerCase()
 

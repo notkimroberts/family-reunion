@@ -125,7 +125,7 @@ let isAdmin = $derived(data.user?.role === 'admin')
                 </AvatarFallback>
             </Avatar>
             <div>
-                <h1 class="text-2xl font-bold">{data.member.name}</h1>
+                <h1>{data.member.name}</h1>
                 {#if data.member.birthYear}
                     <p class="text-muted-foreground">
                         Age {getAge(
@@ -147,10 +147,10 @@ let isAdmin = $derived(data.user?.role === 'admin')
     </section>
 {:else}
     {#each groups as group}
-        <section class="col-span-12 md:col-span-6">
-            <h2 class="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">
+        <section class="col-span-12 md:col-span-6 flex flex-col gap-3">
+            <p class="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
                 {group.label}
-            </h2>
+            </p>
             <div class="space-y-2">
                 {#each group.members as related}
                     <a
