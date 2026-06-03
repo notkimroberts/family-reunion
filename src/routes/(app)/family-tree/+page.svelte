@@ -79,7 +79,7 @@ let relationshipCounts = $derived(
     ),
 )
 
-let chartInstance: { destroy?: () => void } | null = null
+let chartInstance: { destroy?: () => void } | undefined
 
 onMount(async () => {
     try {

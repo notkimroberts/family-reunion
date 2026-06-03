@@ -31,7 +31,7 @@ export const load: PageServerLoad = async (event) => {
 
     const memberAdded = event.url.searchParams.get('member_added') === 'true'
 
-    const openEvent = (await getOpenEvent()) ?? null
+    const openEvent = await getOpenEvent()
 
     const tiers = openEvent ? await getEventTiers(openEvent.id) : []
 
@@ -54,12 +54,12 @@ export const load: PageServerLoad = async (event) => {
                 memberAdded,
                 registrationCancelled: false,
                 form,
-                profile: null,
+                profile: undefined,
             }
         }
     }
 
-    const profile = (await getUserProfile(user.id)) ?? null
+    const profile = await getUserProfile(user.id)
 
     const cancelledReg = openEvent
         ? await getRegistration(user.id, openEvent.id, ['refunded'])
@@ -69,14 +69,14 @@ export const load: PageServerLoad = async (event) => {
 
     return {
         user,
-        existingRegistration: null,
+        existingRegistration: undefined,
         members: [],
         tiers,
         event: openEvent,
         memberAdded: false,
         registrationCancelled: !!cancelledReg,
         form,
-        profile: profile ?? null,
+        profile,
     }
 }
 

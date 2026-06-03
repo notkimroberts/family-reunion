@@ -69,7 +69,7 @@ $effect(() => {
     $form.members = JSON.stringify(members)
 })
 
-let editIndex = $state<number | null>(null)
+let editIndex = $state<number | undefined>(undefined)
 let editName = $state('')
 let editTierId = $state('')
 let editBirthDate = $state<string | undefined>(undefined)
@@ -96,7 +96,7 @@ function handleAddMember() {
 
 function handleRemoveMember(index: number) {
     if (editIndex === index) {
-        editIndex = null
+        editIndex = undefined
     }
     members = members.filter((_, i) => i !== index)
 }
@@ -111,7 +111,7 @@ function handleEditStart(index: number) {
 }
 
 function handleEditSave() {
-    if (editIndex === null || !editName.trim() || !editTierId) {
+    if (editIndex === undefined || !editName.trim() || !editTierId) {
         return
     }
     members = members.map((m, i) =>
@@ -124,11 +124,11 @@ function handleEditSave() {
               }
             : m,
     )
-    editIndex = null
+    editIndex = undefined
 }
 
 function handleEditCancel() {
-    editIndex = null
+    editIndex = undefined
 }
 
 let selfTier = $derived(selfTierId ? tierMap.get(selfTierId) : undefined)

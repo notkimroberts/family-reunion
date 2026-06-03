@@ -17,7 +17,7 @@ import {
 import type { AdminContext } from '$lib/types/adminContext'
 
 let { data } = $props()
-let editingId = $state<string | null>(null)
+let editingId = $state<string | undefined>(undefined)
 
 const adminCtx = getContext<AdminContext>('admin')
 
@@ -69,7 +69,7 @@ let filteredProfiles = $derived(
                                         action="?/update_user"
                                         use:enhance={() => {
                                             return async ({ update }) => {
-                                                editingId = null
+                                                editingId = undefined
                                                 update()
                                             }
                                         }}>
@@ -87,7 +87,8 @@ let filteredProfiles = $derived(
                                                 variant="ghost"
                                                 size="sm"
                                                 class="flex-1"
-                                                onclick={() => (editingId = null)}>Cancel</Button>
+                                                onclick={() => (editingId = undefined)}
+                                                >Cancel</Button>
                                         </div>
                                     </form>
                                 {:else}
@@ -131,7 +132,7 @@ let filteredProfiles = $derived(
                                                         action="?/update_user"
                                                         use:enhance={() => {
                                                             return async ({ update }) => {
-                                                                editingId = null
+                                                                editingId = undefined
                                                                 update()
                                                             }
                                                         }}>
@@ -155,7 +156,8 @@ let filteredProfiles = $derived(
                                                                 variant="ghost"
                                                                 size="sm"
                                                                 class="h-7 px-2 text-xs"
-                                                                onclick={() => (editingId = null)}
+                                                                onclick={() =>
+                                                                    (editingId = undefined)}
                                                                 >Cancel</Button>
                                                         </div>
                                                     </form>

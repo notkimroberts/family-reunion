@@ -10,7 +10,7 @@ export const load: PageServerLoad = async (event) => {
 
     return {
         user,
-        profile: profile ?? null,
+        profile: profile ?? undefined,
     }
 }
 
@@ -18,7 +18,7 @@ export const actions: Actions = {
     update_profile: async (event) => {
         const user = requireAuth(event)
         const data = await event.request.formData()
-        const birthDate = (data.get('birthDate') as string) || null
+        const birthDate = (data.get('birthDate') as string) || undefined
         const phone = (data.get('phone') as string) ?? ''
         const street = (data.get('street') as string) ?? ''
         const city = (data.get('city') as string) ?? ''

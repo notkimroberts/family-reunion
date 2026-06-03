@@ -9,5 +9,5 @@ export const load: PageServerLoad = async () => {
         .from(storefrontConfig)
         .where(eq(storefrontConfig.isActive, true))
         .limit(1)
-    return { config: config ?? null }
+    return { config: config ?? undefined }
 }
