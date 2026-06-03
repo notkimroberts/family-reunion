@@ -228,10 +228,12 @@ export const photos = pgTable('photos', {
     createdAt: timestamp('created_at').notNull().defaultNow(),
 })
 
+export type StorefrontProduct = { name: string; imageUrl: string; description?: string }
+
 export const storefrontConfig = pgTable('storefront_config', {
     id: uuid('id').primaryKey().defaultRandom(),
     externalShopUrl: text('external_shop_url').notNull(),
-    products: jsonb('products').$type<{ name: string; imageUrl: string; description?: string }[]>(),
+    products: jsonb('products').$type<StorefrontProduct[]>(),
     isActive: boolean('is_active').notNull().default(true),
     updatedAt: timestamp('updated_at').notNull().defaultNow(),
 })

@@ -2,7 +2,7 @@ import { fail } from '@sveltejs/kit'
 import { eq } from 'drizzle-orm'
 import { requireAdmin } from '$lib/server/auth/guards'
 import { db } from '$lib/server/db'
-import { storefrontConfig } from '$lib/server/db/schema'
+import { storefrontConfig, type StorefrontProduct } from '$lib/server/db/schema'
 import type { PageServerLoad, Actions } from './$types'
 
 export const load: PageServerLoad = async (event) => {
@@ -23,7 +23,7 @@ export const actions: Actions = {
             return fail(400, { error: 'Shop URL required' })
         }
 
-        let products: { name: string; imageUrl: string; description?: string }[] | null = null
+        let products: StorefrontProduct[] | null = null
         if (productsRaw?.trim()) {
             try {
                 products = JSON.parse(productsRaw)

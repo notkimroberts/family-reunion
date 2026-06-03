@@ -5,7 +5,6 @@ export {
     PRIMARY_NAV_LINKS,
     SECONDARY_NAV_LINKS,
     REGISTER_NAV_LINK,
-    ADMIN_NAV_GROUP,
     type NavLink,
 } from './navigation'
 export { LIGHT_THEME, DARK_THEME, type Theme } from './THEMES'
