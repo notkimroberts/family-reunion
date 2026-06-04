@@ -3,12 +3,10 @@ import { eq } from 'drizzle-orm'
 import { requireAdmin } from '$lib/server/auth/guards'
 import { db } from '$lib/server/db'
 import { reunionEvents } from '$lib/server/db/schema'
-import type { PageServerLoad, Actions } from './$types'
+import type { Actions, PageServerLoad } from './$types'
 
 export const load: PageServerLoad = async (event) => {
     requireAdmin(event)
-    const events = await db.select().from(reunionEvents).orderBy(reunionEvents.year)
-    return { events }
 }
 
 export const actions: Actions = {

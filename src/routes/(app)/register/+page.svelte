@@ -26,6 +26,7 @@ import MemberFormFields from './MemberFormFields.svelte'
 import RegistrationManager from './RegistrationManager.svelte'
 import { getDefaultTierId, getTierLabel, getTierPrice, getMemberAge } from './pricingUtils'
 import { registrationSchema } from './schema'
+import type { FormMember } from './types'
 
 let { data } = $props()
 
@@ -59,9 +60,7 @@ $effect(() => {
     $form.selfShirtSize = selfShirtSize
 })
 
-type Member = { name: string; tierId: string; birthDate?: string; shirtSize?: string }
-
-let members = $state<Member[]>([])
+let members = $state<FormMember[]>([])
 let newName = $state('')
 let newTierId = $state('')
 let newBirthDate = $state<string | undefined>(undefined)

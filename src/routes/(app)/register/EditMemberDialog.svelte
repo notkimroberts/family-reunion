@@ -13,23 +13,14 @@ import {
 import * as Select from '$lib/components/ui/select'
 import { SHIRT_SIZES } from '$lib/general/constants'
 import { formatBirthDate } from '$lib/utils/age'
-
-type Member = {
-    id: string
-    name: string
-    birthYear: number | null
-    birthMonth: number | null
-    birthDay: number | null
-    shirtSize: string | null
-    tierLabel: string
-}
+import type { EditableMember } from './types'
 
 let {
     member,
     shirtsEnabled,
     open = $bindable(false),
 }: {
-    member: Member
+    member: EditableMember
     shirtsEnabled: boolean
     open: boolean
 } = $props()

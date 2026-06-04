@@ -13,6 +13,7 @@ class DebugLogger implements Logger {
     }
 }
 
+// Lazily initializes the Drizzle client on first call; subsequent calls return the cached instance.
 export function getDb() {
     const { DATABASE_LOG, DATABASE_URL } = env
     if (!DATABASE_URL) {
@@ -30,6 +31,7 @@ export function getDb() {
     return _db
 }
 
+// Proxy over the Drizzle instance so callers import `db` directly without triggering eager init.
 export const db = new Proxy({} as ReturnType<typeof drizzle<typeof schema>>, {
     get(_, prop) {
         const inst = getDb()

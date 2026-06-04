@@ -3,6 +3,7 @@ import { db } from '$lib/server/db'
 import { partyMembers, pricingTiers } from '$lib/server/db/schema'
 import type { RegistrationMember } from './RegistrationMember'
 
+// Joins party_members with pricing_tiers to include tier label and price alongside each member's personal details.
 export async function getRegistrationMembers(
     registrationId: string,
 ): Promise<RegistrationMember[]> {

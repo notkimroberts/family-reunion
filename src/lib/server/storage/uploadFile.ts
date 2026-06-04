@@ -8,6 +8,7 @@ import { getS3Client } from './_getS3Client'
 
 const LOCAL_UPLOAD_DIR = 'static/uploads'
 
+// Writes file to local static/uploads in dev, or R2 via PutObjectCommand in production; returns public URL.
 export async function uploadFile(
     key: string,
     body: Buffer | Uint8Array,

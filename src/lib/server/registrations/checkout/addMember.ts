@@ -5,6 +5,7 @@ import { pricingTiers, registrations } from '$lib/server/db/schema'
 import { dbg } from '$lib/server/debug'
 import { createAddMemberCheckout } from '$lib/server/payments'
 
+// Validates ownership of the registration and the tier, then creates a Stripe Checkout for a single additional member; returns the checkout URL
 export async function addMember(params: {
     registrationId: string
     userId: string

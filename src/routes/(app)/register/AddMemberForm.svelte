@@ -8,14 +8,7 @@ import { Input } from '$lib/components/ui/input'
 import * as Select from '$lib/components/ui/select'
 import { SHIRT_SIZES } from '$lib/general/constants'
 import { formatPrice } from '$lib/utils'
-
-type PricingTier = {
-    id: string
-    label: string
-    priceCents: number
-    minAge: number
-    maxAge: number | null
-}
+import type { RegistrationPricingTier } from './types'
 
 let {
     registrationId,
@@ -24,7 +17,7 @@ let {
     onCancel,
 }: {
     registrationId: string
-    tiers: PricingTier[]
+    tiers: RegistrationPricingTier[]
     shirtsEnabled: boolean
     onCancel?: () => void
 } = $props()

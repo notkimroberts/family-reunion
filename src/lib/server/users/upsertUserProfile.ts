@@ -2,6 +2,7 @@ import { db } from '$lib/server/db'
 import { userProfiles } from '$lib/server/db/schema'
 import { parseBirthDate } from '$lib/utils/age'
 
+// Inserts or updates user_profiles for userId, parsing birthDate into split year/month/day integers.
 export async function upsertUserProfile(
     userId: string,
     data: {

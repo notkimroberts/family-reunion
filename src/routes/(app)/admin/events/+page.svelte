@@ -13,8 +13,9 @@ import {
     TableRow,
 } from '$lib/components/ui/table'
 import { EVENT_STATUSES } from '$lib/general/constants'
+import { getAdminEvents } from '../getAdminEvents.remote'
 
-let { data } = $props()
+const eventsQuery = getAdminEvents()
 </script>
 
 <svelte:head>
@@ -34,7 +35,11 @@ let { data } = $props()
             <form
                 method="POST"
                 action="?/create_event"
-                use:enhance
+                use:enhance={() => {
+                    return async () => {
+                        eventsQuery.refresh()
+                    }
+                }}
                 class="grid grid-cols-1 gap-3 md:grid-cols-[1fr_auto_auto] md:items-end">
                 <div class="space-y-1">
                     <label for="title" class="text-sm font-medium">Title</label>
@@ -60,113 +65,132 @@ let { data } = $props()
     </Card>
 </section>
 
-<section class="col-span-12">
-    <Card>
-        <CardHeader>
-            <CardTitle>All Events</CardTitle>
-        </CardHeader>
-        <CardContent class="p-0">
-            {#if data.events.length === 0}
-                <p class="text-muted-foreground px-6 pb-6">No events yet.</p>
-            {:else}
-                <AdminDataView>
-                    {#snippet mobileCards()}
-                        <div class="space-y-3 p-4">
-                            {#each data.events as event}
-                                <div class="rounded-lg border p-4">
-                                    <div class="flex items-center justify-between">
-                                        <a
-                                            href="/admin/events/{event.id}"
-                                            class="text-primary hover:underline font-medium">
-                                            {event.title}
-                                        </a>
-                                        <span class="text-sm text-muted-foreground"
-                                            >{event.year}</span>
+{#await eventsQuery then events}
+    <section class="col-span-12">
+        <Card>
+            <CardHeader>
+                <CardTitle>All Events</CardTitle>
+            </CardHeader>
+            <CardContent class="p-0">
+                {#if events.length === 0}
+                    <p class="text-muted-foreground px-6 pb-6">No events yet.</p>
+                {:else}
+                    <AdminDataView>
+                        {#snippet mobileCards()}
+                            <div class="space-y-3 p-4">
+                                {#each events as event}
+                                    <div class="rounded-lg border p-4">
+                                        <div class="flex items-center justify-between">
+                                            <a
+                                                href="/admin/events/{event.id}"
+                                                class="text-primary hover:underline font-medium">
+                                                {event.title}
+                                            </a>
+                                            <span class="text-sm text-muted-foreground"
+                                                >{event.year}</span>
+                                        </div>
+                                        <div class="mt-3 flex items-center justify-between">
+                                            <form
+                                                method="POST"
+                                                action="?/update_status"
+                                                use:enhance={() => {
+                                                    return async () => {
+                                                        eventsQuery.refresh()
+                                                    }
+                                                }}>
+                                                <input
+                                                    type="hidden"
+                                                    name="eventId"
+                                                    value={event.id} />
+                                                <select
+                                                    name="status"
+                                                    class="border rounded-md px-2 py-1 text-sm bg-background"
+                                                    onchange={(e) =>
+                                                        e.currentTarget.form?.submit()}>
+                                                    {#each EVENT_STATUSES as s}
+                                                        <option
+                                                            value={s}
+                                                            selected={event.status === s}
+                                                            >{s}</option>
+                                                    {/each}
+                                                </select>
+                                            </form>
+                                            <Button
+                                                href="/admin/events/{event.id}"
+                                                variant="ghost"
+                                                size="sm">Edit</Button>
+                                        </div>
                                     </div>
-                                    <div class="mt-3 flex items-center justify-between">
-                                        <form method="POST" action="?/update_status" use:enhance>
-                                            <input type="hidden" name="eventId" value={event.id} />
-                                            <select
-                                                name="status"
-                                                class="border rounded-md px-2 py-1 text-sm bg-background"
-                                                onchange={(e) => e.currentTarget.form?.submit()}>
-                                                {#each EVENT_STATUSES as s}
-                                                    <option value={s} selected={event.status === s}
-                                                        >{s}</option>
-                                                {/each}
-                                            </select>
-                                        </form>
-                                        <Button
-                                            href="/admin/events/{event.id}"
-                                            variant="ghost"
-                                            size="sm">Edit</Button>
-                                    </div>
-                                </div>
-                            {/each}
-                        </div>
-                    {/snippet}
-                    {#snippet desktopTable()}
-                        <div class="overflow-x-auto">
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>Title</TableHead>
-                                        <TableHead>Year</TableHead>
-                                        <TableHead>Status</TableHead>
-                                        <TableHead>Actions</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {#each data.events as event}
+                                {/each}
+                            </div>
+                        {/snippet}
+                        {#snippet desktopTable()}
+                            <div class="overflow-x-auto">
+                                <Table>
+                                    <TableHeader>
                                         <TableRow>
-                                            <TableCell>
-                                                <a
-                                                    href="/admin/events/{event.id}"
-                                                    class="text-primary hover:underline">
-                                                    {event.title}
-                                                </a>
-                                            </TableCell>
-                                            <TableCell>{event.year}</TableCell>
-                                            <TableCell>
-                                                <form
-                                                    method="POST"
-                                                    action="?/update_status"
-                                                    use:enhance
-                                                    class="inline">
-                                                    <input
-                                                        type="hidden"
-                                                        name="eventId"
-                                                        value={event.id} />
-                                                    <select
-                                                        name="status"
-                                                        class="border rounded-md px-2 py-1 text-xs bg-background"
-                                                        onchange={(e) =>
-                                                            e.currentTarget.form?.submit()}>
-                                                        {#each EVENT_STATUSES as s}
-                                                            <option
-                                                                value={s}
-                                                                selected={event.status === s}
-                                                                >{s}</option>
-                                                        {/each}
-                                                    </select>
-                                                </form>
-                                            </TableCell>
-                                            <TableCell>
-                                                <Button
-                                                    href="/admin/events/{event.id}"
-                                                    variant="ghost"
-                                                    size="sm">
-                                                    Edit Details
-                                                </Button>
-                                            </TableCell>
+                                            <TableHead>Title</TableHead>
+                                            <TableHead>Year</TableHead>
+                                            <TableHead>Status</TableHead>
+                                            <TableHead>Actions</TableHead>
                                         </TableRow>
-                                    {/each}
-                                </TableBody>
-                            </Table>
-                        </div>
-                    {/snippet}
-                </AdminDataView>
-            {/if}
-        </CardContent>
-    </Card>
-</section>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {#each events as event}
+                                            <TableRow>
+                                                <TableCell>
+                                                    <a
+                                                        href="/admin/events/{event.id}"
+                                                        class="text-primary hover:underline">
+                                                        {event.title}
+                                                    </a>
+                                                </TableCell>
+                                                <TableCell>{event.year}</TableCell>
+                                                <TableCell>
+                                                    <form
+                                                        method="POST"
+                                                        action="?/update_status"
+                                                        use:enhance={() => {
+                                                            return async () => {
+                                                                eventsQuery.refresh()
+                                                            }
+                                                        }}
+                                                        class="inline">
+                                                        <input
+                                                            type="hidden"
+                                                            name="eventId"
+                                                            value={event.id} />
+                                                        <select
+                                                            name="status"
+                                                            class="border rounded-md px-2 py-1 text-xs bg-background"
+                                                            onchange={(e) =>
+                                                                e.currentTarget.form?.submit()}>
+                                                            {#each EVENT_STATUSES as s}
+                                                                <option
+                                                                    value={s}
+                                                                    selected={event.status === s}
+                                                                    >{s}</option>
+                                                            {/each}
+                                                        </select>
+                                                    </form>
+                                                </TableCell>
+                                                <TableCell>
+                                                    <Button
+                                                        href="/admin/events/{event.id}"
+                                                        variant="ghost"
+                                                        size="sm">
+                                                        Edit Details
+                                                    </Button>
+                                                </TableCell>
+                                            </TableRow>
+                                        {/each}
+                                    </TableBody>
+                                </Table>
+                            </div>
+                        {/snippet}
+                    </AdminDataView>
+                {/if}
+            </CardContent>
+        </Card>
+    </section>
+{/await}

@@ -16,34 +16,12 @@ import AddMemberForm from './AddMemberForm.svelte'
 import CancelRegistrationDialog from './CancelRegistrationDialog.svelte'
 import EditMemberDialog from './EditMemberDialog.svelte'
 import RemoveMemberDialog from './RemoveMemberDialog.svelte'
-
-type Member = {
-    id: string
-    name: string
-    birthYear: number | null
-    birthMonth: number | null
-    birthDay: number | null
-    shirtSize: string | null
-    tierLabel: string
-    priceCents: number
-}
-
-type Registration = {
-    id: string
-    status: string
-    totalAmountCents: number
-    stripeSessionId: string | null
-}
-
-type PricingTier = {
-    id: string
-    label: string
-    priceCents: number
-    minAge: number
-    maxAge: number | null
-}
-
-type ReunionEvent = { id: string; title: string; shirtsEnabled: boolean }
+import type {
+    EventDetails,
+    PartyMember,
+    RegistrationDetails,
+    RegistrationPricingTier,
+} from './types'
 
 let {
     registration,
@@ -51,26 +29,26 @@ let {
     tiers,
     event,
 }: {
-    registration: Registration
-    members: Member[]
-    tiers: PricingTier[]
-    event: ReunionEvent
+    registration: RegistrationDetails
+    members: PartyMember[]
+    tiers: RegistrationPricingTier[]
+    event: EventDetails
 } = $props()
 
 let members = $derived(initialMembers)
 let showAddForm = $state(false)
-let editingMember = $state<Member | null>(null)
+let editingMember = $state<PartyMember | null>(null)
 let editDialogOpen = $state(false)
-let removingMember = $state<Member | null>(null)
+let removingMember = $state<PartyMember | null>(null)
 let removeDialogOpen = $state(false)
 let cancelDialogOpen = $state(false)
 
-function handleEditClick(member: Member) {
+function handleEditClick(member: PartyMember) {
     editingMember = member
     editDialogOpen = true
 }
 
-function handleRemoveClick(member: Member) {
+function handleRemoveClick(member: PartyMember) {
     removingMember = member
     removeDialogOpen = true
 }

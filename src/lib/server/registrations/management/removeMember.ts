@@ -5,6 +5,7 @@ import { partyMembers, pricingTiers, registrations } from '$lib/server/db/schema
 import { dbg } from '$lib/server/debug'
 import { refundPaymentIntent, retrieveSessionPaymentIntent } from '$lib/server/payments'
 
+// Issues a partial refund for the member's tier price, deletes the member row, then marks the registration 'refunded' if no members remain or decrements totalAmountCents otherwise.
 export async function removeMember(memberId: string, userId: string): Promise<void> {
     const [member] = await db
         .select({

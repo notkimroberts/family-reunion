@@ -3,16 +3,10 @@ import { getContext } from 'svelte'
 import { enhance } from '$app/forms'
 import { Button } from '$lib/components/ui/button'
 import type { AdminContext } from '$lib/types/adminContext'
-
-let { data } = $props()
+import { getAdminPhotos } from '../getAdminPhotos.remote'
 
 const adminCtx = getContext<AdminContext>('admin')
-
-let filteredPhotos = $derived(
-    adminCtx.selectedEventId === 'all'
-        ? data.photos
-        : data.photos.filter((p) => p.eventId === adminCtx.selectedEventId),
-)
+const photosQuery = getAdminPhotos()
 </script>
 
 <svelte:head>
@@ -23,36 +17,54 @@ let filteredPhotos = $derived(
     <h1>Photos</h1>
 </section>
 
-{#if filteredPhotos.length === 0}
-    <section class="col-span-12">
-        <p class="text-muted-foreground">No photos for the selected year.</p>
-    </section>
-{:else}
-    <section class="col-span-12">
-        <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
-            {#each filteredPhotos as photo}
-                <div class="rounded-lg border bg-card overflow-hidden shadow-xs">
-                    <figure>
-                        <img
-                            src={photo.url}
-                            alt={photo.caption ?? 'Photo'}
-                            class="w-full aspect-square object-cover" />
-                    </figure>
-                    <div class="p-3 space-y-2">
-                        <p class="text-xs text-muted-foreground">{photo.eventTitle}</p>
-                        {#if photo.caption}
-                            <p class="text-sm truncate">{photo.caption}</p>
-                        {/if}
-                        <form method="POST" action="?/delete_photo" use:enhance>
-                            <input type="hidden" name="photoId" value={photo.id} />
-                            <input type="hidden" name="r2Key" value={photo.r2Key} />
-                            <Button type="submit" variant="destructive" size="sm" class="w-full">
-                                Delete
-                            </Button>
-                        </form>
+{#await photosQuery then photos}
+    {@const filteredPhotos =
+        adminCtx.selectedEventId === 'all'
+            ? photos
+            : photos.filter((p) => p.eventId === adminCtx.selectedEventId)}
+
+    {#if filteredPhotos.length === 0}
+        <section class="col-span-12">
+            <p class="text-muted-foreground">No photos for the selected year.</p>
+        </section>
+    {:else}
+        <section class="col-span-12">
+            <div class="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-4">
+                {#each filteredPhotos as photo}
+                    <div class="overflow-hidden rounded-lg border bg-card shadow-xs">
+                        <figure>
+                            <img
+                                src={photo.url}
+                                alt={photo.caption ?? 'Photo'}
+                                class="w-full aspect-square object-cover" />
+                        </figure>
+                        <div class="p-3 space-y-2">
+                            <p class="text-xs text-muted-foreground">{photo.eventTitle}</p>
+                            {#if photo.caption}
+                                <p class="text-sm truncate">{photo.caption}</p>
+                            {/if}
+                            <form
+                                method="POST"
+                                action="?/delete_photo"
+                                use:enhance={() => {
+                                    return async () => {
+                                        photosQuery.refresh()
+                                    }
+                                }}>
+                                <input type="hidden" name="photoId" value={photo.id} />
+                                <input type="hidden" name="r2Key" value={photo.r2Key} />
+                                <Button
+                                    type="submit"
+                                    variant="destructive"
+                                    size="sm"
+                                    class="w-full">
+                                    Delete
+                                </Button>
+                            </form>
+                        </div>
                     </div>
-                </div>
-            {/each}
-        </div>
-    </section>
-{/if}
+                {/each}
+            </div>
+        </section>
+    {/if}
+{/await}

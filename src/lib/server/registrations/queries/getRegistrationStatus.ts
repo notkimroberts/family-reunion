@@ -2,6 +2,7 @@ import { and, eq } from 'drizzle-orm'
 import { db } from '$lib/server/db'
 import { registrations, registrationStatusEnum } from '$lib/server/db/schema'
 
+// Returns only the status column, scoped to the owning userId to prevent cross-user leakage; null when not found.
 export async function getRegistrationStatus(
     registrationId: string,
     userId: string,

@@ -2,7 +2,7 @@
 import { Moon, Sun } from '@lucide/svelte'
 import { Button } from '$lib/components/ui/button'
 import { LIGHT_THEME } from '$lib/general/constants'
-import { theme } from '$lib/stores/theme'
+import { theme } from '$lib/stores/theme.svelte'
 
 type Props = {
     size?: 'sm' | 'md'
@@ -14,7 +14,7 @@ const iconSize = $derived(size === 'sm' ? 16 : 20)
 </script>
 
 <Button variant="ghost" size="icon" onclick={() => theme.toggle()} aria-label="Toggle theme">
-    {#if $theme === LIGHT_THEME}
+    {#if theme.current === LIGHT_THEME}
         <Moon size={iconSize} />
     {:else}
         <Sun size={iconSize} />

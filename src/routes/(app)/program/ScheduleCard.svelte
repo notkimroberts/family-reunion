@@ -4,12 +4,7 @@ import { SvelteMap } from 'svelte/reactivity'
 import { slide } from 'svelte/transition'
 import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card'
 import { pickDefaultItem } from './scheduleTime'
-
-interface ScheduleItem {
-    day: string
-    time: string
-    activity: string
-}
+import type { ScheduleItem } from './types'
 
 interface Props {
     schedule: ScheduleItem[]

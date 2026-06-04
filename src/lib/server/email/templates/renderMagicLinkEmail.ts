@@ -1,5 +1,6 @@
 import { APP_NAME } from '$lib/general/constants'
 
+// Returns subject and plain-text body for a magic link sign-in email.
 export function renderMagicLinkEmail(url: string): { subject: string; text: string } {
     return {
         subject: `Your sign-in link for ${APP_NAME}`,

@@ -4,7 +4,12 @@ export type {
     AddMemberSessionMetadata,
 } from './stripeMetadata'
 export { decodeSessionMetadata } from './stripeMetadata'
-export type { LineItemInput } from './_buildStripeLineItem'
+export type {
+    LineItemInput,
+    RegistrationCheckoutParams,
+    RegistrationCheckoutResult,
+    AddMemberCheckoutParams,
+} from './types'
 export { createRegistrationCheckout } from './createRegistrationCheckout'
 export { createAddMemberCheckout } from './createAddMemberCheckout'
 export { refundPaymentIntent } from './refundPaymentIntent'

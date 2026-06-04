@@ -12,14 +12,13 @@ import {
 } from '$lib/components/ui/alert-dialog'
 import { Button } from '$lib/components/ui/button'
 import { formatPrice } from '$lib/utils'
-
-type Member = { id: string; name: string; priceCents: number }
+import type { RemovableMember } from './types'
 
 let {
     member,
     open = $bindable(false),
 }: {
-    member: Member
+    member: RemovableMember
     open: boolean
 } = $props()
 

@@ -1,5 +1,5 @@
 <script lang="ts">
-type Member = { id: string; name: string }
+import type { Member } from './types'
 
 type Props = {
     members: Member[]

@@ -8,8 +8,7 @@ import {
     userProfiles,
 } from '$lib/server/db/schema'
 import type { PageServerLoad, Actions } from './$types'
-
-type Rel = { from: string; to: string; type: string }
+import type { Rel } from './types'
 
 function getParents(id: string, allRels: Rel[]): string[] {
     return [

@@ -33,3 +33,4 @@
 - use shadcn-svelte and tailwindcss classes for styling, and prefer tailwind classes over style properties when possible
 - dont add custom styles or classes to headings (h1, h2, etc)
 - unless necessary, use flexbox and gap for layout, spacing, and alignment and dont use margins. if more complex alignment is needed use grid
+- do not use svelte stores (`writable`, `readable`, `derived` from `svelte/store`) — use `.svelte.ts` files with `$state` for shared reactive state instead

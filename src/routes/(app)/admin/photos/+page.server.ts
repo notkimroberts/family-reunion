@@ -8,22 +8,6 @@ import type { PageServerLoad, Actions } from './$types'
 
 export const load: PageServerLoad = async (event) => {
     requireAdmin(event)
-
-    const allPhotos = await db
-        .select({
-            id: photos.id,
-            url: photos.url,
-            caption: photos.caption,
-            r2Key: photos.r2Key,
-            eventId: photos.eventId,
-            createdAt: photos.createdAt,
-            uploadedByUserId: photos.uploadedByUserId,
-            eventTitle: reunionEvents.title,
-        })
-        .from(photos)
-        .leftJoin(reunionEvents, eq(photos.eventId, reunionEvents.id))
-
-    return { photos: allPhotos }
 }
 
 export const actions: Actions = {

@@ -1,8 +1,6 @@
-export type LineItemInput = {
-    name: string
-    priceCents: number
-}
+import type { LineItemInput } from './types'
 
+// Converts a LineItemInput into a Stripe-compatible price_data line item object
 export function buildStripeLineItem(item: LineItemInput) {
     return {
         price_data: {

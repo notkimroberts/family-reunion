@@ -5,6 +5,7 @@ import { partyMembers, registrations } from '$lib/server/db/schema'
 import { dbg } from '$lib/server/debug'
 import { refundPaymentIntent, retrieveSessionPaymentIntent } from '$lib/server/payments'
 
+// Refunds all distinct Stripe payment intents for the registration, then marks it 'refunded'. Falls back to session-level intent when members lack per-member intent IDs.
 export async function cancelRegistration(registrationId: string, userId: string): Promise<void> {
     const [registration] = await db
         .select()

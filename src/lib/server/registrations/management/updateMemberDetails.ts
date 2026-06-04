@@ -5,6 +5,7 @@ import { partyMembers, registrations } from '$lib/server/db/schema'
 import { dbg } from '$lib/server/debug'
 import { parseBirthDate } from '$lib/utils/age'
 
+// Updates mutable fields (birth date split into year/month/day, shirt size) for a member the caller owns; 403 on ownership mismatch.
 export async function updateMemberDetails(
     memberId: string,
     data: { birthDate?: string; shirtSize?: string },

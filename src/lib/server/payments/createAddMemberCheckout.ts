@@ -1,18 +1,10 @@
 import { getStripe } from '$lib/server/stripe'
 import { buildStripeLineItem } from './_buildStripeLineItem'
 import { encodeAddMemberMetadata } from './stripeMetadata'
+import type { AddMemberCheckoutParams } from './types'
 
-export async function createAddMemberCheckout(params: {
-    name: string
-    tierLabel: string
-    priceCents: number
-    registrationId: string
-    memberTierId: string
-    memberBirthDate?: string
-    memberShirtSize?: string
-    successUrl: string
-    cancelUrl: string
-}): Promise<string> {
+// Creates a Stripe Checkout session to add a single member to an existing registration
+export async function createAddMemberCheckout(params: AddMemberCheckoutParams): Promise<string> {
     const session = await getStripe().checkout.sessions.create({
         payment_method_types: ['card'],
         line_items: [
