@@ -1,15 +1,16 @@
-import { json } from '@sveltejs/kit'
 import { eq } from 'drizzle-orm'
+import { query } from '$app/server'
+import { getRequestEvent } from '$app/server'
 import { requireAdmin } from '$lib/server/auth/guards'
 import { db } from '$lib/server/db'
 import { photos, reunionEvents } from '$lib/server/db/schema'
-import type { RequestHandler } from './$types'
+import type { Photo } from './types'
 
-// All photos joined with their event title
-export const GET: RequestHandler = async (event) => {
-    requireAdmin(event)
+// All photos joined with their event title; admin-only
+export const getAdminPhotos = query(async (): Promise<Photo[]> => {
+    requireAdmin(getRequestEvent())
 
-    const allPhotos = await db
+    return db
         .select({
             id: photos.id,
             url: photos.url,
@@ -22,6 +23,4 @@ export const GET: RequestHandler = async (event) => {
         })
         .from(photos)
         .leftJoin(reunionEvents, eq(photos.eventId, reunionEvents.id))
-
-    return json(allPhotos)
-}
+})

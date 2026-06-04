@@ -17,3 +17,13 @@ export type AddMemberSessionMetadata = {
 
 // Discriminated union of all known Stripe session metadata shapes, keyed by `type`
 export type StripeSessionMetadata = RegistrationSessionMetadata | AddMemberSessionMetadata
+
+// Params for encodeAddMemberMetadata
+export type AddMemberMetadataParams = {
+    registrationId: string
+    memberName: string
+    memberTierId: string
+    memberBirthDate?: string
+    memberShirtSize?: string
+    memberPriceCents: number
+}

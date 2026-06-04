@@ -1,11 +1,6 @@
-export function encodeAddMemberMetadata(params: {
-    registrationId: string
-    memberName: string
-    memberTierId: string
-    memberBirthDate?: string
-    memberShirtSize?: string
-    memberPriceCents: number
-}): Record<string, string> {
+import type { AddMemberMetadataParams } from './types'
+
+export function encodeAddMemberMetadata(params: AddMemberMetadataParams): Record<string, string> {
     return {
         type: 'add_member',
         registrationId: params.registrationId,

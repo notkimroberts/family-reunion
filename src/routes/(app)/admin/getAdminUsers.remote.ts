@@ -1,15 +1,16 @@
-import { json } from '@sveltejs/kit'
 import { and, eq, sql } from 'drizzle-orm'
+import { query } from '$app/server'
+import { getRequestEvent } from '$app/server'
 import { requireAdmin } from '$lib/server/auth/guards'
 import { db } from '$lib/server/db'
 import { registrations, userProfiles } from '$lib/server/db/schema'
-import type { RequestHandler } from './$types'
+import type { Profile } from './types'
 
-// All user profiles with their paid registration event IDs aggregated
-export const GET: RequestHandler = async (event) => {
-    requireAdmin(event)
+// All user profiles with paid registration event IDs aggregated; admin-only
+export const getAdminUsers = query(async (): Promise<Profile[]> => {
+    requireAdmin(getRequestEvent())
 
-    const profiles = await db
+    return db
         .select({
             id: userProfiles.id,
             userId: userProfiles.userId,
@@ -25,6 +26,4 @@ export const GET: RequestHandler = async (event) => {
             and(eq(registrations.userId, userProfiles.userId), eq(registrations.status, 'paid')),
         )
         .groupBy(userProfiles.id)
-
-    return json(profiles)
-}
+})

@@ -86,13 +86,24 @@ Server logic lives under `src/lib/server/`, one domain per folder. Each exported
 
 Two-step flow made visually explicit to users:
 
-1. **Step 1** — SSO account creation/sign-in (`/login`)
+1. **Step 1** — Magic link sign-in (`/login`)
 2. **Step 2** — Event registration (`/register`)
 
 Route groups:
 
-- `(auth)` — `/login` only, no nav, full-screen card layout with step indicator. All SSO providers use `callbackURL: '/register'` so new and returning users land directly on event registration after sign-in
+- `(auth)` — `/login` only, no nav, full-screen card layout with step indicator. Magic link `callbackURL: '/register'` so users land directly on event registration after sign-in
 - `(app)` — all authenticated routes including `/register`
+
+### Remote Functions
+
+- **Enabled**: `kit.experimental.remoteFunctions: true` + `compilerOptions.experimental.async: true` in `svelte.config.js`
+- Remote functions live in `.remote.ts` files anywhere in `src/` except `src/lib/server/`
+- Use `query` from `$app/server` for data fetching; `command` for imperative mutations; `form` for form submissions
+- Call `getRequestEvent()` (from `$app/server`) inside the remote function to access `locals` for auth guards
+- One export per `.remote.ts` file, named after the export (e.g. `getAdminUsers.remote.ts` exports `getAdminUsers`)
+- Use `{#await queryFn() then data}` in templates; use `{@const}` for derived values inside the block
+- After a mutation (form action), call `query.refresh()` to re-fetch — no `invalidateAll`, no manual `fetch`
+- `query()` deduplicates: identical calls share a cache instance and re-use the same `await`
 
 ### Forms
 

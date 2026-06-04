@@ -14,6 +14,7 @@ import {
 import { APP_NAME } from '$lib/general/constants'
 import type { AdminContext } from '$lib/types/adminContext'
 import { cn, formatPrice } from '$lib/utils'
+import type { EventMetric } from './types'
 
 const statusVariant = (status: string) => {
     if (status === 'open') {
@@ -38,8 +39,6 @@ function revDeltaLabel(deltaCents: number): string {
 let { data } = $props()
 
 const adminCtx = getContext<AdminContext>('admin')
-
-type EventMetric = { eventId: string; registrationCount: number; revenueCents: string | null }
 
 let selectedMetrics = $derived<EventMetric | undefined>(
     adminCtx.selectedEventId === 'all'

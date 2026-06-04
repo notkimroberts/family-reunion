@@ -8,20 +8,7 @@ import {
     userProfiles,
 } from '$lib/server/db/schema'
 import type { PageServerLoad, Actions } from './$types'
-
-const VALID_RELATIONSHIP_TYPES = [
-    'parent',
-    'child',
-    'spouse',
-    'sibling',
-    'grandparent',
-    'grandchild',
-    'aunt_uncle',
-    'niece_nephew',
-    'cousin',
-] as const
-
-type RelType = (typeof VALID_RELATIONSHIP_TYPES)[number]
+import { VALID_RELATIONSHIP_TYPES, type RelType } from './types'
 
 export const load: PageServerLoad = async () => {
     const members = await db

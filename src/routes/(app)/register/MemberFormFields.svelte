@@ -5,8 +5,7 @@ import { Input } from '$lib/components/ui/input'
 import * as Select from '$lib/components/ui/select'
 import { SHIRT_SIZES } from '$lib/general/constants'
 import { formatPrice } from '$lib/utils'
-
-type Tier = { id: string; label: string; priceCents: number }
+import type { MemberFormTier } from './types'
 
 let {
     name = $bindable(''),
@@ -22,7 +21,7 @@ let {
     tierId: string
     birthDate: string | undefined
     shirtSize: string
-    tiers: Tier[]
+    tiers: MemberFormTier[]
     shirtsEnabled?: boolean
     compact?: boolean
     idPrefix?: string

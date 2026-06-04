@@ -1,14 +1,12 @@
 import { getStripe } from '$lib/server/stripe'
-import { buildStripeLineItem, type LineItemInput } from './_buildStripeLineItem'
+import { buildStripeLineItem } from './_buildStripeLineItem'
 import { encodeRegistrationMetadata } from './stripeMetadata'
+import type { RegistrationCheckoutParams, RegistrationCheckoutResult } from './types'
 
 // Creates a Stripe Checkout session for a full event registration with multiple line items
-export async function createRegistrationCheckout(params: {
-    lineItems: LineItemInput[]
-    registrationId: string
-    successUrl: (id: string) => string
-    cancelUrl: (id: string) => string
-}): Promise<{ url: string; sessionId: string }> {
+export async function createRegistrationCheckout(
+    params: RegistrationCheckoutParams,
+): Promise<RegistrationCheckoutResult> {
     console.log(
         '[stripe-debug] creating checkout, httpClient:',
         (getStripe() as any)._httpClient?.constructor?.name ?? 'unknown',

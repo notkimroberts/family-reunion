@@ -1,8 +1,4 @@
-interface ScheduleItem {
-    day: string
-    time: string
-    activity: string
-}
+import type { ScheduleItem } from './types'
 
 function deriveTimestamp(
     day: string,
