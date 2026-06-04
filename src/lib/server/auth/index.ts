@@ -17,26 +17,12 @@ function createAuthInstance() {
             provider: 'pg',
             schema,
         }),
-        socialProviders: {
-            google: {
-                clientId: env.GOOGLE_CLIENT_ID!,
-                clientSecret: env.GOOGLE_CLIENT_SECRET!,
-            },
-            apple: {
-                clientId: env.APPLE_CLIENT_ID!,
-                clientSecret: env.APPLE_CLIENT_SECRET!,
-            },
-            facebook: {
-                clientId: env.FACEBOOK_CLIENT_ID!,
-                clientSecret: env.FACEBOOK_CLIENT_SECRET!,
-            },
-        },
         plugins: [
             admin(),
             sveltekitCookies(getRequestEvent),
             magicLink({
                 sendMagicLink: async ({ email, url }) => {
-                    dbg.auth('sending magic link to=%s', email)
+                    dbg.auth('sending magic link to=%s url=%s', email, url)
                     await sendMagicLinkEmail(email, url)
                 },
             }),

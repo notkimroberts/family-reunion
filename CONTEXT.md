@@ -7,7 +7,7 @@ A full-stack app for organising family reunion events: registration and payment,
 ### Identity
 
 **User**:
-A person who has signed in via SSO or magic link. Managed entirely by Better Auth (`user`, `session`, `account` tables). The source of truth for authentication.
+A person who has signed in via magic link email. Managed entirely by Better Auth (`user`, `session`, `account` tables). The source of truth for authentication.
 _Avoid_: account, member
 
 **User profile**:
@@ -78,7 +78,7 @@ The app has three distinct ways of representing a person. This is intentional:
 
 > **Dev**: When a user signs up and registers for the reunion, how many "person" records are we creating?
 >
-> **Domain**: Three potentially. The SSO sign-in creates a `user` record (Better Auth) and triggers the hook that creates a `user_profile`. The registration creates a `registration` and at least one `party_members` row — the registrant themselves. Their family tree entry, if any, is separate and only created if they go to the family tree page and add themselves.
+> **Domain**: Three potentially. The magic link sign-in creates a `user` record (Better Auth) and triggers the hook that creates a `user_profile`. The registration creates a `registration` and at least one `party_members` row — the registrant themselves. Their family tree entry, if any, is separate and only created if they go to the family tree page and add themselves.
 
 > **Dev**: Can I look up a guest member's user profile to get their email?
 >
