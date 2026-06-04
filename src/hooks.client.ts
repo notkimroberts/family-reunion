@@ -4,6 +4,7 @@ import { SENTRY_DSN } from '$lib/general/constants'
 
 Sentry.init({
     dsn: SENTRY_DSN,
+    enabled: import.meta.env.PROD,
 
     environment: import.meta.env.MODE,
     release: import.meta.env.VITE_SENTRY_RELEASE,

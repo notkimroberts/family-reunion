@@ -1,6 +1,7 @@
 import { sentrySvelteKit } from '@sentry/sveltekit'
 import { sveltekit } from '@sveltejs/kit/vite'
 import tailwindcss from '@tailwindcss/vite'
+import Debug from 'debug'
 import { readFileSync } from 'fs'
 import { defineConfig, loadEnv } from 'vite'
 
@@ -10,6 +11,14 @@ const project = 'family-reunion'
 
 export default defineConfig(({ mode }) => {
     const env = loadEnv(mode, process.cwd(), '')
+
+    // Forward DEBUG into process.env so the `debug` package can read it.
+    // Also call Debug.enable() directly — Vite loads the debug package before
+    // vite.config.ts runs, so the package initializes with no enabled namespaces.
+    // Debug.enable() updates them retroactively since enabled is checked dynamically.
+    if (env.DEBUG) {
+        Debug.enable(env.DEBUG)
+    }
 
     return {
         plugins: [
