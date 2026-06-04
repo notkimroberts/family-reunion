@@ -20,7 +20,7 @@ import {
     REGISTER_NAV_LINK,
     SECONDARY_NAV_LINKS,
 } from '$lib/general/constants'
-import { theme } from '$lib/stores/theme'
+import { theme } from '$lib/stores/theme.svelte'
 
 type Props = {
     open: boolean
@@ -112,7 +112,7 @@ const linkClass = (active: boolean) =>
             <button
                 onclick={() => theme.toggle()}
                 class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-foreground hover:bg-muted transition-colors w-full text-left cursor-pointer">
-                {$theme === LIGHT_THEME ? 'Switch to Dark' : 'Switch to Light'}
+                {theme.current === LIGHT_THEME ? 'Switch to Dark' : 'Switch to Light'}
             </button>
 
             {#if user}

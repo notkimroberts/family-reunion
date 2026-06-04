@@ -17,7 +17,7 @@ import {
     REGISTER_NAV_LINK,
     SECONDARY_NAV_LINKS,
 } from '$lib/general/constants'
-import { theme } from '$lib/stores/theme'
+import { theme } from '$lib/stores/theme.svelte'
 import { getInitials } from '$lib/utils'
 import MobileDrawer from './MobileDrawer.svelte'
 
@@ -122,7 +122,7 @@ let mobileMenuOpen = $state(false)
                         {/if}
                         <DropdownMenuSeparator />
                         <DropdownMenuItem onclick={() => theme.toggle()}>
-                            {$theme === LIGHT_THEME ? 'Switch to Dark' : 'Switch to Light'}
+                            {theme.current === LIGHT_THEME ? 'Switch to Dark' : 'Switch to Light'}
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem onclick={handleSignOut}>Sign Out</DropdownMenuItem>
