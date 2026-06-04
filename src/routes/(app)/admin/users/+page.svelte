@@ -1,5 +1,6 @@
 <script lang="ts">
 import { getContext } from 'svelte'
+import { onMount } from 'svelte'
 import { enhance } from '$app/forms'
 import { AdminDataView } from '$lib/components'
 import { Badge } from '$lib/components/ui/badge'
@@ -16,15 +17,30 @@ import {
 } from '$lib/components/ui/table'
 import type { AdminContext } from '$lib/types/adminContext'
 
-let { data } = $props()
+type Profile = {
+    id: string
+    userId: string
+    phone: string | null
+    isDeleted: boolean | null
+    registeredEventIds: string[]
+}
+
 let editingId = $state<string | undefined>(undefined)
+let profiles = $state<Profile[]>([])
 
 const adminCtx = getContext<AdminContext>('admin')
 
+async function fetchProfiles() {
+    const response = await fetch('/api/admin/users')
+    profiles = await response.json()
+}
+
+onMount(fetchProfiles)
+
 let filteredProfiles = $derived(
     adminCtx.selectedEventId === 'all'
-        ? data.profiles
-        : data.profiles.filter((p) => p.registeredEventIds.includes(adminCtx.selectedEventId)),
+        ? profiles
+        : profiles.filter((p) => p.registeredEventIds.includes(adminCtx.selectedEventId)),
 )
 </script>
 
@@ -70,7 +86,8 @@ let filteredProfiles = $derived(
                                         use:enhance={() => {
                                             return async ({ update }) => {
                                                 editingId = undefined
-                                                update()
+                                                await update({ invalidateAll: false })
+                                                await fetchProfiles()
                                             }
                                         }}>
                                         <input type="hidden" name="profileId" value={profile.id} />

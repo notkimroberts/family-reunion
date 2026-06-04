@@ -1,17 +1,36 @@
 <script lang="ts">
 import { getContext } from 'svelte'
+import { onMount } from 'svelte'
 import { enhance } from '$app/forms'
 import { Button } from '$lib/components/ui/button'
 import type { AdminContext } from '$lib/types/adminContext'
 
-let { data } = $props()
+type Photo = {
+    id: string
+    url: string
+    caption: string | null
+    r2Key: string | null
+    eventId: string | null
+    createdAt: string | null
+    uploadedByUserId: string
+    eventTitle: string | null
+}
+
+let photos = $state<Photo[]>([])
 
 const adminCtx = getContext<AdminContext>('admin')
 
+async function fetchPhotos() {
+    const response = await fetch('/api/admin/photos')
+    photos = await response.json()
+}
+
+onMount(fetchPhotos)
+
 let filteredPhotos = $derived(
     adminCtx.selectedEventId === 'all'
-        ? data.photos
-        : data.photos.filter((p) => p.eventId === adminCtx.selectedEventId),
+        ? photos
+        : photos.filter((p) => p.eventId === adminCtx.selectedEventId),
 )
 </script>
 
@@ -43,7 +62,15 @@ let filteredPhotos = $derived(
                         {#if photo.caption}
                             <p class="text-sm truncate">{photo.caption}</p>
                         {/if}
-                        <form method="POST" action="?/delete_photo" use:enhance>
+                        <form
+                            method="POST"
+                            action="?/delete_photo"
+                            use:enhance={() => {
+                                return async ({ update }) => {
+                                    await update({ invalidateAll: false })
+                                    await fetchPhotos()
+                                }
+                            }}>
                             <input type="hidden" name="photoId" value={photo.id} />
                             <input type="hidden" name="r2Key" value={photo.r2Key} />
                             <Button type="submit" variant="destructive" size="sm" class="w-full">

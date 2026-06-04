@@ -1,4 +1,5 @@
 <script lang="ts">
+import { onMount } from 'svelte'
 import { enhance } from '$app/forms'
 import { AdminDataView } from '$lib/components'
 import { Button } from '$lib/components/ui/button'
@@ -13,8 +14,25 @@ import {
     TableRow,
 } from '$lib/components/ui/table'
 import { EVENT_STATUSES } from '$lib/general/constants'
+import type { EventStatus } from '$lib/general/constants'
 
-let { data } = $props()
+type ReunionEvent = {
+    id: string
+    title: string
+    year: number
+    status: EventStatus
+    startDate: string | null
+    endDate: string | null
+}
+
+let events = $state<ReunionEvent[]>([])
+
+async function fetchEvents() {
+    const response = await fetch('/api/admin/events')
+    events = await response.json()
+}
+
+onMount(fetchEvents)
 </script>
 
 <svelte:head>
@@ -34,7 +52,12 @@ let { data } = $props()
             <form
                 method="POST"
                 action="?/create_event"
-                use:enhance
+                use:enhance={() => {
+                    return async ({ update }) => {
+                        await update({ invalidateAll: false })
+                        await fetchEvents()
+                    }
+                }}
                 class="grid grid-cols-1 gap-3 md:grid-cols-[1fr_auto_auto] md:items-end">
                 <div class="space-y-1">
                     <label for="title" class="text-sm font-medium">Title</label>
@@ -66,13 +89,13 @@ let { data } = $props()
             <CardTitle>All Events</CardTitle>
         </CardHeader>
         <CardContent class="p-0">
-            {#if data.events.length === 0}
+            {#if events.length === 0}
                 <p class="text-muted-foreground px-6 pb-6">No events yet.</p>
             {:else}
                 <AdminDataView>
                     {#snippet mobileCards()}
                         <div class="space-y-3 p-4">
-                            {#each data.events as event}
+                            {#each events as event}
                                 <div class="rounded-lg border p-4">
                                     <div class="flex items-center justify-between">
                                         <a
@@ -84,7 +107,15 @@ let { data } = $props()
                                             >{event.year}</span>
                                     </div>
                                     <div class="mt-3 flex items-center justify-between">
-                                        <form method="POST" action="?/update_status" use:enhance>
+                                        <form
+                                            method="POST"
+                                            action="?/update_status"
+                                            use:enhance={() => {
+                                                return async ({ update }) => {
+                                                    await update({ invalidateAll: false })
+                                                    await fetchEvents()
+                                                }
+                                            }}>
                                             <input type="hidden" name="eventId" value={event.id} />
                                             <select
                                                 name="status"
@@ -117,7 +148,7 @@ let { data } = $props()
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {#each data.events as event}
+                                    {#each events as event}
                                         <TableRow>
                                             <TableCell>
                                                 <a
@@ -131,7 +162,12 @@ let { data } = $props()
                                                 <form
                                                     method="POST"
                                                     action="?/update_status"
-                                                    use:enhance
+                                                    use:enhance={() => {
+                                                        return async ({ update }) => {
+                                                            await update({ invalidateAll: false })
+                                                            await fetchEvents()
+                                                        }
+                                                    }}
                                                     class="inline">
                                                     <input
                                                         type="hidden"
