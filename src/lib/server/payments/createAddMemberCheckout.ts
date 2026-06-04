@@ -2,6 +2,7 @@ import { getStripe } from '$lib/server/stripe'
 import { buildStripeLineItem } from './_buildStripeLineItem'
 import { encodeAddMemberMetadata } from './stripeMetadata'
 
+// Creates a Stripe Checkout session to add a single member to an existing registration
 export async function createAddMemberCheckout(params: {
     name: string
     tierLabel: string

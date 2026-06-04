@@ -203,51 +203,36 @@ function buildFamilyTree(): FamilyMember[] {
     const [g2h2, g2w2] = addCouple(2, 1892, 1904, [g1h, g1w])
 
     // Gen 3: great×3 grandparents — 4 couples (~1915-1925)
-    const gen3Couples: [number, number][] = []
     const gen2Parents = [
         [g2h1, g2w1],
         [g2h2, g2w2],
     ]
-    for (const [p1, p2] of gen2Parents) {
-        for (let i = 0; i < 2; i++) {
-            gen3Couples.push(addCouple(3, 1913, 1928, [p1, p2]))
-        }
-    }
+    const gen3Couples: [number, number][] = gen2Parents.flatMap(([p1, p2]) =>
+        Array.from({ length: 2 }, () => addCouple(3, 1913, 1928, [p1, p2])),
+    )
 
     // Gen 4: great×2 grandparents — 8 couples (~1935-1948)
-    const gen4Couples: [number, number][] = []
-    for (const [p1, p2] of gen3Couples) {
-        for (let i = 0; i < 2; i++) {
-            gen4Couples.push(addCouple(4, 1933, 1950, [p1, p2]))
-        }
-    }
+    const gen4Couples: [number, number][] = gen3Couples.flatMap(([p1, p2]) =>
+        Array.from({ length: 2 }, () => addCouple(4, 1933, 1950, [p1, p2])),
+    )
 
     // Gen 5: great grandparents — children of gen4 (~1955-1970)
-    const gen5Members: number[] = []
-    for (const [p1, p2] of gen4Couples) {
+    const gen5Members: number[] = gen4Couples.flatMap(([p1, p2]) => {
         const count = faker.number.int({ min: 1, max: 2 })
-        for (let i = 0; i < count; i++) {
-            gen5Members.push(addChild(5, 1953, 1972, [p1, p2]))
-        }
-    }
+        return Array.from({ length: count }, () => addChild(5, 1953, 1972, [p1, p2]))
+    })
 
     // Gen 6: grandparents — children of gen5 (~1972-1987)
-    const gen6Members: number[] = []
-    for (const idx of gen5Members) {
+    const gen6Members: number[] = gen5Members.flatMap((idx) => {
         const count = faker.number.int({ min: 1, max: 2 })
-        for (let i = 0; i < count; i++) {
-            gen6Members.push(addChild(6, 1970, 1988, [idx]))
-        }
-    }
+        return Array.from({ length: count }, () => addChild(6, 1970, 1988, [idx]))
+    })
 
     // Gen 7: parents — children of gen6 (~1990-2008)
-    const gen7Members: number[] = []
-    for (const idx of gen6Members) {
+    const gen7Members: number[] = gen6Members.flatMap((idx) => {
         const count = faker.number.int({ min: 1, max: 2 })
-        for (let i = 0; i < count; i++) {
-            gen7Members.push(addChild(7, 1988, 2010, [idx]))
-        }
-    }
+        return Array.from({ length: count }, () => addChild(7, 1988, 2010, [idx]))
+    })
 
     // Gen 8: children — pad total to 100
     const gen8Parents = [...gen7Members, ...gen6Members]
@@ -282,18 +267,16 @@ function randomDrinks(): string[] {
 }
 
 function randomSchedule(days: string[]): { day: string; time: string; activity: string }[] {
-    const schedule: { day: string; time: string; activity: string }[] = []
-    for (const day of days) {
+    const hours = [9, 11, 12, 14, 17, 19]
+    return days.flatMap((day) => {
         const count = faker.number.int({ min: 3, max: 5 })
         const activities = faker.helpers.arrayElements(SCHEDULE_ACTIVITIES, count)
-        const hours = [9, 11, 12, 14, 17, 19]
-        for (let i = 0; i < activities.length; i++) {
+        return activities.map((activity, i) => {
             const h = hours[i] ?? 10 + i
             const time = h < 12 ? `${h}:00 AM` : h === 12 ? '12:00 PM' : `${h - 12}:00 PM`
-            schedule.push({ day, time, activity: activities[i] })
-        }
-    }
-    return schedule
+            return { day, time, activity }
+        })
+    })
 }
 
 async function seed() {
@@ -399,23 +382,18 @@ async function seed() {
     }
 
     dbg.seed('Seeding user profiles...')
-    const userIds: string[] = []
-    const userValues = []
-    for (let i = 0; i < 15; i++) {
-        const userId = `user_${String(i + 1).padStart(3, '0')}`
-        userIds.push(userId)
-        userValues.push({
-            userId,
-            phone: faker.phone.number({ style: 'national' }),
-            mailingAddress: {
-                street: faker.location.streetAddress(),
-                city: faker.location.city(),
-                state: faker.location.state({ abbreviated: true }),
-                zip: faker.location.zipCode(),
-            },
-            profilePhotoUrl: `https://picsum.photos/seed/user${i + 1}/200/200`,
-        })
-    }
+    const userIds = Array.from({ length: 15 }, (_, i) => `user_${String(i + 1).padStart(3, '0')}`)
+    const userValues = userIds.map((userId, i) => ({
+        userId,
+        phone: faker.phone.number({ style: 'national' }),
+        mailingAddress: {
+            street: faker.location.streetAddress(),
+            city: faker.location.city(),
+            state: faker.location.state({ abbreviated: true }),
+            zip: faker.location.zipCode(),
+        },
+        profilePhotoUrl: `https://picsum.photos/seed/user${i + 1}/200/200`,
+    }))
     await db.insert(schema.userProfiles).values(userValues)
 
     dbg.seed('Seeding family members...')
@@ -451,15 +429,14 @@ async function seed() {
     }
 
     // Spouses
-    for (let i = 0; i < tree.length; i++) {
-        const m = tree[i]
+    tree.forEach((m, i) => {
         if (m.spouseIndex !== undefined && m.spouseIndex > i) {
             const aId = insertedMembers[i].id
             const bId = insertedMembers[m.spouseIndex].id
             addRel(aId, bId, 'spouse')
             addRel(bId, aId, 'spouse')
         }
-    }
+    })
 
     // Build ancestor index: memberId → array of { id, generation }
     // For each member, walk up the parent chain and emit typed ancestor relationships
@@ -480,7 +457,7 @@ async function seed() {
         return result
     }
 
-    for (let i = 0; i < tree.length; i++) {
+    tree.forEach((member, i) => {
         const ancestors = getAncestors(i, 1, new Set())
         const memberId = insertedMembers[i].id
         for (const { idx: ancIdx, depth } of ancestors) {
@@ -492,28 +469,33 @@ async function seed() {
             addRel(ancestorId, memberId, types.ancestor)
             addRel(memberId, ancestorId, types.descendant)
         }
-    }
+    })
 
     // Siblings (share same first parent)
-    for (let i = 0; i < tree.length; i++) {
-        if (!tree[i].parentIndices) {
-            continue
+    tree.forEach((memberI, i) => {
+        if (!memberI.parentIndices) {
+            return
         }
-        for (let j = i + 1; j < tree.length; j++) {
-            if (!tree[j].parentIndices) {
-                continue
+        tree.slice(i + 1).forEach((memberJ, offset) => {
+            const j = i + 1 + offset
+            if (!memberJ.parentIndices) {
+                return
             }
-            if (tree[i].parentIndices![0] === tree[j].parentIndices![0]) {
+            if (memberI.parentIndices![0] === memberJ.parentIndices![0]) {
                 addRel(insertedMembers[i].id, insertedMembers[j].id, 'sibling')
                 addRel(insertedMembers[j].id, insertedMembers[i].id, 'sibling')
             }
-        }
-    }
+        })
+    })
 
     if (relationshipValues.length > 0) {
         const batchSize = 100
-        for (let i = 0; i < relationshipValues.length; i += batchSize) {
-            await db.insert(schema.relationships).values(relationshipValues.slice(i, i + batchSize))
+        const batches = Array.from(
+            { length: Math.ceil(relationshipValues.length / batchSize) },
+            (_, i) => relationshipValues.slice(i * batchSize, (i + 1) * batchSize),
+        )
+        for (const batch of batches) {
+            await db.insert(schema.relationships).values(batch)
         }
     }
     dbg.seed('Inserted %d relationships', relationshipValues.length)
@@ -534,16 +516,7 @@ async function seed() {
                     ? ('pending' as const)
                     : ('paid' as const)
 
-            let totalCents = 0
-            const partyData: {
-                name: string
-                birthYear: number
-                birthMonth: number
-                birthDay: number
-                tierId: string
-            }[] = []
-
-            for (let p = 0; p < numParty; p++) {
+            const partyData = Array.from({ length: numParty }, () => {
                 const birthDate = faker.date.birthdate({ mode: 'age', min: 2, max: 70 })
                 const birthYear = birthDate.getFullYear()
                 const birthMonth = birthDate.getMonth() + 1
@@ -552,15 +525,16 @@ async function seed() {
                 const tier = eventTiers.find(
                     (t) => age >= t.minAge && (t.maxAge === null || age <= t.maxAge),
                 )!
-                totalCents += tier.priceCents
-                partyData.push({
+                return {
                     name: faker.person.fullName(),
                     birthYear,
                     birthMonth,
                     birthDay,
                     tierId: tier.id,
-                })
-            }
+                    priceCents: tier.priceCents,
+                }
+            })
+            const totalCents = partyData.reduce((sum, p) => sum + p.priceCents, 0)
 
             const [reg] = await db
                 .insert(schema.registrations)
@@ -588,13 +562,11 @@ async function seed() {
     }
 
     dbg.seed('Seeding photos...')
-    const photoValues = []
-    for (let eventIdx = 0; eventIdx < 2; eventIdx++) {
-        const event = events[eventIdx]
+    const photoValues = events.slice(0, 2).flatMap((event) => {
         const numPhotos = faker.number.int({ min: 6, max: 10 })
-        for (let p = 0; p < numPhotos; p++) {
+        return Array.from({ length: numPhotos }, (_, p) => {
             const photoId = `${event.year}-${String(p + 1).padStart(3, '0')}`
-            photoValues.push({
+            return {
                 eventId: event.id,
                 uploadedByUserId: userIds[p % userIds.length],
                 r2Key: `photos/event-${event.year}/${photoId}.jpg`,
@@ -605,9 +577,9 @@ async function seed() {
                         : faker.datatype.boolean()
                           ? faker.lorem.sentence()
                           : null,
-            })
-        }
-    }
+            }
+        })
+    })
     await db.insert(schema.photos).values(photoValues)
 
     dbg.seed('Seeding storefront config...')

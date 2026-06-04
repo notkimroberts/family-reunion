@@ -1,6 +1,7 @@
 import { S3Client } from '@aws-sdk/client-s3'
 import { env } from '$env/dynamic/private'
 
+// Creates a new S3Client pointed at the Cloudflare R2 endpoint using runtime env credentials.
 export function getS3Client(): S3Client {
     return new S3Client({
         region: 'auto',

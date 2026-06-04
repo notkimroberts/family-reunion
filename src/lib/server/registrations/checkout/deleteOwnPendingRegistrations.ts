@@ -2,6 +2,7 @@ import { and, eq, inArray } from 'drizzle-orm'
 import { db } from '$lib/server/db'
 import { partyMembers, registrations } from '$lib/server/db/schema'
 
+// Deletes all pending registrations for the user+event pair; party members are removed first to satisfy the FK constraint
 export async function deleteOwnPendingRegistrations(
     userId: string,
     eventId: string,

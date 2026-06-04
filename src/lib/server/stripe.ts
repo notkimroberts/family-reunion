@@ -3,6 +3,7 @@ import { env } from '$env/dynamic/private'
 
 let _stripe: Stripe | undefined
 
+// Returns the lazy-initialized Stripe client singleton, creating it on first call
 export function getStripe(): Stripe {
     if (!_stripe) {
         _stripe = new Stripe(env.STRIPE_SECRET_KEY!, {

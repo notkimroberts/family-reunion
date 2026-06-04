@@ -8,6 +8,7 @@ import { decodeSessionMetadata } from '$lib/server/payments'
 import { formatPrice } from '$lib/utils'
 import { getAge, parseBirthDate } from '$lib/utils/age'
 
+// Webhook handler: branches on metadata.type to either insert an add_member row or mark the registration 'paid'; confirmation email is sent outside the transaction so a send failure never rolls back payment
 export async function fulfillCheckout(session: Stripe.Checkout.Session): Promise<void> {
     const paymentIntentId =
         typeof session.payment_intent === 'string' ? session.payment_intent : null

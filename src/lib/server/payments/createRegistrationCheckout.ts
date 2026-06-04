@@ -2,6 +2,7 @@ import { getStripe } from '$lib/server/stripe'
 import { buildStripeLineItem, type LineItemInput } from './_buildStripeLineItem'
 import { encodeRegistrationMetadata } from './stripeMetadata'
 
+// Creates a Stripe Checkout session for a full event registration with multiple line items
 export async function createRegistrationCheckout(params: {
     lineItems: LineItemInput[]
     registrationId: string

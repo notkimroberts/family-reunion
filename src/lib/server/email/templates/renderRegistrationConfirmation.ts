@@ -1,5 +1,6 @@
 import { APP_NAME } from '$lib/general/constants'
 
+// Returns subject and plain-text body confirming a paid event registration with party member list.
 export function renderRegistrationConfirmation(data: {
     name: string
     eventTitle: string

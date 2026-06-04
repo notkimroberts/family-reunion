@@ -1,5 +1,6 @@
 import { getStripe } from '$lib/server/stripe'
 
+// Issues a full or partial refund against a Stripe PaymentIntent
 export async function refundPaymentIntent(
     paymentIntentId: string,
     amountCents?: number,

@@ -28,6 +28,7 @@ function deriveTimestamp(
     return base.getTime()
 }
 
+// Returns the first upcoming schedule item relative to now, or the first item if none are upcoming or no start date is given
 export function pickDefaultItem(
     items: ScheduleItem[],
     eventStartDate: string | undefined,

@@ -8,6 +8,7 @@ import type { MemberInput } from './MemberInput'
 import { fetchAndValidateTiers } from './_fetchAndValidateTiers'
 import { calculateTotal } from './calculateTotal'
 
+// Creates a 'pending' registration + party members, then opens a Stripe Checkout session; caller must redirect to checkoutUrl
 export async function createPendingRegistration(params: {
     userId: string
     userName: string

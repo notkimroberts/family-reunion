@@ -3,6 +3,7 @@ import { eq } from 'drizzle-orm'
 import { db } from '$lib/server/db'
 import { pricingTiers } from '$lib/server/db/schema'
 
+// Fetches all pricing tiers for the event and throws 400 if any requested tierId is not among them
 export async function fetchAndValidateTiers(
     eventId: string,
     tierIds: string[],

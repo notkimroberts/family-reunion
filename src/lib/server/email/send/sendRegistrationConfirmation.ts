@@ -2,6 +2,7 @@ import { dbg } from '$lib/server/debug'
 import { renderRegistrationConfirmation } from '../templates'
 import { send } from './_resend'
 
+// Sends a registration confirmation email with party members and total amount paid.
 export async function sendRegistrationConfirmation(
     to: string,
     data: { name: string; eventTitle: string; partyMembers: string[]; totalAmount: string },

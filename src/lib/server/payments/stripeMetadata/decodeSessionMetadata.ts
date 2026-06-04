@@ -1,5 +1,6 @@
 import type { StripeSessionMetadata } from './types'
 
+// Parses raw Stripe session metadata into a typed StripeSessionMetadata; returns null if unrecognised or missing
 export function decodeSessionMetadata(
     raw: Record<string, string> | null | undefined,
 ): StripeSessionMetadata | null {

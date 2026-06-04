@@ -5,6 +5,7 @@ import { requireAuth } from './requireAuth'
 
 type AuthEvent = ServerLoadEvent | RequestEvent
 
+// Asserts session exists and user.role === 'admin'; throws redirect(302, '/') for non-admins.
 export function requireAdmin(event: AuthEvent) {
     const user = requireAuth(event)
     if (user.role !== 'admin') {

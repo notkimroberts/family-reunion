@@ -3,6 +3,7 @@ import { partyMembers, registrations, registrationStatusEnum } from '$lib/server
 import { parseBirthDate } from '$lib/utils/age'
 import { fetchAndValidateTiers } from './_fetchAndValidateTiers'
 
+// Inserts a registration directly at the given status (bypasses Stripe); total is derived from tier prices, not passed in
 export async function createAdminRegistration(params: {
     eventId: string
     contactName: string

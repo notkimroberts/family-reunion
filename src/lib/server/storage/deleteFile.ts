@@ -8,6 +8,7 @@ import { getS3Client } from './_getS3Client'
 
 const LOCAL_UPLOAD_DIR = 'static/uploads'
 
+// Deletes file from local static/uploads in dev, or R2 via DeleteObjectCommand in production.
 export async function deleteFile(key: string): Promise<void> {
     dbg.storage('deleteFile key=%s', key)
 
