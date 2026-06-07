@@ -575,6 +575,17 @@ onDestroy(() => {
     overflow: hidden;
 }
 
+/* Break out of the layout's max-w-6xl container on wide screens so the tree
+   has room to breathe. Capped at 100rem so it doesn't span absurdly wide on
+   ultrawide monitors. */
+@media (min-width: 1024px) {
+    .family-tree-page {
+        width: min(calc(100vw - 2rem), 100rem);
+        margin-left: max(calc(-50vw + 50% + 1rem), calc(-50rem + 50%));
+        margin-right: auto;
+    }
+}
+
 .tree-container {
     width: 100%;
     height: 100%;
