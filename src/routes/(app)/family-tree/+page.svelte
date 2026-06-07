@@ -43,8 +43,8 @@ function handleMemberClick(id: string) {
    this ourselves instead of using family-chart's `tree_position: 'main_to_middle'`
    because chained updateTree calls schedule competing d3 transitions and the
    second one (with scale/position) gets clobbered by an interrupted transition. */
-const TARGET_SCALE = 0.8
-const TOP_MARGIN_PX = 140
+const TARGET_SCALE = 0.7
+const TOP_MARGIN_PX = 100
 
 type ZoomLike = {
     transform: (s: unknown, t: unknown) => unknown
