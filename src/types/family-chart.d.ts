@@ -7,10 +7,19 @@ declare module 'family-chart' {
         setCardInnerHtmlCreator(creator: (d: CardNode) => string): Chart
     }
 
+    interface UpdateTreeOptions {
+        initial?: boolean
+        transition_time?: number
+        tree_position?: 'fit' | 'main_to_middle' | 'inherit'
+        scale?: number
+    }
+
     interface Chart {
         setSingleParentEmptyCard(value: boolean): this
         setCardHtml(): CardHtml
-        updateTree(options?: { initial?: boolean }): this
+        updateTree(options?: UpdateTreeOptions): this
+        updateMainId(id: string): this
+        svg: SVGElement
         destroy?(): void
     }
 
