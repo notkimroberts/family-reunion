@@ -2,6 +2,8 @@
 export type RegistrationSessionMetadata = {
     type: 'registration'
     registrationId: string
+    /* Plaintext management token. The DB stores only the hash; this is the channel that carries the plaintext to the webhook so the confirmation email can include a working management URL. */
+    managementToken: string
 }
 
 // Stripe session metadata for an add-member checkout; all numeric fields are stored as strings per Stripe's metadata spec
@@ -10,6 +12,7 @@ export type AddMemberSessionMetadata = {
     registrationId: string
     memberName: string
     memberTierId: string
+    memberTierLabel: string
     memberBirthDate: string
     memberShirtSize: string
     memberPriceCents: string
@@ -23,6 +26,7 @@ export type AddMemberMetadataParams = {
     registrationId: string
     memberName: string
     memberTierId: string
+    memberTierLabel: string
     memberBirthDate?: string
     memberShirtSize?: string
     memberPriceCents: number

@@ -1,6 +1,6 @@
 export {
-    renderMagicLinkEmail,
     renderContactEmail,
     renderRegistrationConfirmation,
+    renderRecoveryEmail,
 } from './templates'
-export { sendMagicLinkEmail, sendContactEmail, sendRegistrationConfirmation } from './send'
+export { sendContactEmail, sendRegistrationConfirmation, sendRecoveryEmail } from './send'

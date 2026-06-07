@@ -1,6 +1,4 @@
 import { fail } from '@sveltejs/kit'
-import { db } from '$lib/server/db'
-import { contactSubmissions } from '$lib/server/db/schema'
 import { dbg } from '$lib/server/debug'
 import { sendContactEmail } from '$lib/server/email'
 import type { Actions } from './$types'
@@ -48,12 +46,6 @@ export const actions: Actions = {
         }
 
         dbg.contact('submission from=%s', email)
-
-        await db.insert(contactSubmissions).values({
-            name: name.trim(),
-            email: email.trim(),
-            message: message.trim(),
-        })
 
         await sendContactEmail({ name: name.trim(), email: email.trim() }, message.trim())
 

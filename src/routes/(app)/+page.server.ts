@@ -1,6 +1,6 @@
 import { eq, and, count } from 'drizzle-orm'
 import { db } from '$lib/server/db'
-import { reunionEvents, registrations, pricingTiers } from '$lib/server/db/schema'
+import { reunionEvents, registrations } from '$lib/server/db/schema'
 import type { PageServerLoad } from './$types'
 
 export const load: PageServerLoad = async () => {
@@ -17,7 +17,7 @@ export const load: PageServerLoad = async () => {
         .from(registrations)
         .where(and(eq(registrations.eventId, event.id), eq(registrations.status, 'paid')))
 
-    const tiers = await db.select().from(pricingTiers).where(eq(pricingTiers.eventId, event.id))
+    const tiers = [...event.pricingTiers].sort((a, b) => a.minAge - b.minAge)
 
     return { event, registrantCount, tiers }
 }

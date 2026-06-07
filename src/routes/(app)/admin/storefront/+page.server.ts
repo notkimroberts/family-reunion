@@ -2,13 +2,17 @@ import { fail } from '@sveltejs/kit'
 import { eq } from 'drizzle-orm'
 import { requireAdmin } from '$lib/server/auth/guards'
 import { db } from '$lib/server/db'
-import { storefrontConfig, type StorefrontProduct } from '$lib/server/db/schema'
+import { reunionEvents, type StorefrontProduct } from '$lib/server/db/schema'
 import type { PageServerLoad, Actions } from './$types'
 
 export const load: PageServerLoad = async (event) => {
     requireAdmin(event)
-    const [config] = await db.select().from(storefrontConfig).limit(1)
-    return { config: config ?? undefined }
+    const [openEvent] = await db
+        .select()
+        .from(reunionEvents)
+        .where(eq(reunionEvents.status, 'open'))
+        .limit(1)
+    return { event: openEvent ?? undefined }
 }
 
 export const actions: Actions = {
@@ -32,20 +36,25 @@ export const actions: Actions = {
             }
         }
 
-        const [existing] = await db.select().from(storefrontConfig).limit(1)
+        const [openEvent] = await db
+            .select({ id: reunionEvents.id })
+            .from(reunionEvents)
+            .where(eq(reunionEvents.status, 'open'))
+            .limit(1)
 
-        if (existing) {
-            await db
-                .update(storefrontConfig)
-                .set({ externalShopUrl, products, isActive, updatedAt: new Date() })
-                .where(eq(storefrontConfig.id, existing.id))
-        } else {
-            await db.insert(storefrontConfig).values({
-                externalShopUrl,
-                products,
-                isActive,
-            })
+        if (!openEvent) {
+            return fail(400, { error: 'No open event to attach the shop to' })
         }
+
+        await db
+            .update(reunionEvents)
+            .set({
+                externalShopUrl: externalShopUrl.trim(),
+                shopProducts: products,
+                shopActive: isActive,
+                updatedAt: new Date(),
+            })
+            .where(eq(reunionEvents.id, openEvent.id))
 
         return { success: true }
     },

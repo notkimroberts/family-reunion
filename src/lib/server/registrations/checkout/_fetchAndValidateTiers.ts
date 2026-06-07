@@ -1,15 +1,22 @@
 import { error } from '@sveltejs/kit'
 import { eq } from 'drizzle-orm'
 import { db } from '$lib/server/db'
-import { pricingTiers } from '$lib/server/db/schema'
+import { reunionEvents, type PricingTier } from '$lib/server/db/schema'
 
-// Fetches all pricing tiers for the event and throws 400 if any requested tierId is not among them
+/* Reads the event's pricing tier list (JSONB) and validates that every requested tierId exists; throws 400 on mismatch. */
 export async function fetchAndValidateTiers(
     eventId: string,
     tierIds: string[],
-): Promise<Map<string, typeof pricingTiers.$inferSelect>> {
-    const tiers = await db.select().from(pricingTiers).where(eq(pricingTiers.eventId, eventId))
-    const tierMap = new Map(tiers.map((t) => [t.id, t]))
+): Promise<Map<string, PricingTier>> {
+    const [event] = await db
+        .select({ pricingTiers: reunionEvents.pricingTiers })
+        .from(reunionEvents)
+        .where(eq(reunionEvents.id, eventId))
+        .limit(1)
+    if (!event) {
+        throw error(404, 'Event not found')
+    }
+    const tierMap = new Map(event.pricingTiers.map((t) => [t.id, t]))
     for (const id of tierIds) {
         if (!tierMap.has(id)) {
             throw error(400, 'Invalid pricing tier')

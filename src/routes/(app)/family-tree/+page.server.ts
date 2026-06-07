@@ -1,12 +1,8 @@
 import { fail } from '@sveltejs/kit'
-import { eq } from 'drizzle-orm'
+import { requireAdmin } from '$lib/server/auth/guards'
 import { db } from '$lib/server/db'
-import {
-    familyMembers,
-    familyMemberEdits,
-    relationships,
-    userProfiles,
-} from '$lib/server/db/schema'
+import { familyMembers, relationships } from '$lib/server/db/schema'
+import { validatePartialBirthDate } from '$lib/utils/age/validatePartialBirthDate'
 import type { PageServerLoad, Actions } from './$types'
 import { VALID_RELATIONSHIP_TYPES, type RelType } from './types'
 
@@ -18,23 +14,13 @@ export const load: PageServerLoad = async () => {
             birthYear: familyMembers.birthYear,
             birthMonth: familyMembers.birthMonth,
             birthDay: familyMembers.birthDay,
-            userId: familyMembers.userId,
-            profilePhotoUrl: userProfiles.profilePhotoUrl,
         })
         .from(familyMembers)
-        .leftJoin(userProfiles, eq(familyMembers.userId, userProfiles.userId))
 
     const rels = await db.select().from(relationships)
 
     return {
-        members: members.map((m) => ({
-            id: m.id,
-            name: m.name,
-            birthYear: m.birthYear,
-            birthMonth: m.birthMonth,
-            birthDay: m.birthDay,
-            photoUrl: m.profilePhotoUrl ?? undefined,
-        })),
+        members,
         relationships: rels.map((r) => ({
             from: r.fromMemberId,
             to: r.toMemberId,
@@ -44,20 +30,18 @@ export const load: PageServerLoad = async () => {
 }
 
 export const actions: Actions = {
-    addMember: async ({ request }) => {
-        const data = await request.formData()
+    addMember: async (event) => {
+        requireAdmin(event)
+        const data = await event.request.formData()
         const name = (data.get('name') as string)?.trim()
-        const birthDate = data.get('birthDate') as string | undefined
-        const editorName = (data.get('editorName') as string)?.trim()
-        const editorEmail = (data.get('editorEmail') as string)?.trim().toLowerCase()
+        const birthYearRaw = (data.get('birthYear') as string)?.trim()
+        const birthMonthRaw = (data.get('birthMonth') as string)?.trim()
+        const birthDayRaw = (data.get('birthDay') as string)?.trim()
         const relationshipType = (data.get('relationshipType') as string) || undefined
         const relatedMemberId = (data.get('relatedMemberId') as string) || undefined
 
         if (!name) {
             return fail(400, { error: 'Name is required' })
-        }
-        if (!editorName || !editorEmail) {
-            return fail(400, { error: 'Your name and email are required' })
         }
         if ((relationshipType && !relatedMemberId) || (!relationshipType && relatedMemberId)) {
             return fail(400, { error: 'Both relationship type and member are required together' })
@@ -66,15 +50,13 @@ export const actions: Actions = {
             return fail(400, { error: 'Invalid relationship type' })
         }
 
-        let birthYear: number | null = null
-        let birthMonth: number | null = null
-        let birthDay: number | null = null
+        const birthYear = birthYearRaw ? parseInt(birthYearRaw, 10) : null
+        const birthMonth = birthMonthRaw ? parseInt(birthMonthRaw, 10) : null
+        const birthDay = birthDayRaw ? parseInt(birthDayRaw, 10) : null
 
-        if (birthDate) {
-            const parts = birthDate.split('-').map(Number)
-            birthYear = parts[0] ?? null
-            birthMonth = parts[1] ?? null
-            birthDay = parts[2] ?? null
+        const birthError = validatePartialBirthDate(birthYear, birthMonth, birthDay)
+        if (birthError) {
+            return fail(400, { error: birthError })
         }
 
         const [member] = await db
@@ -82,19 +64,11 @@ export const actions: Actions = {
             .values({ name, birthYear, birthMonth, birthDay })
             .returning()
 
-        await db.insert(familyMemberEdits).values({
-            memberId: member.id,
-            editorName,
-            editorEmail,
-            snapshot: { name, birthYear, birthMonth, birthDay },
-        })
-
         if (relationshipType && relatedMemberId) {
             await db.insert(relationships).values({
                 fromMemberId: member.id,
                 toMemberId: relatedMemberId,
                 type: relationshipType as RelType,
-                createdByUserId: editorEmail,
             })
         }
 

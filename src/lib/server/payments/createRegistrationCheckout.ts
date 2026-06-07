@@ -1,39 +1,22 @@
+import { dbg } from '$lib/server/debug'
 import { getStripe } from '$lib/server/stripe'
 import { buildStripeLineItem } from './_buildStripeLineItem'
 import { encodeRegistrationMetadata } from './stripeMetadata'
 import type { RegistrationCheckoutParams, RegistrationCheckoutResult } from './types'
 
-// Creates a Stripe Checkout session for a full event registration with multiple line items
+/* Creates a Stripe Checkout session for a full event registration with multiple line items. */
 export async function createRegistrationCheckout(
     params: RegistrationCheckoutParams,
 ): Promise<RegistrationCheckoutResult> {
-    console.log(
-        '[stripe-debug] creating checkout, httpClient:',
-        (getStripe() as any)._httpClient?.constructor?.name ?? 'unknown',
-    )
-    let session
-    try {
-        session = await getStripe().checkout.sessions.create({
-            payment_method_types: ['card'],
-            line_items: params.lineItems.map(buildStripeLineItem),
-            mode: 'payment',
-            success_url: params.successUrl(params.registrationId),
-            cancel_url: params.cancelUrl(params.registrationId),
-            metadata: encodeRegistrationMetadata(params.registrationId),
-        })
-    } catch (err: any) {
-        console.error(
-            '[stripe-debug] checkout error:',
-            err?.type,
-            err?.message,
-            'detail:',
-            err?.detail,
-            'detail.code:',
-            err?.detail?.code,
-            'detail.message:',
-            err?.detail?.message,
-        )
-        throw err
-    }
+    const session = await getStripe().checkout.sessions.create({
+        payment_method_types: ['card'],
+        line_items: params.lineItems.map(buildStripeLineItem),
+        mode: 'payment',
+        customer_email: params.customerEmail,
+        success_url: params.successUrl(),
+        cancel_url: params.cancelUrl(),
+        metadata: encodeRegistrationMetadata(params.registrationId, params.managementToken),
+    })
+    dbg.stripe('created checkout session=%s for registration=%s', session.id, params.registrationId)
     return { url: session.url!, sessionId: session.id }
 }

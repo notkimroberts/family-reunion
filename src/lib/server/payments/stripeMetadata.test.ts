@@ -7,9 +7,13 @@ import {
 
 describe('encodeRegistrationMetadata / decode round-trip', () => {
     it('encodes and decodes a registration session', () => {
-        const encoded = encodeRegistrationMetadata('reg-123')
+        const encoded = encodeRegistrationMetadata('reg-123', 'plaintext-token')
         const decoded = decodeSessionMetadata(encoded)
-        expect(decoded).toEqual({ type: 'registration', registrationId: 'reg-123' })
+        expect(decoded).toEqual({
+            type: 'registration',
+            registrationId: 'reg-123',
+            managementToken: 'plaintext-token',
+        })
     })
 })
 
@@ -19,6 +23,7 @@ describe('encodeAddMemberMetadata / decode round-trip', () => {
             registrationId: 'reg-123',
             memberName: 'Alice',
             memberTierId: 'tier-1',
+            memberTierLabel: 'Adult',
             memberBirthDate: '1990-05-15',
             memberShirtSize: 'M',
             memberPriceCents: 5000,
@@ -29,6 +34,7 @@ describe('encodeAddMemberMetadata / decode round-trip', () => {
             registrationId: 'reg-123',
             memberName: 'Alice',
             memberTierId: 'tier-1',
+            memberTierLabel: 'Adult',
             memberBirthDate: '1990-05-15',
             memberShirtSize: 'M',
             memberPriceCents: '5000',
@@ -40,6 +46,7 @@ describe('encodeAddMemberMetadata / decode round-trip', () => {
             registrationId: 'reg-123',
             memberName: 'Bob',
             memberTierId: 'tier-2',
+            memberTierLabel: 'Child',
             memberPriceCents: 2500,
         })
         expect(encoded.memberBirthDate).toBe('')
@@ -51,6 +58,7 @@ describe('encodeAddMemberMetadata / decode round-trip', () => {
             registrationId: 'reg-123',
             memberName: 'Carol',
             memberTierId: 'tier-3',
+            memberTierLabel: 'Teen',
             memberPriceCents: 7500,
         })
         expect(encoded.memberPriceCents).toBe('7500')

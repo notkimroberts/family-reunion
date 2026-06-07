@@ -5,8 +5,7 @@ export type RegistrationMember = {
     birthMonth: number | null
     birthDay: number | null
     shirtSize: string | null
-    pricingTierId: string
-    stripePaymentIntentId: string | null
     tierLabel: string
     priceCents: number
+    stripePaymentIntentId: string | null
 }

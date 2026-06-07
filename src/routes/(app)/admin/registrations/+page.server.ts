@@ -22,7 +22,7 @@ export const actions: Actions = {
 
         const eventId = (data.get('eventId') as string)?.trim()
         const contactName = (data.get('contactName') as string)?.trim()
-        const contactEmail = (data.get('contactEmail') as string)?.trim().toLowerCase() || null
+        const contactEmail = (data.get('contactEmail') as string)?.trim().toLowerCase()
         const status = (data.get('status') as string)?.trim()
         const membersJson = data.get('members') as string
 
@@ -31,6 +31,9 @@ export const actions: Actions = {
         }
         if (!contactName) {
             return fail(400, { error: 'Contact name is required' })
+        }
+        if (!contactEmail) {
+            return fail(400, { error: 'Contact email is required' })
         }
         if (!['paid', 'pending', 'waived'].includes(status)) {
             return fail(400, { error: 'Invalid payment status' })

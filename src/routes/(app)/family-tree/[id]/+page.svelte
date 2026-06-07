@@ -1,8 +1,8 @@
 <script lang="ts">
 import { SvelteMap } from 'svelte/reactivity'
 import { enhance } from '$app/forms'
-import { DatePicker } from '$lib/components'
-import { Avatar, AvatarFallback, AvatarImage } from '$lib/components/ui/avatar'
+import { BirthDateInput } from '$lib/components'
+import { Avatar, AvatarFallback } from '$lib/components/ui/avatar'
 import {
     Breadcrumb,
     BreadcrumbItem,
@@ -12,7 +12,6 @@ import {
     BreadcrumbSeparator,
 } from '$lib/components/ui/breadcrumb'
 import { Button } from '$lib/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card'
 import {
     Dialog,
     DialogContent,
@@ -22,6 +21,7 @@ import {
 } from '$lib/components/ui/dialog'
 import { Input } from '$lib/components/ui/input'
 import { getAge, getInitials } from '$lib/utils'
+import { formatPartialBirthDate } from '$lib/utils/age'
 
 // [fromLabel, toLabel]: label when current member is 'from' side vs 'to' side
 const GROUP_LABELS: Record<string, [string, string]> = {
@@ -82,13 +82,21 @@ let groups = $derived.by(() => {
 })
 
 let editOpen = $state(false)
-let editBirthDate = $state<string | undefined>(
-    data.member.birthYear
-        ? `${data.member.birthYear}-${String(data.member.birthMonth ?? 1).padStart(2, '0')}-${String(data.member.birthDay ?? 1).padStart(2, '0')}`
-        : undefined,
-)
+let editBirthYear = $state<number | null>(data.member.birthYear)
+let editBirthMonth = $state<number | null>(data.member.birthMonth)
+let editBirthDay = $state<number | null>(data.member.birthDay)
 
 let isAdmin = $derived(data.user?.role === 'admin')
+
+/* Show "Born <date>" for partial dates; reserve "Age N" for the full-date case where it's accurate. */
+let memberBornLabel = $derived(
+    formatPartialBirthDate(data.member.birthYear, data.member.birthMonth, data.member.birthDay),
+)
+let memberAgeLabel = $derived(
+    data.member.birthYear && data.member.birthMonth && data.member.birthDay
+        ? `Age ${getAge(data.member.birthYear, data.member.birthMonth, data.member.birthDay)}`
+        : undefined,
+)
 </script>
 
 <svelte:head>
@@ -117,29 +125,44 @@ let isAdmin = $derived(data.user?.role === 'admin')
     <div class="flex items-start justify-between gap-4">
         <div class="flex items-center gap-4">
             <Avatar class="w-16 h-16 shrink-0">
-                {#if data.member.photoUrl}
-                    <AvatarImage src={data.member.photoUrl} alt={data.member.name} />
-                {/if}
                 <AvatarFallback class="bg-primary text-primary-foreground text-xl">
                     {getInitials(data.member.name)}
                 </AvatarFallback>
             </Avatar>
             <div>
                 <h1>{data.member.name}</h1>
-                {#if data.member.birthYear}
+                {#if memberBornLabel}
                     <p class="text-muted-foreground">
-                        Age {getAge(
-                            data.member.birthYear,
-                            data.member.birthMonth,
-                            data.member.birthDay,
-                        )}
+                        Born {memberBornLabel}{#if memberAgeLabel}
+                            · {memberAgeLabel}
+                        {/if}
                     </p>
                 {/if}
             </div>
         </div>
-        <Button variant="outline" size="sm" onclick={() => (editOpen = true)}>Edit</Button>
+        <Button variant="outline" size="sm" onclick={() => (editOpen = true)} disabled={!isAdmin}>
+            Edit
+        </Button>
     </div>
 </section>
+
+{#if data.attendances.length > 0}
+    <section class="col-span-12">
+        <p class="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+            Reunion attendance
+        </p>
+        <div class="flex flex-wrap gap-2">
+            {#each data.attendances as a (a.partyMemberId)}
+                <span
+                    class="inline-flex items-center gap-2 rounded-full border bg-card px-3 py-1 text-xs">
+                    <span class="font-medium">{a.eventYear}</span>
+                    <span class="text-muted-foreground">·</span>
+                    <span class="text-muted-foreground">{a.tierLabel}</span>
+                </span>
+            {/each}
+        </div>
+    </section>
+{/if}
 
 {#if groups.length === 0}
     <section class="col-span-12">
@@ -153,27 +176,23 @@ let isAdmin = $derived(data.user?.role === 'admin')
             </p>
             <div class="space-y-2">
                 {#each group.members as related}
+                    {@const relatedBorn = formatPartialBirthDate(
+                        related.birthYear,
+                        related.birthMonth,
+                        related.birthDay,
+                    )}
                     <a
                         href="/family-tree/{related.id}"
                         class="flex items-center gap-3 p-3 rounded-lg border bg-card hover:bg-accent transition-colors">
                         <Avatar class="w-9 h-9 shrink-0">
-                            {#if related.photoUrl}
-                                <AvatarImage src={related.photoUrl} alt={related.name} />
-                            {/if}
                             <AvatarFallback class="bg-primary text-primary-foreground text-sm">
                                 {getInitials(related.name)}
                             </AvatarFallback>
                         </Avatar>
                         <div>
                             <p class="font-medium text-sm">{related.name}</p>
-                            {#if related.birthYear}
-                                <p class="text-xs text-muted-foreground">
-                                    Age {getAge(
-                                        related.birthYear,
-                                        related.birthMonth,
-                                        related.birthDay,
-                                    )}
-                                </p>
+                            {#if relatedBorn}
+                                <p class="text-xs text-muted-foreground">Born {relatedBorn}</p>
                             {/if}
                         </div>
                     </a>
@@ -181,33 +200,6 @@ let isAdmin = $derived(data.user?.role === 'admin')
             </div>
         </section>
     {/each}
-{/if}
-
-{#if isAdmin && data.editHistory.length > 0}
-    <section class="col-span-12">
-        <Card>
-            <CardHeader>
-                <CardTitle class="text-sm">Edit History</CardTitle>
-            </CardHeader>
-            <CardContent class="space-y-2">
-                {#each data.editHistory as edit}
-                    <div
-                        class="flex items-center justify-between gap-4 rounded-lg border p-3 text-sm">
-                        <div>
-                            <p class="font-medium">{edit.snapshot.name}</p>
-                            <p class="text-xs text-muted-foreground">
-                                {edit.editorName} · {new Date(edit.createdAt).toLocaleDateString()}
-                            </p>
-                        </div>
-                        <form method="POST" action="?/restoreSnapshot" use:enhance>
-                            <input type="hidden" name="snapshotId" value={edit.id} />
-                            <Button type="submit" variant="ghost" size="sm">Restore</Button>
-                        </form>
-                    </div>
-                {/each}
-            </CardContent>
-        </Card>
-    </section>
 {/if}
 
 <!-- Edit member dialog -->
@@ -234,32 +226,27 @@ let isAdmin = $derived(data.user?.role === 'admin')
                 <Input id="editName" name="name" type="text" value={data.member.name} required />
             </div>
             <div class="space-y-2">
-                <label for="editBirthDate" class="text-sm font-medium">Birthday</label>
-                <input type="hidden" name="birthDate" value={editBirthDate ?? ''} />
-                <DatePicker id="editBirthDate" bind:value={editBirthDate} placeholder="Optional" />
-            </div>
-            <div class="border-t pt-4 space-y-3">
-                <p class="text-xs text-muted-foreground">Your details (for the edit log)</p>
-                <div class="space-y-2">
-                    <label for="editEditorName" class="text-sm font-medium"
-                        >Your name <span class="text-destructive">*</span></label>
-                    <Input
-                        id="editEditorName"
-                        name="editorName"
-                        type="text"
-                        placeholder="Your name"
-                        required />
-                </div>
-                <div class="space-y-2">
-                    <label for="editEditorEmail" class="text-sm font-medium"
-                        >Your email <span class="text-destructive">*</span></label>
-                    <Input
-                        id="editEditorEmail"
-                        name="editorEmail"
-                        type="email"
-                        placeholder="you@example.com"
-                        required />
-                </div>
+                <span class="text-sm font-medium">Birthday</span>
+                <p class="text-xs text-muted-foreground">
+                    Year only is fine for ancestors when month/day aren't known.
+                </p>
+                <input
+                    type="hidden"
+                    name="birthYear"
+                    value={editBirthYear !== null ? String(editBirthYear) : ''} />
+                <input
+                    type="hidden"
+                    name="birthMonth"
+                    value={editBirthMonth !== null ? String(editBirthMonth) : ''} />
+                <input
+                    type="hidden"
+                    name="birthDay"
+                    value={editBirthDay !== null ? String(editBirthDay) : ''} />
+                <BirthDateInput
+                    idPrefix="edit-bday"
+                    bind:year={editBirthYear}
+                    bind:month={editBirthMonth}
+                    bind:day={editBirthDay} />
             </div>
             <DialogFooter>
                 <Button type="button" variant="ghost" onclick={() => (editOpen = false)}

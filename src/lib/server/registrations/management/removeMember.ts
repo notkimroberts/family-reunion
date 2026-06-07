@@ -1,46 +1,63 @@
 import { error } from '@sveltejs/kit'
-import { and, eq, sql } from 'drizzle-orm'
+import { eq } from 'drizzle-orm'
 import { db } from '$lib/server/db'
-import { partyMembers, pricingTiers, registrations } from '$lib/server/db/schema'
+import { partyMembers, registrations } from '$lib/server/db/schema'
 import { dbg } from '$lib/server/debug'
 import { refundPaymentIntent, retrieveSessionPaymentIntent } from '$lib/server/payments'
+import { hashManagementToken } from '../hashManagementToken'
 
-// Issues a partial refund for the member's tier price, deletes the member row, then marks the registration 'refunded' if no members remain or decrements totalAmountCents otherwise.
-export async function removeMember(memberId: string, userId: string): Promise<void> {
+/* Issues a partial refund for the member's recorded price (using the member id as a Stripe
+   idempotency key so retries cannot double-refund), deletes the member row, then marks the
+   registration 'refunded' if no members remain. If the refund fails the member row is NOT
+   deleted — the action errors and the registrant can retry safely. Token-gated (compared
+   by hash): 403 on mismatch. */
+export async function removeMember(memberId: string, managementToken: string): Promise<void> {
+    const tokenHash = hashManagementToken(managementToken)
     const [member] = await db
         .select({
             id: partyMembers.id,
             registrationId: partyMembers.registrationId,
             stripePaymentIntentId: partyMembers.stripePaymentIntentId,
-            priceCents: pricingTiers.priceCents,
-            registrationUserId: registrations.userId,
+            priceCents: partyMembers.priceCents,
+            registrationToken: registrations.managementToken,
             registrationStripeSessionId: registrations.stripeSessionId,
         })
         .from(partyMembers)
-        .innerJoin(pricingTiers, eq(partyMembers.pricingTierId, pricingTiers.id))
         .innerJoin(registrations, eq(partyMembers.registrationId, registrations.id))
         .where(eq(partyMembers.id, memberId))
         .limit(1)
 
-    if (!member || member.registrationUserId !== userId) {
+    if (!member || member.registrationToken !== tokenHash) {
         throw error(403)
     }
 
-    try {
-        let paymentIntentId = member.stripePaymentIntentId
-        if (!paymentIntentId && member.registrationStripeSessionId) {
+    let paymentIntentId = member.stripePaymentIntentId
+    if (!paymentIntentId && member.registrationStripeSessionId) {
+        try {
             paymentIntentId = await retrieveSessionPaymentIntent(member.registrationStripeSessionId)
+        } catch (err) {
+            dbg.register('could not retrieve payment intent for member=%s: %o', memberId, err)
         }
-        if (paymentIntentId) {
-            await refundPaymentIntent(paymentIntentId, member.priceCents)
+    }
+
+    if (paymentIntentId) {
+        try {
+            /* Idempotency key: same memberId always refunds the same amount; Stripe returns
+               the prior refund on retry instead of issuing a second one. */
+            await refundPaymentIntent(
+                paymentIntentId,
+                member.priceCents,
+                `remove-member-${memberId}`,
+            )
             dbg.register(
                 'partial refund issued for member=%s amount=%d',
                 memberId,
                 member.priceCents,
             )
+        } catch (err) {
+            dbg.register('refund failed for member=%s: %o', memberId, err)
+            throw error(502, 'Refund failed; please try again')
         }
-    } catch (err) {
-        dbg.register('refund failed for member=%s: %o', memberId, err)
     }
 
     await db.delete(partyMembers).where(eq(partyMembers.id, memberId))
@@ -54,16 +71,13 @@ export async function removeMember(memberId: string, userId: string): Promise<vo
     if (!anyRemaining) {
         await db
             .update(registrations)
-            .set({ status: 'refunded', totalAmountCents: 0, updatedAt: new Date() })
+            .set({ status: 'refunded', updatedAt: new Date() })
             .where(eq(registrations.id, member.registrationId))
         dbg.register('last member removed, registration %s marked refunded', member.registrationId)
     } else {
         await db
             .update(registrations)
-            .set({
-                totalAmountCents: sql`${registrations.totalAmountCents} - ${member.priceCents}`,
-                updatedAt: new Date(),
-            })
+            .set({ updatedAt: new Date() })
             .where(eq(registrations.id, member.registrationId))
     }
 }

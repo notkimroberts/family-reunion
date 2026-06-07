@@ -37,7 +37,6 @@ export type RemovableMember = {
 export type RegistrationDetails = {
     id: string
     status: string
-    totalAmountCents: number
     stripeSessionId: string | null
 }
 

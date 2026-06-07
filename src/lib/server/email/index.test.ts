@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { sendRegistrationConfirmation, sendMagicLinkEmail, sendContactEmail } from './index'
+import { sendRegistrationConfirmation, sendContactEmail, sendRecoveryEmail } from './index'
 
 const { mockEnv } = vi.hoisted(() => ({
     mockEnv: { RESEND_API_KEY: undefined as string | undefined, ADMIN_EMAIL: 'admin@example.com' },
@@ -24,6 +24,7 @@ const confirmData = {
     eventTitle: 'Family Reunion 2026',
     partyMembers: ['Alice (Adult)', 'Bob (Child)'],
     totalAmount: '$50.00',
+    manageUrl: 'https://example.com/register/manage?token=tok-abc',
 }
 
 describe('email module', () => {
@@ -43,8 +44,11 @@ describe('email module', () => {
             expect(mockEmailSend).not.toHaveBeenCalled()
         })
 
-        it('sendMagicLinkEmail returns without calling send', async () => {
-            await sendMagicLinkEmail('test@example.com', 'https://example.com/magic-link')
+        it('sendRecoveryEmail returns without calling send', async () => {
+            await sendRecoveryEmail('test@example.com', {
+                eventTitle: 'Family Reunion 2026',
+                manageUrl: 'https://example.com/register/manage?token=tok-abc',
+            })
             expect(mockEmailSend).not.toHaveBeenCalled()
         })
 
@@ -76,27 +80,25 @@ describe('email module', () => {
             )
         })
 
-        it('sendRegistrationConfirmation includes party members and total in body', async () => {
+        it('sendRegistrationConfirmation includes party members, total, and manage link', async () => {
             await sendRegistrationConfirmation('test@example.com', confirmData)
             const [payload] = mockEmailSend.mock.calls[0]
             expect(payload.text).toContain('Alice (Adult)')
             expect(payload.text).toContain('Bob (Child)')
             expect(payload.text).toContain('$50.00')
+            expect(payload.text).toContain('https://example.com/register/manage?token=tok-abc')
         })
 
-        it('sendMagicLinkEmail sends to the given address', async () => {
-            await sendMagicLinkEmail('test@example.com', 'https://example.com/magic-link')
+        it('sendRecoveryEmail sends the manage URL to the given address', async () => {
+            const manageUrl = 'https://example.com/register/manage?token=tok-xyz'
+            await sendRecoveryEmail('test@example.com', {
+                eventTitle: 'Family Reunion 2026',
+                manageUrl,
+            })
             expect(mockEmailSend).toHaveBeenCalledOnce()
-            expect(mockEmailSend).toHaveBeenCalledWith(
-                expect.objectContaining({ to: 'test@example.com' }),
-            )
-        })
-
-        it('sendMagicLinkEmail includes the magic link URL in the body', async () => {
-            const url = 'https://example.com/magic-link?token=abc123'
-            await sendMagicLinkEmail('test@example.com', url)
             const [payload] = mockEmailSend.mock.calls[0]
-            expect(payload.text).toContain(url)
+            expect(payload.to).toBe('test@example.com')
+            expect(payload.text).toContain(manageUrl)
         })
 
         it('sendContactEmail sends to ADMIN_EMAIL', async () => {

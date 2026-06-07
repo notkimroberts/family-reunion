@@ -1,4 +1,4 @@
-import { eq, sql } from 'drizzle-orm'
+import { and, eq } from 'drizzle-orm'
 import type Stripe from 'stripe'
 import { db } from '$lib/server/db'
 import { partyMembers, registrations, reunionEvents } from '$lib/server/db/schema'
@@ -8,23 +8,66 @@ import { decodeSessionMetadata } from '$lib/server/payments'
 import { formatPrice } from '$lib/utils'
 import { getAge, parseBirthDate } from '$lib/utils/age'
 
-// Webhook handler: branches on metadata.type to either insert an add_member row or mark the registration 'paid'; confirmation email is sent outside the transaction so a send failure never rolls back payment
-export async function fulfillCheckout(session: Stripe.Checkout.Session): Promise<void> {
+/* Webhook handler: branches on metadata.type to either insert an add_member row or mark the registration 'paid'; confirmation email is sent outside the transaction so a send failure never rolls back payment. Both branches are idempotent — Stripe redelivers checkout.session.completed events on transient failures. */
+export async function fulfillCheckout(
+    session: Stripe.Checkout.Session,
+    origin: string,
+): Promise<void> {
     const paymentIntentId =
         typeof session.payment_intent === 'string' ? session.payment_intent : null
 
     const metadata = decodeSessionMetadata(session.metadata)
     if (!metadata) {
-        dbg.stripe('checkout.session.completed but no registrationId in metadata')
+        dbg.stripe('checkout.session.completed but no/invalid metadata')
         return
     }
 
     if (metadata.type === 'add_member') {
-        const { registrationId, memberName, memberTierId, memberBirthDate, memberShirtSize } =
+        const { registrationId, memberName, memberTierLabel, memberBirthDate, memberShirtSize } =
             metadata
         const memberPriceCents = parseInt(metadata.memberPriceCents, 10)
 
         dbg.stripe('add_member registrationId=%s member=%s', registrationId, memberName)
+
+        /* Reject add_member on a refunded registration — token may still be valid but the
+           registration is closed. Caller should have caught this server-side; this is a
+           defense for the case where state changed between checkout creation and webhook. */
+        const [parent] = await db
+            .select({ status: registrations.status })
+            .from(registrations)
+            .where(eq(registrations.id, registrationId))
+            .limit(1)
+        if (!parent) {
+            dbg.stripe('add_member webhook for missing registration %s; ignoring', registrationId)
+            return
+        }
+        if (parent.status !== 'paid' && parent.status !== 'waived') {
+            dbg.stripe(
+                'add_member webhook for registration %s in status=%s; ignoring',
+                registrationId,
+                parent.status,
+            )
+            return
+        }
+
+        /* Idempotency: Stripe retries deliver the same paymentIntent. Skip insert if already present. */
+        if (paymentIntentId) {
+            const [existing] = await db
+                .select({ id: partyMembers.id })
+                .from(partyMembers)
+                .where(
+                    and(
+                        eq(partyMembers.registrationId, registrationId),
+                        eq(partyMembers.stripePaymentIntentId, paymentIntentId),
+                        eq(partyMembers.name, memberName),
+                    ),
+                )
+                .limit(1)
+            if (existing) {
+                dbg.stripe('add_member redelivery; party_member already exists id=%s', existing.id)
+                return
+            }
+        }
 
         await db.transaction(async (tx) => {
             const parsed = memberBirthDate ? parseBirthDate(memberBirthDate) : null
@@ -35,47 +78,52 @@ export async function fulfillCheckout(session: Stripe.Checkout.Session): Promise
                 birthMonth: parsed?.birthMonth ?? null,
                 birthDay: parsed?.birthDay ?? null,
                 shirtSize: memberShirtSize || null,
-                pricingTierId: memberTierId,
+                tierLabel: memberTierLabel,
+                priceCents: memberPriceCents,
                 stripePaymentIntentId: paymentIntentId,
             })
             await tx
                 .update(registrations)
-                .set({
-                    totalAmountCents: sql`${registrations.totalAmountCents} + ${memberPriceCents}`,
-                    updatedAt: new Date(),
-                })
+                .set({ updatedAt: new Date() })
                 .where(eq(registrations.id, registrationId))
         })
         return
     }
 
-    const { registrationId } = metadata
+    const { registrationId, managementToken } = metadata
 
     dbg.stripe('checkout.session.completed registrationId=%s', registrationId)
 
-    await db.transaction(async (tx) => {
-        await tx
-            .update(registrations)
-            .set({ status: 'paid', updatedAt: new Date() })
-            .where(eq(registrations.id, registrationId))
+    /* Use returning() so we can detect the orphan-payment case where the registration was
+       deleted (or never existed) between checkout creation and webhook arrival. */
+    const updated = await db
+        .update(registrations)
+        .set({ status: 'paid', updatedAt: new Date() })
+        .where(eq(registrations.id, registrationId))
+        .returning({ id: registrations.id })
 
-        if (paymentIntentId) {
-            await tx
-                .update(partyMembers)
-                .set({ stripePaymentIntentId: paymentIntentId })
-                .where(eq(partyMembers.registrationId, registrationId))
-            dbg.stripe(
-                'backfilled payment_intent on party members for registration %s',
-                registrationId,
-            )
-        }
-    })
+    if (updated.length === 0) {
+        dbg.stripe(
+            'ORPHAN PAYMENT: webhook for registrationId=%s but no DB row exists. Stripe charge is captured.',
+            registrationId,
+        )
+        return
+    }
 
-    // Email outside the transaction — a transient email failure should not roll back payment
+    if (paymentIntentId) {
+        await db
+            .update(partyMembers)
+            .set({ stripePaymentIntentId: paymentIntentId })
+            .where(eq(partyMembers.registrationId, registrationId))
+        dbg.stripe('backfilled payment_intent on party members for registration %s', registrationId)
+    }
+
+    /* Email outside the transaction — a transient email failure should not roll back payment. */
     const [registration] = await db
         .select({
             eventId: registrations.eventId,
-            totalAmountCents: registrations.totalAmountCents,
+            contactName: registrations.contactName,
+            contactEmail: registrations.contactEmail,
         })
         .from(registrations)
         .where(eq(registrations.id, registrationId))
@@ -84,33 +132,48 @@ export async function fulfillCheckout(session: Stripe.Checkout.Session): Promise
     }
 
     const [[reunionEvent], members] = await Promise.all([
-        db.select().from(reunionEvents).where(eq(reunionEvents.id, registration.eventId)),
-        db.select().from(partyMembers).where(eq(partyMembers.registrationId, registrationId)),
+        db
+            .select({ title: reunionEvents.title })
+            .from(reunionEvents)
+            .where(eq(reunionEvents.id, registration.eventId)),
+        db
+            .select({
+                name: partyMembers.name,
+                birthYear: partyMembers.birthYear,
+                birthMonth: partyMembers.birthMonth,
+                birthDay: partyMembers.birthDay,
+                shirtSize: partyMembers.shirtSize,
+                priceCents: partyMembers.priceCents,
+            })
+            .from(partyMembers)
+            .where(eq(partyMembers.registrationId, registrationId)),
     ])
     if (!reunionEvent) {
         return
     }
 
+    const totalAmountCents = members.reduce((sum, m) => sum + m.priceCents, 0)
+    /* Plaintext token came through Stripe metadata; the DB only ever holds the hash. */
+    const manageUrl = `${origin}/register/manage?token=${managementToken}`
+
     dbg.stripe('sending confirmation email for registration %s', registrationId)
     try {
-        await sendRegistrationConfirmation(
-            session.customer_details?.email ?? session.customer_email ?? '',
-            {
-                name: session.customer_details?.name ?? 'Family Member',
-                eventTitle: reunionEvent.title,
-                partyMembers: members.map((m) => {
-                    const extras: string[] = []
-                    if (m.birthYear) {
-                        extras.push(`age ${getAge(m.birthYear, m.birthMonth, m.birthDay)}`)
-                    }
-                    if (m.shirtSize) {
-                        extras.push(`shirt ${m.shirtSize}`)
-                    }
-                    return extras.length > 0 ? `${m.name} (${extras.join(', ')})` : m.name
-                }),
-                totalAmount: `$${formatPrice(registration.totalAmountCents)}`,
-            },
-        )
+        await sendRegistrationConfirmation(registration.contactEmail, {
+            name: registration.contactName,
+            eventTitle: reunionEvent.title,
+            partyMembers: members.map((m) => {
+                const extras: string[] = []
+                if (m.birthYear) {
+                    extras.push(`age ${getAge(m.birthYear, m.birthMonth, m.birthDay)}`)
+                }
+                if (m.shirtSize) {
+                    extras.push(`shirt ${m.shirtSize}`)
+                }
+                return extras.length > 0 ? `${m.name} (${extras.join(', ')})` : m.name
+            }),
+            totalAmount: `$${formatPrice(totalAmountCents)}`,
+            manageUrl,
+        })
     } catch (err) {
         dbg.stripe('confirmation email failed for registration %s: %o', registrationId, err)
     }

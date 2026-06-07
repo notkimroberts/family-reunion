@@ -15,9 +15,11 @@ import { formatPrice } from '$lib/utils'
 import type { RemovableMember } from './types'
 
 let {
+    token,
     member,
     open = $bindable(false),
 }: {
+    token: string
     member: RemovableMember
     open: boolean
 } = $props()
@@ -64,6 +66,7 @@ $effect(() => {
                                 open = false
                             }
                         }}>
+                    <input type="hidden" name="token" value={token} />
                     <input type="hidden" name="memberId" value={member.id} />
                     <AlertDialogAction
                         type="submit"

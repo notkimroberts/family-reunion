@@ -5,7 +5,7 @@ import { fulfillCheckout } from '$lib/server/registrations'
 import { getStripe } from '$lib/server/stripe'
 import type { RequestHandler } from './$types'
 
-export const POST: RequestHandler = async ({ request }) => {
+export const POST: RequestHandler = async ({ request, url }) => {
     const body = await request.text()
     const signature = request.headers.get('stripe-signature')
 
@@ -25,7 +25,7 @@ export const POST: RequestHandler = async ({ request }) => {
     dbg.stripe('webhook event type=%s', event.type)
 
     if (event.type === 'checkout.session.completed') {
-        await fulfillCheckout(event.data.object as Stripe.Checkout.Session)
+        await fulfillCheckout(event.data.object as Stripe.Checkout.Session, url.origin)
     }
 
     return new Response('OK', { status: 200 })

@@ -13,9 +13,11 @@ import {
 import { Button } from '$lib/components/ui/button'
 
 let {
+    token,
     registrationId,
     open = $bindable(false),
 }: {
+    token: string
     registrationId: string
     open: boolean
 } = $props()
@@ -54,6 +56,7 @@ $effect(() => {
             <AlertDialogFooter>
                 <Button variant="outline" onclick={() => (step = 1)}>Go back</Button>
                 <form method="POST" action="?/cancel" use:enhance>
+                    <input type="hidden" name="token" value={token} />
                     <input type="hidden" name="registrationId" value={registrationId} />
                     <AlertDialogAction
                         type="submit"

@@ -1,6 +1,5 @@
 export type { MemberInput } from './MemberInput'
 export { calculateTotal } from './calculateTotal'
-export { deleteOwnPendingRegistrations } from './deleteOwnPendingRegistrations'
 export { createPendingRegistration } from './createPendingRegistration'
 export { addMember } from './addMember'
 export { createAdminRegistration } from './createAdminRegistration'

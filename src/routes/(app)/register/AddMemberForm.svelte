@@ -11,11 +11,13 @@ import { formatPrice } from '$lib/utils'
 import type { RegistrationPricingTier } from './types'
 
 let {
+    token,
     registrationId,
     tiers,
     shirtsEnabled,
     onCancel,
 }: {
+    token: string
     registrationId: string
     tiers: RegistrationPricingTier[]
     shirtsEnabled: boolean
@@ -46,6 +48,7 @@ let submitting = $state(false)
                     }
                 }
             }}>
+            <input type="hidden" name="token" value={token} />
             <input type="hidden" name="registrationId" value={registrationId} />
             <input type="hidden" name="birthDate" value={birthDate ?? ''} />
 

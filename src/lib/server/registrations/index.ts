@@ -5,16 +5,21 @@ export {
     addMember,
     createAdminRegistration,
     fulfillCheckout,
-    deleteOwnPendingRegistrations,
 } from './checkout'
 
-export { removeMember, cancelRegistration, updateMemberDetails } from './management'
+export {
+    removeMember,
+    cancelRegistration,
+    updateMemberDetails,
+    linkPartyMember,
+} from './management'
 
 export type { RegistrationMember } from './queries'
 export {
     getOpenEvent,
     getEventTiers,
-    getRegistration,
+    getRegistrationByToken,
+    getRegistrationsByEmail,
     getRegistrationWithEvent,
     getRegistrationMembers,
     getRegistrationStatus,
