@@ -1,4 +1,5 @@
 <script lang="ts">
+import { CalendarDays, MapPin, Sparkles } from '@lucide/svelte'
 import { SvelteMap } from 'svelte/reactivity'
 import { superForm } from 'sveltekit-superforms'
 import { zod4Client as zodClient } from 'sveltekit-superforms/adapters'
@@ -75,6 +76,27 @@ let canSubmit = $derived(
         !!selfTierId &&
         !!selfBirthDate,
 )
+
+let dateRange = $derived.by(() => {
+    if (!data.event?.startDate) {
+        return ''
+    }
+    const start = new Date(data.event.startDate)
+    const end = data.event.endDate ? new Date(data.event.endDate) : start
+    const sameMonth =
+        start.getMonth() === end.getMonth() && start.getFullYear() === end.getFullYear()
+    const startLabel = start.toLocaleDateString('en-US', {
+        month: 'long',
+        day: 'numeric',
+        ...(sameMonth ? {} : { year: undefined }),
+    })
+    const endLabel = end.toLocaleDateString('en-US', {
+        month: sameMonth ? undefined : 'long',
+        day: 'numeric',
+        year: 'numeric',
+    })
+    return start.getTime() === end.getTime() ? endLabel : `${startLabel} – ${endLabel}`
+})
 </script>
 
 <svelte:head>
@@ -92,25 +114,37 @@ let canSubmit = $derived(
 {:else}
     <!-- Event hero banner -->
     <section class="col-span-12">
-        <div class="rounded-xl border bg-card px-6 py-8 text-center">
-            <h1 class="text-2xl">{data.event.title}</h1>
-            {#if data.event.startDate}
-                <p class="text-sm text-muted-foreground mt-1">
-                    {new Date(data.event.startDate).toLocaleDateString('en-US', {
-                        month: 'long',
-                        day: 'numeric',
-                        year: 'numeric',
-                    })}
-                    {#if data.event.endDate}
-                        –
-                        {new Date(data.event.endDate).toLocaleDateString('en-US', {
-                            month: 'long',
-                            day: 'numeric',
-                            year: 'numeric',
-                        })}
+        <div class="rounded-xl border bg-card shadow-xs">
+            <div class="flex flex-col items-center px-6 py-10 text-center md:px-10 md:py-14">
+                <span
+                    class="inline-flex items-center gap-1.5 rounded-full border bg-card px-3 py-1 text-[11px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
+                    <Sparkles class="h-3 w-3 text-primary" />
+                    Family Reunion {data.event.year}
+                </span>
+
+                <h1 class="mt-4 text-3xl font-bold tracking-tight md:text-4xl lg:text-5xl">
+                    {data.event.title}
+                </h1>
+
+                <div class="mt-4 h-px w-12 bg-primary/40"></div>
+
+                <div
+                    class="mt-5 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-sm text-muted-foreground">
+                    {#if dateRange}
+                        <span class="inline-flex items-center gap-1.5">
+                            <CalendarDays class="h-4 w-4 text-primary/70" />
+                            {dateRange}
+                        </span>
                     {/if}
-                </p>
-            {/if}
+                    {#if data.event.venue?.name}
+                        <span class="hidden h-1 w-1 rounded-full bg-border md:inline-block"></span>
+                        <span class="inline-flex items-center gap-1.5">
+                            <MapPin class="h-4 w-4 text-primary/70" />
+                            {data.event.venue.name}
+                        </span>
+                    {/if}
+                </div>
+            </div>
         </div>
     </section>
 
