@@ -60,6 +60,8 @@ EXCEPTION WHEN undefined_object THEN NULL;
 END $$;
 --> statement-breakpoint
 ALTER TABLE "photos" ALTER COLUMN "uploaded_by_user_id" DROP NOT NULL;--> statement-breakpoint
+-- Null out photo uploader refs that no longer match a user row, so the FK can be added.
+UPDATE "photos" SET "uploaded_by_user_id" = NULL WHERE "uploaded_by_user_id" IS NOT NULL AND "uploaded_by_user_id" NOT IN (SELECT "id" FROM "user");--> statement-breakpoint
 DROP TABLE IF EXISTS "contact_submissions" CASCADE;--> statement-breakpoint
 DROP TABLE IF EXISTS "family_member_edits" CASCADE;--> statement-breakpoint
 DROP TABLE IF EXISTS "pricing_tiers" CASCADE;--> statement-breakpoint

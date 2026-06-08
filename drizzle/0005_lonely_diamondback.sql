@@ -1,3 +1,4 @@
+CREATE EXTENSION IF NOT EXISTS pgcrypto;--> statement-breakpoint
 DROP TABLE IF EXISTS "user_profiles" CASCADE;--> statement-breakpoint
 -- Backfill any NULL contact fields before tightening constraints.
 UPDATE "registrations" SET "contact_name" = '' WHERE "contact_name" IS NULL;--> statement-breakpoint
