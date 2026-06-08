@@ -33,6 +33,20 @@ let selfTierId = $state('')
 let selfBirthDate = $state<string | undefined>(undefined)
 let selfShirtSize = $state('')
 
+/* Split the initial contactName (server-prefilled if user is logged in) into first/last
+   on first space. The two visible inputs are the source of truth; we send a derived
+   "First Last" through a hidden input named contactName, so the schema/server stay
+   identical to before. */
+const initialName = $form.contactName.trim()
+const initialFirstSpace = initialName.indexOf(' ')
+let selfFirstName = $state(
+    initialFirstSpace === -1 ? initialName : initialName.slice(0, initialFirstSpace),
+)
+let selfLastName = $state(
+    initialFirstSpace === -1 ? '' : initialName.slice(initialFirstSpace + 1).trim(),
+)
+let contactName = $derived(`${selfFirstName.trim()} ${selfLastName.trim()}`.trim())
+
 /* Auto-select tier from birthday */
 $effect(() => {
     if (selfBirthDate) {
@@ -129,7 +143,11 @@ let processingFee = $derived(
 )
 let total = $derived(subtotal + processingFee)
 let canSubmit = $derived(
-    !!$form.contactName.trim() && !!$form.contactEmail.trim() && !!selfTierId && !!selfBirthDate,
+    !!selfFirstName.trim() &&
+        !!selfLastName.trim() &&
+        !!$form.contactEmail.trim() &&
+        !!selfTierId &&
+        !!selfBirthDate,
 )
 </script>
 
@@ -177,6 +195,7 @@ let canSubmit = $derived(
 
     <form method="POST" action="?/register" use:enhance class="col-span-12">
         <input type="hidden" name="eventId" bind:value={$form.eventId} />
+        <input type="hidden" name="contactName" value={contactName} />
         <input type="hidden" name="selfTierId" bind:value={$form.selfTierId} />
         <input type="hidden" name="selfBirthDate" bind:value={$form.selfBirthDate} />
         <input type="hidden" name="selfShirtSize" bind:value={$form.selfShirtSize} />
@@ -194,18 +213,29 @@ let canSubmit = $derived(
                         </CardTitle>
                     </CardHeader>
                     <CardContent class="space-y-4">
-                        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                        <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
                             <div class="space-y-1.5">
-                                <label for="contactName" class="text-sm font-medium">
-                                    Your name <span class="text-destructive">*</span>
+                                <label for="contactFirstName" class="text-sm font-medium">
+                                    First name <span class="text-destructive">*</span>
                                 </label>
                                 <Input
-                                    id="contactName"
-                                    name="contactName"
+                                    id="contactFirstName"
                                     type="text"
-                                    bind:value={$form.contactName}
-                                    placeholder="First Last"
-                                    autocomplete="name"
+                                    bind:value={selfFirstName}
+                                    placeholder="First"
+                                    autocomplete="given-name"
+                                    required />
+                            </div>
+                            <div class="space-y-1.5">
+                                <label for="contactLastName" class="text-sm font-medium">
+                                    Last name <span class="text-destructive">*</span>
+                                </label>
+                                <Input
+                                    id="contactLastName"
+                                    type="text"
+                                    bind:value={selfLastName}
+                                    placeholder="Last"
+                                    autocomplete="family-name"
                                     required />
                                 {#if $errors.contactName?.[0]}
                                     <p class="text-sm text-destructive">
@@ -231,14 +261,6 @@ let canSubmit = $derived(
                                     </p>
                                 {/if}
                             </div>
-                        </div>
-
-                        <div
-                            class="flex items-center gap-2 rounded-md bg-muted/50 border px-3 py-2">
-                            <span class="font-medium text-sm flex-1">
-                                {$form.contactName || 'You'}
-                            </span>
-                            <Badge variant="secondary" class="text-xs shrink-0">You</Badge>
                         </div>
 
                         <div
@@ -432,7 +454,7 @@ let canSubmit = $derived(
                             <div class="space-y-2">
                                 <div class="flex items-center justify-between text-sm">
                                     <span>
-                                        {$form.contactName || 'You'}
+                                        {contactName || 'You'}
                                         <span class="text-muted-foreground text-xs">(you)</span>
                                     </span>
                                     <span class="tabular-nums">
