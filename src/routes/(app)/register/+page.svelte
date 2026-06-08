@@ -14,6 +14,7 @@ import { Separator } from '$lib/components/ui/separator'
 import { APP_NAME, SHIRT_SIZES } from '$lib/general/constants'
 import { formatPrice } from '$lib/utils'
 import { parseBirthDate } from '$lib/utils/age'
+import { stripeFeeCents } from '$lib/utils/stripeFee'
 import { getDefaultTierId, getTierLabel, getTierPrice, getMemberAge } from './pricingUtils'
 import { registrationSchema } from './schema'
 import type { FormMember } from './types'
@@ -115,10 +116,18 @@ function handleRemoveMember(index: number) {
 }
 
 let selfTier = $derived(selfTierId ? tierMap.get(selfTierId) : undefined)
-let total = $derived(
+/* Subtotal in net cents (sum of selected tier prices). */
+let subtotal = $derived(
     (selfTier?.priceCents ?? 0) +
         members.reduce((sum, m) => sum + (tierMap.get(m.tierId)?.priceCents ?? 0), 0),
 )
+/* Fee is the sum of per-member gross-ups so it never disagrees with what Stripe will
+   actually charge (server uses the same per-member gross-up). */
+let processingFee = $derived(
+    stripeFeeCents(selfTier?.priceCents ?? 0) +
+        members.reduce((sum, m) => sum + stripeFeeCents(tierMap.get(m.tierId)?.priceCents ?? 0), 0),
+)
+let total = $derived(subtotal + processingFee)
 let canSubmit = $derived(
     !!$form.contactName.trim() && !!$form.contactEmail.trim() && !!selfTierId && !!selfBirthDate,
 )
@@ -437,6 +446,19 @@ let canSubmit = $derived(
                                             >${getTierPrice(tierMap, member.tierId)}</span>
                                     </div>
                                 {/each}
+                            </div>
+                            <Separator />
+                            <div class="space-y-1 text-sm">
+                                <div
+                                    class="flex items-center justify-between text-muted-foreground">
+                                    <span>Subtotal</span>
+                                    <span class="tabular-nums">${formatPrice(subtotal)}</span>
+                                </div>
+                                <div
+                                    class="flex items-center justify-between text-muted-foreground">
+                                    <span>Processing fee</span>
+                                    <span class="tabular-nums">${formatPrice(processingFee)}</span>
+                                </div>
                             </div>
                             <Separator />
                             <div class="flex items-center justify-between font-semibold">

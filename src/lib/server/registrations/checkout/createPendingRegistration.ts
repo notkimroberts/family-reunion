@@ -4,6 +4,7 @@ import { partyMembers, registrations } from '$lib/server/db/schema'
 import { dbg } from '$lib/server/debug'
 import { createRegistrationCheckout } from '$lib/server/payments'
 import { parseBirthDate } from '$lib/utils/age'
+import { grossUpForStripe } from '$lib/utils/stripeFee'
 import { generateManagementToken } from '../hashManagementToken'
 import type { MemberInput } from './MemberInput'
 import { fetchAndValidateTiers } from './_fetchAndValidateTiers'
@@ -64,7 +65,8 @@ export async function createPendingRegistration(params: {
             birthDay: selfParsed?.birthDay ?? null,
             shirtSize: params.selfShirtSize || null,
             tierLabel: selfTier.label,
-            priceCents: selfTier.priceCents,
+            /* Snapshot the gross — what the customer is being charged. Refund math reads this directly. */
+            priceCents: grossUpForStripe(selfTier.priceCents),
         },
         ...params.additionalMembers.map((m) => {
             const parsed = m.birthDate ? parseBirthDate(m.birthDate) : null
@@ -77,7 +79,7 @@ export async function createPendingRegistration(params: {
                 birthDay: parsed?.birthDay ?? null,
                 shirtSize: m.shirtSize || null,
                 tierLabel: tier.label,
-                priceCents: tier.priceCents,
+                priceCents: grossUpForStripe(tier.priceCents),
             }
         }),
     ])
@@ -89,7 +91,7 @@ export async function createPendingRegistration(params: {
     )
 
     const { url: checkoutUrl, sessionId } = await createRegistrationCheckout({
-        lineItems,
+        lineItems: lineItems.map((item) => ({ name: item.name, priceCents: item.grossCents })),
         registrationId: registration.id,
         managementToken,
         customerEmail: params.contactEmail,
