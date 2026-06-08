@@ -82,9 +82,19 @@ let groups = $derived.by(() => {
 })
 
 let editOpen = $state(false)
+const initialMemberName = data.member.name.trim()
+const initialMemberSpace = initialMemberName.indexOf(' ')
+let editFirstName = $state(
+    initialMemberSpace === -1 ? initialMemberName : initialMemberName.slice(0, initialMemberSpace),
+)
+let editLastName = $state(
+    initialMemberSpace === -1 ? '' : initialMemberName.slice(initialMemberSpace + 1).trim(),
+)
 let editBirthYear = $state<number | null>(data.member.birthYear)
 let editBirthMonth = $state<number | null>(data.member.birthMonth)
 let editBirthDay = $state<number | null>(data.member.birthDay)
+
+let editName = $derived(`${editFirstName.trim()} ${editLastName.trim()}`.trim())
 
 let isAdmin = $derived(data.user?.role === 'admin')
 
@@ -169,37 +179,39 @@ let memberAgeLabel = $derived(
         <p class="text-muted-foreground">No relationships recorded for this member.</p>
     </section>
 {:else}
-    {#each groups as group}
-        <section class="col-span-12 md:col-span-6 flex flex-col gap-3">
-            <p class="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-                {group.label}
-            </p>
-            <div class="space-y-2">
-                {#each group.members as related}
-                    {@const relatedBorn = formatPartialBirthDate(
-                        related.birthYear,
-                        related.birthMonth,
-                        related.birthDay,
-                    )}
-                    <a
-                        href="/family-tree/{related.id}"
-                        class="flex items-center gap-3 p-3 rounded-lg border bg-card hover:bg-accent transition-colors">
-                        <Avatar class="w-9 h-9 shrink-0">
-                            <AvatarFallback class="bg-primary text-primary-foreground text-sm">
-                                {getInitials(related.name)}
-                            </AvatarFallback>
-                        </Avatar>
-                        <div>
-                            <p class="font-medium text-sm">{related.name}</p>
-                            {#if relatedBorn}
-                                <p class="text-xs text-muted-foreground">Born {relatedBorn}</p>
-                            {/if}
-                        </div>
-                    </a>
-                {/each}
+    <section class="col-span-12 grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-8">
+        {#each groups as group (group.label)}
+            <div class="flex flex-col gap-3">
+                <p class="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+                    {group.label}
+                </p>
+                <div class="space-y-2">
+                    {#each group.members as related (related.id)}
+                        {@const relatedBorn = formatPartialBirthDate(
+                            related.birthYear,
+                            related.birthMonth,
+                            related.birthDay,
+                        )}
+                        <a
+                            href="/family-tree/{related.id}"
+                            class="flex items-center gap-3 p-3 rounded-lg border bg-card hover:bg-accent transition-colors">
+                            <Avatar class="w-9 h-9 shrink-0">
+                                <AvatarFallback class="bg-primary text-primary-foreground text-sm">
+                                    {getInitials(related.name)}
+                                </AvatarFallback>
+                            </Avatar>
+                            <div>
+                                <p class="font-medium text-sm">{related.name}</p>
+                                {#if relatedBorn}
+                                    <p class="text-xs text-muted-foreground">Born {relatedBorn}</p>
+                                {/if}
+                            </div>
+                        </a>
+                    {/each}
+                </div>
             </div>
-        </section>
-    {/each}
+        {/each}
+    </section>
 {/if}
 
 <!-- Edit member dialog -->
@@ -220,10 +232,32 @@ let memberAgeLabel = $derived(
                 }
             }}
             class="space-y-4 pt-2">
-            <div class="space-y-2">
-                <label for="editName" class="text-sm font-medium"
-                    >Name <span class="text-destructive">*</span></label>
-                <Input id="editName" name="name" type="text" value={data.member.name} required />
+            <input type="hidden" name="name" value={editName} />
+            <div class="grid grid-cols-2 gap-3">
+                <div class="space-y-1">
+                    <label for="editFirstName" class="text-xs font-medium text-muted-foreground">
+                        First name <span class="text-destructive">*</span>
+                    </label>
+                    <Input
+                        id="editFirstName"
+                        type="text"
+                        bind:value={editFirstName}
+                        placeholder="First"
+                        autocomplete="given-name"
+                        required />
+                </div>
+                <div class="space-y-1">
+                    <label for="editLastName" class="text-xs font-medium text-muted-foreground">
+                        Last name <span class="text-destructive">*</span>
+                    </label>
+                    <Input
+                        id="editLastName"
+                        type="text"
+                        bind:value={editLastName}
+                        placeholder="Last"
+                        autocomplete="family-name"
+                        required />
+                </div>
             </div>
             <div class="space-y-2">
                 <span class="text-sm font-medium">Birthday</span>
