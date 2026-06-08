@@ -17,67 +17,78 @@ let { data, form } = $props()
     <h1>Storefront</h1>
 </section>
 
-{#if form?.success}
-    <div class="col-span-12">
+{#if !data.event}
+    <section class="col-span-12">
         <Alert>
-            <AlertDescription>Saved!</AlertDescription>
+            <AlertDescription>
+                No open event yet. Open an event in the events admin first — the shop attaches to
+                the open event.
+            </AlertDescription>
         </Alert>
-    </div>
+    </section>
+{:else}
+    {#if form?.success}
+        <div class="col-span-12">
+            <Alert>
+                <AlertDescription>Saved!</AlertDescription>
+            </Alert>
+        </div>
+    {/if}
+    {#if form?.error}
+        <div class="col-span-12">
+            <Alert variant="destructive">
+                <AlertDescription>{form.error}</AlertDescription>
+            </Alert>
+        </div>
+    {/if}
+
+    <section class="col-span-12 xl:col-span-8">
+        <Card>
+            <CardHeader>
+                <CardTitle>Storefront Settings — {data.event.title}</CardTitle>
+            </CardHeader>
+            <CardContent>
+                <form method="POST" use:enhance class="space-y-4">
+                    <div class="space-y-2">
+                        <label for="externalShopUrl" class="text-sm font-medium"
+                            >External Shop URL</label>
+                        <Input
+                            id="externalShopUrl"
+                            name="externalShopUrl"
+                            type="url"
+                            value={data.event.externalShopUrl ?? ''}
+                            placeholder="https://your-shop.com"
+                            required />
+                    </div>
+
+                    <div class="flex items-center justify-between py-2">
+                        <label for="isActive" class="text-sm font-medium">Shop page visible</label>
+                        <input
+                            id="isActive"
+                            name="isActive"
+                            type="checkbox"
+                            class="h-4 w-4 rounded border-input accent-primary cursor-pointer"
+                            checked={data.event.shopActive} />
+                    </div>
+
+                    <div class="space-y-2">
+                        <label for="products" class="text-sm font-medium"
+                            >Product Previews (JSON array)</label>
+                        <p class="text-xs text-muted-foreground">
+                            [{`{"name":"Reunion Tee","imageUrl":"...","description":"..."}`}]
+                        </p>
+                        <Textarea
+                            id="products"
+                            name="products"
+                            class="h-32"
+                            value={data.event.shopProducts
+                                ? JSON.stringify(data.event.shopProducts, null, 2)
+                                : ''} />
+                    </div>
+
+                    <Button type="submit">Save Settings</Button>
+                </form>
+            </CardContent>
+        </Card>
+    </section>
 {/if}
-{#if form?.error}
-    <div class="col-span-12">
-        <Alert variant="destructive">
-            <AlertDescription>{form.error}</AlertDescription>
-        </Alert>
-    </div>
-{/if}
-
-<section class="col-span-12 xl:col-span-8">
-    <Card>
-        <CardHeader>
-            <CardTitle>Storefront Settings</CardTitle>
-        </CardHeader>
-        <CardContent>
-            <form method="POST" use:enhance class="space-y-4">
-                <div class="space-y-2">
-                    <label for="externalShopUrl" class="text-sm font-medium"
-                        >External Shop URL</label>
-                    <Input
-                        id="externalShopUrl"
-                        name="externalShopUrl"
-                        type="url"
-                        value={data.config?.externalShopUrl ?? ''}
-                        placeholder="https://your-shop.com"
-                        required />
-                </div>
-
-                <div class="flex items-center justify-between py-2">
-                    <label for="isActive" class="text-sm font-medium">Shop page visible</label>
-                    <input
-                        id="isActive"
-                        name="isActive"
-                        type="checkbox"
-                        class="h-4 w-4 rounded border-input accent-primary cursor-pointer"
-                        checked={data.config?.isActive ?? true} />
-                </div>
-
-                <div class="space-y-2">
-                    <label for="products" class="text-sm font-medium"
-                        >Product Previews (JSON array)</label>
-                    <p class="text-xs text-muted-foreground">
-                        [{`{"name":"Reunion Tee","imageUrl":"...","description":"..."}`}]
-                    </p>
-                    <Textarea
-                        id="products"
-                        name="products"
-                        class="h-32"
-                        value={data.config?.products
-                            ? JSON.stringify(data.config.products, null, 2)
-                            : ''} />
-                </div>
-
-                <Button type="submit">Save Settings</Button>
-            </form>
-        </CardContent>
-    </Card>
-</section>

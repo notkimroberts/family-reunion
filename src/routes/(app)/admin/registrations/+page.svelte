@@ -140,14 +140,15 @@ const shirtsEnabled = $derived(data.events[0]?.shirtsEnabled ?? false)
                         </div>
                         <div class="space-y-2">
                             <label for="contactEmail" class="text-sm font-medium">
-                                Email <span class="text-muted-foreground text-xs">(optional)</span>
+                                Email <span class="text-destructive">*</span>
                             </label>
                             <Input
                                 id="contactEmail"
                                 name="contactEmail"
                                 type="email"
                                 bind:value={contactEmail}
-                                placeholder="email@example.com" />
+                                placeholder="email@example.com"
+                                required />
                         </div>
                     </div>
 

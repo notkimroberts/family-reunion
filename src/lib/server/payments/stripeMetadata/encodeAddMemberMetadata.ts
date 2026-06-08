@@ -6,6 +6,7 @@ export function encodeAddMemberMetadata(params: AddMemberMetadataParams): Record
         registrationId: params.registrationId,
         memberName: params.memberName,
         memberTierId: params.memberTierId,
+        memberTierLabel: params.memberTierLabel,
         memberBirthDate: params.memberBirthDate ?? '',
         memberShirtSize: params.memberShirtSize ?? '',
         memberPriceCents: String(params.memberPriceCents),

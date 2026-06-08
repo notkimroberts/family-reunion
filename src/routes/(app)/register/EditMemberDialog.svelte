@@ -16,10 +16,12 @@ import { formatBirthDate } from '$lib/utils/age'
 import type { EditableMember } from './types'
 
 let {
+    token,
     member,
     shirtsEnabled,
     open = $bindable(false),
 }: {
+    token: string
     member: EditableMember
     shirtsEnabled: boolean
     open: boolean
@@ -44,6 +46,7 @@ let shirtSize = $state(member.shirtSize ?? '')
                     }
                 }
             }}>
+            <input type="hidden" name="token" value={token} />
             <input type="hidden" name="memberId" value={member.id} />
             <input type="hidden" name="birthDate" value={birthDate ?? ''} />
 

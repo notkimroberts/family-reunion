@@ -1,10 +1,20 @@
 import { error, fail } from '@sveltejs/kit'
-import { eq } from 'drizzle-orm'
+import { eq, sql } from 'drizzle-orm'
 import { requireAdmin } from '$lib/server/auth/guards'
 import { db } from '$lib/server/db'
-import { reunionEvents, pricingTiers } from '$lib/server/db/schema'
+import { reunionEvents, type PricingTier } from '$lib/server/db/schema'
 import { dbg } from '$lib/server/debug'
 import type { PageServerLoad, Actions } from './$types'
+
+function parseFiniteInt(raw: string): number | null {
+    const n = parseInt(raw, 10)
+    return Number.isFinite(n) ? n : null
+}
+
+function parseFiniteFloat(raw: string): number | null {
+    const n = parseFloat(raw)
+    return Number.isFinite(n) ? n : null
+}
 
 export const load: PageServerLoad = async (event) => {
     requireAdmin(event)
@@ -18,12 +28,33 @@ export const load: PageServerLoad = async (event) => {
         throw error(404, 'Event not found')
     }
 
-    const tiers = await db
-        .select()
-        .from(pricingTiers)
-        .where(eq(pricingTiers.eventId, event.params.id))
+    const tiers = [...reunionEvent.pricingTiers].sort((a, b) => a.minAge - b.minAge)
 
     return { event: reunionEvent, tiers }
+}
+
+/* Mutates pricingTiers JSONB inside a transaction with FOR UPDATE so concurrent admin edits
+   serialize instead of clobbering each other (last-writer-wins on a JSONB read-modify-write). */
+async function mutateTiers(
+    eventId: string,
+    f: (current: PricingTier[]) => PricingTier[],
+): Promise<void> {
+    await db.transaction(async (tx) => {
+        const [row] = await tx
+            .select({ pricingTiers: reunionEvents.pricingTiers })
+            .from(reunionEvents)
+            .where(eq(reunionEvents.id, eventId))
+            .for('update')
+            .limit(1)
+        if (!row) {
+            throw error(404, 'Event not found')
+        }
+        const next = f(row.pricingTiers)
+        await tx
+            .update(reunionEvents)
+            .set({ pricingTiers: next, updatedAt: new Date() })
+            .where(eq(reunionEvents.id, eventId))
+    })
 }
 
 export const actions: Actions = {
@@ -43,8 +74,20 @@ export const actions: Actions = {
         const sitesRaw = data.get('recommendedSites') as string
         const activitiesRaw = data.get('recommendedActivities') as string
 
-        const startDate = startDateRaw ? new Date(startDateRaw) : null
-        const endDate = endDateRaw ? new Date(endDateRaw) : null
+        let startDate: Date | null = null
+        if (startDateRaw) {
+            const d = new Date(startDateRaw)
+            if (!Number.isNaN(d.getTime())) {
+                startDate = d
+            }
+        }
+        let endDate: Date | null = null
+        if (endDateRaw) {
+            const d = new Date(endDateRaw)
+            if (!Number.isNaN(d.getTime())) {
+                endDate = d
+            }
+        }
 
         const venue = venueName
             ? { name: venueName, address: venueAddress || '', description: venueDescription || '' }
@@ -101,25 +144,39 @@ export const actions: Actions = {
     add_tier: async (event) => {
         requireAdmin(event)
         const data = await event.request.formData()
-        const label = data.get('label') as string
-        const minAge = data.get('minAge') as string
-        const maxAge = data.get('maxAge') as string
-        const price = data.get('price') as string
+        const label = (data.get('label') as string)?.trim()
+        const minAgeRaw = data.get('minAge') as string
+        const maxAgeRaw = data.get('maxAge') as string
+        const priceRaw = data.get('price') as string
 
-        if (!label || !minAge || !price) {
+        if (!label || !minAgeRaw || !priceRaw) {
             return fail(400, { error: 'All fields required' })
         }
 
-        dbg.admin('add_tier eventId=%s label=%s price=%s', event.params.id, label, price)
+        const minAge = parseFiniteInt(minAgeRaw)
+        const maxAge = maxAgeRaw ? parseFiniteInt(maxAgeRaw) : null
+        const priceFloat = parseFiniteFloat(priceRaw)
+        if (minAge === null || minAge < 0 || (maxAgeRaw && maxAge === null)) {
+            return fail(400, { error: 'Min/max age must be a number' })
+        }
+        if (priceFloat === null || priceFloat < 0) {
+            return fail(400, { error: 'Price must be a non-negative number' })
+        }
+        if (maxAge !== null && maxAge < minAge) {
+            return fail(400, { error: 'Max age must be at least min age' })
+        }
 
-        await db.insert(pricingTiers).values({
-            eventId: event.params.id,
+        dbg.admin('add_tier eventId=%s label=%s price=%s', event.params.id, label, priceRaw)
+
+        const newTier: PricingTier = {
+            id: crypto.randomUUID(),
             label,
-            minAge: parseInt(minAge),
-            maxAge: maxAge ? parseInt(maxAge) : null,
-            priceCents: Math.round(parseFloat(price) * 100),
-        })
+            minAge,
+            maxAge,
+            priceCents: Math.round(priceFloat * 100),
+        }
 
+        await mutateTiers(event.params.id, (current) => [...current, newTier])
         return { success: true }
     },
 
@@ -132,7 +189,8 @@ export const actions: Actions = {
         }
 
         dbg.admin('delete_tier id=%s', tierId)
-        await db.delete(pricingTiers).where(eq(pricingTiers.id, tierId))
+
+        await mutateTiers(event.params.id, (current) => current.filter((t) => t.id !== tierId))
         return { success: true }
     },
 }

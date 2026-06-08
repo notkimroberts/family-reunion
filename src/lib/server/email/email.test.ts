@@ -1,24 +1,25 @@
 import { describe, it, expect, vi } from 'vitest'
-import { renderMagicLinkEmail, renderContactEmail, renderRegistrationConfirmation } from './index'
+import { renderRecoveryEmail, renderContactEmail, renderRegistrationConfirmation } from './index'
 
 vi.mock('$env/dynamic/private', () => ({ env: {} }))
 vi.mock('$lib/general/constants', () => ({ APP_NAME: 'Family Reunion', APP_DOMAIN: 'example.com' }))
 vi.mock('$lib/server/debug', () => ({ dbg: { email: vi.fn() } }))
 
-describe('renderMagicLinkEmail', () => {
-    it('includes the sign-in URL in the body', () => {
-        const { text } = renderMagicLinkEmail('https://example.com/auth/magic?token=abc')
-        expect(text).toContain('https://example.com/auth/magic?token=abc')
+describe('renderRecoveryEmail', () => {
+    it('includes the management URL in the body', () => {
+        const { text } = renderRecoveryEmail({
+            eventTitle: 'Family Reunion 2026',
+            manageUrl: 'https://example.com/register/manage?token=abc',
+        })
+        expect(text).toContain('https://example.com/register/manage?token=abc')
     })
 
-    it('mentions expiry in the body', () => {
-        const { text } = renderMagicLinkEmail('https://example.com/link')
-        expect(text).toContain('5 minutes')
-    })
-
-    it('subject references the app name', () => {
-        const { subject } = renderMagicLinkEmail('https://example.com/link')
-        expect(subject).toContain('Family Reunion')
+    it('subject references the event', () => {
+        const { subject } = renderRecoveryEmail({
+            eventTitle: 'Family Reunion 2026',
+            manageUrl: 'https://example.com/link',
+        })
+        expect(subject).toContain('Family Reunion 2026')
     })
 })
 
@@ -48,6 +49,7 @@ describe('renderRegistrationConfirmation', () => {
         eventTitle: 'Roberts Family Reunion 2026',
         partyMembers: ['Alice (Adult)', 'Bob (Child, age 8)'],
         totalAmount: '$150.00',
+        manageUrl: 'https://example.com/register/manage?token=tok',
     }
 
     it('subject includes the event title', () => {
@@ -66,9 +68,10 @@ describe('renderRegistrationConfirmation', () => {
         expect(text).toContain('Bob (Child, age 8)')
     })
 
-    it('body includes the total amount', () => {
+    it('body includes the total amount and manage URL', () => {
         const { text } = renderRegistrationConfirmation(data)
         expect(text).toContain('$150.00')
+        expect(text).toContain('https://example.com/register/manage?token=tok')
     })
 
     it('handles a single party member', () => {

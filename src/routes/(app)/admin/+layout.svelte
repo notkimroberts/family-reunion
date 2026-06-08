@@ -4,14 +4,22 @@ import {
     ClipboardList,
     Images,
     LayoutDashboard,
+    Link2,
+    LogOut,
+    Moon,
+    Sun,
     ShoppingBag,
     Users,
 } from '@lucide/svelte'
 import { setContext } from 'svelte'
 import { page } from '$app/state'
+import { authClient } from '$lib/auth-client'
+import { Avatar, AvatarFallback } from '$lib/components/ui/avatar'
 import { Separator } from '$lib/components/ui/separator'
+import { LIGHT_THEME } from '$lib/general/constants'
+import { theme } from '$lib/stores/theme.svelte'
 import type { AdminContext } from '$lib/types/adminContext'
-import { cn } from '$lib/utils'
+import { cn, getInitials } from '$lib/utils'
 
 let { data, children } = $props()
 
@@ -35,6 +43,7 @@ const navLinks = [
     { href: '/admin/users', label: 'Users', Icon: Users },
     { href: '/admin/photos', label: 'Photos', Icon: Images },
     { href: '/admin/registrations', label: 'Registrations', Icon: ClipboardList },
+    { href: '/admin/attendees', label: 'Attendees', Icon: Link2 },
     { href: '/admin/storefront', label: 'Storefront', Icon: ShoppingBag },
 ]
 
@@ -44,7 +53,31 @@ function isActive(href: string): boolean {
     }
     return page.url.pathname.startsWith(href)
 }
+
+function handleSignOut() {
+    authClient.signOut().then(() => {
+        window.location.href = '/'
+    })
+}
 </script>
+
+<!-- Mobile-only admin top bar (sidebar is desktop only) -->
+<div class="col-span-12 md:hidden flex items-center justify-between gap-3 -mt-2 mb-2">
+    <div class="flex items-center gap-2 min-w-0">
+        <Avatar class="w-8 h-8 shrink-0">
+            <AvatarFallback class="bg-primary text-primary-foreground text-xs font-bold">
+                {getInitials(data.user.name)}
+            </AvatarFallback>
+        </Avatar>
+        <span class="text-sm font-medium truncate">{data.user.name}</span>
+    </div>
+    <button
+        onclick={handleSignOut}
+        class="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-destructive transition-colors">
+        <LogOut class="h-3.5 w-3.5" />
+        Sign out
+    </button>
+</div>
 
 <div class="col-span-12 flex items-start gap-0">
     <aside class="hidden md:flex w-52 shrink-0 flex-col self-start sticky top-28 border-r pr-5">
@@ -94,6 +127,34 @@ function isActive(href: string): boolean {
                 </button>
             {/each}
         </div>
+
+        <Separator class="my-4" />
+
+        <div class="flex items-center gap-2 px-3 pb-2">
+            <Avatar class="w-7 h-7 shrink-0">
+                <AvatarFallback class="bg-primary text-primary-foreground text-xs font-bold">
+                    {getInitials(data.user.name)}
+                </AvatarFallback>
+            </Avatar>
+            <span class="text-xs font-medium truncate">{data.user.name}</span>
+        </div>
+        <button
+            onclick={() => theme.toggle()}
+            class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm text-muted-foreground hover:bg-muted hover:text-foreground transition-colors text-left">
+            {#if theme.current === LIGHT_THEME}
+                <Moon class="h-4 w-4" />
+                Dark mode
+            {:else}
+                <Sun class="h-4 w-4" />
+                Light mode
+            {/if}
+        </button>
+        <button
+            onclick={handleSignOut}
+            class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors text-left">
+            <LogOut class="h-4 w-4" />
+            Sign out
+        </button>
     </aside>
 
     <div class="flex-1 min-w-0 md:pl-6">

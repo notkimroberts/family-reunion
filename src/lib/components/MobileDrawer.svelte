@@ -10,8 +10,6 @@ import {
 } from '@lucide/svelte'
 import type { Component } from 'svelte'
 import { page } from '$app/state'
-import { authClient } from '$lib/auth-client'
-import { Separator } from '$lib/components/ui/separator'
 import { Sheet, SheetContent } from '$lib/components/ui/sheet'
 import {
     APP_NAME,
@@ -24,12 +22,10 @@ import { theme } from '$lib/stores/theme.svelte'
 
 type Props = {
     open: boolean
-    user: { name: string | null; role?: string | null } | null
-    isAdmin: boolean
     onClose: () => void
 }
 
-let { open, user, isAdmin, onClose }: Props = $props()
+let { open, onClose }: Props = $props()
 
 const iconMap: Record<string, Component> = {
     images: Images,
@@ -44,12 +40,6 @@ function isActive(href: string): boolean {
         return page.url.pathname === '/'
     }
     return page.url.pathname.startsWith(href)
-}
-
-function handleSignOut() {
-    authClient.signOut().then(() => {
-        window.location.href = '/'
-    })
 }
 
 const linkClass = (active: boolean) =>
@@ -108,31 +98,12 @@ const linkClass = (active: boolean) =>
             </div>
         </nav>
 
-        <div class="border-t p-3 flex flex-col gap-0.5">
+        <div class="border-t p-3">
             <button
                 onclick={() => theme.toggle()}
                 class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-foreground hover:bg-muted transition-colors w-full text-left cursor-pointer">
                 {theme.current === LIGHT_THEME ? 'Switch to Dark' : 'Switch to Light'}
             </button>
-
-            {#if user}
-                <Separator class="my-1" />
-                <a href="/profile" onclick={onClose} class={linkClass(isActive('/profile'))}>
-                    Profile
-                </a>
-                {#if isAdmin}
-                    <a href="/admin" onclick={onClose} class={linkClass(isActive('/admin'))}>
-                        Admin
-                    </a>
-                {/if}
-                <button
-                    onclick={handleSignOut}
-                    class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-destructive hover:bg-destructive/10 transition-colors w-full text-left cursor-pointer">
-                    Sign Out
-                </button>
-            {:else}
-                <a href="/login" onclick={onClose} class={linkClass(false)}>Sign In</a>
-            {/if}
         </div>
     </SheetContent>
 </Sheet>

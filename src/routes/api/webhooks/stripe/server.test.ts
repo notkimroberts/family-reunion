@@ -5,25 +5,43 @@ const { mockConstructEvent } = vi.hoisted(() => ({
     mockConstructEvent: vi.fn(),
 }))
 
-const { mockWhere, mockSet, mockDb } = vi.hoisted(() => {
-    const mockWhere = vi.fn().mockResolvedValue([])
+const { mockTerminal, mockSet, mockReturning, mockDb } = vi.hoisted(() => {
+    /* Single terminal queue: each `await` on a builder pulls the next mocked value.
+       Tests configure with `mockTerminal.mockResolvedValueOnce(...)` in call order. */
+    const mockTerminal = vi.fn().mockResolvedValue([])
     const mockSet = vi.fn()
+    const mockReturning = vi.fn().mockResolvedValue([])
+
     const chain: Record<string, ReturnType<typeof vi.fn>> = {
         select: vi.fn(),
         from: vi.fn(),
-        where: mockWhere,
+        where: vi.fn(),
+        limit: vi.fn(),
         update: vi.fn(),
         set: mockSet,
+        returning: mockReturning,
+        insert: vi.fn(),
+        values: vi.fn(),
         transaction: vi.fn(),
     }
     chain.select.mockReturnValue(chain)
     chain.from.mockReturnValue(chain)
+    chain.where.mockReturnValue(chain)
+    chain.limit.mockReturnValue(chain)
     chain.update.mockReturnValue(chain)
+    chain.insert.mockReturnValue(chain)
+    chain.values.mockReturnValue(chain)
     mockSet.mockReturnValue(chain)
     chain.transaction.mockImplementation(async (cb: (tx: typeof chain) => Promise<void>) =>
         cb(chain),
     )
-    return { mockWhere, mockSet, mockDb: chain }
+    /* Make chain thenable. Each await pulls one value from mockTerminal. */
+    ;(chain as unknown as { then: unknown }).then = (onFulfilled: unknown, onRejected: unknown) =>
+        (mockTerminal as unknown as () => Promise<unknown>)().then(
+            onFulfilled as (value: unknown) => unknown,
+            onRejected as (reason: unknown) => unknown,
+        )
+    return { mockTerminal, mockSet, mockReturning, mockDb: chain }
 })
 
 const { mockSendEmail } = vi.hoisted(() => ({
@@ -34,7 +52,7 @@ vi.mock('$env/dynamic/private', () => ({
     env: { STRIPE_SECRET_KEY: 'sk_test_mock', STRIPE_WEBHOOK_SECRET: 'whsec_test_mock' },
 }))
 
-// Must use a regular function (not arrow) so new Stripe(...) works
+/* Must use a regular function (not arrow) so new Stripe(...) works. */
 vi.mock('stripe', () => {
     function MockStripe() {
         return { webhooks: { constructEvent: mockConstructEvent } }
@@ -56,7 +74,8 @@ vi.mock('$lib/utils/age', () => ({ getAge: vi.fn().mockReturnValue(30), parseBir
 const mockRegistration = {
     id: 'reg-123',
     eventId: 'event-456',
-    totalAmountCents: 5000,
+    contactName: 'Alice Smith',
+    contactEmail: 'alice@example.com',
     status: 'paid',
 }
 const mockReunionEvent = { id: 'event-456', title: 'Family Reunion 2026' }
@@ -67,12 +86,15 @@ const mockMember = {
     birthMonth: 1,
     birthDay: 1,
     shirtSize: 'M',
+    priceCents: 5000,
     registrationId: 'reg-123',
 }
 const validSession = {
-    metadata: { type: 'registration', registrationId: 'reg-123' },
-    customer_details: { email: 'alice@example.com', name: 'Alice Smith' },
-    customer_email: null,
+    metadata: {
+        type: 'registration',
+        registrationId: 'reg-123',
+        managementToken: 'plaintext-tok',
+    },
 }
 
 function makeRequest(body: string, signature?: string): Parameters<typeof POST>[0] {
@@ -80,20 +102,39 @@ function makeRequest(body: string, signature?: string): Parameters<typeof POST>[
     if (signature !== undefined) {
         headers['stripe-signature'] = signature
     }
+    const url = new URL('http://localhost/api/webhooks/stripe')
     return {
-        request: new Request('http://localhost/api/webhooks/stripe', {
+        request: new Request(url, {
             method: 'POST',
             body,
             headers,
         }),
+        url,
     } as unknown as Parameters<typeof POST>[0]
+}
+
+/* Helper: queue terminals for the registration-branch happy path:
+   1. update().returning() → [{id}]
+   2. select().from().where() → [registration]
+   3. Promise.all([event select, members select]) → [event], [members] */
+function queueRegistrationHappyPath(
+    reg = mockRegistration,
+    evt = mockReunionEvent,
+    mem = mockMember,
+) {
+    mockReturning.mockResolvedValueOnce([{ id: reg.id }])
+    mockTerminal
+        .mockResolvedValueOnce([reg])
+        .mockResolvedValueOnce([evt])
+        .mockResolvedValueOnce([mem])
 }
 
 describe('POST /api/webhooks/stripe', () => {
     beforeEach(() => {
         vi.clearAllMocks()
         mockSendEmail.mockResolvedValue(undefined)
-        mockWhere.mockResolvedValue([])
+        mockTerminal.mockResolvedValue([])
+        mockReturning.mockResolvedValue([])
         mockSet.mockReturnValue(mockDb)
     })
 
@@ -117,17 +158,17 @@ describe('POST /api/webhooks/stripe', () => {
         })
         const res = await POST(makeRequest('{}', 'sig'))
         expect(res.status).toBe(200)
-        expect(mockWhere).not.toHaveBeenCalled()
+        expect(mockTerminal).not.toHaveBeenCalled()
     })
 
-    it('returns 200 for checkout.session.completed with no registrationId', async () => {
+    it('returns 200 for checkout.session.completed with no/invalid metadata', async () => {
         mockConstructEvent.mockReturnValue({
             type: 'checkout.session.completed',
             data: { object: { metadata: {} } },
         })
         const res = await POST(makeRequest('{}', 'sig'))
         expect(res.status).toBe(200)
-        expect(mockWhere).not.toHaveBeenCalled()
+        expect(mockTerminal).not.toHaveBeenCalled()
     })
 
     it('marks registration as paid on checkout.session.completed', async () => {
@@ -135,53 +176,41 @@ describe('POST /api/webhooks/stripe', () => {
             type: 'checkout.session.completed',
             data: { object: validSession },
         })
-        mockWhere
-            .mockResolvedValueOnce(undefined)
-            .mockResolvedValueOnce([mockRegistration])
-            .mockResolvedValueOnce([mockReunionEvent])
-            .mockResolvedValueOnce([mockMember])
+        queueRegistrationHappyPath()
 
         const res = await POST(makeRequest('{}', 'sig'))
         expect(res.status).toBe(200)
         expect(mockSet).toHaveBeenCalledWith(expect.objectContaining({ status: 'paid' }))
     })
 
-    it('sends confirmation email to customer_details.email when customer_email is null', async () => {
+    it('logs and returns when registration row is missing (orphan payment)', async () => {
         mockConstructEvent.mockReturnValue({
             type: 'checkout.session.completed',
             data: { object: validSession },
         })
-        mockWhere
-            .mockResolvedValueOnce(undefined)
-            .mockResolvedValueOnce([mockRegistration])
-            .mockResolvedValueOnce([mockReunionEvent])
-            .mockResolvedValueOnce([mockMember])
+        mockReturning.mockResolvedValueOnce([])
+
+        const res = await POST(makeRequest('{}', 'sig'))
+        expect(res.status).toBe(200)
+        expect(mockSendEmail).not.toHaveBeenCalled()
+    })
+
+    it('sends confirmation email to registration.contactEmail with the manage URL and total', async () => {
+        mockConstructEvent.mockReturnValue({
+            type: 'checkout.session.completed',
+            data: { object: validSession },
+        })
+        queueRegistrationHappyPath()
 
         await POST(makeRequest('{}', 'sig'))
         expect(mockSendEmail).toHaveBeenCalledWith(
             'alice@example.com',
-            expect.objectContaining({ eventTitle: 'Family Reunion 2026' }),
+            expect.objectContaining({
+                eventTitle: 'Family Reunion 2026',
+                manageUrl: expect.stringContaining('token=plaintext-tok'),
+                totalAmount: '$50.00',
+            }),
         )
-    })
-
-    it('falls back to customer_email when customer_details.email is absent', async () => {
-        const session = {
-            ...validSession,
-            customer_email: 'fallback@example.com',
-            customer_details: { ...validSession.customer_details, email: null },
-        }
-        mockConstructEvent.mockReturnValue({
-            type: 'checkout.session.completed',
-            data: { object: session },
-        })
-        mockWhere
-            .mockResolvedValueOnce(undefined)
-            .mockResolvedValueOnce([mockRegistration])
-            .mockResolvedValueOnce([mockReunionEvent])
-            .mockResolvedValueOnce([mockMember])
-
-        await POST(makeRequest('{}', 'sig'))
-        expect(mockSendEmail).toHaveBeenCalledWith('fallback@example.com', expect.any(Object))
     })
 
     it('returns 200 even when email sending throws', async () => {
@@ -189,11 +218,7 @@ describe('POST /api/webhooks/stripe', () => {
             type: 'checkout.session.completed',
             data: { object: validSession },
         })
-        mockWhere
-            .mockResolvedValueOnce(undefined)
-            .mockResolvedValueOnce([mockRegistration])
-            .mockResolvedValueOnce([mockReunionEvent])
-            .mockResolvedValueOnce([mockMember])
+        queueRegistrationHappyPath()
         mockSendEmail.mockRejectedValue(new Error('Resend unavailable'))
 
         const res = await POST(makeRequest('{}', 'sig'))
@@ -205,8 +230,8 @@ describe('POST /api/webhooks/stripe', () => {
             type: 'checkout.session.completed',
             data: { object: validSession },
         })
-        mockWhere
-            .mockResolvedValueOnce(undefined)
+        mockReturning.mockResolvedValueOnce([{ id: mockRegistration.id }])
+        mockTerminal
             .mockResolvedValueOnce([mockRegistration])
             .mockResolvedValueOnce([]) // event not found
             .mockResolvedValueOnce([mockMember])

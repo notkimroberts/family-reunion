@@ -1,16 +1,18 @@
-import { and, eq } from 'drizzle-orm'
+import { eq } from 'drizzle-orm'
 import { db } from '$lib/server/db'
 import { registrations, registrationStatusEnum } from '$lib/server/db/schema'
+import { hashManagementToken } from '../hashManagementToken'
 
-// Returns only the status column, scoped to the owning userId to prevent cross-user leakage; null when not found.
-export async function getRegistrationStatus(
-    registrationId: string,
-    userId: string,
-): Promise<(typeof registrationStatusEnum.enumValues)[number] | null> {
+/* Returns the registration id and status for the given plaintext management token; null when not found. Used by the post-checkout polling client. */
+export async function getRegistrationStatus(managementToken: string): Promise<{
+    id: string
+    status: (typeof registrationStatusEnum.enumValues)[number]
+} | null> {
+    const tokenHash = hashManagementToken(managementToken)
     const [registration] = await db
-        .select({ status: registrations.status })
+        .select({ id: registrations.id, status: registrations.status })
         .from(registrations)
-        .where(and(eq(registrations.id, registrationId), eq(registrations.userId, userId)))
+        .where(eq(registrations.managementToken, tokenHash))
         .limit(1)
-    return registration?.status ?? null
+    return registration ?? null
 }

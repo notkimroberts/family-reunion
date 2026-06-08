@@ -1,7 +1,9 @@
 <script lang="ts">
+import { CheckCircle2 } from '@lucide/svelte'
 import { Badge } from '$lib/components/ui/badge'
 import { Button } from '$lib/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card'
+import { Separator } from '$lib/components/ui/separator'
 import {
     Table,
     TableBody,
@@ -24,11 +26,13 @@ import type {
 } from './types'
 
 let {
+    token,
     registration,
     members: initialMembers,
     tiers,
     event,
 }: {
+    token: string
     registration: RegistrationDetails
     members: PartyMember[]
     tiers: RegistrationPricingTier[]
@@ -36,6 +40,7 @@ let {
 } = $props()
 
 let members = $derived(initialMembers)
+let totalCents = $derived(members.reduce((sum, m) => sum + m.priceCents, 0))
 let showAddForm = $state(false)
 let editingMember = $state<PartyMember | null>(null)
 let editDialogOpen = $state(false)
@@ -54,42 +59,46 @@ function handleRemoveClick(member: PartyMember) {
 }
 </script>
 
-<!-- Summary card -->
+<!-- Success banner -->
 <div class="col-span-12">
-    <Card>
-        <CardContent class="pt-6 pb-4">
-            <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                    <h2>{event.title}</h2>
-                    <p class="text-muted-foreground text-sm mt-0.5">
-                        Total paid: <span class="font-medium text-foreground">
-                            ${formatPrice(registration.totalAmountCents)}
-                        </span>
-                    </p>
-                </div>
-                <Badge variant={registration.status === 'paid' ? 'default' : 'secondary'}>
-                    {registration.status}
-                </Badge>
+    <div
+        class="rounded-xl border bg-card px-6 py-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div class="flex items-start gap-3">
+            <CheckCircle2 class="h-6 w-6 text-green-500 mt-0.5 shrink-0" />
+            <div>
+                <p class="font-semibold">{event.title}</p>
+                <p class="text-sm text-muted-foreground mt-0.5">
+                    {members.length}
+                    {members.length === 1 ? 'person' : 'people'} registered ·
+                    <span class="text-foreground font-medium">
+                        ${formatPrice(totalCents)} paid
+                    </span>
+                </p>
             </div>
-        </CardContent>
-    </Card>
+        </div>
+        <Badge
+            variant={registration.status === 'paid' ? 'default' : 'secondary'}
+            class="self-start sm:self-auto capitalize">
+            {registration.status}
+        </Badge>
+    </div>
 </div>
 
 <!-- Party members card -->
 <div class="col-span-12">
     <Card>
         <CardHeader>
-            <CardTitle>Party Members</CardTitle>
+            <CardTitle>Your Party</CardTitle>
         </CardHeader>
         <CardContent>
             <!-- Mobile cards -->
             <div class="space-y-3 md:hidden">
                 {#each members as member (member.id)}
-                    <div class="rounded-lg border p-4">
+                    <div class="rounded-lg border px-4 py-3">
                         <div class="flex items-start justify-between gap-2">
                             <div class="min-w-0">
-                                <p class="font-medium truncate">{member.name}</p>
-                                <p class="text-muted-foreground text-sm">
+                                <p class="font-medium">{member.name}</p>
+                                <p class="text-muted-foreground text-sm mt-0.5">
                                     {member.tierLabel}
                                     {#if member.birthYear}
                                         · Age {getAge(
@@ -102,7 +111,7 @@ function handleRemoveClick(member: PartyMember) {
                                         · {member.shirtSize}
                                     {/if}
                                 </p>
-                                <p class="text-sm font-mono mt-0.5">
+                                <p class="text-sm tabular-nums mt-0.5">
                                     ${formatPrice(member.priceCents)}
                                 </p>
                             </div>
@@ -153,7 +162,7 @@ function handleRemoveClick(member: PartyMember) {
                                 {#if event.shirtsEnabled}
                                     <TableCell>{member.shirtSize || '—'}</TableCell>
                                 {/if}
-                                <TableCell class="font-mono"
+                                <TableCell class="tabular-nums"
                                     >${formatPrice(member.priceCents)}</TableCell>
                                 <TableCell>
                                     <div class="flex gap-2 justify-end">
@@ -173,14 +182,24 @@ function handleRemoveClick(member: PartyMember) {
                     </TableBody>
                 </Table>
             </div>
+
+            <Separator class="my-4" />
+
+            <div class="flex items-center justify-between">
+                <p class="text-sm font-medium">
+                    Total paid:
+                    <span class="tabular-nums">${formatPrice(totalCents)}</span>
+                </p>
+            </div>
         </CardContent>
     </Card>
 </div>
 
-<!-- Add member form -->
+<!-- Actions -->
 {#if showAddForm}
     <div class="col-span-12">
         <AddMemberForm
+            {token}
             registrationId={registration.id}
             {tiers}
             shirtsEnabled={event.shirtsEnabled}
@@ -189,21 +208,29 @@ function handleRemoveClick(member: PartyMember) {
 {:else}
     <div class="col-span-12 flex flex-wrap gap-3 justify-between">
         <Button onclick={() => (showAddForm = true)}>Add a Member</Button>
-        <Button variant="destructive" onclick={() => (cancelDialogOpen = true)}>
+        <Button
+            variant="outline"
+            class="text-destructive border-destructive hover:bg-destructive/10"
+            onclick={() => (cancelDialogOpen = true)}>
             Cancel Registration
         </Button>
     </div>
 {/if}
 
 {#if editingMember}
-    <EditMemberDialog
-        member={editingMember}
-        shirtsEnabled={event.shirtsEnabled}
-        bind:open={editDialogOpen} />
+    {#key editingMember.id}
+        <EditMemberDialog
+            {token}
+            member={editingMember}
+            shirtsEnabled={event.shirtsEnabled}
+            bind:open={editDialogOpen} />
+    {/key}
 {/if}
 
 {#if removingMember}
-    <RemoveMemberDialog member={removingMember} bind:open={removeDialogOpen} />
+    {#key removingMember.id}
+        <RemoveMemberDialog {token} member={removingMember} bind:open={removeDialogOpen} />
+    {/key}
 {/if}
 
-<CancelRegistrationDialog registrationId={registration.id} bind:open={cancelDialogOpen} />
+<CancelRegistrationDialog {token} registrationId={registration.id} bind:open={cancelDialogOpen} />

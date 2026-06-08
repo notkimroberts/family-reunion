@@ -1,12 +1,15 @@
 import { error, fail } from '@sveltejs/kit'
-import { eq, inArray, desc } from 'drizzle-orm'
+import { eq, inArray, asc } from 'drizzle-orm'
+import { requireAdmin } from '$lib/server/auth/guards'
 import { db } from '$lib/server/db'
 import {
     familyMembers,
-    familyMemberEdits,
+    partyMembers,
+    registrations,
     relationships,
-    userProfiles,
+    reunionEvents,
 } from '$lib/server/db/schema'
+import { validatePartialBirthDate } from '$lib/utils/age/validatePartialBirthDate'
 import type { PageServerLoad, Actions } from './$types'
 import type { Rel } from './types'
 
@@ -24,7 +27,7 @@ function getParents(id: string, allRels: Rel[]): string[] {
     ]
 }
 
-// BFS from memberId upward; returns shortest path [root, ..., parent] excluding memberId
+/* BFS from memberId upward; returns shortest path [root, ..., parent] excluding memberId. */
 function findAncestryChain(memberId: string, allRels: Rel[]): string[] {
     const queue: [string, string[]][] = [[memberId, [memberId]]]
     const visited = new Set<string>([memberId])
@@ -55,16 +58,15 @@ const memberSelect = {
     birthYear: familyMembers.birthYear,
     birthMonth: familyMembers.birthMonth,
     birthDay: familyMembers.birthDay,
-    photoUrl: userProfiles.profilePhotoUrl,
 }
 
-export const load: PageServerLoad = async ({ params }) => {
+export const load: PageServerLoad = async ({ params, locals }) => {
     const { id } = params
+    const isAdmin = locals.user?.role === 'admin'
 
     const [member] = await db
         .select(memberSelect)
         .from(familyMembers)
-        .leftJoin(userProfiles, eq(familyMembers.userId, userProfiles.userId))
         .where(eq(familyMembers.id, id))
 
     if (!member) {
@@ -89,7 +91,6 @@ export const load: PageServerLoad = async ({ params }) => {
             ? await db
                   .select(memberSelect)
                   .from(familyMembers)
-                  .leftJoin(userProfiles, eq(familyMembers.userId, userProfiles.userId))
                   .where(inArray(familyMembers.id, allNeededIds))
             : []
 
@@ -102,96 +103,60 @@ export const load: PageServerLoad = async ({ params }) => {
         })
         .filter((m): m is { id: string; name: string } => m !== undefined)
 
-    const editHistory = await db
-        .select()
-        .from(familyMemberEdits)
-        .where(eq(familyMemberEdits.memberId, id))
-        .orderBy(desc(familyMemberEdits.createdAt))
+    /* Attendances linked to this tree node — admin-only to avoid leaking reunion attendance
+       and tier brackets to unauthenticated visitors via the public family-tree route. */
+    const attendances = isAdmin
+        ? await db
+              .select({
+                  partyMemberId: partyMembers.id,
+                  eventYear: reunionEvents.year,
+                  eventTitle: reunionEvents.title,
+                  tierLabel: partyMembers.tierLabel,
+                  registrationStatus: registrations.status,
+              })
+              .from(partyMembers)
+              .innerJoin(registrations, eq(partyMembers.registrationId, registrations.id))
+              .innerJoin(reunionEvents, eq(registrations.eventId, reunionEvents.id))
+              .where(eq(partyMembers.familyMemberId, id))
+              .orderBy(asc(reunionEvents.year))
+        : []
 
     return {
-        member: { ...member, photoUrl: member.photoUrl ?? undefined },
+        member,
         relationships: memberRels,
-        relatedMembers: fetched
-            .filter((m) => directRelatedIds.includes(m.id))
-            .map((m) => ({ ...m, photoUrl: m.photoUrl ?? undefined })),
+        relatedMembers: fetched.filter((m) => directRelatedIds.includes(m.id)),
         ancestryChain,
-        editHistory,
+        attendances,
     }
 }
 
 export const actions: Actions = {
-    editMember: async ({ params, request }) => {
-        const { id } = params
-        const data = await request.formData()
+    editMember: async (event) => {
+        requireAdmin(event)
+        const { id } = event.params
+        const data = await event.request.formData()
         const name = (data.get('name') as string)?.trim()
-        const birthDate = data.get('birthDate') as string | undefined
-        const editorName = (data.get('editorName') as string)?.trim()
-        const editorEmail = (data.get('editorEmail') as string)?.trim().toLowerCase()
+        const birthYearRaw = (data.get('birthYear') as string)?.trim()
+        const birthMonthRaw = (data.get('birthMonth') as string)?.trim()
+        const birthDayRaw = (data.get('birthDay') as string)?.trim()
 
         if (!name) {
             return fail(400, { error: 'Name is required' })
         }
-        if (!editorName || !editorEmail) {
-            return fail(400, { error: 'Your name and email are required' })
-        }
 
-        let birthYear: number | null = null
-        let birthMonth: number | null = null
-        let birthDay: number | null = null
+        const birthYear = birthYearRaw ? parseInt(birthYearRaw, 10) : null
+        const birthMonth = birthMonthRaw ? parseInt(birthMonthRaw, 10) : null
+        const birthDay = birthDayRaw ? parseInt(birthDayRaw, 10) : null
 
-        if (birthDate) {
-            const parts = birthDate.split('-').map(Number)
-            birthYear = parts[0] ?? null
-            birthMonth = parts[1] ?? null
-            birthDay = parts[2] ?? null
+        const birthError = validatePartialBirthDate(birthYear, birthMonth, birthDay)
+        if (birthError) {
+            return fail(400, { error: birthError })
         }
 
         await db
             .update(familyMembers)
             .set({ name, birthYear, birthMonth, birthDay, updatedAt: new Date() })
-            .where(eq(familyMembers.id, id))
-
-        await db.insert(familyMemberEdits).values({
-            memberId: id,
-            editorName,
-            editorEmail,
-            snapshot: { name, birthYear, birthMonth, birthDay },
-        })
-
-        return { success: true }
-    },
-
-    restoreSnapshot: async ({ params, request, locals }) => {
-        if (locals.user?.role !== 'admin') {
-            return fail(403, { error: 'Admin only' })
-        }
-
-        const { id } = params
-        const data = await request.formData()
-        const snapshotId = data.get('snapshotId') as string
-
-        const [edit] = await db
-            .select()
-            .from(familyMemberEdits)
-            .where(eq(familyMemberEdits.id, snapshotId))
-
-        if (!edit || edit.memberId !== id) {
-            return fail(404, { error: 'Snapshot not found' })
-        }
-
-        const { name, birthYear, birthMonth, birthDay } = edit.snapshot
-
-        await db
-            .update(familyMembers)
-            .set({ name, birthYear, birthMonth, birthDay, updatedAt: new Date() })
-            .where(eq(familyMembers.id, id))
-
-        await db.insert(familyMemberEdits).values({
-            memberId: id,
-            editorName: locals.user.name,
-            editorEmail: locals.user.email,
-            snapshot: { name, birthYear, birthMonth, birthDay },
-        })
+            .where(eq(familyMembers.id, id!))
 
         return { success: true }
     },

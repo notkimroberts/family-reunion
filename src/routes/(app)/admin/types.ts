@@ -15,11 +15,12 @@ export type ReunionEvent = {
     endDate: Date | null
 }
 
-export type Profile = {
+export type AdminUser = {
     id: string
-    userId: string
-    phone: string | null
-    isDeleted: boolean | null
+    name: string
+    email: string
+    role: string | null
+    createdAt: Date
     registeredEventIds: string[]
 }
 
@@ -30,6 +31,6 @@ export type Photo = {
     r2Key: string | null
     eventId: string | null
     createdAt: Date | null
-    uploadedByUserId: string
+    uploadedByUserId: string | null
     eventTitle: string | null
 }

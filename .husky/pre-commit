@@ -1,1 +1,14 @@
+if git diff --cached --name-only | grep -qx 'bun.lock'; then
+    if git show :bun.lock | grep -qE 'npm\.apple\.com|pegasus\.apple\.com'; then
+        echo
+        echo "ERROR: bun.lock contains Apple-internal registry URLs (npm.apple.com)."
+        echo "This breaks CI and other contributors. Reinstall with the public registry:"
+        echo
+        echo "    NPM_CONFIG_REGISTRY=https://registry.npmjs.org/ bun install"
+        echo
+        echo "Then re-stage bun.lock and commit again."
+        exit 1
+    fi
+fi
+
 bunx lint-staged

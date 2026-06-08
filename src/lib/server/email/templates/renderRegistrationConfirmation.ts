@@ -1,11 +1,12 @@
 import { APP_NAME } from '$lib/general/constants'
 
-// Returns subject and plain-text body confirming a paid event registration with party member list.
+/* Returns subject and plain-text body confirming a paid event registration with party members and the management link. */
 export function renderRegistrationConfirmation(data: {
     name: string
     eventTitle: string
     partyMembers: string[]
     totalAmount: string
+    manageUrl: string
 }): { subject: string; text: string } {
     return {
         subject: `Registration Confirmed: ${data.eventTitle}`,
@@ -18,6 +19,9 @@ export function renderRegistrationConfirmation(data: {
             ...data.partyMembers.map((m) => `  - ${m}`),
             '',
             `Total paid: ${data.totalAmount}`,
+            '',
+            'Manage your registration (add members, edit, or cancel):',
+            data.manageUrl,
             '',
             'See you at the reunion!',
             `— ${APP_NAME} Team`,

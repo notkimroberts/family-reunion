@@ -39,10 +39,25 @@ export const actions: Actions = {
             return fail(400, { error: 'Missing fields' })
         }
 
-        await db
-            .update(reunionEvents)
-            .set({ status: status as any, updatedAt: new Date() })
-            .where(eq(reunionEvents.id, eventId))
+        try {
+            await db
+                .update(reunionEvents)
+                .set({ status: status as any, updatedAt: new Date() })
+                .where(eq(reunionEvents.id, eventId))
+        } catch (err: unknown) {
+            /* Partial unique index `one_open_event` enforces at most one row with status='open'. Friendly-fail when the admin tries to open a second one. */
+            if (
+                typeof err === 'object' &&
+                err !== null &&
+                'code' in err &&
+                (err as { code?: string }).code === '23505'
+            ) {
+                return fail(409, {
+                    error: 'Another event is already open. Close it first before opening this one.',
+                })
+            }
+            throw err
+        }
 
         return { success: true }
     },

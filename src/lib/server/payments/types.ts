@@ -8,8 +8,12 @@ export type LineItemInput = {
 export type RegistrationCheckoutParams = {
     lineItems: LineItemInput[]
     registrationId: string
-    successUrl: (id: string) => string
-    cancelUrl: (id: string) => string
+    /* Plaintext management token; embedded in Stripe metadata so the webhook can build the manage URL. The DB only stores the hash. */
+    managementToken: string
+    customerEmail?: string
+    /* Caller closes over whatever it wants in these — typically the plaintext managementToken. */
+    successUrl: () => string
+    cancelUrl: () => string
 }
 
 // Return value of createRegistrationCheckout

@@ -1,29 +1,19 @@
 <script lang="ts">
+import { Plus, Trash2, UserCircle } from '@lucide/svelte'
 import { Select as BitsSelect } from 'bits-ui'
-import { onMount } from 'svelte'
-import { toast } from 'svelte-sonner'
+import { SvelteMap } from 'svelte/reactivity'
 import { superForm } from 'sveltekit-superforms'
 import { zod4Client as zodClient } from 'sveltekit-superforms/adapters'
 import { DatePicker } from '$lib/components'
-import { Alert, AlertDescription, AlertTitle } from '$lib/components/ui/alert'
 import { Badge } from '$lib/components/ui/badge'
 import { Button } from '$lib/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '$lib/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card'
+import { Input } from '$lib/components/ui/input'
 import * as Select from '$lib/components/ui/select'
 import { Separator } from '$lib/components/ui/separator'
-import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
-} from '$lib/components/ui/table'
 import { APP_NAME, SHIRT_SIZES } from '$lib/general/constants'
 import { formatPrice } from '$lib/utils'
-import { formatBirthDate } from '$lib/utils/age'
-import MemberFormFields from './MemberFormFields.svelte'
-import RegistrationManager from './RegistrationManager.svelte'
+import { parseBirthDate } from '$lib/utils/age'
 import { getDefaultTierId, getTierLabel, getTierPrice, getMemberAge } from './pricingUtils'
 import { registrationSchema } from './schema'
 import type { FormMember } from './types'
@@ -35,20 +25,25 @@ const { form, errors, enhance } = superForm(data.form, {
     dataType: 'form',
 })
 
-onMount(() => {
-    if (data.memberAdded) {
-        toast.success('Member added successfully!')
+const tiers = data.tiers
+const tierMap = new SvelteMap(tiers.map((t) => [t.id, t]))
+
+let selfTierId = $state('')
+let selfBirthDate = $state<string | undefined>(undefined)
+let selfShirtSize = $state('')
+
+/* Auto-select tier from birthday */
+$effect(() => {
+    if (selfBirthDate) {
+        const parsed = parseBirthDate(selfBirthDate)
+        if (parsed) {
+            const suggested = getDefaultTierId(tiers, parsed.birthYear)
+            if (suggested) {
+                selfTierId = suggested
+            }
+        }
     }
 })
-
-const tiers = data.tiers
-const tierMap = new Map(tiers.map((t) => [t.id, t]))
-
-let selfTierId = $state(getDefaultTierId(tiers, data.profile?.birthYear))
-let selfBirthDate = $state(
-    formatBirthDate(data.profile?.birthYear, data.profile?.birthMonth, data.profile?.birthDay),
-)
-let selfShirtSize = $state('')
 
 $effect(() => {
     $form.selfTierId = selfTierId
@@ -61,75 +56,62 @@ $effect(() => {
 })
 
 let members = $state<FormMember[]>([])
-let newName = $state('')
+let showAddForm = $state(false)
+let newFirstName = $state('')
+let newLastName = $state('')
 let newTierId = $state('')
 let newBirthDate = $state<string | undefined>(undefined)
 let newShirtSize = $state('')
+
+/* Auto-select tier from new member birthday */
+$effect(() => {
+    if (newBirthDate) {
+        const parsed = parseBirthDate(newBirthDate)
+        if (parsed) {
+            const suggested = getDefaultTierId(tiers, parsed.birthYear)
+            if (suggested) {
+                newTierId = suggested
+            }
+        }
+    }
+})
 
 $effect(() => {
     $form.members = JSON.stringify(members)
 })
 
-let editIndex = $state<number | undefined>(undefined)
-let editName = $state('')
-let editTierId = $state('')
-let editBirthDate = $state<string | undefined>(undefined)
-let editShirtSize = $state('')
-
 function handleAddMember() {
-    if (!newName.trim() || !newTierId) {
+    if (!newFirstName.trim() || !newLastName.trim() || !newTierId || !newBirthDate) {
         return
     }
     members = [
         ...members,
         {
-            name: newName.trim(),
+            name: `${newFirstName.trim()} ${newLastName.trim()}`,
             tierId: newTierId,
             birthDate: newBirthDate,
             shirtSize: newShirtSize || undefined,
         },
     ]
-    newName = ''
+    newFirstName = ''
+    newLastName = ''
+    newTierId = ''
+    newBirthDate = undefined
+    newShirtSize = ''
+    showAddForm = false
+}
+
+function handleCancelAdd() {
+    showAddForm = false
+    newFirstName = ''
+    newLastName = ''
     newTierId = ''
     newBirthDate = undefined
     newShirtSize = ''
 }
 
 function handleRemoveMember(index: number) {
-    if (editIndex === index) {
-        editIndex = undefined
-    }
     members = members.filter((_, i) => i !== index)
-}
-
-function handleEditStart(index: number) {
-    const member = members[index]
-    editIndex = index
-    editName = member.name
-    editTierId = member.tierId
-    editBirthDate = member.birthDate
-    editShirtSize = member.shirtSize ?? ''
-}
-
-function handleEditSave() {
-    if (editIndex === undefined || !editName.trim() || !editTierId) {
-        return
-    }
-    members = members.map((m, i) =>
-        i === editIndex
-            ? {
-                  name: editName.trim(),
-                  tierId: editTierId,
-                  birthDate: editBirthDate,
-                  shirtSize: editShirtSize || undefined,
-              }
-            : m,
-    )
-    editIndex = undefined
-}
-
-function handleEditCancel() {
-    editIndex = undefined
 }
 
 let selfTier = $derived(selfTierId ? tierMap.get(selfTierId) : undefined)
@@ -137,8 +119,9 @@ let total = $derived(
     (selfTier?.priceCents ?? 0) +
         members.reduce((sum, m) => sum + (tierMap.get(m.tierId)?.priceCents ?? 0), 0),
 )
-let canSubmit = $derived(!!selfTierId)
-let tableColCount = $derived(data.event?.shirtsEnabled ? 6 : 5)
+let canSubmit = $derived(
+    !!$form.contactName.trim() && !!$form.contactEmail.trim() && !!selfTierId && !!selfBirthDate,
+)
 </script>
 
 <svelte:head>
@@ -153,37 +136,23 @@ let tableColCount = $derived(data.event?.shirtsEnabled ? 6 : 5)
             <p class="text-muted-foreground text-sm mt-1">Check back soon!</p>
         </div>
     </div>
-{:else if data.existingRegistration}
-    <RegistrationManager
-        registration={data.existingRegistration}
-        members={data.members}
-        tiers={data.tiers}
-        event={data.event} />
 {:else}
-    <!-- Event hero header -->
+    <!-- Event hero banner -->
     <section class="col-span-12">
-        {#if data.registrationCancelled}
-            <Alert class="mb-4" variant="destructive">
-                <AlertTitle>Registration cancelled</AlertTitle>
-                <AlertDescription>
-                    Your registration has been cancelled and a refund is on its way. Fill out the
-                    form below to register again.
-                </AlertDescription>
-            </Alert>
-        {/if}
         <div class="rounded-xl border bg-card px-6 py-8 text-center">
             <p class="text-4xl mb-3">🎉</p>
             <h1>{data.event.title}</h1>
-            <p class="text-muted-foreground mt-1 text-lg">{data.event.year} Reunion</p>
+            <p class="text-muted-foreground mt-1">{data.event.year} Reunion</p>
             {#if data.event.startDate}
-                <p class="text-sm text-muted-foreground mt-2">
+                <p class="text-sm text-muted-foreground mt-1">
                     {new Date(data.event.startDate).toLocaleDateString('en-US', {
                         month: 'long',
                         day: 'numeric',
                         year: 'numeric',
                     })}
                     {#if data.event.endDate}
-                        – {new Date(data.event.endDate).toLocaleDateString('en-US', {
+                        –
+                        {new Date(data.event.endDate).toLocaleDateString('en-US', {
                             month: 'long',
                             day: 'numeric',
                             year: 'numeric',
@@ -191,9 +160,8 @@ let tableColCount = $derived(data.event?.shirtsEnabled ? 6 : 5)
                     {/if}
                 </p>
             {/if}
-            <p class="mt-4 text-sm text-muted-foreground">
-                Hi, <span class="font-medium text-foreground">{data.user.name}</span>! Add everyone
-                in your party below to register.
+            <p class="mt-3 text-sm text-muted-foreground">
+                Add everyone in your party below — no account required.
             </p>
         </div>
     </section>
@@ -206,78 +174,201 @@ let tableColCount = $derived(data.event?.shirtsEnabled ? 6 : 5)
         <input type="hidden" name="members" bind:value={$form.members} />
 
         <div class="grid grid-cols-1 lg:grid-cols-[1fr_minmax(0,22rem)] gap-6">
-            <!-- Left column -->
-            <div class="flex flex-col gap-6">
+            <!-- Left: party builder -->
+            <div class="flex flex-col gap-4">
+                <!-- Your info card -->
                 <Card>
-                    <CardHeader>
-                        <CardTitle>Your Party</CardTitle>
-                        <CardDescription>Add everyone attending in your household.</CardDescription>
+                    <CardHeader class="pb-3">
+                        <CardTitle class="flex items-center gap-2 text-base">
+                            <UserCircle class="h-5 w-5 text-muted-foreground" />
+                            Your Information
+                        </CardTitle>
                     </CardHeader>
                     <CardContent class="space-y-4">
-                        <!-- Account holder row (locked) -->
-                        <div class="space-y-2">
-                            <div
-                                class="grid grid-cols-1 gap-2 sm:grid-cols-2 {data.event
-                                    .shirtsEnabled
-                                    ? 'lg:grid-cols-4'
-                                    : 'lg:grid-cols-3'}">
-                                <div class="space-y-1">
-                                    <p class="text-xs font-medium">Name</p>
-                                    <div
-                                        class="flex h-9 items-center gap-1.5 rounded-md border border-input bg-muted/50 px-3 text-sm">
-                                        <span class="truncate">{data.user.name}</span>
-                                        <Badge variant="secondary" class="text-xs shrink-0"
-                                            >You</Badge>
-                                    </div>
-                                </div>
-                                <div class="space-y-1">
-                                    <label for="selfTier" class="text-xs font-medium">
-                                        Category <span class="text-destructive">*</span>
+                        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                            <div class="space-y-1.5">
+                                <label for="contactName" class="text-sm font-medium">
+                                    Your name <span class="text-destructive">*</span>
+                                </label>
+                                <Input
+                                    id="contactName"
+                                    name="contactName"
+                                    type="text"
+                                    bind:value={$form.contactName}
+                                    placeholder="First Last"
+                                    autocomplete="name"
+                                    required />
+                                {#if $errors.contactName?.[0]}
+                                    <p class="text-sm text-destructive">
+                                        {$errors.contactName[0]}
+                                    </p>
+                                {/if}
+                            </div>
+                            <div class="space-y-1.5">
+                                <label for="contactEmail" class="text-sm font-medium">
+                                    Email <span class="text-destructive">*</span>
+                                </label>
+                                <Input
+                                    id="contactEmail"
+                                    name="contactEmail"
+                                    type="email"
+                                    bind:value={$form.contactEmail}
+                                    placeholder="you@example.com"
+                                    autocomplete="email"
+                                    required />
+                                {#if $errors.contactEmail?.[0]}
+                                    <p class="text-sm text-destructive">
+                                        {$errors.contactEmail[0]}
+                                    </p>
+                                {/if}
+                            </div>
+                        </div>
+
+                        <div
+                            class="flex items-center gap-2 rounded-md bg-muted/50 border px-3 py-2">
+                            <span class="font-medium text-sm flex-1">
+                                {$form.contactName || 'You'}
+                            </span>
+                            <Badge variant="secondary" class="text-xs shrink-0">You</Badge>
+                        </div>
+
+                        <div
+                            class="grid grid-cols-1 gap-3 {data.event.shirtsEnabled
+                                ? 'sm:grid-cols-2'
+                                : ''}">
+                            <div class="space-y-1.5">
+                                <label for="selfBirthDate" class="text-sm font-medium">
+                                    Your birthday <span class="text-destructive">*</span>
+                                </label>
+                                <DatePicker
+                                    id="selfBirthDate"
+                                    bind:value={selfBirthDate}
+                                    placeholder="Your birthday" />
+                            </div>
+
+                            {#if data.event.shirtsEnabled}
+                                <div class="space-y-1.5">
+                                    <label for="selfShirtSize" class="text-sm font-medium">
+                                        T-shirt
+                                        <span class="text-muted-foreground font-normal text-xs"
+                                            >(optional)</span>
                                     </label>
                                     <Select.Root
                                         type="single"
-                                        value={selfTierId}
-                                        onValueChange={(v) => (selfTierId = v)}>
-                                        <Select.Trigger id="selfTier">
-                                            <BitsSelect.Value placeholder="Select category…" />
+                                        value={selfShirtSize}
+                                        onValueChange={(v) => (selfShirtSize = v)}>
+                                        <Select.Trigger id="selfShirtSize">
+                                            <BitsSelect.Value placeholder="Select size…" />
                                         </Select.Trigger>
                                         <Select.Content>
-                                            {#each data.tiers as tier}
-                                                <Select.Item
-                                                    value={tier.id}
-                                                    label="{tier.label} — ${formatPrice(
-                                                        tier.priceCents,
-                                                    )}" />
+                                            {#each SHIRT_SIZES as size (size)}
+                                                <Select.Item value={size} label={size} />
                                             {/each}
                                         </Select.Content>
                                     </Select.Root>
                                 </div>
-                                <div class="space-y-1">
-                                    <label for="selfBirthDate" class="text-xs font-medium">
-                                        Birthday <span class="text-muted-foreground/70 font-normal"
-                                            >(optional)</span>
+                            {/if}
+                        </div>
+                    </CardContent>
+                </Card>
+
+                <!-- Added party members -->
+                {#if members.length > 0}
+                    <div class="space-y-2">
+                        {#each members as member, i (i)}
+                            <div
+                                class="flex items-center gap-3 rounded-lg border bg-card px-4 py-3">
+                                <div class="flex-1 min-w-0">
+                                    <p class="font-medium text-sm">{member.name}</p>
+                                    <p class="text-xs text-muted-foreground">
+                                        {getTierLabel(tierMap, member.tierId)}
+                                        {#if member.birthDate}
+                                            · Age {getMemberAge(member.birthDate)}
+                                        {/if}
+                                        {#if data.event.shirtsEnabled && member.shirtSize}
+                                            · Size {member.shirtSize}
+                                        {/if}
+                                    </p>
+                                </div>
+                                <span class="text-sm font-medium tabular-nums shrink-0"
+                                    >${getTierPrice(tierMap, member.tierId)}</span>
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    class="h-7 w-7 p-0 text-muted-foreground hover:text-destructive shrink-0"
+                                    onclick={() => handleRemoveMember(i)}>
+                                    <Trash2 class="h-3.5 w-3.5" />
+                                    <span class="sr-only">Remove {member.name}</span>
+                                </Button>
+                            </div>
+                        {/each}
+                    </div>
+                {/if}
+
+                {#if $errors.members?.[0]}
+                    <p class="text-sm text-destructive">{$errors.members[0]}</p>
+                {/if}
+
+                <!-- Add person form / button -->
+                {#if showAddForm}
+                    <Card class="border-dashed">
+                        <CardHeader class="pb-3">
+                            <CardTitle class="text-base">Add a person</CardTitle>
+                        </CardHeader>
+                        <CardContent class="space-y-4">
+                            <div class="grid grid-cols-2 gap-3">
+                                <div class="space-y-1.5">
+                                    <label for="new-first" class="text-sm font-medium">
+                                        First name <span class="text-destructive">*</span>
+                                    </label>
+                                    <Input
+                                        id="new-first"
+                                        type="text"
+                                        bind:value={newFirstName}
+                                        placeholder="First" />
+                                </div>
+                                <div class="space-y-1.5">
+                                    <label for="new-last" class="text-sm font-medium">
+                                        Last name <span class="text-destructive">*</span>
+                                    </label>
+                                    <Input
+                                        id="new-last"
+                                        type="text"
+                                        bind:value={newLastName}
+                                        placeholder="Last" />
+                                </div>
+                            </div>
+                            <div
+                                class="grid grid-cols-1 gap-3 {data.event.shirtsEnabled
+                                    ? 'sm:grid-cols-2'
+                                    : ''}">
+                                <div class="space-y-1.5">
+                                    <label for="new-bday" class="text-sm font-medium">
+                                        Birthday <span class="text-destructive">*</span>
                                     </label>
                                     <DatePicker
-                                        id="selfBirthDate"
-                                        bind:value={selfBirthDate}
-                                        placeholder="Your birthday" />
+                                        id="new-bday"
+                                        bind:value={newBirthDate}
+                                        placeholder="Their birthday" />
                                 </div>
+
                                 {#if data.event.shirtsEnabled}
-                                    <div class="space-y-1">
-                                        <label for="selfShirtSize" class="text-xs font-medium">
-                                            T-shirt size <span
-                                                class="text-muted-foreground/70 font-normal"
+                                    <div class="space-y-1.5">
+                                        <label for="new-shirt" class="text-sm font-medium">
+                                            T-shirt
+                                            <span class="text-muted-foreground font-normal text-xs"
                                                 >(optional)</span>
                                         </label>
                                         <Select.Root
                                             type="single"
-                                            value={selfShirtSize}
-                                            onValueChange={(v) => (selfShirtSize = v)}>
-                                            <Select.Trigger id="selfShirtSize">
+                                            value={newShirtSize}
+                                            onValueChange={(v) => (newShirtSize = v)}>
+                                            <Select.Trigger id="new-shirt">
                                                 <BitsSelect.Value placeholder="Select size…" />
                                             </Select.Trigger>
                                             <Select.Content>
-                                                {#each SHIRT_SIZES as size}
+                                                {#each SHIRT_SIZES as size (size)}
                                                     <Select.Item value={size} label={size} />
                                                 {/each}
                                             </Select.Content>
@@ -285,241 +376,90 @@ let tableColCount = $derived(data.event?.shirtsEnabled ? 6 : 5)
                                     </div>
                                 {/if}
                             </div>
-                            {#if $errors.selfTierId?.[0]}
-                                <p class="text-xs text-destructive">{$errors.selfTierId[0]}</p>
-                            {/if}
-                        </div>
-
-                        <Separator />
-
-                        <!-- Add a guest -->
-                        <div class="space-y-2">
-                            <p class="text-sm font-medium">Add a guest</p>
-                            <MemberFormFields
-                                bind:name={newName}
-                                bind:tierId={newTierId}
-                                bind:birthDate={newBirthDate}
-                                bind:shirtSize={newShirtSize}
-                                {tiers}
-                                shirtsEnabled={data.event.shirtsEnabled}
-                                idPrefix="new-member" />
-                            <Button
-                                type="button"
-                                size="sm"
-                                variant="outline"
-                                onclick={handleAddMember}>
-                                + Add
-                            </Button>
-                        </div>
-
-                        {#if $errors.members?.[0]}
-                            <p class="text-sm text-destructive">{$errors.members[0]}</p>
-                        {/if}
-
-                        {#if members.length > 0}
-                            <!-- Mobile cards -->
-                            <div class="space-y-3 md:hidden">
-                                {#each members as member, i}
-                                    <div class="rounded-lg border p-3">
-                                        {#if editIndex === i}
-                                            <div class="space-y-2">
-                                                <MemberFormFields
-                                                    bind:name={editName}
-                                                    bind:tierId={editTierId}
-                                                    bind:birthDate={editBirthDate}
-                                                    bind:shirtSize={editShirtSize}
-                                                    {tiers}
-                                                    shirtsEnabled={data.event.shirtsEnabled}
-                                                    idPrefix="edit-mob" />
-                                                <div class="flex gap-2 pt-1">
-                                                    <Button
-                                                        type="button"
-                                                        size="sm"
-                                                        onclick={handleEditSave}>Save</Button>
-                                                    <Button
-                                                        type="button"
-                                                        size="sm"
-                                                        variant="ghost"
-                                                        onclick={handleEditCancel}>Cancel</Button>
-                                                </div>
-                                            </div>
-                                        {:else}
-                                            <div class="flex items-center justify-between">
-                                                <span class="font-medium">{member.name}</span>
-                                                <div class="flex gap-1">
-                                                    <Button
-                                                        type="button"
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        class="h-6 px-2 text-xs"
-                                                        onclick={() => handleEditStart(i)}
-                                                        >Edit</Button>
-                                                    <Button
-                                                        type="button"
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        class="text-destructive hover:text-destructive h-6 px-2"
-                                                        onclick={() => handleRemoveMember(i)}
-                                                        >✕</Button>
-                                                </div>
-                                            </div>
-                                            <div
-                                                class="mt-1 flex flex-wrap gap-x-4 gap-y-0.5 text-sm text-muted-foreground">
-                                                {#if member.birthDate}
-                                                    <span
-                                                        >Age {getMemberAge(member.birthDate)}</span>
-                                                {/if}
-                                                <span>{getTierLabel(tierMap, member.tierId)}</span>
-                                                {#if data.event.shirtsEnabled && member.shirtSize}
-                                                    <span>Size {member.shirtSize}</span>
-                                                {/if}
-                                                <span class="ml-auto font-medium text-foreground"
-                                                    >${getTierPrice(tierMap, member.tierId)}</span>
-                                            </div>
-                                        {/if}
-                                    </div>
-                                {/each}
+                            <div class="flex gap-2">
+                                <Button
+                                    type="button"
+                                    size="sm"
+                                    disabled={!newFirstName.trim() ||
+                                        !newLastName.trim() ||
+                                        !newTierId ||
+                                        !newBirthDate}
+                                    onclick={handleAddMember}>
+                                    Add to party
+                                </Button>
+                                <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="ghost"
+                                    onclick={handleCancelAdd}>
+                                    Cancel
+                                </Button>
                             </div>
-
-                            <!-- Desktop table -->
-                            <div class="hidden overflow-x-auto md:block">
-                                <Table>
-                                    <TableHeader>
-                                        <TableRow>
-                                            <TableHead>Name</TableHead>
-                                            <TableHead>Age</TableHead>
-                                            <TableHead>Category</TableHead>
-                                            {#if data.event.shirtsEnabled}
-                                                <TableHead>T-shirt</TableHead>
-                                            {/if}
-                                            <TableHead>Price</TableHead>
-                                            <TableHead></TableHead>
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {#each members as member, i}
-                                            {#if editIndex === i}
-                                                <TableRow class="bg-muted/20">
-                                                    <TableCell colspan={tableColCount} class="p-3">
-                                                        <MemberFormFields
-                                                            bind:name={editName}
-                                                            bind:tierId={editTierId}
-                                                            bind:birthDate={editBirthDate}
-                                                            bind:shirtSize={editShirtSize}
-                                                            {tiers}
-                                                            shirtsEnabled={data.event.shirtsEnabled}
-                                                            idPrefix="edit-desk"
-                                                            compact />
-                                                        <div class="flex gap-2 mt-2">
-                                                            <Button
-                                                                type="button"
-                                                                size="sm"
-                                                                onclick={handleEditSave}
-                                                                >Save</Button>
-                                                            <Button
-                                                                type="button"
-                                                                size="sm"
-                                                                variant="ghost"
-                                                                onclick={handleEditCancel}
-                                                                >Cancel</Button>
-                                                        </div>
-                                                    </TableCell>
-                                                </TableRow>
-                                            {:else}
-                                                <TableRow>
-                                                    <TableCell>{member.name}</TableCell>
-                                                    <TableCell>
-                                                        {member.birthDate
-                                                            ? getMemberAge(member.birthDate)
-                                                            : '—'}
-                                                    </TableCell>
-                                                    <TableCell
-                                                        >{getTierLabel(
-                                                            tierMap,
-                                                            member.tierId,
-                                                        )}</TableCell>
-                                                    {#if data.event.shirtsEnabled}
-                                                        <TableCell
-                                                            >{member.shirtSize || '—'}</TableCell>
-                                                    {/if}
-                                                    <TableCell
-                                                        >${getTierPrice(
-                                                            tierMap,
-                                                            member.tierId,
-                                                        )}</TableCell>
-                                                    <TableCell>
-                                                        <div class="flex gap-1">
-                                                            <Button
-                                                                type="button"
-                                                                variant="ghost"
-                                                                size="sm"
-                                                                class="h-6 px-2 text-xs"
-                                                                onclick={() => handleEditStart(i)}
-                                                                >Edit</Button>
-                                                            <Button
-                                                                type="button"
-                                                                variant="ghost"
-                                                                size="sm"
-                                                                class="text-destructive hover:text-destructive h-6 px-2"
-                                                                onclick={() =>
-                                                                    handleRemoveMember(i)}
-                                                                >✕</Button>
-                                                        </div>
-                                                    </TableCell>
-                                                </TableRow>
-                                            {/if}
-                                        {/each}
-                                    </TableBody>
-                                </Table>
-                            </div>
-                        {/if}
-                    </CardContent>
-                </Card>
+                        </CardContent>
+                    </Card>
+                {:else}
+                    <p class="text-sm text-muted-foreground">
+                        Include children — we use this to plan programming and food.
+                    </p>
+                    <Button
+                        type="button"
+                        variant="outline"
+                        class="w-full border-dashed"
+                        onclick={() => (showAddForm = true)}>
+                        <Plus class="h-4 w-4 mr-2" />
+                        Add another person
+                    </Button>
+                {/if}
             </div>
 
-            <!-- Right column: order summary -->
-            <div class="self-start">
+            <!-- Right: order summary (sticky on desktop) -->
+            <div class="self-start lg:sticky lg:top-6">
                 <Card>
-                    <CardHeader>
+                    <CardHeader class="pb-3">
                         <CardTitle>Order Summary</CardTitle>
-                        <CardDescription>Complete your registration below.</CardDescription>
                     </CardHeader>
                     <CardContent class="space-y-4">
                         {#if canSubmit}
                             <div class="space-y-2">
                                 <div class="flex items-center justify-between text-sm">
                                     <span>
-                                        {data.user.name}
-                                        <span class="text-muted-foreground">(you)</span>
+                                        {$form.contactName || 'You'}
+                                        <span class="text-muted-foreground text-xs">(you)</span>
                                     </span>
-                                    <span class="font-mono"
-                                        >{selfTier
-                                            ? `$${formatPrice(selfTier.priceCents)}`
-                                            : ''}</span>
+                                    <span class="tabular-nums">
+                                        {selfTier ? `$${formatPrice(selfTier.priceCents)}` : ''}
+                                    </span>
                                 </div>
-                                {#each members as member}
+                                {#each members as member (member.name + member.tierId)}
                                     <div class="flex items-center justify-between text-sm">
-                                        <span>{member.name}</span>
-                                        <span class="font-mono"
+                                        <span class="truncate mr-2">{member.name}</span>
+                                        <span class="tabular-nums shrink-0"
                                             >${getTierPrice(tierMap, member.tierId)}</span>
                                     </div>
                                 {/each}
                             </div>
                             <Separator />
-                            <div class="flex items-center justify-between font-bold text-lg">
+                            <div class="flex items-center justify-between font-semibold">
                                 <span>Total</span>
                                 <span>${formatPrice(total)}</span>
                             </div>
-                            <Button type="submit" class="w-full mt-2">
+                            <Button type="submit" class="w-full">
                                 Pay ${formatPrice(total)} & Register
                             </Button>
+                            <p class="text-xs text-muted-foreground text-center">
+                                You'll be redirected to a secure checkout.
+                            </p>
                         {:else}
-                            <p class="text-sm text-muted-foreground text-center py-4">
-                                Select your category to see your total.
+                            <p class="text-sm text-muted-foreground text-center py-6">
+                                Enter your name, email, and birthday above to get started.
                             </p>
                         {/if}
                     </CardContent>
                 </Card>
+                <p class="text-xs text-muted-foreground text-center mt-3">
+                    Already registered? <a class="underline" href="/register/recover"
+                        >Resend management link</a>
+                </p>
             </div>
         </div>
     </form>

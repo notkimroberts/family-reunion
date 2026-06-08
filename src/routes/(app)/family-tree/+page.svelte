@@ -1,13 +1,16 @@
 <script lang="ts">
+import { Minus, Plus } from '@lucide/svelte'
 import { Select as BitsSelect } from 'bits-ui'
+import { select } from 'd3-selection'
+import { zoomIdentity } from 'd3-zoom'
 import { createChart } from 'family-chart'
 import 'family-chart/styles/family-chart.css'
 import { onDestroy, onMount } from 'svelte'
 import { enhance } from '$app/forms'
 import { goto } from '$app/navigation'
-import { DatePicker } from '$lib/components'
+import { BirthDateInput, MemberSelect } from '$lib/components'
 import { Alert, AlertDescription } from '$lib/components/ui/alert'
-import { Avatar, AvatarFallback, AvatarImage } from '$lib/components/ui/avatar'
+import { Avatar, AvatarFallback } from '$lib/components/ui/avatar'
 import { Button } from '$lib/components/ui/button'
 import { Card } from '$lib/components/ui/card'
 import {
@@ -28,15 +31,88 @@ import {
     TableRow,
 } from '$lib/components/ui/table'
 import { APP_NAME } from '$lib/general/constants'
-import { getAge, getInitials } from '$lib/utils'
-import MemberSelect from './MemberSelect.svelte'
+import { getInitials } from '$lib/utils'
+import { formatPartialBirthDate } from '$lib/utils/age'
 
 function handleMemberClick(id: string) {
     goto(`/family-tree/${id}`)
 }
 
+/* After family-chart's initial fit, drive d3-zoom directly to place the founding
+   couple's midpoint near the top of the viewport at a closer zoom level. We do
+   this ourselves instead of using family-chart's `tree_position: 'main_to_middle'`
+   because chained updateTree calls schedule competing d3 transitions and the
+   second one (with scale/position) gets clobbered by an interrupted transition. */
+const TARGET_SCALE = 0.7
+const TOP_MARGIN_PX = 100
+
+type ZoomLike = {
+    transform: (s: unknown, t: unknown) => unknown
+    scaleBy: (s: unknown, k: number) => unknown
+}
+type LayoutNode = { x: number; y: number; data: { id: string } }
+type ChartLike = {
+    svg: SVGElement
+    store: { getTree: () => { data: LayoutNode[] } | undefined }
+}
+
+function positionFoundingCoupleAtTop(
+    chart: ChartLike,
+    mainId: string,
+    spouseId: string | undefined,
+    container: HTMLDivElement,
+) {
+    const tree = chart.store.getTree()
+    if (!tree) {
+        return
+    }
+    const main = tree.data.find((n) => n.data.id === mainId)
+    if (!main) {
+        return
+    }
+    const spouse = spouseId ? tree.data.find((n) => n.data.id === spouseId) : undefined
+    const centerX = spouse ? (main.x + spouse.x) / 2 : main.x
+    const centerY = main.y
+
+    const listener = (
+        (chart.svg as unknown as { __zoomObj?: unknown }).__zoomObj
+            ? chart.svg
+            : (chart.svg.parentNode as Element | null)
+    ) as (Element & { __zoomObj?: ZoomLike }) | null
+    const zoom = listener?.__zoomObj
+    if (!listener || !zoom) {
+        return
+    }
+
+    const k = TARGET_SCALE
+    const tx = container.clientWidth / 2 - centerX * k
+    const ty = TOP_MARGIN_PX - centerY * k
+    const transform = zoomIdentity.translate(tx, ty).scale(k)
+    zoom.transform(select(listener), transform)
+}
+
+const ZOOM_STEP = 1.4
+
+function zoomBy(chart: ChartLike | undefined, factor: number) {
+    if (!chart) {
+        return
+    }
+    const listener = (
+        (chart.svg as unknown as { __zoomObj?: unknown }).__zoomObj
+            ? chart.svg
+            : (chart.svg.parentNode as Element | null)
+    ) as (Element & { __zoomObj?: ZoomLike }) | null
+    const zoom = listener?.__zoomObj
+    if (!listener || !zoom) {
+        return
+    }
+    zoom.scaleBy(select(listener), factor)
+}
+
 let addOpen = $state(false)
-let addBirthDate = $state<string | undefined>(undefined)
+let addBirthYear = $state<number | null>(null)
+let addBirthMonth = $state<number | null>(null)
+let addBirthDay = $state<number | null>(null)
 let addRelationshipType = $state('')
 let addRelatedMemberId = $state('')
 
@@ -46,6 +122,8 @@ let loaded = $state(false)
 let error = $state('')
 let search = $state('')
 let view = $state<'tree' | 'table'>('tree')
+
+let isAdmin = $derived(data.user?.role === 'admin')
 
 let filtered = $derived(
     data.members.filter((m) => m.name.toLowerCase().includes(search.toLowerCase())),
@@ -81,7 +159,7 @@ let relationshipCounts = $derived(
     ),
 )
 
-let chartInstance: { destroy?: () => void } | undefined
+let chartInstance = $state<(ChartLike & { destroy?: () => void }) | undefined>(undefined)
 
 onMount(async () => {
     try {
@@ -109,8 +187,7 @@ onMount(async () => {
                 data: {
                     'first name': m.name.split(' ')[0] ?? '',
                     'last name': m.name.split(' ').slice(1).join(' ') ?? '',
-                    age: m.birthYear ? `${getAge(m.birthYear, m.birthMonth, m.birthDay)}` : '',
-                    photoUrl: m.photoUrl ?? '',
+                    born: formatPartialBirthDate(m.birthYear, m.birthMonth, m.birthDay) ?? '',
                     gender: 'M',
                 },
                 rels: {
@@ -124,24 +201,73 @@ onMount(async () => {
 
         if (nodes.length > 0) {
             const f3Chart = createChart(treeContainer, nodes)
-            chartInstance = f3Chart
+            chartInstance = f3Chart as unknown as ChartLike & { destroy?: () => void }
             f3Chart.setSingleParentEmptyCard(false)
             f3Chart.setCardHtml().setCardInnerHtmlCreator((d) => {
                 const name = `${d.data.data['first name']} ${d.data.data['last name']}`.trim()
-                const photo = d.data.data.photoUrl
-                    ? `<div style="width:2rem;height:2rem;border-radius:9999px;overflow:hidden;flex-shrink:0"><img src="${d.data.data.photoUrl}" alt="" style="width:100%;height:100%;object-fit:cover" /></div>`
-                    : `<div style="width:2rem;height:2rem;border-radius:9999px;background:var(--primary);color:var(--primary-foreground);display:flex;align-items:center;justify-content:center;font-size:0.75rem;font-weight:bold;flex-shrink:0">${getInitials(name)}</div>`
+                const photo = `<div style="width:2rem;height:2rem;border-radius:9999px;background:var(--primary);color:var(--primary-foreground);display:flex;align-items:center;justify-content:center;font-size:0.75rem;font-weight:bold;flex-shrink:0">${getInitials(name)}</div>`
                 return `
                     <div style="background:var(--card);border:1px solid var(--border);border-radius:0.5rem;padding:0.75rem;display:flex;align-items:center;gap:0.75rem;width:12rem;box-shadow:0 1px 3px rgba(0,0,0,0.1)">
                         ${photo}
                         <div style="min-width:0">
                             <div style="font-weight:500;font-size:0.875rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--foreground)">${name}</div>
-                            <div style="font-size:0.75rem;color:var(--muted-foreground)">${d.data.data.age ? `Age ${d.data.data.age}` : ''}</div>
+                            <div style="font-size:0.75rem;color:var(--muted-foreground)">${d.data.data.born ? `Born ${d.data.data.born}` : ''}</div>
                         </div>
                     </div>
                 `
             })
+
+            /* Pick the founding-ancestor couple as the centered "main" — earliest birth year
+               with no recorded parents in the relationship graph. Falls back to the earliest
+               birth year overall, then to the first node. */
+            const parentedIds = new Set(
+                data.relationships
+                    .filter((r) => r.type === 'child' || r.type === 'parent')
+                    .map((r) => (r.type === 'child' ? r.from : r.to)),
+            )
+            const candidates = data.members.filter((m) => m.birthYear !== null)
+            const rooted = candidates.filter((m) => !parentedIds.has(m.id))
+            const root = (rooted.length ? rooted : candidates).reduce<
+                (typeof candidates)[number] | null
+            >(
+                (acc, m) =>
+                    !acc ||
+                    (m.birthYear !== null && acc.birthYear !== null && m.birthYear < acc.birthYear)
+                        ? m
+                        : acc,
+                null,
+            )
+            if (root) {
+                f3Chart.updateMainId(root.id)
+            }
+
+            /* family-chart forces a 'fit' on initial:true regardless of tree_position,
+               so we render once to lay out the cards, then take direct control of the
+               d3 zoom transform on the next animation frame (after the fit transition
+               settles). We center on the midpoint of the founding couple, not just on
+               the main, so both cards sit horizontally centered. */
             f3Chart.updateTree({ initial: true })
+
+            let spouseId: string | undefined
+            if (root) {
+                const spouseRel = data.relationships.find(
+                    (r) => r.type === 'spouse' && (r.from === root.id || r.to === root.id),
+                )
+                if (spouseRel) {
+                    spouseId = spouseRel.from === root.id ? spouseRel.to : spouseRel.from
+                }
+            }
+
+            if (root) {
+                requestAnimationFrame(() => {
+                    positionFoundingCoupleAtTop(
+                        f3Chart as unknown as ChartLike,
+                        root.id,
+                        spouseId,
+                        treeContainer,
+                    )
+                })
+            }
         }
 
         loaded = true
@@ -165,7 +291,9 @@ onDestroy(() => {
     {#if view === 'table'}
         <Input type="text" class="max-w-sm" placeholder="Search by name..." bind:value={search} />
     {/if}
-    <Button variant="outline" size="sm" onclick={() => (addOpen = true)}>+ Add Member</Button>
+    {#if isAdmin}
+        <Button variant="outline" size="sm" onclick={() => (addOpen = true)}>+ Add Member</Button>
+    {/if}
     <div class="ml-auto flex items-center rounded-lg border bg-muted p-1 gap-1">
         <Button
             variant={view === 'tree' ? 'default' : 'ghost'}
@@ -182,7 +310,9 @@ onDestroy(() => {
 <section class="col-span-12 lg:hidden">
     <div class="flex items-center gap-3 mb-4">
         <Input type="text" class="flex-1" placeholder="Search by name..." bind:value={search} />
-        <Button variant="outline" size="sm" onclick={() => (addOpen = true)}>+ Add</Button>
+        {#if isAdmin}
+            <Button variant="outline" size="sm" onclick={() => (addOpen = true)}>+ Add</Button>
+        {/if}
     </div>
     {#if data.members.length === 0}
         <div class="text-center py-12">
@@ -197,9 +327,6 @@ onDestroy(() => {
                     <Card class="p-4 hover:bg-accent transition-colors">
                         <div class="flex items-center gap-4">
                             <Avatar class="w-12 h-12 shrink-0">
-                                {#if member.photoUrl}
-                                    <AvatarImage src={member.photoUrl} alt={member.name} />
-                                {/if}
                                 <AvatarFallback class="bg-primary text-primary-foreground text-lg">
                                     {getInitials(member.name)}
                                 </AvatarFallback>
@@ -208,7 +335,7 @@ onDestroy(() => {
                                 <h3>{member.name}</h3>
                                 {#if member.birthYear}
                                     <p class="text-sm text-muted-foreground">
-                                        Age {getAge(
+                                        Born {formatPartialBirthDate(
                                             member.birthYear,
                                             member.birthMonth,
                                             member.birthDay,
@@ -225,12 +352,16 @@ onDestroy(() => {
 </section>
 
 <!-- Desktop tree view (always in DOM to preserve chart state) -->
-<section class="col-span-12 desktop-view family-tree-page" class:active={view === 'tree'}>
+<section
+    class="border border-gray-500 rounded-xl col-span-12 desktop-view family-tree-page"
+    class:active={view === 'tree'}>
     {#if data.members.length === 0}
         <div class="flex items-center justify-center h-full">
             <div class="text-center">
                 <p class="text-muted-foreground text-lg">No family members have been added yet.</p>
-                <Button href="/profile/relationships" class="mt-4">Add Relationships</Button>
+                {#if isAdmin}
+                    <Button onclick={() => (addOpen = true)} class="mt-4">+ Add Member</Button>
+                {/if}
             </div>
         </div>
     {:else if error}
@@ -247,6 +378,24 @@ onDestroy(() => {
         </div>
     {/if}
     <div bind:this={treeContainer} class="tree-container f3"></div>
+    {#if loaded && !error && data.members.length > 0}
+        <div class="zoom-controls">
+            <Button
+                variant="outline"
+                size="icon"
+                aria-label="Zoom in"
+                onclick={() => zoomBy(chartInstance, ZOOM_STEP)}>
+                <Plus class="h-4 w-4" />
+            </Button>
+            <Button
+                variant="outline"
+                size="icon"
+                aria-label="Zoom out"
+                onclick={() => zoomBy(chartInstance, 1 / ZOOM_STEP)}>
+                <Minus class="h-4 w-4" />
+            </Button>
+        </div>
+    {/if}
 </section>
 
 <!-- Desktop table view (always in DOM, CSS-toggled) -->
@@ -254,7 +403,9 @@ onDestroy(() => {
     {#if data.members.length === 0}
         <div class="text-center py-12">
             <p class="text-muted-foreground text-lg">No family members have been added yet.</p>
-            <Button href="/profile/relationships" class="mt-4">Add Relationships</Button>
+            {#if isAdmin}
+                <Button onclick={() => (addOpen = true)} class="mt-4">+ Add Member</Button>
+            {/if}
         </div>
     {:else if filtered.length === 0}
         <p class="text-muted-foreground">No family members found.</p>
@@ -265,7 +416,7 @@ onDestroy(() => {
                     <TableHeader>
                         <TableRow>
                             <TableHead>Name</TableHead>
-                            <TableHead>Age</TableHead>
+                            <TableHead>Born</TableHead>
                             <TableHead>Relationships</TableHead>
                         </TableRow>
                     </TableHeader>
@@ -277,11 +428,6 @@ onDestroy(() => {
                                 <TableCell>
                                     <div class="flex items-center gap-4">
                                         <Avatar class="w-10 h-10 shrink-0">
-                                            {#if member.photoUrl}
-                                                <AvatarImage
-                                                    src={member.photoUrl}
-                                                    alt={member.name} />
-                                            {/if}
                                             <AvatarFallback
                                                 class="bg-primary text-primary-foreground text-sm">
                                                 {getInitials(member.name)}
@@ -292,7 +438,7 @@ onDestroy(() => {
                                 </TableCell>
                                 <TableCell>
                                     {#if member.birthYear}
-                                        {getAge(
+                                        {formatPartialBirthDate(
                                             member.birthYear,
                                             member.birthMonth,
                                             member.birthDay,
@@ -324,7 +470,9 @@ onDestroy(() => {
                 return ({ result, update }) => {
                     if (result.type === 'success') {
                         addOpen = false
-                        addBirthDate = undefined
+                        addBirthYear = null
+                        addBirthMonth = null
+                        addBirthDay = null
                         addRelationshipType = ''
                         addRelatedMemberId = ''
                     }
@@ -338,9 +486,27 @@ onDestroy(() => {
                 <Input id="addName" name="name" type="text" placeholder="Full name" required />
             </div>
             <div class="space-y-2">
-                <label for="addBirthDate" class="text-sm font-medium">Birthday</label>
-                <input type="hidden" name="birthDate" value={addBirthDate ?? ''} />
-                <DatePicker id="addBirthDate" bind:value={addBirthDate} placeholder="Optional" />
+                <span class="text-sm font-medium">Birthday</span>
+                <p class="text-xs text-muted-foreground">
+                    Year only is fine for ancestors when month/day aren't known.
+                </p>
+                <input
+                    type="hidden"
+                    name="birthYear"
+                    value={addBirthYear !== null ? String(addBirthYear) : ''} />
+                <input
+                    type="hidden"
+                    name="birthMonth"
+                    value={addBirthMonth !== null ? String(addBirthMonth) : ''} />
+                <input
+                    type="hidden"
+                    name="birthDay"
+                    value={addBirthDay !== null ? String(addBirthDay) : ''} />
+                <BirthDateInput
+                    idPrefix="add-bday"
+                    bind:year={addBirthYear}
+                    bind:month={addBirthMonth}
+                    bind:day={addBirthDay} />
             </div>
             {#if data.members.length > 0}
                 <div class="border-t pt-4 space-y-3">
@@ -383,29 +549,6 @@ onDestroy(() => {
                     </div>
                 </div>
             {/if}
-            <div class="border-t pt-4 space-y-3">
-                <p class="text-xs text-muted-foreground">Your details (for the edit log)</p>
-                <div class="space-y-2">
-                    <label for="addEditorName" class="text-sm font-medium"
-                        >Your name <span class="text-destructive">*</span></label>
-                    <Input
-                        id="addEditorName"
-                        name="editorName"
-                        type="text"
-                        placeholder="Your name"
-                        required />
-                </div>
-                <div class="space-y-2">
-                    <label for="addEditorEmail" class="text-sm font-medium"
-                        >Your email <span class="text-destructive">*</span></label>
-                    <Input
-                        id="addEditorEmail"
-                        name="editorEmail"
-                        type="email"
-                        placeholder="you@example.com"
-                        required />
-                </div>
-            </div>
             <DialogFooter>
                 <Button type="button" variant="ghost" onclick={() => (addOpen = false)}
                     >Cancel</Button>
@@ -432,6 +575,17 @@ onDestroy(() => {
     overflow: hidden;
 }
 
+/* Break out of the layout's max-w-6xl container on wide screens so the tree
+   has room to breathe. Capped at 100rem so it doesn't span absurdly wide on
+   ultrawide monitors. */
+@media (min-width: 1024px) {
+    .family-tree-page {
+        width: min(calc(100vw - 2rem), 100rem);
+        margin-left: max(calc(-50vw + 50% + 1rem), calc(-50rem + 50%));
+        margin-right: auto;
+    }
+}
+
 .tree-container {
     width: 100%;
     height: 100%;
@@ -443,5 +597,15 @@ onDestroy(() => {
     stroke: var(--border);
     stroke-width: 1.5;
     fill: none;
+}
+
+.zoom-controls {
+    position: absolute;
+    bottom: 1rem;
+    right: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    z-index: 10;
 }
 </style>

@@ -20,6 +20,7 @@ export async function createAddMemberCheckout(params: AddMemberCheckoutParams): 
             registrationId: params.registrationId,
             memberName: params.name,
             memberTierId: params.memberTierId,
+            memberTierLabel: params.tierLabel,
             memberBirthDate: params.memberBirthDate,
             memberShirtSize: params.memberShirtSize,
             memberPriceCents: params.priceCents,

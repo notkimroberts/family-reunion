@@ -1,9 +1,9 @@
 import { eq } from 'drizzle-orm'
 import { db } from '$lib/server/db'
-import { partyMembers, pricingTiers } from '$lib/server/db/schema'
+import { partyMembers } from '$lib/server/db/schema'
 import type { RegistrationMember } from './RegistrationMember'
 
-// Joins party_members with pricing_tiers to include tier label and price alongside each member's personal details.
+/* Returns party members for a registration; tier label and price are stored directly on the row, so no join is needed. */
 export async function getRegistrationMembers(
     registrationId: string,
 ): Promise<RegistrationMember[]> {
@@ -15,12 +15,10 @@ export async function getRegistrationMembers(
             birthMonth: partyMembers.birthMonth,
             birthDay: partyMembers.birthDay,
             shirtSize: partyMembers.shirtSize,
-            pricingTierId: partyMembers.pricingTierId,
+            tierLabel: partyMembers.tierLabel,
+            priceCents: partyMembers.priceCents,
             stripePaymentIntentId: partyMembers.stripePaymentIntentId,
-            tierLabel: pricingTiers.label,
-            priceCents: pricingTiers.priceCents,
         })
         .from(partyMembers)
-        .innerJoin(pricingTiers, eq(partyMembers.pricingTierId, pricingTiers.id))
         .where(eq(partyMembers.registrationId, registrationId))
 }

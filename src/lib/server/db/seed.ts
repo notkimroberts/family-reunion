@@ -3,6 +3,7 @@ import { sql } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/postgres-js'
 import postgres from 'postgres'
 import { dbg } from '../debug'
+import { hashManagementToken } from '../registrations/hashManagementToken'
 import * as schema from './schema'
 
 faker.seed(42)
@@ -292,18 +293,45 @@ async function seed() {
     dbg.seed('Truncating all tables...')
     await db.execute(sql`
 		TRUNCATE TABLE
-			contact_submissions,
 			photos,
-			storefront_config,
 			party_members,
 			registrations,
 			relationships,
 			family_members,
-			pricing_tiers,
-			reunion_events,
-			user_profiles
+			reunion_events
 		CASCADE
 	`)
+
+    /* Pricing tiers are embedded as JSONB on each event; generate stable IDs so seeded registrations can reference them. */
+    const standardTiers: schema.PricingTier[] = [
+        {
+            id: crypto.randomUUID(),
+            label: 'Child',
+            minAge: 0,
+            maxAge: 12,
+            priceCents: 5000,
+        },
+        {
+            id: crypto.randomUUID(),
+            label: 'Teen',
+            minAge: 13,
+            maxAge: 17,
+            priceCents: 7500,
+        },
+        {
+            id: crypto.randomUUID(),
+            label: 'Adult',
+            minAge: 18,
+            maxAge: null,
+            priceCents: 15000,
+        },
+    ]
+
+    const shopProducts = Array.from({ length: 3 }, () => ({
+        name: faker.commerce.productName(),
+        imageUrl: `https://picsum.photos/seed/${faker.string.alphanumeric(8)}/400/400`,
+        description: faker.commerce.productDescription(),
+    }))
 
     dbg.seed('Seeding reunion events...')
     const events = await db
@@ -311,25 +339,27 @@ async function seed() {
         .values([
             {
                 year: 2024,
-                title: 'Patterson Family Reunion 2024',
+                title: 'Patterson Family Reunion',
                 status: 'archived' as const,
                 venue: randomVenue(),
                 menu: randomMenu(),
                 drinks: randomDrinks(),
                 schedule: randomSchedule(['Saturday']),
+                pricingTiers: standardTiers,
             },
             {
                 year: 2025,
-                title: 'Patterson Family Reunion 2025',
+                title: 'Patterson Family Reunion',
                 status: 'closed' as const,
                 venue: randomVenue(),
                 menu: randomMenu(),
                 drinks: randomDrinks(),
                 schedule: randomSchedule(['Saturday', 'Sunday']),
+                pricingTiers: standardTiers,
             },
             {
                 year: 2027,
-                title: 'Patterson Family Reunion 2027',
+                title: 'Patterson Family Reunion',
                 status: 'open' as const,
                 startDate: new Date('2027-07-23T16:00:00'),
                 endDate: new Date('2027-07-25T12:00:00'),
@@ -363,43 +393,17 @@ async function seed() {
                     { day: 'Saturday', time: '6:00 PM', activity: 'Dinner & Dance' },
                     { day: 'Sunday', time: '9:00 AM', activity: 'Farewell Brunch' },
                 ],
+                pricingTiers: standardTiers,
+                externalShopUrl: 'https://patterson-family-store.example.com',
+                shopProducts,
+                shopActive: true,
             },
         ])
         .returning()
 
-    dbg.seed('Seeding pricing tiers...')
-    const allTiers = []
-    for (const event of events) {
-        const tiers = await db
-            .insert(schema.pricingTiers)
-            .values([
-                { eventId: event.id, label: 'Child', minAge: 0, maxAge: 12, priceCents: 0 },
-                { eventId: event.id, label: 'Teen', minAge: 13, maxAge: 17, priceCents: 2500 },
-                { eventId: event.id, label: 'Adult', minAge: 18, maxAge: null, priceCents: 5000 },
-            ])
-            .returning()
-        allTiers.push(...tiers)
-    }
-
-    dbg.seed('Seeding user profiles...')
-    const userIds = Array.from({ length: 15 }, (_, i) => `user_${String(i + 1).padStart(3, '0')}`)
-    const userValues = userIds.map((userId, i) => ({
-        userId,
-        phone: faker.phone.number({ style: 'national' }),
-        mailingAddress: {
-            street: faker.location.streetAddress(),
-            city: faker.location.city(),
-            state: faker.location.state({ abbreviated: true }),
-            zip: faker.location.zipCode(),
-        },
-        profilePhotoUrl: `https://picsum.photos/seed/user${i + 1}/200/200`,
-    }))
-    await db.insert(schema.userProfiles).values(userValues)
-
     dbg.seed('Seeding family members...')
     const tree = buildFamilyTree()
-    const familyValues = tree.map((member, i) => ({
-        userId: i < 15 ? userIds[i] : null,
+    const familyValues = tree.map((member) => ({
         name: member.name,
         birthYear: member.birthYear,
         birthMonth: member.birthMonth,
@@ -413,18 +417,15 @@ async function seed() {
         fromMemberId: string
         toMemberId: string
         type: RelationshipType
-        createdByUserId: string
     }
 
     const relationshipValues: RelRow[] = []
-    const createdBy = userIds[0]
 
     function addRel(from: string, to: string, type: RelationshipType) {
         relationshipValues.push({
             fromMemberId: from,
             toMemberId: to,
             type,
-            createdByUserId: createdBy,
         })
     }
 
@@ -489,27 +490,42 @@ async function seed() {
     })
 
     if (relationshipValues.length > 0) {
+        /* Defensive dedup against the unique (from, to, type) constraint. The walk above
+           should already produce unique tuples, but this keeps a tree-builder change from
+           mid-seed-failing in the future. */
+        const seen = new Set<string>()
+        const deduped = relationshipValues.filter((r) => {
+            const key = `${r.fromMemberId}:${r.toMemberId}:${r.type}`
+            if (seen.has(key)) {
+                return false
+            }
+            seen.add(key)
+            return true
+        })
+
         const batchSize = 100
-        const batches = Array.from(
-            { length: Math.ceil(relationshipValues.length / batchSize) },
-            (_, i) => relationshipValues.slice(i * batchSize, (i + 1) * batchSize),
+        const batches = Array.from({ length: Math.ceil(deduped.length / batchSize) }, (_, i) =>
+            deduped.slice(i * batchSize, (i + 1) * batchSize),
         )
         for (const batch of batches) {
             await db.insert(schema.relationships).values(batch)
         }
+        dbg.seed(
+            'Inserted %d relationships (%d duplicates filtered)',
+            deduped.length,
+            relationshipValues.length - deduped.length,
+        )
     }
-    dbg.seed('Inserted %d relationships', relationshipValues.length)
 
     dbg.seed('Seeding registrations...')
     for (const event of events) {
-        const eventTiers = allTiers.filter((t) => t.eventId === event.id)
+        const eventTiers = event.pricingTiers
         const numRegistrations =
             event.status === 'open'
                 ? faker.number.int({ min: 5, max: 7 })
                 : faker.number.int({ min: 8, max: 10 })
 
         for (let r = 0; r < numRegistrations; r++) {
-            const userId = userIds[r % userIds.length]
             const numParty = faker.number.int({ min: 1, max: 4 })
             const status =
                 event.status === 'open' && faker.datatype.boolean()
@@ -530,20 +546,26 @@ async function seed() {
                     birthYear,
                     birthMonth,
                     birthDay,
-                    tierId: tier.id,
+                    tierLabel: tier.label,
                     priceCents: tier.priceCents,
                 }
             })
-            const totalCents = partyData.reduce((sum, p) => sum + p.priceCents, 0)
+            const contactName = partyData[0].name
+            const contactEmail = faker.internet
+                .email({ firstName: contactName.split(' ')[0] })
+                .toLowerCase()
+            const managementToken = crypto.randomUUID().replace(/-/g, '')
+            const managementTokenHash = hashManagementToken(managementToken)
 
             const [reg] = await db
                 .insert(schema.registrations)
                 .values({
-                    userId,
+                    managementToken: managementTokenHash,
+                    contactName,
+                    contactEmail,
                     eventId: event.id,
                     stripeSessionId:
                         status === 'paid' ? `cs_test_${crypto.randomUUID().slice(0, 24)}` : null,
-                    totalAmountCents: totalCents,
                     status,
                 })
                 .returning()
@@ -555,7 +577,8 @@ async function seed() {
                     birthYear: p.birthYear,
                     birthMonth: p.birthMonth,
                     birthDay: p.birthDay,
-                    pricingTierId: p.tierId,
+                    tierLabel: p.tierLabel,
+                    priceCents: p.priceCents,
                 })),
             )
         }
@@ -568,7 +591,7 @@ async function seed() {
             const photoId = `${event.year}-${String(p + 1).padStart(3, '0')}`
             return {
                 eventId: event.id,
-                uploadedByUserId: userIds[p % userIds.length],
+                uploadedByUserId: null,
                 r2Key: `photos/event-${event.year}/${photoId}.jpg`,
                 url: `https://picsum.photos/seed/${photoId}/800/600`,
                 caption:
@@ -581,26 +604,6 @@ async function seed() {
         })
     })
     await db.insert(schema.photos).values(photoValues)
-
-    dbg.seed('Seeding storefront config...')
-    await db.insert(schema.storefrontConfig).values({
-        externalShopUrl: 'https://patterson-family-store.example.com',
-        products: Array.from({ length: 3 }, () => ({
-            name: faker.commerce.productName(),
-            imageUrl: `https://picsum.photos/seed/${faker.string.alphanumeric(8)}/400/400`,
-            description: faker.commerce.productDescription(),
-        })),
-        isActive: true,
-    })
-
-    dbg.seed('Seeding contact submissions...')
-    await db.insert(schema.contactSubmissions).values(
-        Array.from({ length: faker.number.int({ min: 5, max: 8 }) }, () => ({
-            name: faker.person.fullName(),
-            email: faker.internet.email(),
-            message: faker.lorem.sentences(2),
-        })),
-    )
 
     dbg.seed('Seed complete!')
     await client.end()

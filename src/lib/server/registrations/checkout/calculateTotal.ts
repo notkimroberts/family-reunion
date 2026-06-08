@@ -1,13 +1,12 @@
+import type { PricingTier } from '$lib/server/db/schema'
 import type { MemberInput } from './MemberInput'
-
-type Tier = { label: string; priceCents: number }
 
 /* Computes line items and total for a registration party. */
 export function calculateTotal(
     selfName: string,
-    selfTier: Tier,
+    selfTier: PricingTier,
     additionalMembers: MemberInput[],
-    tierMap: Map<string, Tier>,
+    tierMap: Map<string, PricingTier>,
 ): { totalCents: number; lineItems: Array<{ name: string; priceCents: number }> } {
     const allMembers = [
         { name: selfName, tier: selfTier },

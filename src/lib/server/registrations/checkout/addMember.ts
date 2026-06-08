@@ -1,14 +1,15 @@
 import { error } from '@sveltejs/kit'
-import { and, eq } from 'drizzle-orm'
-import { db } from '$lib/server/db'
-import { pricingTiers, registrations } from '$lib/server/db/schema'
 import { dbg } from '$lib/server/debug'
 import { createAddMemberCheckout } from '$lib/server/payments'
+import { getRegistrationByToken } from '../queries/getRegistrationByToken'
+import { fetchAndValidateTiers } from './_fetchAndValidateTiers'
 
-// Validates ownership of the registration and the tier, then creates a Stripe Checkout for a single additional member; returns the checkout URL
+/* Validates ownership via plaintext management token (compared by hash) and looks up the
+   tier on the event, then creates a Stripe Checkout for a single additional member.
+   Rejects refunded/pending registrations — only paid or waived may add members. */
 export async function addMember(params: {
     registrationId: string
-    userId: string
+    managementToken: string
     name: string
     tierId: string
     birthDate?: string
@@ -16,28 +17,16 @@ export async function addMember(params: {
     successUrl: string
     cancelUrl: string
 }): Promise<string> {
-    const [registration] = await db
-        .select()
-        .from(registrations)
-        .where(
-            and(
-                eq(registrations.id, params.registrationId),
-                eq(registrations.userId, params.userId),
-            ),
-        )
-        .limit(1)
-    if (!registration) {
+    const registration = await getRegistrationByToken(params.managementToken)
+    if (!registration || registration.id !== params.registrationId) {
         throw error(404)
     }
-
-    const [tier] = await db
-        .select()
-        .from(pricingTiers)
-        .where(eq(pricingTiers.id, params.tierId))
-        .limit(1)
-    if (!tier) {
-        throw error(400, 'Invalid pricing tier')
+    if (registration.status !== 'paid' && registration.status !== 'waived') {
+        throw error(409, 'Cannot add members to a registration that is not active')
     }
+
+    const tierMap = await fetchAndValidateTiers(registration.eventId, [params.tierId])
+    const tier = tierMap.get(params.tierId)!
 
     dbg.register('add_member registrationId=%s name=%s', params.registrationId, params.name)
 

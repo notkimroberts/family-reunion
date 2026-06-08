@@ -1,5 +1,5 @@
 <script lang="ts">
-import type { Member } from './types'
+type Member = { id: string; name: string }
 
 type Props = {
     members: Member[]
@@ -12,14 +12,19 @@ let { members, value = $bindable(''), name, placeholder = 'Search members…' }:
 
 let search = $state('')
 let open = $state(false)
+let lastSyncedValue = $state<string | undefined>(undefined)
 
+/* Sync `search` to the selected member's name only when `value` itself changes (initial
+   mount, dialog reopen with a different attendee). User-driven typing must NOT trigger
+   this sync — otherwise every keystroke would be overwritten with the prior selection. */
 $effect(() => {
-    if (!value) {
-        search = ''
-    } else {
-        const m = members.find((m) => m.id === value)
-        if (m) {
-            search = m.name
+    if (value !== lastSyncedValue) {
+        lastSyncedValue = value
+        if (value) {
+            const m = members.find((m) => m.id === value)
+            search = m ? m.name : ''
+        } else {
+            search = ''
         }
     }
 })
@@ -31,12 +36,12 @@ let filtered = $derived(
 )
 
 function handleInput() {
-    value = ''
     open = true
 }
 
 function handleSelect(member: Member) {
     value = member.id
+    lastSyncedValue = member.id
     search = member.name
     open = false
 }
@@ -44,8 +49,16 @@ function handleSelect(member: Member) {
 function handleBlur() {
     setTimeout(() => {
         open = false
-        if (!value) {
-            search = ''
+        if (search.trim() === '') {
+            /* Empty input = unlink. */
+            value = ''
+            lastSyncedValue = ''
+        } else if (value) {
+            /* User typed but didn't pick — restore the prior selection's name. */
+            const m = members.find((m) => m.id === value)
+            if (m) {
+                search = m.name
+            }
         }
     }, 150)
 }

@@ -55,7 +55,7 @@ SvelteKit full-stack app (Svelte 5 with runes). Node adapter for Railway deploym
 
 - **PostgreSQL** via `postgres` driver + **Drizzle ORM** (schema at `src/lib/server/db/schema.ts`)
 - DB connection uses lazy init with SvelteKit's `$env/dynamic/private` — standalone scripts (like seed.ts) must create their own `postgres()` client directly
-- All person records store birth date as split integers (`birthYear`, `birthMonth`, `birthDay`); age is always derived via `getAge(birthYear, birthMonth?, birthDay?)` from `$lib/utils/age`
+- All person records store birth date as split nullable integers (`birthYear`, `birthMonth`, `birthDay`); a CHECK constraint enforces prefix-consistency (day ⇒ month, month ⇒ year). `family_members` allows partial dates (year-only is fine for ancestors); registration party members come through the form which requires a full date
 
 ### Server modules
 
@@ -65,34 +65,40 @@ Server logic lives under `src/lib/server/`, one domain per folder. Each exported
 | ------------- | --------------------------- | ------------------------------------------------------------------------------------------------- |
 | Registrations | `$lib/server/registrations` | Barrel delegating to `checkout/`, `management/`, `queries/`                                       |
 | — checkout    | `registrations/checkout/`   | Pending registration, add-member checkout, admin direct creation, Stripe fulfillment              |
-| — management  | `registrations/management/` | Post-payment mutations: remove member, cancel, update member details                              |
+| — management  | `registrations/management/` | Post-payment mutations: remove member, cancel, update member details, link to family tree         |
 | — queries     | `registrations/queries/`    | All registration reads                                                                            |
 | Payments      | `$lib/server/payments`      | Stripe checkout creation, refunds, session retrieval; metadata encode/decode in `stripeMetadata/` |
 | Email         | `$lib/server/email`         | Template rendering in `templates/`; Resend delivery in `send/`                                    |
-| Users         | `$lib/server/users`         | User profile reads and writes                                                                     |
 | Storage       | `$lib/server/storage`       | Cloudflare R2 uploads/deletes; local-dev writes to `static/uploads/`                              |
 | Auth          | `$lib/server/auth`          | Better Auth setup; guards in `guards/`                                                            |
 
 ### Auth
 
-- **Better Auth** with admin plugin. Social SSO (Google, Apple, Facebook) + magic link email
-- Magic link plugin configured in `src/lib/server/auth/index.ts`; email sent via `sendMagicLinkEmail` in `$lib/server/email`
+- **Better Auth** with admin plugin and email + password sign-in
+- Magic link has been removed — admins sign in at `/login` with credentials only
 - `hooks.server.ts` populates `event.locals.user` per request. In dev mode, falls back to a hardcoded admin user when no session exists
-- Guards: `requireAuth()` and `requireAdmin()` in `$lib/server/auth/guards`
-- Better Auth manages its own tables (`user`, `session`, `account`) — separate from the app's `user_profiles` table
+- Guards: `requireAuth()` and `requireAdmin()` in `$lib/server/auth/guards`. Used by `/admin/*` and the `restoreSnapshot` family-tree action only — registration is fully public
+- Better Auth manages its own tables (`user`, `session`, `account`)
 - **Lazy-init typing**: `betterAuth({...})` returns a concrete parameterized type that TypeScript can't directly assign to `ReturnType<typeof betterAuth>`. To avoid `any`, extract the call into a `createAuthInstance()` function and type the singleton as `ReturnType<typeof createAuthInstance> | undefined`
 
-### Sign-up & Registration Flow
+#### Bootstrapping admins
 
-Two-step flow made visually explicit to users:
+`bun run admin:create <email> <password> [name]` creates a Better Auth user and sets `role='admin'` on the user row. Reads `DATABASE_URL` from the environment. Run once on a fresh DB; subsequent admins can be added via the admin panel.
 
-1. **Step 1** — Magic link sign-in (`/login`)
-2. **Step 2** — Event registration (`/register`)
+### Registration Flow
+
+Registration is **fully public — no sign-in required**. Anyone with a name + email can register and pay.
+
+1. **Register** (`/register`) — public form collects contact name, email, party members. Submitting creates a pending registration with a `managementToken` and redirects to Stripe Checkout.
+2. **Manage** (`/register/manage?token=…`) — public; the success URL after Stripe checkout. Shows pending/processing while polling, switches to `RegistrationManager` once paid. All add/edit/remove/cancel actions take the token as a hidden form field.
+3. **Recover** (`/register/recover`) — public; enter the registration email and the management link is re-sent via email.
+
+The token is the only credential — no per-request auth check. Email enumeration is avoided in `/register/recover` by always returning a generic success message.
 
 Route groups:
 
-- `(auth)` — `/login` only, no nav, full-screen card layout with step indicator. Magic link `callbackURL: '/register'` so users land directly on event registration after sign-in
-- `(app)` — all authenticated routes including `/register`
+- `(auth)` — `/login` only, no nav, full-screen card layout. Admin sign-in only.
+- `(app)` — public paths include `/`, `/family-tree`, `/gallery`, `/program`, `/shop`, `/register`, `/contact`. Everything else (e.g. `/admin/*`) requires sign-in.
 
 ### Remote Functions
 
@@ -120,8 +126,11 @@ Route groups:
 ### Payments
 
 - **Stripe Checkout** for event registration. Webhook at `/api/webhooks/stripe` handles `checkout.session.completed`
-- `party_members` are linked to `pricing_tiers` (age-based); the tier FK is the source of truth for what was charged
-- Stripe session metadata is typed via `encodeRegistrationMetadata` / `encodeAddMemberMetadata` / `decodeSessionMetadata` in `$lib/server/payments/stripeMetadata` — never access `session.metadata` keys directly
+- Each registration carries a `managementToken` (32 random bytes, base64url) — the credential the registrant uses to manage their party afterward. The DB only stores `sha256(token)`; the plaintext lives in URLs/email and is carried through Stripe metadata so the webhook can build the manage URL in the confirmation email
+- `/register/manage?token=…` sets a `reg_token` HttpOnly cookie on first land and redirects to a clean URL, keeping the plaintext out of subsequent access logs / Sentry breadcrumbs / referers
+- `party_members` are denormalized: tier label and price are snapshotted onto the row at registration time so subsequent tier rename/reprice don't change historical refund amounts
+- Stripe session metadata is typed via `encodeRegistrationMetadata` / `encodeAddMemberMetadata` / `decodeSessionMetadata` in `$lib/server/payments/stripeMetadata` — never access `session.metadata` keys directly. `decodeSessionMetadata` fails closed (returns null) when required fields are missing
+- Refund flows pass a stable Stripe idempotency key (`remove-member-<id>`, `cancel-registration-<id>-<intent>`) so retries cannot double-refund
 
 ### Family Tree
 
@@ -149,7 +158,7 @@ Route groups:
 ### Mobile Navigation
 
 - Top navbar is **hidden on mobile** (`hidden md:flex`) — only shown on desktop
-- **Side drawer** (`MobileDrawer.svelte`) slides in from the left on mobile, triggered by a hamburger button in `AppHeader`. Contains: app logo/name, Family links, Reunion links, Register CTA, theme toggle, profile/admin/sign-out
+- **Side drawer** (`MobileDrawer.svelte`) slides in from the left on mobile, triggered by a hamburger button in `AppHeader`. Contains: app logo/name, Family links, Reunion links, Register CTA, theme toggle (sign-in / sign-out are admin-only and live inside the admin shell)
 - Main content has no bottom-bar clearance (bottom tab bar was removed)
 
 ### Versioning

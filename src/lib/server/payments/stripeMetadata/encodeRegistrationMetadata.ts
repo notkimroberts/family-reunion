@@ -1,3 +1,6 @@
-export function encodeRegistrationMetadata(registrationId: string): Record<string, string> {
-    return { type: 'registration', registrationId }
+export function encodeRegistrationMetadata(
+    registrationId: string,
+    managementToken: string,
+): Record<string, string> {
+    return { type: 'registration', registrationId, managementToken }
 }

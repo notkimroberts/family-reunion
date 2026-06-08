@@ -1,33 +1,31 @@
 import { db } from '$lib/server/db'
 import { partyMembers, registrations, registrationStatusEnum } from '$lib/server/db/schema'
 import { parseBirthDate } from '$lib/utils/age'
+import { generateManagementToken } from '../hashManagementToken'
 import { fetchAndValidateTiers } from './_fetchAndValidateTiers'
 
-// Inserts a registration directly at the given status (bypasses Stripe); total is derived from tier prices, not passed in
+/* Inserts a registration directly at the given status (bypasses Stripe). Generates a managementToken so the contact can self-manage later; the DB stores only the SHA-256 hash, the plaintext is returned to the caller. */
 export async function createAdminRegistration(params: {
     eventId: string
     contactName: string
-    contactEmail: string | null
+    contactEmail: string
     status: (typeof registrationStatusEnum.enumValues)[number]
     members: Array<{ name: string; birthDate?: string; tierId: string; shirtSize?: string }>
-}): Promise<{ registrationId: string }> {
+}): Promise<{ registrationId: string; managementToken: string }> {
     const tierMap = await fetchAndValidateTiers(
         params.eventId,
         params.members.map((m) => m.tierId),
     )
 
-    const totalAmountCents = params.members.reduce(
-        (sum, m) => sum + (tierMap.get(m.tierId)?.priceCents ?? 0),
-        0,
-    )
+    const { plaintext: managementToken, hash: tokenHash } = generateManagementToken()
 
     const [registration] = await db
         .insert(registrations)
         .values({
+            managementToken: tokenHash,
             eventId: params.eventId,
             contactName: params.contactName,
             contactEmail: params.contactEmail,
-            totalAmountCents,
             status: params.status,
         })
         .returning()
@@ -35,6 +33,7 @@ export async function createAdminRegistration(params: {
     await db.insert(partyMembers).values(
         params.members.map((m) => {
             const parsed = m.birthDate ? parseBirthDate(m.birthDate) : null
+            const tier = tierMap.get(m.tierId)!
             return {
                 registrationId: registration.id,
                 name: m.name.trim(),
@@ -42,10 +41,11 @@ export async function createAdminRegistration(params: {
                 birthMonth: parsed?.birthMonth ?? null,
                 birthDay: parsed?.birthDay ?? null,
                 shirtSize: m.shirtSize || null,
-                pricingTierId: m.tierId,
+                tierLabel: tier.label,
+                priceCents: tier.priceCents,
             }
         }),
     )
 
-    return { registrationId: registration.id }
+    return { registrationId: registration.id, managementToken }
 }
