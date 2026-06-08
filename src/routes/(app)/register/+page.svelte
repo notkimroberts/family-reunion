@@ -187,9 +187,6 @@ let canSubmit = $derived(
                     {/if}
                 </p>
             {/if}
-            <p class="mt-3 text-sm text-muted-foreground">
-                Add everyone in your party below — no account required.
-            </p>
         </div>
     </section>
 
@@ -269,7 +266,7 @@ let canSubmit = $derived(
                                 : ''}">
                             <div class="space-y-1.5">
                                 <label for="selfBirthDate" class="text-sm font-medium">
-                                    Your birthday <span class="text-destructive">*</span>
+                                    Birthday <span class="text-destructive">*</span>
                                 </label>
                                 <DatePicker
                                     id="selfBirthDate"
