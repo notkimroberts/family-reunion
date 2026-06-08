@@ -1,6 +1,6 @@
 {
     "name": "family-reunion",
-    "version": "0.0.3",
+    "version": "0.0.4",
     "type": "module",
     "scripts": {
         "dev": "bun run clean && NODE_TLS_REJECT_UNAUTHORIZED=0 vite dev",
