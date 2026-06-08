@@ -1,9 +1,10 @@
 <script lang="ts">
-import { CheckCircle2, LoaderCircle } from '@lucide/svelte'
+import { CheckCircle2, KeyRound, LoaderCircle } from '@lucide/svelte'
 import { onMount, untrack } from 'svelte'
 import { toast } from 'svelte-sonner'
 import { Alert, AlertDescription, AlertTitle } from '$lib/components/ui/alert'
 import { Button } from '$lib/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card'
 import { APP_NAME } from '$lib/general/constants'
 import RegistrationManager from '../RegistrationManager.svelte'
 
@@ -12,11 +13,11 @@ const POLL_TIMEOUT_MS = 30000
 
 let { data } = $props()
 
-let status = $state(untrack(() => data.registration.status))
+let status = $state(untrack(() => (data.missingToken ? null : data.registration.status)))
 let timedOut = $state(false)
 
 onMount(() => {
-    if (data.memberAdded) {
+    if (!data.missingToken && data.memberAdded) {
         toast.success('Member added successfully!')
     }
 })
@@ -53,7 +54,28 @@ $effect(() => {
     <title>Manage Registration — {APP_NAME}</title>
 </svelte:head>
 
-{#if status === 'pending' && !timedOut}
+{#if data.missingToken}
+    <section class="col-span-12 max-w-md mx-auto w-full">
+        <Card>
+            <CardHeader>
+                <CardTitle class="flex items-center gap-2">
+                    <KeyRound class="h-5 w-5 text-muted-foreground" />
+                    Find your registration
+                </CardTitle>
+            </CardHeader>
+            <CardContent class="flex flex-col gap-4">
+                <p class="text-sm text-muted-foreground">
+                    We couldn't find an active registration session in this browser. If you've
+                    already registered, we can email a fresh management link to you.
+                </p>
+                <div class="flex flex-col gap-2">
+                    <Button href="/register/recover">Resend management link</Button>
+                    <Button href="/register" variant="outline">Start a new registration</Button>
+                </div>
+            </CardContent>
+        </Card>
+    </section>
+{:else if status === 'pending' && !timedOut}
     <section class="col-span-12 text-center py-12">
         <LoaderCircle class="mx-auto mb-4 h-10 w-10 animate-spin text-primary" />
         <p class="text-lg font-semibold">Processing Payment…</p>

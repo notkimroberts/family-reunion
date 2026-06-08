@@ -1,4 +1,4 @@
-import { error, redirect, fail } from '@sveltejs/kit'
+import { redirect, fail } from '@sveltejs/kit'
 import { zod4 as zod } from 'sveltekit-superforms/adapters'
 import { superValidate } from 'sveltekit-superforms/server'
 import {
@@ -45,17 +45,21 @@ export const load: PageServerLoad = async ({ url, cookies }) => {
 
     const token = cookies.get(TOKEN_COOKIE)
     if (!token) {
-        throw error(404)
+        return { missingToken: true as const }
     }
 
     const registration = await getRegistrationByToken(token)
     if (!registration) {
-        throw error(404)
+        /* Token cookie is set but no longer matches a registration (deleted, rotated, or
+           cookie carried over from another env). Clear it so a refresh doesn't loop. */
+        cookies.delete(TOKEN_COOKIE, { path: '/' })
+        return { missingToken: true as const }
     }
 
     const result = await getRegistrationWithEvent(registration.id)
     if (!result) {
-        throw error(404)
+        cookies.delete(TOKEN_COOKIE, { path: '/' })
+        return { missingToken: true as const }
     }
 
     const { event: reunionEvent } = result
@@ -68,6 +72,7 @@ export const load: PageServerLoad = async ({ url, cookies }) => {
     /* Narrow projection: do not ship contactName/contactEmail/managementToken hash to the
        client. The Svelte components only need id, status, and the session id. */
     return {
+        missingToken: false as const,
         token,
         memberAdded,
         registration: {
