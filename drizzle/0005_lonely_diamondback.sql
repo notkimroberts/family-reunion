@@ -12,8 +12,8 @@ ALTER TABLE "registrations" ADD COLUMN IF NOT EXISTS "management_token" text;-->
 UPDATE "registrations" SET "management_token" = encode(gen_random_bytes(32), 'hex') WHERE "management_token" IS NULL;--> statement-breakpoint
 ALTER TABLE "registrations" ALTER COLUMN "management_token" SET NOT NULL;--> statement-breakpoint
 ALTER TABLE "registrations" DROP COLUMN IF EXISTS "user_id";--> statement-breakpoint
-DO $ BEGIN
+DO $$ BEGIN
   ALTER TABLE "registrations" ADD CONSTRAINT "registrations_management_token_unique" UNIQUE("management_token");
 EXCEPTION WHEN duplicate_object THEN NULL;
-END $;
+END $$;
 
