@@ -1,4 +1,5 @@
 import { redirect, fail } from '@sveltejs/kit'
+import { defaults } from 'sveltekit-superforms'
 import { zod4 as zod } from 'sveltekit-superforms/adapters'
 import { superValidate } from 'sveltekit-superforms/server'
 import { dbg } from '$lib/server/debug'
@@ -15,11 +16,17 @@ export const load: PageServerLoad = async ({ locals }) => {
     const openEvent = await getOpenEvent()
     const tiers = openEvent ? await getEventTiers(openEvent.id) : []
 
-    const form = await superValidate(
+    /* Use defaults() (not superValidate) so the page renders with no errors on cold load.
+       superValidate runs the schema against the partial defaults, which fails the min(1)
+       rules on contactName/contactEmail and the members refine — those errors then ship
+       to the client and flash on hydration. defaults() skips validation entirely; the
+       register action below still validates submissions normally. */
+    const form = defaults(
         {
             eventId: openEvent?.id ?? '',
             contactName: locals.user?.name ?? '',
             contactEmail: locals.user?.email ?? '',
+            members: '[]',
         },
         zod(registrationSchema),
     )
