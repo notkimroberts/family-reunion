@@ -1,15 +1,14 @@
 <script lang="ts">
-import { Select as BitsSelect } from 'bits-ui'
 import { getContext } from 'svelte'
+import { SvelteMap } from 'svelte/reactivity'
 import { enhance } from '$app/forms'
-import { DatePicker } from '$lib/components'
 import { Button } from '$lib/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card'
-import { Input } from '$lib/components/ui/input'
-import * as Select from '$lib/components/ui/select'
-import { SHIRT_SIZES } from '$lib/general/constants'
+import { Card, CardContent } from '$lib/components/ui/card'
 import type { AdminContext } from '$lib/types/adminContext'
-import { formatPrice } from '$lib/utils'
+import OrderSummaryCard from '../../register/OrderSummaryCard.svelte'
+import PartyMembersBuilder from '../../register/PartyMembersBuilder.svelte'
+import YourInformationCard from '../../register/YourInformationCard.svelte'
+import type { FormMember } from '../../register/types'
 
 let { data, form } = $props()
 
@@ -19,20 +18,19 @@ let targetEventId = $derived(
     adminCtx.selectedEventId !== 'all' ? adminCtx.selectedEventId : (data.events[0]?.id ?? ''),
 )
 
-type Member = {
-    name: string
-    birthDate: string | undefined
-    tierId: string
-    shirtSize: string
-}
+const tierMap = $derived(new SvelteMap(data.tiers.map((t) => [t.id, t])))
 
-const defaultMember = (): Member => ({ name: '', birthDate: undefined, tierId: '', shirtSize: '' })
-
-let contactName = $state('')
+let selfFirstName = $state('')
+let selfLastName = $state('')
 let contactEmail = $state('')
+let selfBirthDate = $state<string | undefined>(undefined)
+let selfShirtSize = $state('')
+let selfTierId = $state('')
 let status = $state<'paid' | 'pending' | 'waived'>('paid')
-let members = $state<Member[]>([defaultMember()])
+let members = $state<FormMember[]>([])
 let submitted = $state(false)
+
+let contactName = $derived(`${selfFirstName.trim()} ${selfLastName.trim()}`.trim())
 
 let membersJson = $derived(
     JSON.stringify(
@@ -45,31 +43,33 @@ let membersJson = $derived(
     ),
 )
 
-let totalCents = $derived(
-    members.reduce((sum, m) => {
-        const tier = data.tiers.find((t) => t.id === m.tierId)
-        return sum + (tier?.priceCents ?? 0)
-    }, 0),
+let selfTier = $derived(selfTierId ? tierMap.get(selfTierId) : undefined)
+let subtotal = $derived(
+    (selfTier?.priceCents ?? 0) +
+        members.reduce((sum, m) => sum + (tierMap.get(m.tierId)?.priceCents ?? 0), 0),
+)
+let canSubmit = $derived(
+    !!selfFirstName.trim() &&
+        !!selfLastName.trim() &&
+        !!contactEmail.trim() &&
+        !!selfTierId &&
+        !!selfBirthDate,
 )
 
-function addMember() {
-    members = [...members, defaultMember()]
-}
-
-function removeMember(index: number) {
-    members = members.filter((_, i) => i !== index)
-}
+const shirtsEnabled = $derived(data.events[0]?.shirtsEnabled ?? false)
 
 function handleSuccess() {
-    contactName = ''
+    selfFirstName = ''
+    selfLastName = ''
     contactEmail = ''
+    selfBirthDate = undefined
+    selfShirtSize = ''
+    selfTierId = ''
     status = 'paid'
-    members = [defaultMember()]
+    members = []
     submitted = true
     setTimeout(() => (submitted = false), 3000)
 }
-
-const shirtsEnabled = $derived(data.events[0]?.shirtsEnabled ?? false)
 </script>
 
 <svelte:head>
@@ -116,178 +116,45 @@ const shirtsEnabled = $derived(data.events[0]?.shirtsEnabled ?? false)
                     }
                     update({ reset: false })
                 }
-            }}
-            class="space-y-6 max-w-2xl">
+            }}>
             <input type="hidden" name="eventId" value={targetEventId} />
+            <input type="hidden" name="contactName" value={contactName} />
+            <input type="hidden" name="selfTierId" value={selfTierId} />
+            <input type="hidden" name="selfBirthDate" value={selfBirthDate ?? ''} />
+            <input type="hidden" name="selfShirtSize" value={selfShirtSize} />
             <input type="hidden" name="members" value={membersJson} />
 
-            <Card>
-                <CardHeader>
-                    <CardTitle class="text-base">Contact Info</CardTitle>
-                </CardHeader>
-                <CardContent class="space-y-4">
-                    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                        <div class="space-y-2">
-                            <label for="contactName" class="text-sm font-medium">
-                                Name <span class="text-destructive">*</span>
-                            </label>
-                            <Input
-                                id="contactName"
-                                name="contactName"
-                                bind:value={contactName}
-                                placeholder="Full name"
-                                required />
-                        </div>
-                        <div class="space-y-2">
-                            <label for="contactEmail" class="text-sm font-medium">
-                                Email <span class="text-destructive">*</span>
-                            </label>
-                            <Input
-                                id="contactEmail"
-                                name="contactEmail"
-                                type="email"
-                                bind:value={contactEmail}
-                                placeholder="email@example.com"
-                                required />
-                        </div>
-                    </div>
+            <div class="grid grid-cols-1 lg:grid-cols-[1fr_minmax(0,22rem)] gap-6">
+                <!-- Left: party builder -->
+                <div class="flex flex-col gap-4">
+                    <YourInformationCard
+                        bind:email={contactEmail}
+                        bind:firstName={selfFirstName}
+                        bind:lastName={selfLastName}
+                        bind:birthDate={selfBirthDate}
+                        bind:shirtSize={selfShirtSize}
+                        bind:tierId={selfTierId}
+                        tiers={data.tiers}
+                        {shirtsEnabled} />
 
-                    <div class="space-y-2">
-                        <label for="status" class="text-sm font-medium">
-                            Payment status <span class="text-destructive">*</span>
-                        </label>
-                        <Select.Root
-                            type="single"
-                            value={status}
-                            onValueChange={(v) => (status = v as typeof status)}
-                            name="status">
-                            <Select.Trigger id="status" class="max-w-xs">
-                                <BitsSelect.Value placeholder="Select status…" />
-                            </Select.Trigger>
-                            <Select.Content>
-                                <Select.Item value="paid" label="Paid" />
-                                <Select.Item value="pending" label="Not yet paid" />
-                                <Select.Item value="waived" label="Waived" />
-                            </Select.Content>
-                        </Select.Root>
-                    </div>
-                </CardContent>
-            </Card>
+                    <PartyMembersBuilder bind:members tiers={data.tiers} {shirtsEnabled} />
+                </div>
 
-            <Card>
-                <CardHeader>
-                    <CardTitle class="text-base">Party Members</CardTitle>
-                </CardHeader>
-                <CardContent class="space-y-4">
-                    {#each members as member, i}
-                        <div
-                            class="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_auto] items-end rounded-lg border p-3">
-                            <div
-                                class="grid grid-cols-1 gap-3 sm:grid-cols-2 {shirtsEnabled
-                                    ? 'lg:grid-cols-4'
-                                    : 'lg:grid-cols-3'}">
-                                <div class="space-y-1.5">
-                                    <label
-                                        for="member-name-{i}"
-                                        class="text-xs font-medium text-muted-foreground">
-                                        Name <span class="text-destructive">*</span>
-                                    </label>
-                                    <Input
-                                        id="member-name-{i}"
-                                        bind:value={member.name}
-                                        placeholder="Full name"
-                                        required />
-                                </div>
-                                <div class="space-y-1.5">
-                                    <label
-                                        for="member-tier-{i}"
-                                        class="text-xs font-medium text-muted-foreground">
-                                        Category <span class="text-destructive">*</span>
-                                    </label>
-                                    <Select.Root
-                                        type="single"
-                                        value={member.tierId}
-                                        onValueChange={(v) => (member.tierId = v)}>
-                                        <Select.Trigger id="member-tier-{i}">
-                                            <BitsSelect.Value placeholder="Select category…" />
-                                        </Select.Trigger>
-                                        <Select.Content>
-                                            {#each data.tiers as tier}
-                                                <Select.Item
-                                                    value={tier.id}
-                                                    label="{tier.label} — ${formatPrice(
-                                                        tier.priceCents,
-                                                    )}" />
-                                            {/each}
-                                        </Select.Content>
-                                    </Select.Root>
-                                </div>
-                                <div class="space-y-1.5">
-                                    <label
-                                        for="member-bday-{i}"
-                                        class="text-xs font-medium text-muted-foreground">
-                                        Birthday
-                                        <span class="text-muted-foreground/60">(optional)</span>
-                                    </label>
-                                    <DatePicker
-                                        id="member-bday-{i}"
-                                        bind:value={member.birthDate}
-                                        placeholder="Optional" />
-                                </div>
-                                {#if shirtsEnabled}
-                                    <div class="space-y-1.5">
-                                        <label
-                                            for="member-shirt-{i}"
-                                            class="text-xs font-medium text-muted-foreground">
-                                            T-shirt
-                                            <span class="text-muted-foreground/60">(optional)</span>
-                                        </label>
-                                        <Select.Root
-                                            type="single"
-                                            value={member.shirtSize}
-                                            onValueChange={(v) => (member.shirtSize = v)}>
-                                            <Select.Trigger id="member-shirt-{i}">
-                                                <BitsSelect.Value placeholder="Select size…" />
-                                            </Select.Trigger>
-                                            <Select.Content>
-                                                <Select.Item value="" label="No shirt" />
-                                                {#each SHIRT_SIZES as size}
-                                                    <Select.Item value={size} label={size} />
-                                                {/each}
-                                            </Select.Content>
-                                        </Select.Root>
-                                    </div>
-                                {/if}
-                            </div>
-                            {#if members.length > 1}
-                                <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="sm"
-                                    class="text-muted-foreground hover:text-destructive"
-                                    onclick={() => removeMember(i)}>
-                                    Remove
-                                </Button>
-                            {/if}
-                        </div>
-                    {/each}
-
-                    <Button type="button" variant="outline" size="sm" onclick={addMember}>
-                        + Add person
-                    </Button>
-
-                    {#if totalCents > 0}
-                        <div class="flex items-center justify-between border-t pt-3 text-sm">
-                            <span class="text-muted-foreground">Total</span>
-                            <span class="font-semibold">${formatPrice(totalCents)}</span>
-                        </div>
-                    {/if}
-                </CardContent>
-            </Card>
-
-            <div class="flex gap-3">
-                <Button type="submit">Add Registration</Button>
-                <Button type="button" variant="ghost" href="/admin">Cancel</Button>
+                <!-- Right: order summary (sticky on desktop) -->
+                <div class="self-start lg:sticky lg:top-6">
+                    <OrderSummaryCard
+                        {contactName}
+                        {selfTier}
+                        {members}
+                        {tierMap}
+                        {subtotal}
+                        {canSubmit}
+                        submitLabel="Add Registration"
+                        placeholderText="Enter the contact's name, email, and birthday to get started."
+                        contactSuffix="contact"
+                        showStatus
+                        bind:status />
+                </div>
             </div>
         </form>
     {/if}
