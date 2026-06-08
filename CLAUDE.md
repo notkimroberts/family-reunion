@@ -28,7 +28,7 @@ bun run db:studio        # Drizzle Studio GUI
 >
 > **Rules:**
 >
-> - Never edit, rename, or delete a `.sql` file in `drizzle/` once it has been committed to `main`
+> - Never edit, rename, or delete a `.sql` file in `drizzle/` once it has been **applied** to any environment. Verify by checking `drizzle.__drizzle_migrations` on every DB the file could have reached — if its hash isn't there anywhere, editing the file is still safe (and is often the right fix when a never-applied migration is broken). Once applied anywhere, treat the file as immutable and put corrections in a new migration on top.
 > - Never re-run `db:generate` to "redo" an existing migration — always generate a new one on top
 > - Never use `db:push` on any database that has ever had `db:migrate` run on it — it bypasses the migration tracker entirely and will cause the same hash-mismatch problem on the next deploy
 
@@ -40,6 +40,20 @@ Schema changes must follow this sequence:
 4. Run `bun run db:migrate` locally, then commit both the schema change and the new migration files together
 
 **Do not use `db:push`** in any environment where data must be preserved — it bypasses the migration tracker.
+
+#### Writing migration SQL safely
+
+Local seed data has the shape your code expects; production rarely does. Before pushing a migration that touches existing data, verify it against a snapshot of the target DB:
+
+```bash
+{ echo "BEGIN;"; sed 's|--> statement-breakpoint||g' drizzle/NNNN_*.sql; echo "ROLLBACK;"; } \
+  | psql "$PROD_DATABASE_URL" -v ON_ERROR_STOP=1
+```
+
+This applies the migration in a transaction and reverts it. Failures surface as real Postgres errors (orphan FKs, missing extensions, NOT NULL violations) without changing prod state. Two patterns this catches:
+
+- **Adding a FK on an existing column.** If any row has a value with no match in the parent table, `ADD CONSTRAINT` fails. The fix is to pre-clean before the FK is added: `ALTER COLUMN DROP NOT NULL` → `UPDATE child SET ref = NULL WHERE ref NOT IN (SELECT id FROM parent)` → `ADD CONSTRAINT FK ... ON DELETE set null`. Order matters — null the orphans only after the column allows null.
+- **PL/pgSQL `DO` blocks must use `$$` (or another matching tag), never single `$`.** `DO $ BEGIN … END $;` is a syntax error; `DO $$ BEGIN … END $$;` is correct. Drizzle-generated DO blocks are usually fine, but hand-written ones are easy to break here.
 
 > **Never use `dropdb && createdb` to reset local data.** Use `bun run db:reseed` instead — it truncates all app tables and re-seeds without touching the DB itself.
 
