@@ -2,10 +2,48 @@ ALTER TABLE "contact_submissions" DISABLE ROW LEVEL SECURITY;--> statement-break
 ALTER TABLE "family_member_edits" DISABLE ROW LEVEL SECURITY;--> statement-breakpoint
 ALTER TABLE "pricing_tiers" DISABLE ROW LEVEL SECURITY;--> statement-breakpoint
 ALTER TABLE "storefront_config" DISABLE ROW LEVEL SECURITY;--> statement-breakpoint
-DROP TABLE "contact_submissions" CASCADE;--> statement-breakpoint
-DROP TABLE "family_member_edits" CASCADE;--> statement-breakpoint
-DROP TABLE "pricing_tiers" CASCADE;--> statement-breakpoint
-DROP TABLE "storefront_config" CASCADE;--> statement-breakpoint
+-- Add new columns nullable; backfill from pricing_tiers BEFORE dropping it, then SET NOT NULL.
+ALTER TABLE "party_members" ADD COLUMN "family_member_id" uuid;--> statement-breakpoint
+ALTER TABLE "party_members" ADD COLUMN "tier_label" text;--> statement-breakpoint
+ALTER TABLE "party_members" ADD COLUMN "price_cents" integer;--> statement-breakpoint
+ALTER TABLE "reunion_events" ADD COLUMN "pricing_tiers" jsonb DEFAULT '[]'::jsonb NOT NULL;--> statement-breakpoint
+ALTER TABLE "reunion_events" ADD COLUMN "external_shop_url" text;--> statement-breakpoint
+ALTER TABLE "reunion_events" ADD COLUMN "shop_products" jsonb;--> statement-breakpoint
+ALTER TABLE "reunion_events" ADD COLUMN "shop_active" boolean DEFAULT false NOT NULL;--> statement-breakpoint
+-- Migrate pricing_tiers TABLE rows into reunion_events.pricing_tiers JSONB column.
+UPDATE "reunion_events" e
+SET "pricing_tiers" = COALESCE((
+    SELECT jsonb_agg(jsonb_build_object(
+        'id', pt.id::text,
+        'label', pt.label,
+        'minAge', pt.min_age,
+        'maxAge', pt.max_age,
+        'priceCents', pt.price_cents
+    ))
+    FROM "pricing_tiers" pt WHERE pt.event_id = e.id
+), '[]'::jsonb);--> statement-breakpoint
+-- Backfill party_members.tier_label and price_cents from the soon-to-be-dropped pricing_tiers.
+UPDATE "party_members" pm
+SET "tier_label" = pt.label, "price_cents" = pt.price_cents
+FROM "pricing_tiers" pt
+WHERE pm."pricing_tier_id" = pt.id;--> statement-breakpoint
+UPDATE "party_members" SET "tier_label" = 'unknown' WHERE "tier_label" IS NULL;--> statement-breakpoint
+UPDATE "party_members" SET "price_cents" = 0 WHERE "price_cents" IS NULL;--> statement-breakpoint
+ALTER TABLE "party_members" ALTER COLUMN "tier_label" SET NOT NULL;--> statement-breakpoint
+ALTER TABLE "party_members" ALTER COLUMN "price_cents" SET NOT NULL;--> statement-breakpoint
+-- Pre-clean rows so the new CHECK constraints are satisfiable.
+UPDATE "family_members" SET "birth_day" = NULL WHERE "birth_day" IS NOT NULL AND "birth_month" IS NULL;--> statement-breakpoint
+UPDATE "family_members" SET "birth_month" = NULL, "birth_day" = NULL WHERE "birth_month" IS NOT NULL AND "birth_year" IS NULL;--> statement-breakpoint
+UPDATE "party_members" SET "birth_day" = NULL WHERE "birth_day" IS NOT NULL AND "birth_month" IS NULL;--> statement-breakpoint
+UPDATE "party_members" SET "birth_month" = NULL, "birth_day" = NULL WHERE "birth_month" IS NOT NULL AND "birth_year" IS NULL;--> statement-breakpoint
+DELETE FROM "relationships" WHERE "from_member_id" = "to_member_id";--> statement-breakpoint
+-- Close all but the most-recent open event so the partial unique index is satisfiable.
+UPDATE "reunion_events" SET "status" = 'closed' WHERE "id" IN (
+    SELECT id FROM (
+        SELECT id, ROW_NUMBER() OVER (ORDER BY created_at DESC) AS rn
+        FROM "reunion_events" WHERE "status" = 'open'
+    ) ranked WHERE rn > 1
+);--> statement-breakpoint
 ALTER TABLE "party_members" DROP CONSTRAINT "party_members_pricing_tier_id_pricing_tiers_id_fk";
 --> statement-breakpoint
 ALTER TABLE "party_members" DROP CONSTRAINT "party_members_registration_id_registrations_id_fk";
@@ -15,13 +53,10 @@ ALTER TABLE "relationships" DROP CONSTRAINT "relationships_from_member_id_family
 ALTER TABLE "relationships" DROP CONSTRAINT "relationships_to_member_id_family_members_id_fk";
 --> statement-breakpoint
 ALTER TABLE "photos" ALTER COLUMN "uploaded_by_user_id" DROP NOT NULL;--> statement-breakpoint
-ALTER TABLE "party_members" ADD COLUMN "family_member_id" uuid;--> statement-breakpoint
-ALTER TABLE "party_members" ADD COLUMN "tier_label" text NOT NULL;--> statement-breakpoint
-ALTER TABLE "party_members" ADD COLUMN "price_cents" integer NOT NULL;--> statement-breakpoint
-ALTER TABLE "reunion_events" ADD COLUMN "pricing_tiers" jsonb DEFAULT '[]'::jsonb NOT NULL;--> statement-breakpoint
-ALTER TABLE "reunion_events" ADD COLUMN "external_shop_url" text;--> statement-breakpoint
-ALTER TABLE "reunion_events" ADD COLUMN "shop_products" jsonb;--> statement-breakpoint
-ALTER TABLE "reunion_events" ADD COLUMN "shop_active" boolean DEFAULT false NOT NULL;--> statement-breakpoint
+DROP TABLE "contact_submissions" CASCADE;--> statement-breakpoint
+DROP TABLE "family_member_edits" CASCADE;--> statement-breakpoint
+DROP TABLE "pricing_tiers" CASCADE;--> statement-breakpoint
+DROP TABLE "storefront_config" CASCADE;--> statement-breakpoint
 ALTER TABLE "party_members" ADD CONSTRAINT "party_members_family_member_id_family_members_id_fk" FOREIGN KEY ("family_member_id") REFERENCES "public"."family_members"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "party_members" ADD CONSTRAINT "party_members_registration_id_registrations_id_fk" FOREIGN KEY ("registration_id") REFERENCES "public"."registrations"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "photos" ADD CONSTRAINT "photos_uploaded_by_user_id_user_id_fk" FOREIGN KEY ("uploaded_by_user_id") REFERENCES "public"."user"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
