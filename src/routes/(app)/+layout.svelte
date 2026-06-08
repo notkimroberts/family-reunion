@@ -5,7 +5,7 @@ import { Toaster } from '$lib/components/ui/sonner'
 let { children } = $props()
 </script>
 
-<div class="min-h-screen bg-base-200 flex flex-col">
+<div class="min-h-screen flex flex-col">
     <AppHeader />
 
     <main class="mx-auto max-w-6xl w-full px-4 py-6 md:px-6 md:py-6 flex-1">
