@@ -12,6 +12,7 @@ import {
     Users,
 } from '@lucide/svelte'
 import { setContext } from 'svelte'
+import { goto } from '$app/navigation'
 import { page } from '$app/state'
 import { authClient } from '$lib/auth-client'
 import { Avatar, AvatarFallback } from '$lib/components/ui/avatar'
@@ -23,15 +24,25 @@ import { cn, getInitials } from '$lib/utils'
 
 let { data, children } = $props()
 
-let selectedEventId = $state('all')
+/* eventId lives in the URL (?eventId=…) so the choice survives refresh, deep
+   links, and tab navigation. 'all' is the absence of the param. */
+let selectedEventId = $derived(page.url.searchParams.get('eventId') ?? 'all')
+
+function setSelectedEventId(id: string) {
+    const url = new URL(page.url)
+    if (id === 'all') {
+        url.searchParams.delete('eventId')
+    } else {
+        url.searchParams.set('eventId', id)
+    }
+    goto(url, { replaceState: true, keepFocus: true, noScroll: true })
+}
 
 setContext<AdminContext>('admin', {
     get selectedEventId() {
         return selectedEventId
     },
-    setSelectedEventId(id: string) {
-        selectedEventId = id
-    },
+    setSelectedEventId,
     get events() {
         return data.events
     },
@@ -46,6 +57,30 @@ const navLinks = [
     { href: '/admin/attendees', label: 'Attendees', Icon: Link2 },
     { href: '/admin/storefront', label: 'Storefront', Icon: ShoppingBag },
 ]
+
+/* Routes that filter by event — the year selector is rendered above them.
+   /admin/events and /admin/storefront manage cross-year or open-event-only
+   data and intentionally don't react to the filter. */
+const SELECTOR_PATHS = [
+    '/admin',
+    '/admin/users',
+    '/admin/photos',
+    '/admin/registrations',
+    '/admin/attendees',
+]
+let showYearSelector = $derived.by(() => {
+    const path = page.url.pathname
+    if (path === '/admin') {
+        return true
+    }
+    return SELECTOR_PATHS.some((p) => p !== '/admin' && (path === p || path.startsWith(`${p}/`)))
+})
+
+/* Preserve the year filter across admin tab navigation. */
+function navHref(href: string): string {
+    const eventId = page.url.searchParams.get('eventId')
+    return eventId ? `${href}?eventId=${encodeURIComponent(eventId)}` : href
+}
 
 function isActive(href: string): boolean {
     if (href === '/admin') {
@@ -84,7 +119,7 @@ function handleSignOut() {
         <nav class="flex flex-col gap-0.5">
             {#each navLinks as { href, label, Icon } (href)}
                 <a
-                    {href}
+                    href={navHref(href)}
                     class={cn(
                         'flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors',
                         isActive(href)
@@ -96,37 +131,6 @@ function handleSignOut() {
                 </a>
             {/each}
         </nav>
-
-        <Separator class="my-4" />
-
-        <div class="flex flex-col gap-0.5">
-            <p
-                class="px-3 mb-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                Year
-            </p>
-            <button
-                class={cn(
-                    'rounded-lg px-3 py-1.5 text-sm font-medium transition-colors text-left',
-                    selectedEventId === 'all'
-                        ? 'bg-primary text-primary-foreground'
-                        : 'text-muted-foreground hover:bg-muted',
-                )}
-                onclick={() => (selectedEventId = 'all')}>
-                All years
-            </button>
-            {#each data.events as event (event.id)}
-                <button
-                    class={cn(
-                        'rounded-lg px-3 py-1.5 text-sm font-medium transition-colors text-left',
-                        selectedEventId === event.id
-                            ? 'bg-primary text-primary-foreground'
-                            : 'text-muted-foreground hover:bg-muted',
-                    )}
-                    onclick={() => (selectedEventId = event.id)}>
-                    {event.year}
-                </button>
-            {/each}
-        </div>
 
         <Separator class="my-4" />
 
@@ -159,6 +163,34 @@ function handleSignOut() {
 
     <div class="flex-1 min-w-0 md:pl-6">
         <div class="grid grid-cols-12 gap-y-8 md:gap-y-10">
+            {#if showYearSelector && data.events.length > 0}
+                <section class="col-span-12">
+                    <div class="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
+                        <button
+                            class={cn(
+                                'shrink-0 rounded-full px-4 py-1.5 text-sm font-medium transition-colors',
+                                selectedEventId === 'all'
+                                    ? 'bg-primary text-primary-foreground'
+                                    : 'bg-muted text-muted-foreground hover:bg-muted/80',
+                            )}
+                            onclick={() => setSelectedEventId('all')}>
+                            All years
+                        </button>
+                        {#each data.events as event (event.id)}
+                            <button
+                                class={cn(
+                                    'shrink-0 rounded-full px-4 py-1.5 text-sm font-medium transition-colors',
+                                    selectedEventId === event.id
+                                        ? 'bg-primary text-primary-foreground'
+                                        : 'bg-muted text-muted-foreground hover:bg-muted/80',
+                                )}
+                                onclick={() => setSelectedEventId(event.id)}>
+                                {event.year}
+                            </button>
+                        {/each}
+                    </div>
+                </section>
+            {/if}
             {@render children()}
         </div>
     </div>

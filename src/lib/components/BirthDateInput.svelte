@@ -61,20 +61,6 @@ let dayDisabled = $derived(month === null)
 
 <div class="grid grid-cols-3 gap-3">
     <div class="space-y-1">
-        <label for="{idPrefix}-year" class="text-xs font-medium text-muted-foreground">
-            Year{yearRequired ? ' *' : ''}
-        </label>
-        <Input
-            id="{idPrefix}-year"
-            type="number"
-            inputmode="numeric"
-            bind:value={yearStr}
-            min="1"
-            max={currentYear}
-            placeholder="1880"
-            required={yearRequired} />
-    </div>
-    <div class="space-y-1">
         <label for="{idPrefix}-month" class="text-xs font-medium text-muted-foreground"
             >Month</label>
         <Select.Root
@@ -87,7 +73,7 @@ let dayDisabled = $derived(month === null)
                 }
             }}
             disabled={monthDisabled}>
-            <Select.Trigger id="{idPrefix}-month">
+            <Select.Trigger id="{idPrefix}-month" class="w-full">
                 <BitsSelect.Value placeholder="Unknown" />
             </Select.Trigger>
             <Select.Content>
@@ -109,5 +95,19 @@ let dayDisabled = $derived(month === null)
             max="31"
             placeholder="—"
             disabled={dayDisabled} />
+    </div>
+    <div class="space-y-1">
+        <label for="{idPrefix}-year" class="text-xs font-medium text-muted-foreground">
+            Year{yearRequired ? ' *' : ''}
+        </label>
+        <Input
+            id="{idPrefix}-year"
+            type="number"
+            inputmode="numeric"
+            bind:value={yearStr}
+            min="1"
+            max={currentYear}
+            placeholder="1880"
+            required={yearRequired} />
     </div>
 </div>

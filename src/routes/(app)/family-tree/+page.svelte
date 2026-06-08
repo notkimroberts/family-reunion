@@ -1,5 +1,5 @@
 <script lang="ts">
-import { Minus, Plus } from '@lucide/svelte'
+import { Minus, MoveHorizontal, MoveVertical, Plus } from '@lucide/svelte'
 import { Select as BitsSelect } from 'bits-ui'
 import { select } from 'd3-selection'
 import { zoomIdentity } from 'd3-zoom'
@@ -54,6 +54,14 @@ type LayoutNode = { x: number; y: number; data: { id: string } }
 type ChartLike = {
     svg: SVGElement
     store: { getTree: () => { data: LayoutNode[] } | undefined }
+    setOrientationVertical: () => unknown
+    setOrientationHorizontal: () => unknown
+    updateTree: (props: {
+        initial?: boolean
+        tree_position?: 'fit' | 'main_to_middle' | 'inherit'
+    }) => unknown
+    updateMainId: (id: string) => unknown
+    destroy?: () => void
 }
 
 function positionFoundingCoupleAtTop(
@@ -110,11 +118,15 @@ function zoomBy(chart: ChartLike | undefined, factor: number) {
 }
 
 let addOpen = $state(false)
+let addFirstName = $state('')
+let addLastName = $state('')
 let addBirthYear = $state<number | null>(null)
 let addBirthMonth = $state<number | null>(null)
 let addBirthDay = $state<number | null>(null)
 let addRelationshipType = $state('')
 let addRelatedMemberId = $state('')
+
+let addName = $derived(`${addFirstName.trim()} ${addLastName.trim()}`.trim())
 
 let { data } = $props()
 let treeContainer: HTMLDivElement
@@ -159,7 +171,41 @@ let relationshipCounts = $derived(
     ),
 )
 
-let chartInstance = $state<(ChartLike & { destroy?: () => void }) | undefined>(undefined)
+let chartInstance = $state<ChartLike | undefined>(undefined)
+let rootId: string | undefined
+let rootSpouseId: string | undefined
+let orientation = $state<'vertical' | 'horizontal'>('vertical')
+
+/* Apply orientation and re-render. In vertical layout, re-anchor the founding
+   couple at the top (matching the initial render). In horizontal, let the
+   library center on `main`. */
+function applyChartSettings() {
+    const chart = chartInstance
+    if (!chart) {
+        return
+    }
+    if (orientation === 'horizontal') {
+        chart.setOrientationHorizontal()
+    } else {
+        chart.setOrientationVertical()
+    }
+    chart.updateTree({ tree_position: 'main_to_middle' })
+    if (orientation === 'vertical' && rootId) {
+        const id = rootId
+        const spouseId = rootSpouseId
+        requestAnimationFrame(() => {
+            positionFoundingCoupleAtTop(chart, id, spouseId, treeContainer)
+        })
+    }
+}
+
+function handleSetOrientation(next: 'vertical' | 'horizontal') {
+    if (orientation === next) {
+        return
+    }
+    orientation = next
+    applyChartSettings()
+}
 
 onMount(async () => {
     try {
@@ -201,7 +247,7 @@ onMount(async () => {
 
         if (nodes.length > 0) {
             const f3Chart = createChart(treeContainer, nodes)
-            chartInstance = f3Chart as unknown as ChartLike & { destroy?: () => void }
+            chartInstance = f3Chart as unknown as ChartLike
             f3Chart.setSingleParentEmptyCard(false)
             f3Chart.setCardHtml().setCardInnerHtmlCreator((d) => {
                 const name = `${d.data.data['first name']} ${d.data.data['last name']}`.trim()
@@ -239,6 +285,7 @@ onMount(async () => {
             )
             if (root) {
                 f3Chart.updateMainId(root.id)
+                rootId = root.id
             }
 
             /* family-chart forces a 'fit' on initial:true regardless of tree_position,
@@ -255,6 +302,7 @@ onMount(async () => {
                 )
                 if (spouseRel) {
                     spouseId = spouseRel.from === root.id ? spouseRel.to : spouseRel.from
+                    rootSpouseId = spouseId
                 }
             }
 
@@ -294,7 +342,27 @@ onDestroy(() => {
     {#if isAdmin}
         <Button variant="outline" size="sm" onclick={() => (addOpen = true)}>+ Add Member</Button>
     {/if}
-    <div class="ml-auto flex items-center rounded-lg border bg-muted p-1 gap-1">
+    {#if view === 'tree'}
+        <div class="ml-auto flex items-center rounded-lg border bg-muted p-1 gap-1">
+            <Button
+                variant={orientation === 'vertical' ? 'default' : 'ghost'}
+                size="sm"
+                aria-label="Vertical layout"
+                onclick={() => handleSetOrientation('vertical')}>
+                <MoveVertical class="h-4 w-4" />
+            </Button>
+            <Button
+                variant={orientation === 'horizontal' ? 'default' : 'ghost'}
+                size="sm"
+                aria-label="Horizontal layout"
+                onclick={() => handleSetOrientation('horizontal')}>
+                <MoveHorizontal class="h-4 w-4" />
+            </Button>
+        </div>
+    {/if}
+    <div
+        class="flex items-center rounded-lg border bg-muted p-1 gap-1"
+        class:ml-auto={view === 'table'}>
         <Button
             variant={view === 'tree' ? 'default' : 'ghost'}
             size="sm"
@@ -470,6 +538,8 @@ onDestroy(() => {
                 return ({ result, update }) => {
                     if (result.type === 'success') {
                         addOpen = false
+                        addFirstName = ''
+                        addLastName = ''
                         addBirthYear = null
                         addBirthMonth = null
                         addBirthDay = null
@@ -480,10 +550,32 @@ onDestroy(() => {
                 }
             }}
             class="space-y-4 pt-2">
-            <div class="space-y-2">
-                <label for="addName" class="text-sm font-medium"
-                    >Name <span class="text-destructive">*</span></label>
-                <Input id="addName" name="name" type="text" placeholder="Full name" required />
+            <input type="hidden" name="name" value={addName} />
+            <div class="grid grid-cols-2 gap-3">
+                <div class="space-y-1">
+                    <label for="addFirstName" class="text-xs font-medium text-muted-foreground">
+                        First name <span class="text-destructive">*</span>
+                    </label>
+                    <Input
+                        id="addFirstName"
+                        type="text"
+                        bind:value={addFirstName}
+                        placeholder="First"
+                        autocomplete="given-name"
+                        required />
+                </div>
+                <div class="space-y-1">
+                    <label for="addLastName" class="text-xs font-medium text-muted-foreground">
+                        Last name <span class="text-destructive">*</span>
+                    </label>
+                    <Input
+                        id="addLastName"
+                        type="text"
+                        bind:value={addLastName}
+                        placeholder="Last"
+                        autocomplete="family-name"
+                        required />
+                </div>
             </div>
             <div class="space-y-2">
                 <span class="text-sm font-medium">Birthday</span>

@@ -24,6 +24,9 @@ export const actions: Actions = {
         const contactName = (data.get('contactName') as string)?.trim()
         const contactEmail = (data.get('contactEmail') as string)?.trim().toLowerCase()
         const status = (data.get('status') as string)?.trim()
+        const selfTierId = (data.get('selfTierId') as string)?.trim()
+        const selfBirthDate = (data.get('selfBirthDate') as string)?.trim()
+        const selfShirtSize = (data.get('selfShirtSize') as string)?.trim()
         const membersJson = data.get('members') as string
 
         if (!eventId) {
@@ -35,36 +38,56 @@ export const actions: Actions = {
         if (!contactEmail) {
             return fail(400, { error: 'Contact email is required' })
         }
+        if (!selfTierId) {
+            return fail(400, { error: 'Pricing tier could not be determined from birthday' })
+        }
+        if (!selfBirthDate) {
+            return fail(400, { error: 'Contact birthday is required' })
+        }
         if (!['paid', 'pending', 'waived'].includes(status)) {
             return fail(400, { error: 'Invalid payment status' })
         }
 
-        type MemberEntry = { name: string; birthDate: string; tierId: string; shirtSize?: string }
-        let members: MemberEntry[]
+        type AdditionalMember = {
+            name: string
+            birthDate: string
+            tierId: string
+            shirtSize?: string
+        }
+        let additional: AdditionalMember[]
         try {
-            members = JSON.parse(membersJson)
+            additional = JSON.parse(membersJson)
         } catch {
             return fail(400, { error: 'Invalid member data' })
         }
 
-        if (members.length === 0) {
-            return fail(400, { error: 'At least one party member is required' })
-        }
-        if (members.some((m) => !m.name?.trim() || !m.tierId)) {
+        if (additional.some((m) => !m.name?.trim() || !m.tierId)) {
             return fail(400, { error: 'Each party member requires a name and pricing tier' })
         }
+
+        /* The contact is the first member of the party — their birthday and tier come
+           from the self* fields. Additional members were added through the builder. */
+        const members = [
+            {
+                name: contactName,
+                birthDate: selfBirthDate,
+                tierId: selfTierId,
+                shirtSize: selfShirtSize || undefined,
+            },
+            ...additional.map((m) => ({
+                name: m.name.trim(),
+                birthDate: m.birthDate || undefined,
+                tierId: m.tierId,
+                shirtSize: m.shirtSize || undefined,
+            })),
+        ]
 
         const { registrationId } = await createAdminRegistration({
             eventId,
             contactName,
             contactEmail,
             status: status as 'paid' | 'pending' | 'waived',
-            members: members.map((m) => ({
-                name: m.name,
-                birthDate: m.birthDate || undefined,
-                tierId: m.tierId,
-                shirtSize: m.shirtSize || undefined,
-            })),
+            members,
         })
 
         return { success: true, registrationId }
