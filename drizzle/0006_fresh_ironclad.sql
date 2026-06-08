@@ -33,7 +33,6 @@ UPDATE "family_members" SET "birth_month" = NULL, "birth_day" = NULL WHERE "birt
 UPDATE "party_members" SET "birth_day" = NULL WHERE "birth_day" IS NOT NULL AND "birth_month" IS NULL;--> statement-breakpoint
 UPDATE "party_members" SET "birth_month" = NULL, "birth_day" = NULL WHERE "birth_month" IS NOT NULL AND "birth_year" IS NULL;--> statement-breakpoint
 DELETE FROM "relationships" WHERE "from_member_id" = "to_member_id";--> statement-breakpoint
--- Close all but the most-recent open event so the partial unique index is satisfiable.
 UPDATE "reunion_events" SET "status" = 'closed' WHERE "id" IN (
     SELECT id FROM (
         SELECT id, ROW_NUMBER() OVER (ORDER BY created_at DESC) AS rn
