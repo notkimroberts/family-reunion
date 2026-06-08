@@ -213,7 +213,25 @@ let canSubmit = $derived(
                         </CardTitle>
                     </CardHeader>
                     <CardContent class="space-y-4">
-                        <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                        <div class="space-y-1.5">
+                            <label for="contactEmail" class="text-sm font-medium">
+                                Email <span class="text-destructive">*</span>
+                            </label>
+                            <Input
+                                id="contactEmail"
+                                name="contactEmail"
+                                type="email"
+                                bind:value={$form.contactEmail}
+                                placeholder="you@example.com"
+                                autocomplete="email"
+                                required />
+                            {#if $errors.contactEmail?.[0]}
+                                <p class="text-sm text-destructive">
+                                    {$errors.contactEmail[0]}
+                                </p>
+                            {/if}
+                        </div>
+                        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
                             <div class="space-y-1.5">
                                 <label for="contactFirstName" class="text-sm font-medium">
                                     First name <span class="text-destructive">*</span>
@@ -240,24 +258,6 @@ let canSubmit = $derived(
                                 {#if $errors.contactName?.[0]}
                                     <p class="text-sm text-destructive">
                                         {$errors.contactName[0]}
-                                    </p>
-                                {/if}
-                            </div>
-                            <div class="space-y-1.5">
-                                <label for="contactEmail" class="text-sm font-medium">
-                                    Email <span class="text-destructive">*</span>
-                                </label>
-                                <Input
-                                    id="contactEmail"
-                                    name="contactEmail"
-                                    type="email"
-                                    bind:value={$form.contactEmail}
-                                    placeholder="you@example.com"
-                                    autocomplete="email"
-                                    required />
-                                {#if $errors.contactEmail?.[0]}
-                                    <p class="text-sm text-destructive">
-                                        {$errors.contactEmail[0]}
                                     </p>
                                 {/if}
                             </div>
