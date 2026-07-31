@@ -3,6 +3,7 @@ import { CalendarDays, Compass, MapPin, Utensils, Users } from '@lucide/svelte'
 import { Button } from '$lib/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card'
 import { APP_NAME } from '$lib/general/constants'
+import LocationMap from './LocationMap.svelte'
 import ScheduleCard from './ScheduleCard.svelte'
 
 let { data } = $props()
@@ -185,6 +186,11 @@ let hasThingsToDo = $derived(
             </div>
         </section>
     {/if}
+
+    <!-- Map -->
+    <section class="col-span-12">
+        <LocationMap />
+    </section>
 
     <!-- Things To Do -->
     {#if hasThingsToDo}
