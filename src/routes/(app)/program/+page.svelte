@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/car
 import { APP_NAME } from '$lib/general/constants'
 import LocationMap from './LocationMap.svelte'
 import ScheduleCard from './ScheduleCard.svelte'
+import StayConnected from './StayConnected.svelte'
 
 let { data } = $props()
 
@@ -229,6 +230,11 @@ let hasThingsToDo = $derived(
             </Card>
         </section>
     {/if}
+
+    <!-- Stay Connected -->
+    <section class="col-span-12">
+        <StayConnected />
+    </section>
 
     <!-- Bottom CTA -->
     <section class="col-span-12">
