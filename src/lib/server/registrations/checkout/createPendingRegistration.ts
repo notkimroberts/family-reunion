@@ -3,11 +3,12 @@ import { db } from '$lib/server/db'
 import { partyMembers, registrations } from '$lib/server/db/schema'
 import { dbg } from '$lib/server/debug'
 import { createRegistrationCheckout } from '$lib/server/payments'
+import type { RegistrationCategory } from '$lib/types/registrationCategory'
 import { parseBirthDate } from '$lib/utils/age'
 import { grossUpForStripe } from '$lib/utils/stripeFee'
 import { generateManagementToken } from '../hashManagementToken'
 import type { MemberInput } from './MemberInput'
-import { fetchAndValidateTiers } from './_fetchAndValidateTiers'
+import { resolveCategoryPricing } from './_resolveCategoryPricing'
 import { calculateTotal } from './calculateTotal'
 
 /* Creates a 'pending' registration + party members, then opens a Stripe Checkout session.
@@ -23,23 +24,24 @@ import { calculateTotal } from './calculateTotal'
 export async function createPendingRegistration(params: {
     contactName: string
     contactEmail: string
+    contactPhone?: string
     eventId: string
-    selfTierId: string
+    selfCategory: RegistrationCategory
     selfBirthDate?: string
     selfShirtSize?: string
     additionalMembers: MemberInput[]
     successUrl: (token: string) => string
     cancelUrl: (token: string) => string
 }): Promise<{ registrationId: string; managementToken: string; checkoutUrl: string }> {
-    const allTierIds = [params.selfTierId, ...params.additionalMembers.map((m) => m.tierId)]
-    const tierMap = await fetchAndValidateTiers(params.eventId, allTierIds)
-    const selfTier = tierMap.get(params.selfTierId)!
+    const allCategories = [params.selfCategory, ...params.additionalMembers.map((m) => m.category)]
+    const pricingByCategory = await resolveCategoryPricing(params.eventId, allCategories)
+    const selfPricing = pricingByCategory[params.selfCategory]
 
     const { lineItems } = calculateTotal(
         params.contactName,
-        selfTier,
+        selfPricing,
         params.additionalMembers,
-        tierMap,
+        pricingByCategory,
     )
 
     const { plaintext: managementToken, hash: tokenHash } = generateManagementToken()
@@ -50,6 +52,7 @@ export async function createPendingRegistration(params: {
             managementToken: tokenHash,
             contactName: params.contactName,
             contactEmail: params.contactEmail,
+            contactPhone: params.contactPhone || null,
             eventId: params.eventId,
             status: 'pending',
         })
@@ -64,13 +67,13 @@ export async function createPendingRegistration(params: {
             birthMonth: selfParsed?.birthMonth ?? null,
             birthDay: selfParsed?.birthDay ?? null,
             shirtSize: params.selfShirtSize || null,
-            tierLabel: selfTier.label,
+            tierLabel: selfPricing.label,
             /* Snapshot the gross — what the customer is being charged. Refund math reads this directly. */
-            priceCents: grossUpForStripe(selfTier.priceCents),
+            priceCents: grossUpForStripe(selfPricing.priceCents),
         },
         ...params.additionalMembers.map((m) => {
             const parsed = m.birthDate ? parseBirthDate(m.birthDate) : null
-            const tier = tierMap.get(m.tierId)!
+            const pricing = pricingByCategory[m.category]
             return {
                 registrationId: registration.id,
                 name: m.name,
@@ -78,8 +81,8 @@ export async function createPendingRegistration(params: {
                 birthMonth: parsed?.birthMonth ?? null,
                 birthDay: parsed?.birthDay ?? null,
                 shirtSize: m.shirtSize || null,
-                tierLabel: tier.label,
-                priceCents: grossUpForStripe(tier.priceCents),
+                tierLabel: pricing.label,
+                priceCents: grossUpForStripe(pricing.priceCents),
             }
         }),
     ])

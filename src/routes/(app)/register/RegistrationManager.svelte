@@ -18,24 +18,17 @@ import AddMemberForm from './AddMemberForm.svelte'
 import CancelRegistrationDialog from './CancelRegistrationDialog.svelte'
 import EditMemberDialog from './EditMemberDialog.svelte'
 import RemoveMemberDialog from './RemoveMemberDialog.svelte'
-import type {
-    EventDetails,
-    PartyMember,
-    RegistrationDetails,
-    RegistrationPricingTier,
-} from './types'
+import type { EventDetails, PartyMember, RegistrationDetails } from './types'
 
 let {
     token,
     registration,
     members: initialMembers,
-    tiers,
     event,
 }: {
     token: string
     registration: RegistrationDetails
     members: PartyMember[]
-    tiers: RegistrationPricingTier[]
     event: EventDetails
 } = $props()
 
@@ -201,7 +194,8 @@ function handleRemoveClick(member: PartyMember) {
         <AddMemberForm
             {token}
             registrationId={registration.id}
-            {tiers}
+            adultPriceCents={event.adultPriceCents}
+            childPriceCents={event.childPriceCents}
             shirtsEnabled={event.shirtsEnabled}
             onCancel={() => (showAddForm = false)} />
     </div>

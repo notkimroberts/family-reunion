@@ -6,7 +6,6 @@ import { dbg } from '$lib/server/debug'
 import {
     createPendingRegistration,
     getOpenEvent,
-    getEventTiers,
     type MemberInput,
 } from '$lib/server/registrations'
 import type { PageServerLoad, Actions } from './$types'
@@ -14,7 +13,6 @@ import { registrationSchema } from './schema'
 
 export const load: PageServerLoad = async ({ locals }) => {
     const openEvent = await getOpenEvent()
-    const tiers = openEvent ? await getEventTiers(openEvent.id) : []
 
     /* Use defaults() (not superValidate) so the page renders with no errors on cold load.
        superValidate runs the schema against the partial defaults, which fails the min(1)
@@ -32,7 +30,6 @@ export const load: PageServerLoad = async ({ locals }) => {
     )
 
     return {
-        tiers,
         event: openEvent,
         form,
     }
@@ -50,7 +47,8 @@ export const actions: Actions = {
             eventId,
             contactName,
             contactEmail,
-            selfTierId,
+            contactPhone,
+            selfCategory,
             selfBirthDate,
             selfShirtSize,
             members: membersJson,
@@ -67,8 +65,9 @@ export const actions: Actions = {
         const { checkoutUrl } = await createPendingRegistration({
             contactName,
             contactEmail,
+            contactPhone: contactPhone || undefined,
             eventId,
-            selfTierId,
+            selfCategory,
             selfBirthDate: selfBirthDate || undefined,
             selfShirtSize: selfShirtSize || undefined,
             additionalMembers,

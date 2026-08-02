@@ -1,6 +1,7 @@
-import type { PricingTier } from '$lib/server/db/schema'
+import type { RegistrationCategory } from '$lib/types/registrationCategory'
 import { grossUpForStripe } from '$lib/utils/stripeFee'
 import type { MemberInput } from './MemberInput'
+import type { CategoryPricing } from './_resolveCategoryPricing'
 
 export type CalculatedLineItem = {
     name: string
@@ -13,9 +14,9 @@ export type CalculatedLineItem = {
    receives the intended net after Stripe's 2.9% + 30¢. */
 export function calculateTotal(
     selfName: string,
-    selfTier: PricingTier,
+    selfPricing: CategoryPricing,
     additionalMembers: MemberInput[],
-    tierMap: Map<string, PricingTier>,
+    pricingByCategory: Record<RegistrationCategory, CategoryPricing>,
 ): {
     netCents: number
     feeCents: number
@@ -23,13 +24,13 @@ export function calculateTotal(
     lineItems: CalculatedLineItem[]
 } {
     const allMembers = [
-        { name: selfName, tier: selfTier },
-        ...additionalMembers.map((m) => ({ name: m.name, tier: tierMap.get(m.tierId)! })),
+        { name: selfName, pricing: selfPricing },
+        ...additionalMembers.map((m) => ({ name: m.name, pricing: pricingByCategory[m.category] })),
     ]
     const lineItems: CalculatedLineItem[] = allMembers.map((m) => ({
-        name: `${m.name} (${m.tier.label})`,
-        netCents: m.tier.priceCents,
-        grossCents: grossUpForStripe(m.tier.priceCents),
+        name: `${m.name} (${m.pricing.label})`,
+        netCents: m.pricing.priceCents,
+        grossCents: grossUpForStripe(m.pricing.priceCents),
     }))
     const netCents = lineItems.reduce((sum, item) => sum + item.netCents, 0)
     const totalCents = lineItems.reduce((sum, item) => sum + item.grossCents, 0)

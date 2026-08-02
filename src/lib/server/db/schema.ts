@@ -108,14 +108,6 @@ export const verification = pgTable('verification', {
 
 /* Application tables */
 
-export type PricingTier = {
-    id: string
-    label: string
-    minAge: number
-    maxAge: number | null
-    priceCents: number
-}
-
 export type StorefrontProduct = { name: string; imageUrl: string; description?: string }
 
 export const reunionEvents = pgTable(
@@ -146,7 +138,8 @@ export const reunionEvents = pgTable(
             jsonb('recommended_activities').$type<{ name: string; description?: string }[]>(),
         schedule: jsonb('schedule').$type<{ day: string; time: string; activity: string }[]>(),
         shirtsEnabled: boolean('shirts_enabled').notNull().default(false),
-        pricingTiers: jsonb('pricing_tiers').$type<PricingTier[]>().notNull().default([]),
+        adultPriceCents: integer('adult_price_cents').notNull(),
+        childPriceCents: integer('child_price_cents').notNull(),
         externalShopUrl: text('external_shop_url'),
         shopProducts: jsonb('shop_products').$type<StorefrontProduct[]>(),
         shopActive: boolean('shop_active').notNull().default(false),
@@ -167,6 +160,7 @@ export const registrations = pgTable(
         managementToken: text('management_token').notNull().unique(),
         contactName: text('contact_name').notNull(),
         contactEmail: text('contact_email').notNull(),
+        contactPhone: text('contact_phone'),
         eventId: uuid('event_id')
             .notNull()
             .references(() => reunionEvents.id),

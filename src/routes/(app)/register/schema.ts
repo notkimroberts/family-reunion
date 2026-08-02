@@ -1,9 +1,12 @@
 import { z } from 'zod'
+import { isValidPhone } from '$lib/utils'
 
 /* Trim + lowercase incoming emails so recovery and dedup lookups are stable. */
 const normalizedEmail = z
     .email('Please enter a valid email')
     .transform((s) => s.trim().toLowerCase())
+
+const categorySchema = z.enum(['adult', 'child'], 'Please select a category')
 
 export const registrationSchema = z.object({
     eventId: z.string().min(1, 'Please select an event'),
@@ -12,8 +15,12 @@ export const registrationSchema = z.object({
         .min(1, 'Your name is required')
         .transform((s) => s.trim()),
     contactEmail: normalizedEmail,
-    selfTierId: z.string().min(1, 'Please select your pricing tier'),
-    selfBirthDate: z.string().min(1, 'Birthday is required'),
+    contactPhone: z
+        .string()
+        .default('')
+        .refine((val) => !val || isValidPhone(val), 'Please enter a valid phone number'),
+    selfCategory: categorySchema,
+    selfBirthDate: z.string().optional(),
     selfShirtSize: z.string().optional(),
     members: z.string().refine((val) => {
         try {
@@ -27,8 +34,8 @@ export const registrationSchema = z.object({
 
 export const memberSchema = z.object({
     name: z.string().min(1),
-    tierId: z.string().min(1),
-    birthDate: z.string().min(1, 'Birthday is required'),
+    category: categorySchema,
+    birthDate: z.string().optional(),
     shirtSize: z.string().optional(),
 })
 
@@ -36,7 +43,7 @@ export const addMemberSchema = z.object({
     token: z.string().min(1),
     registrationId: z.string().min(1),
     name: z.string().min(1, 'Name is required'),
-    tierId: z.string().min(1, 'Please select a pricing tier'),
+    category: categorySchema,
     birthDate: z.string().optional(),
     shirtSize: z.string().optional(),
 })

@@ -15,6 +15,7 @@ import {
     APP_NAME,
     LIGHT_THEME,
     PRIMARY_NAV_LINKS,
+    PROGRAM_NAV_LINK,
     REGISTER_NAV_LINK,
     SECONDARY_NAV_LINKS,
 } from '$lib/general/constants'
@@ -61,6 +62,13 @@ const linkClass = (active: boolean) =>
                 <Home class="h-4 w-4" />
                 Home
             </a>
+            <a
+                href={PROGRAM_NAV_LINK.href}
+                onclick={onClose}
+                class={linkClass(isActive(PROGRAM_NAV_LINK.href))}>
+                <CalendarClock class="h-4 w-4" />
+                {PROGRAM_NAV_LINK.label}
+            </a>
             {#if PRIMARY_NAV_LINKS.length}
                 <p
                     class="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest px-3 pt-4 pb-1">
@@ -75,10 +83,12 @@ const linkClass = (active: boolean) =>
                 </a>
             {/each}
 
-            <p
-                class="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest px-3 pt-4 pb-1">
-                Reunion
-            </p>
+            {#if SECONDARY_NAV_LINKS.length}
+                <p
+                    class="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest px-3 pt-4 pb-1">
+                    Reunion
+                </p>
+            {/if}
             {#each SECONDARY_NAV_LINKS as link}
                 {@const Icon = iconMap[link.icon]}
                 <a href={link.href} onclick={onClose} class={linkClass(isActive(link.href))}>

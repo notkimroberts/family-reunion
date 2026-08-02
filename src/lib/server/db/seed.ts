@@ -302,30 +302,8 @@ async function seed() {
 		CASCADE
 	`)
 
-    /* Pricing tiers are embedded as JSONB on each event; generate stable IDs so seeded registrations can reference them. */
-    const standardTiers: schema.PricingTier[] = [
-        {
-            id: crypto.randomUUID(),
-            label: 'Child',
-            minAge: 0,
-            maxAge: 12,
-            priceCents: 5000,
-        },
-        {
-            id: crypto.randomUUID(),
-            label: 'Teen',
-            minAge: 13,
-            maxAge: 17,
-            priceCents: 7500,
-        },
-        {
-            id: crypto.randomUUID(),
-            label: 'Adult',
-            minAge: 18,
-            maxAge: null,
-            priceCents: 15000,
-        },
-    ]
+    const ADULT_PRICE_CENTS = 16000
+    const CHILD_PRICE_CENTS = 10000
 
     const shopProducts = Array.from({ length: 3 }, () => ({
         name: faker.commerce.productName(),
@@ -345,7 +323,8 @@ async function seed() {
                 menu: randomMenu(),
                 drinks: randomDrinks(),
                 schedule: randomSchedule(['Saturday']),
-                pricingTiers: standardTiers,
+                adultPriceCents: ADULT_PRICE_CENTS,
+                childPriceCents: CHILD_PRICE_CENTS,
             },
             {
                 year: 2025,
@@ -355,7 +334,8 @@ async function seed() {
                 menu: randomMenu(),
                 drinks: randomDrinks(),
                 schedule: randomSchedule(['Saturday', 'Sunday']),
-                pricingTiers: standardTiers,
+                adultPriceCents: ADULT_PRICE_CENTS,
+                childPriceCents: CHILD_PRICE_CENTS,
             },
             {
                 year: 2027,
@@ -393,7 +373,8 @@ async function seed() {
                     { day: 'Saturday', time: '6:00 PM', activity: 'Dinner & Dance' },
                     { day: 'Sunday', time: '9:00 AM', activity: 'Farewell Brunch' },
                 ],
-                pricingTiers: standardTiers,
+                adultPriceCents: ADULT_PRICE_CENTS,
+                childPriceCents: CHILD_PRICE_CENTS,
                 externalShopUrl: 'https://patterson-family-store.example.com',
                 shopProducts,
                 shopActive: true,
@@ -518,8 +499,8 @@ async function seed() {
     }
 
     dbg.seed('Seeding registrations...')
+    const ADULT_AGE_CUTOFF = 18
     for (const event of events) {
-        const eventTiers = event.pricingTiers
         const numRegistrations =
             event.status === 'open'
                 ? faker.number.int({ min: 5, max: 7 })
@@ -538,16 +519,14 @@ async function seed() {
                 const birthMonth = birthDate.getMonth() + 1
                 const birthDay = birthDate.getDate()
                 const age = new Date().getFullYear() - birthYear
-                const tier = eventTiers.find(
-                    (t) => age >= t.minAge && (t.maxAge === null || age <= t.maxAge),
-                )!
+                const isAdult = age >= ADULT_AGE_CUTOFF
                 return {
                     name: faker.person.fullName(),
                     birthYear,
                     birthMonth,
                     birthDay,
-                    tierLabel: tier.label,
-                    priceCents: tier.priceCents,
+                    tierLabel: isAdult ? 'Adult' : 'Child',
+                    priceCents: isAdult ? event.adultPriceCents : event.childPriceCents,
                 }
             })
             const contactName = partyData[0].name

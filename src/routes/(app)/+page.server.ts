@@ -7,7 +7,7 @@ export const load: PageServerLoad = async () => {
     const events = await db.select().from(reunionEvents).where(eq(reunionEvents.status, 'open'))
 
     if (events.length === 0) {
-        return { event: null, registrantCount: 0, tiers: [] }
+        return { event: null, registrantCount: 0 }
     }
 
     const event = events[0]
@@ -17,7 +17,5 @@ export const load: PageServerLoad = async () => {
         .from(registrations)
         .where(and(eq(registrations.eventId, event.id), eq(registrations.status, 'paid')))
 
-    const tiers = [...event.pricingTiers].sort((a, b) => a.minAge - b.minAge)
-
-    return { event, registrantCount, tiers }
+    return { event, registrantCount }
 }

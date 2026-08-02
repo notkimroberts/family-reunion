@@ -1,6 +1,6 @@
 {
-  "id": "ca4d68f2-8437-4c4e-aa57-6dfee91c5002",
-  "prevId": "34e5963c-825d-4fd8-9fda-05b9e039d002",
+  "id": "5103ccf6-64eb-4b19-af14-2e5265878428",
+  "prevId": "f084197a-dcf8-4501-960b-58347cbb84bc",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -111,116 +111,6 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.contact_submissions": {
-      "name": "contact_submissions",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "name": {
-          "name": "name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "email": {
-          "name": "email",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "message": {
-          "name": "message",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.family_member_edits": {
-      "name": "family_member_edits",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "member_id": {
-          "name": "member_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "editor_name": {
-          "name": "editor_name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "editor_email": {
-          "name": "editor_email",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "snapshot": {
-          "name": "snapshot",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "family_member_edits_member_id_family_members_id_fk": {
-          "name": "family_member_edits_member_id_family_members_id_fk",
-          "tableFrom": "family_member_edits",
-          "tableTo": "family_members",
-          "columnsFrom": [
-            "member_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
     "public.family_members": {
       "name": "family_members",
       "schema": "",
@@ -231,12 +121,6 @@
           "primaryKey": true,
           "notNull": true,
           "default": "gen_random_uuid()"
-        },
-        "user_id": {
-          "name": "user_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
         },
         "name": {
           "name": "name",
@@ -282,7 +166,12 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
-      "checkConstraints": {},
+      "checkConstraints": {
+        "family_members_birth_date_prefix": {
+          "name": "family_members_birth_date_prefix",
+          "value": "(\"family_members\".\"birth_day\" IS NULL OR \"family_members\".\"birth_month\" IS NOT NULL) AND (\"family_members\".\"birth_month\" IS NULL OR \"family_members\".\"birth_year\" IS NOT NULL)"
+        }
+      },
       "isRLSEnabled": false
     },
     "public.party_members": {
@@ -302,23 +191,59 @@
           "primaryKey": false,
           "notNull": true
         },
+        "family_member_id": {
+          "name": "family_member_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
         "name": {
           "name": "name",
           "type": "text",
           "primaryKey": false,
           "notNull": true
         },
-        "birth_date": {
-          "name": "birth_date",
-          "type": "date",
+        "birth_year": {
+          "name": "birth_year",
+          "type": "integer",
           "primaryKey": false,
           "notNull": false
         },
-        "pricing_tier_id": {
-          "name": "pricing_tier_id",
-          "type": "uuid",
+        "birth_month": {
+          "name": "birth_month",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "birth_day": {
+          "name": "birth_day",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "shirt_size": {
+          "name": "shirt_size",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "tier_label": {
+          "name": "tier_label",
+          "type": "text",
           "primaryKey": false,
           "notNull": true
+        },
+        "price_cents": {
+          "name": "price_cents",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "stripe_payment_intent_id": {
+          "name": "stripe_payment_intent_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
         },
         "created_at": {
           "name": "created_at",
@@ -328,7 +253,38 @@
           "default": "now()"
         }
       },
-      "indexes": {},
+      "indexes": {
+        "party_members_registration_id_idx": {
+          "name": "party_members_registration_id_idx",
+          "columns": [
+            {
+              "expression": "registration_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "party_members_family_member_id_idx": {
+          "name": "party_members_family_member_id_idx",
+          "columns": [
+            {
+              "expression": "family_member_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {
         "party_members_registration_id_registrations_id_fk": {
           "name": "party_members_registration_id_registrations_id_fk",
@@ -340,27 +296,32 @@
           "columnsTo": [
             "id"
           ],
-          "onDelete": "no action",
+          "onDelete": "cascade",
           "onUpdate": "no action"
         },
-        "party_members_pricing_tier_id_pricing_tiers_id_fk": {
-          "name": "party_members_pricing_tier_id_pricing_tiers_id_fk",
+        "party_members_family_member_id_family_members_id_fk": {
+          "name": "party_members_family_member_id_family_members_id_fk",
           "tableFrom": "party_members",
-          "tableTo": "pricing_tiers",
+          "tableTo": "family_members",
           "columnsFrom": [
-            "pricing_tier_id"
+            "family_member_id"
           ],
           "columnsTo": [
             "id"
           ],
-          "onDelete": "no action",
+          "onDelete": "set null",
           "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
-      "checkConstraints": {},
+      "checkConstraints": {
+        "party_members_birth_date_prefix": {
+          "name": "party_members_birth_date_prefix",
+          "value": "(\"party_members\".\"birth_day\" IS NULL OR \"party_members\".\"birth_month\" IS NOT NULL) AND (\"party_members\".\"birth_month\" IS NULL OR \"party_members\".\"birth_year\" IS NOT NULL)"
+        }
+      },
       "isRLSEnabled": false
     },
     "public.photos": {
@@ -384,7 +345,7 @@
           "name": "uploaded_by_user_id",
           "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "r2_key": {
           "name": "r2_key",
@@ -412,7 +373,23 @@
           "default": "now()"
         }
       },
-      "indexes": {},
+      "indexes": {
+        "photos_event_id_idx": {
+          "name": "photos_event_id_idx",
+          "columns": [
+            {
+              "expression": "event_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {
         "photos_event_id_reunion_events_id_fk": {
           "name": "photos_event_id_reunion_events_id_fk",
@@ -426,76 +403,18 @@
           ],
           "onDelete": "no action",
           "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.pricing_tiers": {
-      "name": "pricing_tiers",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
         },
-        "event_id": {
-          "name": "event_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "label": {
-          "name": "label",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "min_age": {
-          "name": "min_age",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "max_age": {
-          "name": "max_age",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "price_cents": {
-          "name": "price_cents",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "pricing_tiers_event_id_reunion_events_id_fk": {
-          "name": "pricing_tiers_event_id_reunion_events_id_fk",
-          "tableFrom": "pricing_tiers",
-          "tableTo": "reunion_events",
+        "photos_uploaded_by_user_id_user_id_fk": {
+          "name": "photos_uploaded_by_user_id_user_id_fk",
+          "tableFrom": "photos",
+          "tableTo": "user",
           "columnsFrom": [
-            "event_id"
+            "uploaded_by_user_id"
           ],
           "columnsTo": [
             "id"
           ],
-          "onDelete": "no action",
+          "onDelete": "set null",
           "onUpdate": "no action"
         }
       },
@@ -516,20 +435,26 @@
           "notNull": true,
           "default": "gen_random_uuid()"
         },
-        "user_id": {
-          "name": "user_id",
+        "management_token": {
+          "name": "management_token",
           "type": "text",
           "primaryKey": false,
-          "notNull": false
+          "notNull": true
         },
         "contact_name": {
           "name": "contact_name",
           "type": "text",
           "primaryKey": false,
-          "notNull": false
+          "notNull": true
         },
         "contact_email": {
           "name": "contact_email",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "contact_phone": {
+          "name": "contact_phone",
           "type": "text",
           "primaryKey": false,
           "notNull": false
@@ -545,12 +470,6 @@
           "type": "text",
           "primaryKey": false,
           "notNull": false
-        },
-        "total_amount_cents": {
-          "name": "total_amount_cents",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
         },
         "status": {
           "name": "status",
@@ -575,7 +494,38 @@
           "default": "now()"
         }
       },
-      "indexes": {},
+      "indexes": {
+        "registrations_contact_email_idx": {
+          "name": "registrations_contact_email_idx",
+          "columns": [
+            {
+              "expression": "contact_email",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "registrations_event_id_idx": {
+          "name": "registrations_event_id_idx",
+          "columns": [
+            {
+              "expression": "event_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {
         "registrations_event_id_reunion_events_id_fk": {
           "name": "registrations_event_id_reunion_events_id_fk",
@@ -592,7 +542,22 @@
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
+      "uniqueConstraints": {
+        "registrations_management_token_unique": {
+          "name": "registrations_management_token_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "management_token"
+          ]
+        },
+        "registrations_stripe_session_id_unique": {
+          "name": "registrations_stripe_session_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "stripe_session_id"
+          ]
+        }
+      },
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
@@ -627,12 +592,6 @@
           "primaryKey": false,
           "notNull": true
         },
-        "created_by_user_id": {
-          "name": "created_by_user_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp",
@@ -641,7 +600,50 @@
           "default": "now()"
         }
       },
-      "indexes": {},
+      "indexes": {
+        "rel_unique": {
+          "name": "rel_unique",
+          "columns": [
+            {
+              "expression": "from_member_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "to_member_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "type",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "relationships_to_idx": {
+          "name": "relationships_to_idx",
+          "columns": [
+            {
+              "expression": "to_member_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {
         "relationships_from_member_id_family_members_id_fk": {
           "name": "relationships_from_member_id_family_members_id_fk",
@@ -653,7 +655,7 @@
           "columnsTo": [
             "id"
           ],
-          "onDelete": "no action",
+          "onDelete": "cascade",
           "onUpdate": "no action"
         },
         "relationships_to_member_id_family_members_id_fk": {
@@ -666,14 +668,19 @@
           "columnsTo": [
             "id"
           ],
-          "onDelete": "no action",
+          "onDelete": "cascade",
           "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
-      "checkConstraints": {},
+      "checkConstraints": {
+        "rel_no_self": {
+          "name": "rel_no_self",
+          "value": "\"relationships\".\"from_member_id\" <> \"relationships\".\"to_member_id\""
+        }
+      },
       "isRLSEnabled": false
     },
     "public.reunion_events": {
@@ -755,6 +762,44 @@
           "primaryKey": false,
           "notNull": false
         },
+        "shirts_enabled": {
+          "name": "shirts_enabled",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "adult_price_cents": {
+          "name": "adult_price_cents",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "child_price_cents": {
+          "name": "child_price_cents",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "external_shop_url": {
+          "name": "external_shop_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "shop_products": {
+          "name": "shop_products",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "shop_active": {
+          "name": "shop_active",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp",
@@ -770,7 +815,24 @@
           "default": "now()"
         }
       },
-      "indexes": {},
+      "indexes": {
+        "one_open_event": {
+          "name": "one_open_event",
+          "columns": [
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"reunion_events\".\"status\" = 'open'",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
@@ -869,52 +931,6 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.storefront_config": {
-      "name": "storefront_config",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "external_shop_url": {
-          "name": "external_shop_url",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "products": {
-          "name": "products",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "is_active": {
-          "name": "is_active",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": true
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
     "public.user": {
       "name": "user",
       "schema": "",
@@ -999,91 +1015,6 @@
           "nullsNotDistinct": false,
           "columns": [
             "email"
-          ]
-        }
-      },
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.user_profiles": {
-      "name": "user_profiles",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "user_id": {
-          "name": "user_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "birth_date": {
-          "name": "birth_date",
-          "type": "date",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "phone": {
-          "name": "phone",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "mailing_address": {
-          "name": "mailing_address",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "profile_photo_url": {
-          "name": "profile_photo_url",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "is_deleted": {
-          "name": "is_deleted",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
-        },
-        "deleted_at": {
-          "name": "deleted_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "user_profiles_user_id_unique": {
-          "name": "user_profiles_user_id_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "user_id"
           ]
         }
       },

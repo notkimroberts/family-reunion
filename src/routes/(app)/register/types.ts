@@ -1,9 +1,11 @@
+import type { RegistrationCategory } from '$lib/types/registrationCategory'
+
 /* Shared domain types for the /register route */
 
 /* Member being built in the new-registration form before submission */
 export type FormMember = {
     name: string
-    tierId: string
+    category: RegistrationCategory
     birthDate?: string
     shirtSize?: string
 }
@@ -45,20 +47,6 @@ export type EventDetails = {
     id: string
     title: string
     shirtsEnabled: boolean
-}
-
-/* Pricing tier with age bounds — used in RegistrationManager and AddMemberForm */
-export type RegistrationPricingTier = {
-    id: string
-    label: string
-    priceCents: number
-    minAge: number
-    maxAge: number | null
-}
-
-/* Minimal tier shape used in MemberFormFields (no age bounds needed) */
-export type MemberFormTier = {
-    id: string
-    label: string
-    priceCents: number
+    adultPriceCents: number
+    childPriceCents: number
 }

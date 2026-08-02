@@ -4,14 +4,6 @@ import { Button } from '$lib/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card'
 import { Input } from '$lib/components/ui/input'
 import { Separator } from '$lib/components/ui/separator'
-import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
-} from '$lib/components/ui/table'
 import { Textarea } from '$lib/components/ui/textarea'
 import { formatPrice } from '$lib/utils'
 
@@ -41,98 +33,37 @@ let { data } = $props()
 <section class="col-span-12">
     <Card>
         <CardHeader>
-            <CardTitle>Pricing Tiers</CardTitle>
+            <CardTitle>Pricing</CardTitle>
         </CardHeader>
         <CardContent>
-            {#if data.tiers.length > 0}
-                <div class="mb-4 space-y-3 md:hidden">
-                    {#each data.tiers as tier}
-                        <div class="rounded-lg border p-3">
-                            <div class="flex items-center justify-between">
-                                <span class="font-medium">{tier.label}</span>
-                                <form method="POST" action="?/delete_tier" use:enhance>
-                                    <input type="hidden" name="tierId" value={tier.id} />
-                                    <Button
-                                        type="submit"
-                                        variant="ghost"
-                                        size="sm"
-                                        class="text-destructive hover:text-destructive h-6 px-2">
-                                        Delete
-                                    </Button>
-                                </form>
-                            </div>
-                            <div class="mt-1 flex gap-4 text-sm text-muted-foreground">
-                                <span>Ages {tier.minAge}–{tier.maxAge ?? '∞'}</span>
-                                <span class="ml-auto font-medium text-foreground">
-                                    ${formatPrice(tier.priceCents)}
-                                </span>
-                            </div>
-                        </div>
-                    {/each}
-                </div>
-                <div class="mb-4 hidden overflow-x-auto md:block">
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Label</TableHead>
-                                <TableHead>Min Age</TableHead>
-                                <TableHead>Max Age</TableHead>
-                                <TableHead>Price</TableHead>
-                                <TableHead></TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {#each data.tiers as tier}
-                                <TableRow>
-                                    <TableCell>{tier.label}</TableCell>
-                                    <TableCell>{tier.minAge}</TableCell>
-                                    <TableCell>{tier.maxAge ?? '∞'}</TableCell>
-                                    <TableCell>${formatPrice(tier.priceCents)}</TableCell>
-                                    <TableCell>
-                                        <form method="POST" action="?/delete_tier" use:enhance>
-                                            <input type="hidden" name="tierId" value={tier.id} />
-                                            <Button
-                                                type="submit"
-                                                variant="ghost"
-                                                size="sm"
-                                                class="text-destructive hover:text-destructive h-6 px-2">
-                                                Delete
-                                            </Button>
-                                        </form>
-                                    </TableCell>
-                                </TableRow>
-                            {/each}
-                        </TableBody>
-                    </Table>
-                </div>
-            {/if}
-
             <form
                 method="POST"
-                action="?/add_tier"
+                action="?/update_pricing"
                 use:enhance
-                class="grid grid-cols-2 gap-3 md:grid-cols-[1fr_auto_auto_auto_auto] md:items-end">
-                <div class="col-span-2 md:col-span-1 space-y-1">
-                    <label for="tierLabel" class="text-xs font-medium text-muted-foreground"
-                        >Label</label>
-                    <Input id="tierLabel" name="label" type="text" placeholder="Adult" required />
+                class="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-[auto_auto_auto] md:items-end">
+                <div class="space-y-1">
+                    <label for="adultPrice" class="text-xs font-medium text-muted-foreground"
+                        >Adult price ($)</label>
+                    <Input
+                        id="adultPrice"
+                        name="adultPrice"
+                        type="number"
+                        step="0.01"
+                        value={formatPrice(data.event.adultPriceCents)}
+                        required />
                 </div>
                 <div class="space-y-1">
-                    <label for="tierMinAge" class="text-xs font-medium text-muted-foreground"
-                        >Min Age</label>
-                    <Input id="tierMinAge" name="minAge" type="number" value="0" required />
+                    <label for="childPrice" class="text-xs font-medium text-muted-foreground"
+                        >Child price ($)</label>
+                    <Input
+                        id="childPrice"
+                        name="childPrice"
+                        type="number"
+                        step="0.01"
+                        value={formatPrice(data.event.childPriceCents)}
+                        required />
                 </div>
-                <div class="space-y-1">
-                    <label for="tierMaxAge" class="text-xs font-medium text-muted-foreground"
-                        >Max Age</label>
-                    <Input id="tierMaxAge" name="maxAge" type="number" placeholder="∞" />
-                </div>
-                <div class="space-y-1">
-                    <label for="tierPrice" class="text-xs font-medium text-muted-foreground"
-                        >Price ($)</label>
-                    <Input id="tierPrice" name="price" type="number" step="0.01" required />
-                </div>
-                <Button type="submit" size="sm" class="col-span-2 md:col-span-1">Add Tier</Button>
+                <Button type="submit" size="sm">Save Pricing</Button>
             </form>
         </CardContent>
     </Card>

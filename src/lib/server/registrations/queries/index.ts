@@ -1,6 +1,5 @@
 export type { RegistrationMember } from './RegistrationMember'
 export { getOpenEvent } from './getOpenEvent'
-export { getEventTiers } from './getEventTiers'
 export { getRegistrationByToken } from './getRegistrationByToken'
 export { getRegistrationsByEmail } from './getRegistrationsByEmail'
 export { getRegistrationWithEvent } from './getRegistrationWithEvent'

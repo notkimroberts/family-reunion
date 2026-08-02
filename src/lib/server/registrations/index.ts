@@ -17,7 +17,6 @@ export {
 export type { RegistrationMember } from './queries'
 export {
     getOpenEvent,
-    getEventTiers,
     getRegistrationByToken,
     getRegistrationsByEmail,
     getRegistrationWithEvent,

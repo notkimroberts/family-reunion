@@ -123,6 +123,5 @@ $effect(() => {
         token={data.token}
         registration={data.registration}
         members={data.members}
-        tiers={data.tiers}
         event={data.event} />
 {/if}
