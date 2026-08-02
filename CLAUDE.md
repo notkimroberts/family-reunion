@@ -289,3 +289,40 @@ After completing the code, ask the user if they want a playground link. Only cal
 ## Runtime, Package Manager, Test
 
 Always use `bun`, not `npm`.
+
+## Debugging principles
+
+### Diagnosis before remedy
+
+1. State the mechanism in one falsifiable sentence before proposing any fix. If you can't explain why the bad thing happens in a single concrete sentence, you don't have a diagnosis - you have a guess. Fixes proposed before this point anchor you to a wrong model.
+2. A mitigation is not a diagnosis. "Make the symptom stop" (add a bound, add a retry, add a cache) and "explain the cause" are different activities. Doing the first early actively harms the second by making you stop looking.
+3. Separate "what is the defect" from "what triggered it." For regressions especially, the defect often lives in unchanged code while a separate change made it reachable. Answering the first from the current code is usually faster and firmer than archaeology on the second.
+
+### Evidence discipline
+
+4. Rank evidence by conclusiveness; derive from the strongest artifact first. Not all clues are equal. When one is near-decisive, reason from it rather than generating parallel hypotheses that ignore it.
+5. Distinguish "I verified this" from "this seems true," and never let the second speak in the voice of the first. Confidence should track what you actually checked. Phrases like "in practice,"
+   "presumably," "should be" are flags to go run the check.
+6. Don't generalize from one instance. "This case behaves like X" does not establish "all cases behave like X." Enumerate; check the others.
+7. Label every artifact with its exact provenance and don't merge conclusions across sources until you've confirmed they're the same path. Different environment, version, or config = potentially
+   different behavior. Conflating them manufactures contradictions you then waste effort resolving.
+
+### Contradictions are signal
+
+8. When two things you believe can't both be true, that gap is the diagnosis - don't paper over it. "It's always been broken" colliding with "it used to work" is not noise to smooth away; it's the exact question to chase.
+9. Ask the naive question of yourself: "why did this ever work / not fire before?" The highest-leverage questions are often the simplest ones you're tempted to skip.
+
+### Verification
+
+10. A fix isn't verified until you've seen the test fail without it. Watching the broken code exhibit the failure - and the fix remove it - is far stronger than a passing happy-path test.
+11. Verify across the conditions that change behavior, not just the default. Flags, environments, config toggles, concurrency - enumerate the axes that could alter the path and confirm each.
+12. Prove equivalence exhaustively when replacing load-bearing logic. For a sensitive change, tabulate every input/state and show old-vs-new behavior matches everywhere except the intended delta.
+    "It looks equivalent" is not equivalence.
+
+### Working style
+
+13. Resist the bias toward forward motion. The urge to propose/plan/patch fires before diagnosis is done. On sensitive work, treat that urge as a liability and route it back into "go falsify the mechanism first."
+14. Internalize backpressure instead of relying on the reviewer to supply it. If a person keeps having to push you back to evidence, pre-empt them: challenge your own claim before presenting it.
+15. Prefer the smallest change that maps exactly to the diagnosed cause. Once the mechanism is nailed, the fix should be traceable to it - not a broad rewrite that "probably also" fixes other things.
+
+16. Read the actual current code, not your memory of it. Line numbers drift, functions move, code you "know" has changed. Re-read before reasoning or editing.
