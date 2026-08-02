@@ -199,6 +199,45 @@ Route groups:
 - Start: `node build/index.js`
 - DB migrations are idempotent — Drizzle tracks applied migrations and skips them on subsequent deploys
 - Required Railway environment variables: `SENTRY_AUTH_TOKEN`, `SENTRY_ENVIRONMENT=production`
+- **Watch paths**: `family-reunion-app`'s Railway build config sets `watchPatterns` to `["src/**", "static/**", "drizzle/**", "package.json", "bun.lock", "svelte.config.js", "vite.config.ts", "tsconfig.json"]`, so pushes to `main` that only touch docs/tooling (`CLAUDE.md`, `.claude/**`, `.agents/**`, `skills-lock.json`, etc.) don't trigger a deploy. If you add a new source directory, config file, or build input outside these paths, update the pattern list (`railway environment edit --environment production --service-config family-reunion-app build.watchPatterns '[...]'`) or it'll silently stop deploying real changes.
+
+#### Resetting production
+
+Only do this when production has no real data worth keeping (e.g. pre-launch, or after an intentional migration-history squash — see Migration rules above for why squashing breaks `drizzle-kit migrate` on any environment the old files were ever applied to).
+
+1. **Wipe both schemas** — not just `public`. The migration tracker lives in a separate `drizzle` schema, which survives a `public`-only wipe and causes the exact hash-mismatch failure this runbook exists to fix:
+
+   ```sql
+   DROP SCHEMA IF EXISTS drizzle CASCADE;
+   DROP SCHEMA public CASCADE;
+   CREATE SCHEMA public;
+   ```
+
+   Run via `railway connect family-reunion-db --environment production` (opens a psql shell), or Railway's dashboard query console.
+
+2. **Redeploy** so predeploy (`bun run db:migrate`) runs fresh against the empty DB. `redeploy` only takes `--service`/`--yes`/`--json`/`--from-source` — no `--environment` or `--project` flags; it uses whatever environment the CLI is linked to:
+
+   ```
+   railway redeploy --service family-reunion-app --yes
+   ```
+
+3. **Verify** the deploy actually succeeded before assuming it worked:
+
+   ```
+   railway deployment list --service family-reunion-app --environment production --limit 5 --json
+   ```
+
+   Look for `status: SUCCESS` on the newest entry.
+
+4. **Bootstrap the first admin.** The app's `DATABASE_URL` points at the Railway-internal hostname, which only resolves inside Railway's network — `railway run` (which injects env vars into a _local_ process) fails with `DNSException: getaddrinfo ENOTFOUND`. Use `railway ssh` instead, which executes the command inside the deployed container itself:
+
+   ```
+   railway ssh --service family-reunion-app --environment production -- bun run admin:create <email> <password> <name>
+   ```
+
+5. **Smoke-test**: visit the production URL, confirm the homepage loads and `/admin` login works with the new credentials.
+
+**Do not run `bun run db:seed` against production as a shortcut for real content.** It generates a fictional 100-person family tree via faker, fake historical events, and fake registrations with fake Stripe session IDs — meant for local dev only. Add real family members and the real event through `/admin` instead.
 
 ## Mobile-first guidelines
 
