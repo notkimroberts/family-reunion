@@ -1,15 +1,10 @@
 import { error, fail } from '@sveltejs/kit'
-import { eq, sql } from 'drizzle-orm'
+import { eq } from 'drizzle-orm'
 import { requireAdmin } from '$lib/server/auth/guards'
 import { db } from '$lib/server/db'
-import { reunionEvents, type PricingTier } from '$lib/server/db/schema'
+import { reunionEvents } from '$lib/server/db/schema'
 import { dbg } from '$lib/server/debug'
 import type { PageServerLoad, Actions } from './$types'
-
-function parseFiniteInt(raw: string): number | null {
-    const n = parseInt(raw, 10)
-    return Number.isFinite(n) ? n : null
-}
 
 function parseFiniteFloat(raw: string): number | null {
     const n = parseFloat(raw)
@@ -28,33 +23,7 @@ export const load: PageServerLoad = async (event) => {
         throw error(404, 'Event not found')
     }
 
-    const tiers = [...reunionEvent.pricingTiers].sort((a, b) => a.minAge - b.minAge)
-
-    return { event: reunionEvent, tiers }
-}
-
-/* Mutates pricingTiers JSONB inside a transaction with FOR UPDATE so concurrent admin edits
-   serialize instead of clobbering each other (last-writer-wins on a JSONB read-modify-write). */
-async function mutateTiers(
-    eventId: string,
-    f: (current: PricingTier[]) => PricingTier[],
-): Promise<void> {
-    await db.transaction(async (tx) => {
-        const [row] = await tx
-            .select({ pricingTiers: reunionEvents.pricingTiers })
-            .from(reunionEvents)
-            .where(eq(reunionEvents.id, eventId))
-            .for('update')
-            .limit(1)
-        if (!row) {
-            throw error(404, 'Event not found')
-        }
-        const next = f(row.pricingTiers)
-        await tx
-            .update(reunionEvents)
-            .set({ pricingTiers: next, updatedAt: new Date() })
-            .where(eq(reunionEvents.id, eventId))
-    })
+    return { event: reunionEvent }
 }
 
 export const actions: Actions = {
@@ -141,56 +110,37 @@ export const actions: Actions = {
         return { success: true }
     },
 
-    add_tier: async (event) => {
+    update_pricing: async (event) => {
         requireAdmin(event)
         const data = await event.request.formData()
-        const label = (data.get('label') as string)?.trim()
-        const minAgeRaw = data.get('minAge') as string
-        const maxAgeRaw = data.get('maxAge') as string
-        const priceRaw = data.get('price') as string
+        const adultPriceRaw = data.get('adultPrice') as string
+        const childPriceRaw = data.get('childPrice') as string
 
-        if (!label || !minAgeRaw || !priceRaw) {
-            return fail(400, { error: 'All fields required' })
+        const adultPriceFloat = parseFiniteFloat(adultPriceRaw)
+        const childPriceFloat = parseFiniteFloat(childPriceRaw)
+        if (adultPriceFloat === null || adultPriceFloat < 0) {
+            return fail(400, { error: 'Adult price must be a non-negative number' })
+        }
+        if (childPriceFloat === null || childPriceFloat < 0) {
+            return fail(400, { error: 'Child price must be a non-negative number' })
         }
 
-        const minAge = parseFiniteInt(minAgeRaw)
-        const maxAge = maxAgeRaw ? parseFiniteInt(maxAgeRaw) : null
-        const priceFloat = parseFiniteFloat(priceRaw)
-        if (minAge === null || minAge < 0 || (maxAgeRaw && maxAge === null)) {
-            return fail(400, { error: 'Min/max age must be a number' })
-        }
-        if (priceFloat === null || priceFloat < 0) {
-            return fail(400, { error: 'Price must be a non-negative number' })
-        }
-        if (maxAge !== null && maxAge < minAge) {
-            return fail(400, { error: 'Max age must be at least min age' })
-        }
+        dbg.admin(
+            'update_pricing eventId=%s adult=%s child=%s',
+            event.params.id,
+            adultPriceRaw,
+            childPriceRaw,
+        )
 
-        dbg.admin('add_tier eventId=%s label=%s price=%s', event.params.id, label, priceRaw)
+        await db
+            .update(reunionEvents)
+            .set({
+                adultPriceCents: Math.round(adultPriceFloat * 100),
+                childPriceCents: Math.round(childPriceFloat * 100),
+                updatedAt: new Date(),
+            })
+            .where(eq(reunionEvents.id, event.params.id))
 
-        const newTier: PricingTier = {
-            id: crypto.randomUUID(),
-            label,
-            minAge,
-            maxAge,
-            priceCents: Math.round(priceFloat * 100),
-        }
-
-        await mutateTiers(event.params.id, (current) => [...current, newTier])
-        return { success: true }
-    },
-
-    delete_tier: async (event) => {
-        requireAdmin(event)
-        const data = await event.request.formData()
-        const tierId = data.get('tierId') as string
-        if (!tierId) {
-            return fail(400, { error: 'Missing tier ID' })
-        }
-
-        dbg.admin('delete_tier id=%s', tierId)
-
-        await mutateTiers(event.params.id, (current) => current.filter((t) => t.id !== tierId))
         return { success: true }
     },
 }

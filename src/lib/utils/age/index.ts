@@ -1,4 +1,5 @@
 export { getAge } from './getAge'
+export { getMemberAge } from './getMemberAge'
 export { parseBirthDate } from './parseBirthDate'
 export { formatBirthDate } from './formatBirthDate'
 export { formatPartialBirthDate } from './formatPartialBirthDate'

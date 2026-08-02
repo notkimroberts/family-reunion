@@ -24,6 +24,8 @@ export const actions: Actions = {
             title: title.trim(),
             year: parseInt(year),
             status: 'draft',
+            adultPriceCents: 0,
+            childPriceCents: 0,
         })
 
         return { success: true }

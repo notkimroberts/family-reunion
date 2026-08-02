@@ -1,10 +1,11 @@
 <script lang="ts">
 import { getContext } from 'svelte'
-import { SvelteMap } from 'svelte/reactivity'
 import { enhance } from '$app/forms'
 import { Button } from '$lib/components/ui/button'
 import { Card, CardContent } from '$lib/components/ui/card'
 import type { AdminContext } from '$lib/types/adminContext'
+import type { RegistrationCategory } from '$lib/types/registrationCategory'
+import { getCategoryPriceCents, isValidPhone } from '$lib/utils'
 import OrderSummaryCard from '../../register/OrderSummaryCard.svelte'
 import PartyMembersBuilder from '../../register/PartyMembersBuilder.svelte'
 import YourInformationCard from '../../register/YourInformationCard.svelte'
@@ -18,14 +19,16 @@ let targetEventId = $derived(
     adminCtx.selectedEventId !== 'all' ? adminCtx.selectedEventId : (data.events[0]?.id ?? ''),
 )
 
-const tierMap = $derived(new SvelteMap(data.tiers.map((t) => [t.id, t])))
+const adultPriceCents = $derived(data.events[0]?.adultPriceCents ?? 0)
+const childPriceCents = $derived(data.events[0]?.childPriceCents ?? 0)
 
 let selfFirstName = $state('')
 let selfLastName = $state('')
 let contactEmail = $state('')
+let contactPhone = $state('')
 let selfBirthDate = $state<string | undefined>(undefined)
 let selfShirtSize = $state('')
-let selfTierId = $state('')
+let selfCategory = $state<RegistrationCategory | ''>('')
 let status = $state<'paid' | 'pending' | 'waived'>('paid')
 let members = $state<FormMember[]>([])
 let submitted = $state(false)
@@ -37,23 +40,26 @@ let membersJson = $derived(
         members.map((m) => ({
             name: m.name,
             birthDate: m.birthDate ?? '',
-            tierId: m.tierId,
+            category: m.category,
             shirtSize: m.shirtSize || undefined,
         })),
     ),
 )
 
-let selfTier = $derived(selfTierId ? tierMap.get(selfTierId) : undefined)
+function categoryPriceCents(category: RegistrationCategory): number {
+    return getCategoryPriceCents(category, { adultPriceCents, childPriceCents })
+}
+
 let subtotal = $derived(
-    (selfTier?.priceCents ?? 0) +
-        members.reduce((sum, m) => sum + (tierMap.get(m.tierId)?.priceCents ?? 0), 0),
+    (selfCategory ? categoryPriceCents(selfCategory) : 0) +
+        members.reduce((sum, m) => sum + categoryPriceCents(m.category), 0),
 )
 let canSubmit = $derived(
     !!selfFirstName.trim() &&
         !!selfLastName.trim() &&
         !!contactEmail.trim() &&
-        !!selfTierId &&
-        !!selfBirthDate,
+        !!selfCategory &&
+        (!contactPhone.trim() || isValidPhone(contactPhone)),
 )
 
 const shirtsEnabled = $derived(data.events[0]?.shirtsEnabled ?? false)
@@ -62,9 +68,10 @@ function handleSuccess() {
     selfFirstName = ''
     selfLastName = ''
     contactEmail = ''
+    contactPhone = ''
     selfBirthDate = undefined
     selfShirtSize = ''
-    selfTierId = ''
+    selfCategory = ''
     status = 'paid'
     members = []
     submitted = true
@@ -119,7 +126,8 @@ function handleSuccess() {
             }}>
             <input type="hidden" name="eventId" value={targetEventId} />
             <input type="hidden" name="contactName" value={contactName} />
-            <input type="hidden" name="selfTierId" value={selfTierId} />
+            <input type="hidden" name="contactPhone" value={contactPhone} />
+            <input type="hidden" name="selfCategory" value={selfCategory} />
             <input type="hidden" name="selfBirthDate" value={selfBirthDate ?? ''} />
             <input type="hidden" name="selfShirtSize" value={selfShirtSize} />
             <input type="hidden" name="members" value={membersJson} />
@@ -129,24 +137,31 @@ function handleSuccess() {
                 <div class="flex flex-col gap-4">
                     <YourInformationCard
                         bind:email={contactEmail}
+                        bind:phone={contactPhone}
                         bind:firstName={selfFirstName}
                         bind:lastName={selfLastName}
                         bind:birthDate={selfBirthDate}
                         bind:shirtSize={selfShirtSize}
-                        bind:tierId={selfTierId}
-                        tiers={data.tiers}
+                        bind:category={selfCategory}
+                        {adultPriceCents}
+                        {childPriceCents}
                         {shirtsEnabled} />
 
-                    <PartyMembersBuilder bind:members tiers={data.tiers} {shirtsEnabled} />
+                    <PartyMembersBuilder
+                        bind:members
+                        {adultPriceCents}
+                        {childPriceCents}
+                        {shirtsEnabled} />
                 </div>
 
                 <!-- Right: order summary (sticky on desktop) -->
                 <div class="self-start lg:sticky lg:top-6">
                     <OrderSummaryCard
                         {contactName}
-                        {selfTier}
+                        {selfCategory}
                         {members}
-                        {tierMap}
+                        {adultPriceCents}
+                        {childPriceCents}
                         {subtotal}
                         {canSubmit}
                         submitLabel="Add Registration"

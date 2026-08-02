@@ -10,6 +10,7 @@ import {
 import {
     APP_NAME,
     PRIMARY_NAV_LINKS,
+    PROGRAM_NAV_LINK,
     REGISTER_NAV_LINK,
     SECONDARY_NAV_LINKS,
 } from '$lib/general/constants'
@@ -24,6 +25,7 @@ function isActive(href: string): boolean {
 
 let familyActive = $derived(PRIMARY_NAV_LINKS.some((l) => isActive(l.href)))
 let reunionActive = $derived(SECONDARY_NAV_LINKS.some((l) => isActive(l.href)))
+let programActive = $derived(isActive(PROGRAM_NAV_LINK.href))
 let mobileMenuOpen = $state(false)
 </script>
 
@@ -61,23 +63,31 @@ let mobileMenuOpen = $state(false)
                     </DropdownMenuContent>
                 </DropdownMenu>
             {/if}
-            <DropdownMenu>
-                <DropdownMenuTrigger
-                    class="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer
+            <a
+                href={PROGRAM_NAV_LINK.href}
+                class="flex items-center px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors
+                {programActive ? 'bg-primary/15 text-primary' : 'text-foreground hover:bg-muted'}">
+                {PROGRAM_NAV_LINK.label}
+            </a>
+            {#if SECONDARY_NAV_LINKS.length}
+                <DropdownMenu>
+                    <DropdownMenuTrigger
+                        class="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer
                         {reunionActive
-                        ? 'bg-primary/15 text-primary'
-                        : 'text-foreground hover:bg-muted'}">
-                    Reunion
-                    <ChevronDown class="h-3 w-3 opacity-60" />
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start">
-                    {#each SECONDARY_NAV_LINKS as link}
-                        <DropdownMenuItem>
-                            <a href={link.href} class="w-full">{link.label}</a>
-                        </DropdownMenuItem>
-                    {/each}
-                </DropdownMenuContent>
-            </DropdownMenu>
+                            ? 'bg-primary/15 text-primary'
+                            : 'text-foreground hover:bg-muted'}">
+                        Reunion
+                        <ChevronDown class="h-3 w-3 opacity-60" />
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start">
+                        {#each SECONDARY_NAV_LINKS as link}
+                            <DropdownMenuItem>
+                                <a href={link.href} class="w-full">{link.label}</a>
+                            </DropdownMenuItem>
+                        {/each}
+                    </DropdownMenuContent>
+                </DropdownMenu>
+            {/if}
             <a
                 href={REGISTER_NAV_LINK.href}
                 class="ml-1 flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/90">

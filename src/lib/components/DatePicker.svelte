@@ -57,7 +57,7 @@ function handleSelect(date: DateValue | undefined) {
         {id}
         type="button"
         {disabled}
-        class="border-input bg-background ring-offset-background flex h-9 w-full items-center justify-start gap-2 rounded-md border px-3 py-1 text-sm shadow-xs transition-colors focus:outline-none focus:ring-1 disabled:cursor-not-allowed disabled:opacity-50 {!displayValue
+        class="border-input bg-transparent ring-offset-background flex h-9 w-full items-center justify-start gap-2 rounded-md border px-3 py-1 text-sm shadow-xs transition-colors focus:outline-none focus:ring-1 disabled:cursor-not-allowed disabled:opacity-50 {!displayValue
             ? 'text-muted-foreground'
             : ''}">
         <CalendarIcon class="h-4 w-4 shrink-0 opacity-50" />

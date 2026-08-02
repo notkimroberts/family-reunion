@@ -4,18 +4,18 @@ import { Button } from '$lib/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card'
 import * as Select from '$lib/components/ui/select'
 import { Separator } from '$lib/components/ui/separator'
-import { formatPrice } from '$lib/utils'
-import { getTierPrice } from './pricingUtils'
-import type { PricingTier } from './pricingUtils'
+import type { RegistrationCategory } from '$lib/types/registrationCategory'
+import { formatPrice, getCategoryPriceCents } from '$lib/utils'
 import type { FormMember } from './types'
 
 type Status = 'paid' | 'pending' | 'waived'
 
 let {
     contactName,
-    selfTier,
+    selfCategory,
     members,
-    tierMap,
+    adultPriceCents,
+    childPriceCents,
     subtotal,
     processingFee = 0,
     canSubmit,
@@ -27,9 +27,10 @@ let {
     submitFootnote,
 }: {
     contactName: string
-    selfTier: PricingTier | undefined
+    selfCategory: RegistrationCategory | ''
     members: FormMember[]
-    tierMap: Map<string, PricingTier>
+    adultPriceCents: number
+    childPriceCents: number
     subtotal: number
     processingFee?: number
     canSubmit: boolean
@@ -57,14 +58,27 @@ let total = $derived(subtotal + processingFee)
                         <span class="text-muted-foreground text-xs">({contactSuffix})</span>
                     </span>
                     <span class="tabular-nums">
-                        {selfTier ? `$${formatPrice(selfTier.priceCents)}` : ''}
+                        {selfCategory
+                            ? '$' +
+                              formatPrice(
+                                  getCategoryPriceCents(selfCategory, {
+                                      adultPriceCents,
+                                      childPriceCents,
+                                  }),
+                              )
+                            : ''}
                     </span>
                 </div>
-                {#each members as member (member.name + member.tierId)}
+                {#each members as member (member.name + member.category)}
                     <div class="flex items-center justify-between text-sm">
                         <span class="truncate mr-2">{member.name}</span>
                         <span class="tabular-nums shrink-0"
-                            >${getTierPrice(tierMap, member.tierId)}</span>
+                            >${formatPrice(
+                                getCategoryPriceCents(member.category, {
+                                    adultPriceCents,
+                                    childPriceCents,
+                                }),
+                            )}</span>
                     </div>
                 {/each}
             </div>

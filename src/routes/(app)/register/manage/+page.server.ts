@@ -4,7 +4,6 @@ import { superValidate } from 'sveltekit-superforms/server'
 import {
     addMember,
     cancelRegistration,
-    getEventTiers,
     getRegistrationByToken,
     getRegistrationMembers,
     getRegistrationWithEvent,
@@ -64,10 +63,7 @@ export const load: PageServerLoad = async ({ url, cookies }) => {
 
     const { event: reunionEvent } = result
 
-    const [members, tiers] = await Promise.all([
-        getRegistrationMembers(registration.id),
-        getEventTiers(reunionEvent.id),
-    ])
+    const members = await getRegistrationMembers(registration.id)
 
     /* Narrow projection: do not ship contactName/contactEmail/managementToken hash to the
        client. The Svelte components only need id, status, and the session id. */
@@ -82,7 +78,6 @@ export const load: PageServerLoad = async ({ url, cookies }) => {
         },
         event: reunionEvent,
         members,
-        tiers,
     }
 }
 
@@ -93,13 +88,13 @@ export const actions: Actions = {
             return fail(400, { form })
         }
 
-        const { token, registrationId, name, tierId, birthDate, shirtSize } = form.data
+        const { token, registrationId, name, category, birthDate, shirtSize } = form.data
 
         const checkoutUrl = await addMember({
             registrationId,
             managementToken: token,
             name,
-            tierId,
+            category,
             birthDate: birthDate || undefined,
             shirtSize: shirtSize || undefined,
             successUrl: `${event.url.origin}/register/manage?member_added=true`,

@@ -1,4 +1,5 @@
-import { getAge, parseBirthDate } from '$lib/utils/age'
+import { getAge } from './getAge'
+import { parseBirthDate } from './parseBirthDate'
 
 // Parses a birthDate string and returns the member's current age; returns undefined if input is absent or unparseable
 export function getMemberAge(birthDate: string | undefined): number | undefined {

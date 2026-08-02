@@ -7,25 +7,27 @@ import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/car
 import { Input } from '$lib/components/ui/input'
 import * as Select from '$lib/components/ui/select'
 import { SHIRT_SIZES } from '$lib/general/constants'
-import { formatPrice } from '$lib/utils'
-import type { RegistrationPricingTier } from './types'
+import type { RegistrationCategory } from '$lib/types/registrationCategory'
+import CategorySelect from './CategorySelect.svelte'
 
 let {
     token,
     registrationId,
-    tiers,
+    adultPriceCents,
+    childPriceCents,
     shirtsEnabled,
     onCancel,
 }: {
     token: string
     registrationId: string
-    tiers: RegistrationPricingTier[]
+    adultPriceCents: number
+    childPriceCents: number
     shirtsEnabled: boolean
     onCancel?: () => void
 } = $props()
 
 let name = $state('')
-let tierId = $state('')
+let category = $state<RegistrationCategory | ''>('')
 let birthDate = $state<string | undefined>(undefined)
 let shirtSize = $state('')
 let submitting = $state(false)
@@ -65,23 +67,13 @@ let submitting = $state(false)
                             required />
                     </div>
                     <div class="space-y-2">
-                        <label for="add-tier" class="text-sm font-medium">Category</label>
-                        <Select.Root
-                            type="single"
-                            value={tierId}
-                            onValueChange={(v) => (tierId = v)}
-                            name="tierId">
-                            <Select.Trigger id="add-tier">
-                                <BitsSelect.Value placeholder="Select category" />
-                            </Select.Trigger>
-                            <Select.Content>
-                                {#each tiers as tier (tier.id)}
-                                    <Select.Item
-                                        value={tier.id}
-                                        label="{tier.label} — ${formatPrice(tier.priceCents)}" />
-                                {/each}
-                            </Select.Content>
-                        </Select.Root>
+                        <label for="add-category" class="text-sm font-medium">Category</label>
+                        <CategorySelect
+                            id="add-category"
+                            bind:category
+                            {adultPriceCents}
+                            {childPriceCents} />
+                        <input type="hidden" name="category" value={category} />
                     </div>
                     <div class="space-y-2">
                         <label for="add-birthDate" class="text-sm font-medium">
@@ -120,7 +112,7 @@ let submitting = $state(false)
                     {#if onCancel}
                         <Button type="button" variant="outline" onclick={onCancel}>Cancel</Button>
                     {/if}
-                    <Button type="submit" disabled={submitting || !name.trim() || !tierId}>
+                    <Button type="submit" disabled={submitting || !name.trim() || !category}>
                         {submitting ? 'Redirecting to checkout…' : 'Continue to Payment'}
                     </Button>
                 </div>
