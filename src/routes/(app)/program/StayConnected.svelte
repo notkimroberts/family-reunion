@@ -1,5 +1,5 @@
 <script lang="ts">
-import { Facebook } from '@lucide/svelte'
+import { FacebookIcon } from '$lib/components'
 import { Button } from '$lib/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card'
 import { FACEBOOK_EVENT_URL, FACEBOOK_GROUP_URL } from '$lib/general/constants'
@@ -9,7 +9,7 @@ import { FACEBOOK_EVENT_URL, FACEBOOK_GROUP_URL } from '$lib/general/constants'
     <Card class="h-full">
         <CardHeader>
             <CardTitle class="flex items-center gap-2">
-                <Facebook class="size-5" />
+                <FacebookIcon class="size-5" />
                 Join the Family Group
             </CardTitle>
         </CardHeader>
@@ -31,7 +31,7 @@ import { FACEBOOK_EVENT_URL, FACEBOOK_GROUP_URL } from '$lib/general/constants'
     <Card class="h-full">
         <CardHeader>
             <CardTitle class="flex items-center gap-2">
-                <Facebook class="size-5" />
+                <FacebookIcon class="size-5" />
                 Reunion Event
             </CardTitle>
         </CardHeader>
