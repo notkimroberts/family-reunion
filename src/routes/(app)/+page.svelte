@@ -1,5 +1,5 @@
 <script lang="ts">
-import { Mail, Phone } from '@lucide/svelte'
+import { Mail, MessageSquare } from '@lucide/svelte'
 import { onMount, onDestroy } from 'svelte'
 import { StayConnected } from '$lib/components'
 import { Button } from '$lib/components/ui/button'
@@ -307,14 +307,14 @@ const FAMILY_STATS = [
                 {/if}
                 {#if contactPhone}
                     <a
-                        href="tel:{contactPhone.replace(/[^\d+]/g, '')}"
+                        href="sms:{contactPhone.replace(/[^\d+]/g, '')}"
                         class="flex items-center gap-3 group">
                         <div
                             class="rounded-md bg-primary/10 p-2 text-primary shrink-0 group-hover:bg-primary/20 transition-colors">
-                            <Phone class="h-4 w-4" />
+                            <MessageSquare class="h-4 w-4" />
                         </div>
                         <div>
-                            <p class="text-xs text-muted-foreground">Call</p>
+                            <p class="text-xs text-muted-foreground">Text</p>
                             <p class="text-sm font-medium group-hover:underline">
                                 {contactPhone}
                             </p>
