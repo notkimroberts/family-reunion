@@ -1,1 +1,1 @@
-export const CONTACT_PHONE = '+1 (234) 567-890'
+export const CONTACT_PHONE = '(510) 575-9080'
