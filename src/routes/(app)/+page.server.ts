@@ -1,6 +1,6 @@
 import { eq, and, count } from 'drizzle-orm'
 import { db } from '$lib/server/db'
-import { reunionEvents, registrations } from '$lib/server/db/schema'
+import { reunionEvents, registrations, partyMembers } from '$lib/server/db/schema'
 import type { PageServerLoad } from './$types'
 
 export const load: PageServerLoad = async () => {
@@ -14,7 +14,8 @@ export const load: PageServerLoad = async () => {
 
     const [{ value: registrantCount }] = await db
         .select({ value: count() })
-        .from(registrations)
+        .from(partyMembers)
+        .innerJoin(registrations, eq(partyMembers.registrationId, registrations.id))
         .where(and(eq(registrations.eventId, event.id), eq(registrations.status, 'paid')))
 
     return { event, registrantCount }

@@ -1,8 +1,13 @@
-import type { RegistrationCategory } from '$lib/types/registrationCategory'
-
 export type MemberInput = {
     name: string
-    category: RegistrationCategory
+    tierId: string
     birthDate?: string
     shirtSize?: string
+    addressLine1?: string
+    addressLine2?: string
+    addressCity?: string
+    addressState?: string
+    addressZip?: string
+    vegetarianMeal?: boolean
+    attendedReunion2025?: boolean
 }

@@ -15,6 +15,14 @@ export type AddMemberSessionMetadata = {
     memberTierLabel: string
     memberBirthDate: string
     memberShirtSize: string
+    memberAddressLine1: string
+    memberAddressLine2: string
+    memberAddressCity: string
+    memberAddressState: string
+    memberAddressZip: string
+    /* '', 'true', or 'false' — '' means the question wasn't answered (tri-state, mirrors the nullable DB column) */
+    memberVegetarianMeal: string
+    memberAttendedReunion2025: string
     memberPriceCents: string
 }
 
@@ -29,5 +37,12 @@ export type AddMemberMetadataParams = {
     memberTierLabel: string
     memberBirthDate?: string
     memberShirtSize?: string
+    memberAddressLine1?: string
+    memberAddressLine2?: string
+    memberAddressCity?: string
+    memberAddressState?: string
+    memberAddressZip?: string
+    memberVegetarianMeal?: boolean
+    memberAttendedReunion2025?: boolean
     memberPriceCents: number
 }

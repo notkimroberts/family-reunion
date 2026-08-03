@@ -2,13 +2,46 @@ import { error, fail } from '@sveltejs/kit'
 import { eq } from 'drizzle-orm'
 import { requireAdmin } from '$lib/server/auth/guards'
 import { db } from '$lib/server/db'
-import { reunionEvents } from '$lib/server/db/schema'
+import { reunionEvents, shirtSizeCategoryEnum } from '$lib/server/db/schema'
 import { dbg } from '$lib/server/debug'
+import { createTier, deleteTier, getTiersForEvent, updateTier } from '$lib/server/tiers'
 import type { PageServerLoad, Actions } from './$types'
 
 function parseFiniteFloat(raw: string): number | null {
     const n = parseFloat(raw)
     return Number.isFinite(n) ? n : null
+}
+
+function isShirtSizeCategory(
+    value: string,
+): value is (typeof shirtSizeCategoryEnum.enumValues)[number] {
+    return (shirtSizeCategoryEnum.enumValues as readonly string[]).includes(value)
+}
+
+/* Parses and validates the add_tier/update_tier form fields shared by both actions. */
+function parseTierForm(data: FormData):
+    | {
+          label: string
+          priceCents: number
+          shirtSizeCategory: (typeof shirtSizeCategoryEnum.enumValues)[number]
+      }
+    | { error: string } {
+    const label = (data.get('label') as string)?.trim()
+    const priceRaw = data.get('priceCents') as string
+    const shirtSizeCategory = (data.get('shirtSizeCategory') as string)?.trim()
+
+    const priceFloat = parseFiniteFloat(priceRaw)
+    if (!label) {
+        return { error: 'Tier label is required' }
+    }
+    if (priceFloat === null || priceFloat < 0) {
+        return { error: 'Price must be a non-negative number' }
+    }
+    if (!isShirtSizeCategory(shirtSizeCategory)) {
+        return { error: 'Invalid shirt size category' }
+    }
+
+    return { label, priceCents: Math.round(priceFloat * 100), shirtSizeCategory }
 }
 
 export const load: PageServerLoad = async (event) => {
@@ -23,7 +56,9 @@ export const load: PageServerLoad = async (event) => {
         throw error(404, 'Event not found')
     }
 
-    return { event: reunionEvent }
+    const tiers = await getTiersForEvent(reunionEvent.id)
+
+    return { event: reunionEvent, tiers }
 }
 
 export const actions: Actions = {
@@ -110,36 +145,66 @@ export const actions: Actions = {
         return { success: true }
     },
 
-    update_pricing: async (event) => {
+    update_lock_date: async (event) => {
         requireAdmin(event)
         const data = await event.request.formData()
-        const adultPriceRaw = data.get('adultPrice') as string
-        const childPriceRaw = data.get('childPrice') as string
+        const raw = (data.get('registrationLockDate') as string)?.trim()
 
-        const adultPriceFloat = parseFiniteFloat(adultPriceRaw)
-        const childPriceFloat = parseFiniteFloat(childPriceRaw)
-        if (adultPriceFloat === null || adultPriceFloat < 0) {
-            return fail(400, { error: 'Adult price must be a non-negative number' })
-        }
-        if (childPriceFloat === null || childPriceFloat < 0) {
-            return fail(400, { error: 'Child price must be a non-negative number' })
+        let registrationLockDate: Date | null = null
+        if (raw) {
+            const d = new Date(raw)
+            if (Number.isNaN(d.getTime())) {
+                return fail(400, { error: 'Invalid lock date' })
+            }
+            registrationLockDate = d
         }
 
-        dbg.admin(
-            'update_pricing eventId=%s adult=%s child=%s',
-            event.params.id,
-            adultPriceRaw,
-            childPriceRaw,
-        )
+        dbg.admin('update_lock_date eventId=%s date=%s', event.params.id, raw)
 
         await db
             .update(reunionEvents)
-            .set({
-                adultPriceCents: Math.round(adultPriceFloat * 100),
-                childPriceCents: Math.round(childPriceFloat * 100),
-                updatedAt: new Date(),
-            })
+            .set({ registrationLockDate, updatedAt: new Date() })
             .where(eq(reunionEvents.id, event.params.id))
+
+        return { success: true }
+    },
+
+    add_tier: async (event) => {
+        requireAdmin(event)
+        const data = await event.request.formData()
+        const parsed = parseTierForm(data)
+        if ('error' in parsed) {
+            return fail(400, { error: parsed.error })
+        }
+
+        await createTier({
+            eventId: event.params.id,
+            ...parsed,
+        })
+
+        return { success: true }
+    },
+
+    update_tier: async (event) => {
+        requireAdmin(event)
+        const data = await event.request.formData()
+        const tierId = data.get('tierId') as string
+        const parsed = parseTierForm(data)
+        if ('error' in parsed) {
+            return fail(400, { error: parsed.error })
+        }
+
+        await updateTier(tierId, parsed)
+
+        return { success: true }
+    },
+
+    delete_tier: async (event) => {
+        requireAdmin(event)
+        const data = await event.request.formData()
+        const tierId = data.get('tierId') as string
+
+        await deleteTier(tierId)
 
         return { success: true }
     },

@@ -112,7 +112,7 @@ The token is the only credential — no per-request auth check. Email enumeratio
 Route groups:
 
 - `(auth)` — `/login` only, no nav, full-screen card layout. Admin sign-in only.
-- `(app)` — public paths include `/`, `/family-tree`, `/gallery`, `/program`, `/shop`, `/register`, `/contact`. Everything else (e.g. `/admin/*`) requires sign-in.
+- `(app)` — public paths include `/`, `/family-tree`, `/gallery`, `/program`, `/shop`, `/register`. Everything else (e.g. `/admin/*`) requires sign-in. Contact is a section on `/` (`#contact`), not its own route.
 
 ### Remote Functions
 

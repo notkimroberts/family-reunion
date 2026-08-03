@@ -9,8 +9,8 @@ import {
 } from '$lib/components/ui/dropdown-menu'
 import {
     APP_NAME,
+    CONTACT_NAV_LINK,
     PRIMARY_NAV_LINKS,
-    PROGRAM_NAV_LINK,
     REGISTER_NAV_LINK,
     SECONDARY_NAV_LINKS,
 } from '$lib/general/constants'
@@ -25,7 +25,6 @@ function isActive(href: string): boolean {
 
 let familyActive = $derived(PRIMARY_NAV_LINKS.some((l) => isActive(l.href)))
 let reunionActive = $derived(SECONDARY_NAV_LINKS.some((l) => isActive(l.href)))
-let programActive = $derived(isActive(PROGRAM_NAV_LINK.href))
 let mobileMenuOpen = $state(false)
 </script>
 
@@ -64,10 +63,9 @@ let mobileMenuOpen = $state(false)
                 </DropdownMenu>
             {/if}
             <a
-                href={PROGRAM_NAV_LINK.href}
-                class="flex items-center px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors
-                {programActive ? 'bg-primary/15 text-primary' : 'text-foreground hover:bg-muted'}">
-                {PROGRAM_NAV_LINK.label}
+                href={CONTACT_NAV_LINK.href}
+                class="flex items-center px-2.5 py-1.5 rounded-lg text-xs font-medium text-foreground transition-colors hover:bg-muted">
+                {CONTACT_NAV_LINK.label}
             </a>
             {#if SECONDARY_NAV_LINKS.length}
                 <DropdownMenu>

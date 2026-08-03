@@ -1,6 +1,2 @@
-export {
-    renderContactEmail,
-    renderRegistrationConfirmation,
-    renderRecoveryEmail,
-} from './templates'
-export { sendContactEmail, sendRegistrationConfirmation, sendRecoveryEmail } from './send'
+export { renderRegistrationConfirmation, renderRecoveryEmail } from './templates'
+export { sendRegistrationConfirmation, sendRecoveryEmail } from './send'

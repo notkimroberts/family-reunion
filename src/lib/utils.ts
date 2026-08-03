@@ -2,11 +2,13 @@ export { getAge, getMemberAge, parseBirthDate, formatBirthDate } from './utils/a
 export { getInitials } from './utils/initials'
 export { formatPrice } from './utils/price'
 export { isValidPhone } from './utils/isValidPhone'
+export { isValidZip } from './utils/isValidZip'
 export { formatPhoneInput } from './utils/formatPhoneInput'
 export { formatDateRange } from './utils/formatDateRange'
 export { splitFullName } from './utils/splitFullName'
-export { REGISTRATION_CATEGORY_LABELS } from './utils/REGISTRATION_CATEGORY_LABELS'
-export { getCategoryPriceCents } from './utils/getCategoryPriceCents'
+export { getTierPriceCents } from './utils/getTierPriceCents'
+export { getTierLabel } from './utils/getTierLabel'
+export { parseYesNo } from './utils/parseYesNo'
 export {
     cn,
     type WithoutChild,

@@ -1,9 +1,10 @@
 import { error } from '@sveltejs/kit'
 import { eq } from 'drizzle-orm'
 import { db } from '$lib/server/db'
-import { partyMembers, registrations } from '$lib/server/db/schema'
+import { partyMembers, registrations, reunionEvents } from '$lib/server/db/schema'
 import { dbg } from '$lib/server/debug'
 import { refundPaymentIntent, retrieveSessionPaymentIntent } from '$lib/server/payments'
+import { assertRegistrationEditable } from '../assertRegistrationEditable'
 import { hashManagementToken } from '../hashManagementToken'
 
 /* Issues a partial refund for the member's recorded price (using the member id as a Stripe
@@ -21,15 +22,19 @@ export async function removeMember(memberId: string, managementToken: string): P
             priceCents: partyMembers.priceCents,
             registrationToken: registrations.managementToken,
             registrationStripeSessionId: registrations.stripeSessionId,
+            registrationLockDate: reunionEvents.registrationLockDate,
         })
         .from(partyMembers)
         .innerJoin(registrations, eq(partyMembers.registrationId, registrations.id))
+        .innerJoin(reunionEvents, eq(registrations.eventId, reunionEvents.id))
         .where(eq(partyMembers.id, memberId))
         .limit(1)
 
     if (!member || member.registrationToken !== tokenHash) {
         throw error(403)
     }
+
+    assertRegistrationEditable(member.registrationLockDate)
 
     let paymentIntentId = member.stripePaymentIntentId
     if (!paymentIntentId && member.registrationStripeSessionId) {

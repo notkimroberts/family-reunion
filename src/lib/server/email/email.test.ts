@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { renderRecoveryEmail, renderContactEmail, renderRegistrationConfirmation } from './index'
+import { renderRecoveryEmail, renderRegistrationConfirmation } from './index'
 
 vi.mock('$env/dynamic/private', () => ({ env: {} }))
 vi.mock('$lib/general/constants', () => ({ APP_NAME: 'Family Reunion', APP_DOMAIN: 'example.com' }))
@@ -20,26 +20,6 @@ describe('renderRecoveryEmail', () => {
             manageUrl: 'https://example.com/link',
         })
         expect(subject).toContain('Family Reunion 2026')
-    })
-})
-
-describe('renderContactEmail', () => {
-    it('puts the sender name in the subject', () => {
-        const { subject } = renderContactEmail(
-            { name: 'Jane Doe', email: 'jane@example.com' },
-            'Hello',
-        )
-        expect(subject).toBe('Contact Form: Jane Doe')
-    })
-
-    it('includes sender name, email, and message in the body', () => {
-        const { text } = renderContactEmail(
-            { name: 'Jane Doe', email: 'jane@example.com' },
-            'I have a question.',
-        )
-        expect(text).toContain('Jane Doe')
-        expect(text).toContain('jane@example.com')
-        expect(text).toContain('I have a question.')
     })
 })
 

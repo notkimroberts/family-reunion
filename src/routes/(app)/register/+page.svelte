@@ -3,12 +3,12 @@ import { CalendarDays, MapPin, Sparkles } from '@lucide/svelte'
 import { superForm } from 'sveltekit-superforms'
 import { zod4Client as zodClient } from 'sveltekit-superforms/adapters'
 import { APP_NAME } from '$lib/general/constants'
-import type { RegistrationCategory } from '$lib/types/registrationCategory'
 import {
     formatDateRange,
     formatPrice,
-    getCategoryPriceCents,
+    getTierPriceCents,
     isValidPhone,
+    isValidZip,
     splitFullName,
 } from '$lib/utils'
 import { stripeFeeCents } from '$lib/utils/stripeFee'
@@ -16,7 +16,7 @@ import OrderSummaryCard from './OrderSummaryCard.svelte'
 import PartyMembersBuilder from './PartyMembersBuilder.svelte'
 import YourInformationCard from './YourInformationCard.svelte'
 import { registrationSchema } from './schema'
-import type { FormMember } from './types'
+import type { FormMember, PersonDetails } from './types'
 
 let { data } = $props()
 
@@ -25,12 +25,20 @@ const { form, errors, enhance } = superForm(data.form, {
     dataType: 'form',
 })
 
-const adultPriceCents = data.event?.adultPriceCents ?? 0
-const childPriceCents = data.event?.childPriceCents ?? 0
+const tiers = data.tiers
 
-let selfCategory = $state<RegistrationCategory | ''>('')
-let selfBirthDate = $state<string | undefined>(undefined)
-let selfShirtSize = $state('')
+let self = $state<PersonDetails>({
+    tierId: '',
+    birthDate: undefined,
+    shirtSize: '',
+    addressLine1: '',
+    addressLine2: '',
+    addressCity: '',
+    addressState: '',
+    addressZip: '',
+    vegetarianMeal: '',
+    attendedReunion2025: '',
+})
 
 /* Split the initial contactName (server-prefilled if user is logged in) into first/last.
    The two visible inputs are the source of truth; we send a derived "First Last" through
@@ -39,44 +47,41 @@ const initialSplit = splitFullName($form.contactName)
 let selfFirstName = $state(initialSplit.firstName)
 let selfLastName = $state(initialSplit.lastName)
 let contactName = $derived(`${selfFirstName.trim()} ${selfLastName.trim()}`.trim())
-
-$effect(() => {
-    $form.selfCategory = selfCategory as 'adult' | 'child'
-})
-$effect(() => {
-    $form.selfBirthDate = selfBirthDate ?? ''
-})
-$effect(() => {
-    $form.selfShirtSize = selfShirtSize
+let contactAddress = $derived({
+    addressLine1: self.addressLine1,
+    addressLine2: self.addressLine2,
+    addressCity: self.addressCity,
+    addressState: self.addressState,
+    addressZip: self.addressZip,
 })
 
 let members = $state<FormMember[]>([])
+let membersJson = $derived(JSON.stringify(members))
 
-$effect(() => {
-    $form.members = JSON.stringify(members)
-})
-
-function categoryPriceCents(category: RegistrationCategory): number {
-    return getCategoryPriceCents(category, { adultPriceCents, childPriceCents })
-}
-
-/* Subtotal in net cents (sum of selected category prices). */
+/* Subtotal in net cents (sum of selected tier prices). */
 let subtotal = $derived(
-    (selfCategory ? categoryPriceCents(selfCategory) : 0) +
-        members.reduce((sum, m) => sum + categoryPriceCents(m.category), 0),
+    (self.tierId ? getTierPriceCents(self.tierId, tiers) : 0) +
+        members.reduce((sum, m) => sum + getTierPriceCents(m.tierId, tiers), 0),
 )
 /* Fee is the sum of per-member gross-ups so it never disagrees with what Stripe will
    actually charge (server uses the same per-member gross-up). */
 let processingFee = $derived(
-    (selfCategory ? stripeFeeCents(categoryPriceCents(selfCategory)) : 0) +
-        members.reduce((sum, m) => sum + stripeFeeCents(categoryPriceCents(m.category)), 0),
+    (self.tierId ? stripeFeeCents(getTierPriceCents(self.tierId, tiers)) : 0) +
+        members.reduce((sum, m) => sum + stripeFeeCents(getTierPriceCents(m.tierId, tiers)), 0),
 )
 let total = $derived(subtotal + processingFee)
 let canSubmit = $derived(
     !!selfFirstName.trim() &&
         !!selfLastName.trim() &&
         !!$form.contactEmail.trim() &&
-        !!selfCategory &&
+        !!self.tierId &&
+        !!self.addressLine1.trim() &&
+        !!self.addressCity.trim() &&
+        !!self.addressState.trim() &&
+        !!self.addressZip.trim() &&
+        isValidZip(self.addressZip) &&
+        !!self.vegetarianMeal &&
+        !!self.attendedReunion2025 &&
         (!$form.contactPhone.trim() || isValidPhone($form.contactPhone)),
 )
 
@@ -142,10 +147,17 @@ let dateRange = $derived(
     <form method="POST" action="?/register" use:enhance class="col-span-12">
         <input type="hidden" name="eventId" bind:value={$form.eventId} />
         <input type="hidden" name="contactName" value={contactName} />
-        <input type="hidden" name="selfCategory" bind:value={$form.selfCategory} />
-        <input type="hidden" name="selfBirthDate" bind:value={$form.selfBirthDate} />
-        <input type="hidden" name="selfShirtSize" bind:value={$form.selfShirtSize} />
-        <input type="hidden" name="members" bind:value={$form.members} />
+        <input type="hidden" name="selfTierId" value={self.tierId} />
+        <input type="hidden" name="selfBirthDate" value={self.birthDate ?? ''} />
+        <input type="hidden" name="selfShirtSize" value={self.shirtSize ?? ''} />
+        <input type="hidden" name="selfAddressLine1" value={self.addressLine1} />
+        <input type="hidden" name="selfAddressLine2" value={self.addressLine2 ?? ''} />
+        <input type="hidden" name="selfAddressCity" value={self.addressCity} />
+        <input type="hidden" name="selfAddressState" value={self.addressState} />
+        <input type="hidden" name="selfAddressZip" value={self.addressZip} />
+        <input type="hidden" name="selfVegetarianMeal" value={self.vegetarianMeal} />
+        <input type="hidden" name="selfAttendedReunion2025" value={self.attendedReunion2025} />
+        <input type="hidden" name="members" value={membersJson} />
 
         <div class="grid grid-cols-1 lg:grid-cols-[1fr_minmax(0,22rem)] gap-6">
             <!-- Left: party builder -->
@@ -155,11 +167,8 @@ let dateRange = $derived(
                     bind:phone={$form.contactPhone}
                     bind:firstName={selfFirstName}
                     bind:lastName={selfLastName}
-                    bind:birthDate={selfBirthDate}
-                    bind:shirtSize={selfShirtSize}
-                    bind:category={selfCategory}
-                    {adultPriceCents}
-                    {childPriceCents}
+                    bind:info={self}
+                    {tiers}
                     shirtsEnabled={data.event.shirtsEnabled}
                     errors={{
                         email: $errors.contactEmail?.[0],
@@ -168,8 +177,9 @@ let dateRange = $derived(
 
                 <PartyMembersBuilder
                     bind:members
-                    {adultPriceCents}
-                    {childPriceCents}
+                    {tiers}
+                    {contactName}
+                    {contactAddress}
                     shirtsEnabled={data.event.shirtsEnabled}
                     error={$errors.members?.[0]} />
             </div>
@@ -178,10 +188,9 @@ let dateRange = $derived(
             <div class="self-start lg:sticky lg:top-6">
                 <OrderSummaryCard
                     {contactName}
-                    {selfCategory}
+                    selfTierId={self.tierId}
                     {members}
-                    {adultPriceCents}
-                    {childPriceCents}
+                    {tiers}
                     {subtotal}
                     {processingFee}
                     {canSubmit}

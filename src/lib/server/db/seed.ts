@@ -323,8 +323,6 @@ async function seed() {
                 menu: randomMenu(),
                 drinks: randomDrinks(),
                 schedule: randomSchedule(['Saturday']),
-                adultPriceCents: ADULT_PRICE_CENTS,
-                childPriceCents: CHILD_PRICE_CENTS,
             },
             {
                 year: 2025,
@@ -334,8 +332,6 @@ async function seed() {
                 menu: randomMenu(),
                 drinks: randomDrinks(),
                 schedule: randomSchedule(['Saturday', 'Sunday']),
-                adultPriceCents: ADULT_PRICE_CENTS,
-                childPriceCents: CHILD_PRICE_CENTS,
             },
             {
                 year: 2027,
@@ -373,14 +369,30 @@ async function seed() {
                     { day: 'Saturday', time: '6:00 PM', activity: 'Dinner & Dance' },
                     { day: 'Sunday', time: '9:00 AM', activity: 'Farewell Brunch' },
                 ],
-                adultPriceCents: ADULT_PRICE_CENTS,
-                childPriceCents: CHILD_PRICE_CENTS,
                 externalShopUrl: 'https://patterson-family-store.example.com',
                 shopProducts,
                 shopActive: true,
             },
         ])
         .returning()
+
+    dbg.seed('Seeding tiers...')
+    await db.insert(schema.tiers).values(
+        events.flatMap((event) => [
+            {
+                eventId: event.id,
+                label: 'Adult',
+                priceCents: ADULT_PRICE_CENTS,
+                shirtSizeCategory: 'adult' as const,
+            },
+            {
+                eventId: event.id,
+                label: 'Child',
+                priceCents: CHILD_PRICE_CENTS,
+                shirtSizeCategory: 'child' as const,
+            },
+        ]),
+    )
 
     dbg.seed('Seeding family members...')
     const tree = buildFamilyTree()
@@ -526,7 +538,7 @@ async function seed() {
                     birthMonth,
                     birthDay,
                     tierLabel: isAdult ? 'Adult' : 'Child',
-                    priceCents: isAdult ? event.adultPriceCents : event.childPriceCents,
+                    priceCents: isAdult ? ADULT_PRICE_CENTS : CHILD_PRICE_CENTS,
                 }
             })
             const contactName = partyData[0].name

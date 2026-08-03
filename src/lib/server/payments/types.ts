@@ -31,6 +31,13 @@ export type AddMemberCheckoutParams = {
     memberTierId: string
     memberBirthDate?: string
     memberShirtSize?: string
+    memberAddressLine1?: string
+    memberAddressLine2?: string
+    memberAddressCity?: string
+    memberAddressState?: string
+    memberAddressZip?: string
+    memberVegetarianMeal?: boolean
+    memberAttendedReunion2025?: boolean
     successUrl: string
     cancelUrl: string
 }

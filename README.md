@@ -124,7 +124,6 @@ src/
     ├── (app)/             # Authenticated routes
     │   ├── admin/         # Admin dashboard
     │   ├── changelog/     # App changelog
-    │   ├── contact/       # Contact form
     │   ├── family-tree/   # Family tree visualization
     │   ├── gallery/       # Photo gallery + upload
     │   ├── profile/       # User profile + relationship management

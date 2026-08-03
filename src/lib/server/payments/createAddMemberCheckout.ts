@@ -23,6 +23,13 @@ export async function createAddMemberCheckout(params: AddMemberCheckoutParams): 
             memberTierLabel: params.tierLabel,
             memberBirthDate: params.memberBirthDate,
             memberShirtSize: params.memberShirtSize,
+            memberAddressLine1: params.memberAddressLine1,
+            memberAddressLine2: params.memberAddressLine2,
+            memberAddressCity: params.memberAddressCity,
+            memberAddressState: params.memberAddressState,
+            memberAddressZip: params.memberAddressZip,
+            memberVegetarianMeal: params.memberVegetarianMeal,
+            memberAttendedReunion2025: params.memberAttendedReunion2025,
             memberPriceCents: params.priceCents,
         }),
     })

@@ -78,6 +78,19 @@ export async function fulfillCheckout(
                 birthMonth: parsed?.birthMonth ?? null,
                 birthDay: parsed?.birthDay ?? null,
                 shirtSize: memberShirtSize || null,
+                addressLine1: metadata.memberAddressLine1 || null,
+                addressLine2: metadata.memberAddressLine2 || null,
+                addressCity: metadata.memberAddressCity || null,
+                addressState: metadata.memberAddressState || null,
+                addressZip: metadata.memberAddressZip || null,
+                vegetarianMeal:
+                    metadata.memberVegetarianMeal === ''
+                        ? null
+                        : metadata.memberVegetarianMeal === 'true',
+                attendedReunion2025:
+                    metadata.memberAttendedReunion2025 === ''
+                        ? null
+                        : metadata.memberAttendedReunion2025 === 'true',
                 tierLabel: memberTierLabel,
                 priceCents: memberPriceCents,
                 stripePaymentIntentId: paymentIntentId,
