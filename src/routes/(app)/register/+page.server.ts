@@ -8,11 +8,21 @@ import {
     getOpenEvent,
     type MemberInput,
 } from '$lib/server/registrations'
+import { getTiersForEvent } from '$lib/server/tiers'
+import { parseYesNo } from '$lib/utils'
 import type { PageServerLoad, Actions } from './$types'
 import { registrationSchema } from './schema'
 
+/* Wire shape of a member as serialized by PartyMembersBuilder's FormMember — yes/no as
+   raw strings, converted to boolean below before reaching createPendingRegistration. */
+type RawMemberInput = Omit<MemberInput, 'vegetarianMeal' | 'attendedReunion2025'> & {
+    vegetarianMeal?: string
+    attendedReunion2025?: string
+}
+
 export const load: PageServerLoad = async ({ locals }) => {
     const openEvent = await getOpenEvent()
+    const tiers = openEvent ? await getTiersForEvent(openEvent.id) : []
 
     /* Use defaults() (not superValidate) so the page renders with no errors on cold load.
        superValidate runs the schema against the partial defaults, which fails the min(1)
@@ -31,6 +41,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 
     return {
         event: openEvent,
+        tiers,
         form,
     }
 }
@@ -48,12 +59,24 @@ export const actions: Actions = {
             contactName,
             contactEmail,
             contactPhone,
-            selfCategory,
+            selfTierId,
             selfBirthDate,
             selfShirtSize,
+            selfAddressLine1,
+            selfAddressLine2,
+            selfAddressCity,
+            selfAddressState,
+            selfAddressZip,
+            selfVegetarianMeal,
+            selfAttendedReunion2025,
             members: membersJson,
         } = form.data
-        const additionalMembers: MemberInput[] = JSON.parse(membersJson)
+        const rawMembers: RawMemberInput[] = JSON.parse(membersJson)
+        const additionalMembers: MemberInput[] = rawMembers.map((m) => ({
+            ...m,
+            vegetarianMeal: parseYesNo(m.vegetarianMeal),
+            attendedReunion2025: parseYesNo(m.attendedReunion2025),
+        }))
 
         dbg.register(
             'email=%s eventId=%s members=%d',
@@ -67,9 +90,16 @@ export const actions: Actions = {
             contactEmail,
             contactPhone: contactPhone || undefined,
             eventId,
-            selfCategory,
+            selfTierId,
             selfBirthDate: selfBirthDate || undefined,
             selfShirtSize: selfShirtSize || undefined,
+            selfAddressLine1,
+            selfAddressLine2,
+            selfAddressCity,
+            selfAddressState,
+            selfAddressZip,
+            selfVegetarianMeal: parseYesNo(selfVegetarianMeal),
+            selfAttendedReunion2025: parseYesNo(selfAttendedReunion2025),
             additionalMembers,
             successUrl: (token) => `${event.url.origin}/register/manage?token=${token}`,
             cancelUrl: (token) => `${event.url.origin}/register?cancelled=true&token=${token}`,

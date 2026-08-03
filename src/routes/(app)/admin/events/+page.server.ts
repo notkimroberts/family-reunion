@@ -2,7 +2,7 @@ import { fail } from '@sveltejs/kit'
 import { eq } from 'drizzle-orm'
 import { requireAdmin } from '$lib/server/auth/guards'
 import { db } from '$lib/server/db'
-import { reunionEvents } from '$lib/server/db/schema'
+import { reunionEvents, tiers } from '$lib/server/db/schema'
 import type { Actions, PageServerLoad } from './$types'
 
 export const load: PageServerLoad = async (event) => {
@@ -20,13 +20,21 @@ export const actions: Actions = {
             return fail(400, { error: 'Title and year required' })
         }
 
-        await db.insert(reunionEvents).values({
-            title: title.trim(),
-            year: parseInt(year),
-            status: 'draft',
-            adultPriceCents: 0,
-            childPriceCents: 0,
-        })
+        const [reunionEvent] = await db
+            .insert(reunionEvents)
+            .values({
+                title: title.trim(),
+                year: parseInt(year),
+                status: 'draft',
+            })
+            .returning()
+
+        /* Starter tiers so the event is immediately registrable — matches the old behavior
+           of starting adult/child prices at $0 and editing them after creation. */
+        await db.insert(tiers).values([
+            { eventId: reunionEvent.id, label: 'Adult', priceCents: 0, shirtSizeCategory: 'adult' },
+            { eventId: reunionEvent.id, label: 'Child', priceCents: 0, shirtSizeCategory: 'child' },
+        ])
 
         return { success: true }
     },

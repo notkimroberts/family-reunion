@@ -1,9 +1,11 @@
 import { error } from '@sveltejs/kit'
 import { eq } from 'drizzle-orm'
 import { db } from '$lib/server/db'
-import { partyMembers, registrations } from '$lib/server/db/schema'
+import { partyMembers, registrations, reunionEvents } from '$lib/server/db/schema'
 import { dbg } from '$lib/server/debug'
 import { parseBirthDate } from '$lib/utils/age'
+import { parseYesNo } from '$lib/utils/parseYesNo'
+import { assertRegistrationEditable } from '../assertRegistrationEditable'
 import { hashManagementToken } from '../hashManagementToken'
 
 /* Updates mutable fields on a party_member. Each field is only written when the caller
@@ -12,23 +14,32 @@ import { hashManagementToken } from '../hashManagementToken'
    a previously-saved value. Token-gated (compared by hash): 403 on mismatch. */
 export async function updateMemberDetails(
     memberId: string,
-    data: { birthDate?: string | undefined; shirtSize?: string | undefined },
+    data: {
+        birthDate?: string | undefined
+        shirtSize?: string | undefined
+        vegetarianMeal?: string | undefined
+    },
     managementToken: string,
 ): Promise<void> {
     const tokenHash = hashManagementToken(managementToken)
     const [member] = await db
         .select({
             id: partyMembers.id,
+            registrationId: partyMembers.registrationId,
             registrationToken: registrations.managementToken,
+            registrationLockDate: reunionEvents.registrationLockDate,
         })
         .from(partyMembers)
         .innerJoin(registrations, eq(partyMembers.registrationId, registrations.id))
+        .innerJoin(reunionEvents, eq(registrations.eventId, reunionEvents.id))
         .where(eq(partyMembers.id, memberId))
         .limit(1)
 
     if (!member || member.registrationToken !== tokenHash) {
         throw error(403)
     }
+
+    assertRegistrationEditable(member.registrationLockDate)
 
     const updates: Partial<typeof partyMembers.$inferInsert> = {}
     if (data.birthDate !== undefined) {
@@ -47,6 +58,10 @@ export async function updateMemberDetails(
     }
     if (data.shirtSize !== undefined) {
         updates.shirtSize = data.shirtSize || null
+    }
+    if (data.vegetarianMeal !== undefined) {
+        updates.vegetarianMeal =
+            data.vegetarianMeal === '' ? null : (parseYesNo(data.vegetarianMeal) ?? false)
     }
 
     if (Object.keys(updates).length === 0) {

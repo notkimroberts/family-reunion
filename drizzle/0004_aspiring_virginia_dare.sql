@@ -1,0 +1,1 @@
+ALTER TABLE "party_members" ADD COLUMN "address_line2" text;

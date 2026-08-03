@@ -4,12 +4,11 @@ import { enhance } from '$app/forms'
 import { Button } from '$lib/components/ui/button'
 import { Card, CardContent } from '$lib/components/ui/card'
 import type { AdminContext } from '$lib/types/adminContext'
-import type { RegistrationCategory } from '$lib/types/registrationCategory'
-import { getCategoryPriceCents, isValidPhone } from '$lib/utils'
+import { getTierPriceCents, isValidPhone } from '$lib/utils'
 import OrderSummaryCard from '../../register/OrderSummaryCard.svelte'
 import PartyMembersBuilder from '../../register/PartyMembersBuilder.svelte'
 import YourInformationCard from '../../register/YourInformationCard.svelte'
-import type { FormMember } from '../../register/types'
+import type { FormMember, PersonDetails } from '../../register/types'
 
 let { data, form } = $props()
 
@@ -19,46 +18,64 @@ let targetEventId = $derived(
     adminCtx.selectedEventId !== 'all' ? adminCtx.selectedEventId : (data.events[0]?.id ?? ''),
 )
 
-const adultPriceCents = $derived(data.events[0]?.adultPriceCents ?? 0)
-const childPriceCents = $derived(data.events[0]?.childPriceCents ?? 0)
+const tiers = $derived(data.tiers)
 
 let selfFirstName = $state('')
 let selfLastName = $state('')
 let contactEmail = $state('')
 let contactPhone = $state('')
-let selfBirthDate = $state<string | undefined>(undefined)
-let selfShirtSize = $state('')
-let selfCategory = $state<RegistrationCategory | ''>('')
+let self = $state<PersonDetails>({
+    tierId: '',
+    birthDate: undefined,
+    shirtSize: '',
+    addressLine1: '',
+    addressLine2: '',
+    addressCity: '',
+    addressState: '',
+    addressZip: '',
+    vegetarianMeal: '',
+    attendedReunion2025: '',
+})
 let status = $state<'paid' | 'pending' | 'waived'>('paid')
 let members = $state<FormMember[]>([])
 let submitted = $state(false)
 
 let contactName = $derived(`${selfFirstName.trim()} ${selfLastName.trim()}`.trim())
+let contactAddress = $derived({
+    addressLine1: self.addressLine1,
+    addressLine2: self.addressLine2,
+    addressCity: self.addressCity,
+    addressState: self.addressState,
+    addressZip: self.addressZip,
+})
 
 let membersJson = $derived(
     JSON.stringify(
         members.map((m) => ({
             name: m.name,
             birthDate: m.birthDate ?? '',
-            category: m.category,
+            tierId: m.tierId,
             shirtSize: m.shirtSize || undefined,
+            addressLine1: m.addressLine1,
+            addressLine2: m.addressLine2,
+            addressCity: m.addressCity,
+            addressState: m.addressState,
+            addressZip: m.addressZip,
+            vegetarianMeal: m.vegetarianMeal,
+            attendedReunion2025: m.attendedReunion2025,
         })),
     ),
 )
 
-function categoryPriceCents(category: RegistrationCategory): number {
-    return getCategoryPriceCents(category, { adultPriceCents, childPriceCents })
-}
-
 let subtotal = $derived(
-    (selfCategory ? categoryPriceCents(selfCategory) : 0) +
-        members.reduce((sum, m) => sum + categoryPriceCents(m.category), 0),
+    (self.tierId ? getTierPriceCents(self.tierId, tiers) : 0) +
+        members.reduce((sum, m) => sum + getTierPriceCents(m.tierId, tiers), 0),
 )
 let canSubmit = $derived(
     !!selfFirstName.trim() &&
         !!selfLastName.trim() &&
         !!contactEmail.trim() &&
-        !!selfCategory &&
+        !!self.tierId &&
         (!contactPhone.trim() || isValidPhone(contactPhone)),
 )
 
@@ -69,9 +86,18 @@ function handleSuccess() {
     selfLastName = ''
     contactEmail = ''
     contactPhone = ''
-    selfBirthDate = undefined
-    selfShirtSize = ''
-    selfCategory = ''
+    self = {
+        tierId: '',
+        birthDate: undefined,
+        shirtSize: '',
+        addressLine1: '',
+        addressLine2: '',
+        addressCity: '',
+        addressState: '',
+        addressZip: '',
+        vegetarianMeal: '',
+        attendedReunion2025: '',
+    }
     status = 'paid'
     members = []
     submitted = true
@@ -127,9 +153,16 @@ function handleSuccess() {
             <input type="hidden" name="eventId" value={targetEventId} />
             <input type="hidden" name="contactName" value={contactName} />
             <input type="hidden" name="contactPhone" value={contactPhone} />
-            <input type="hidden" name="selfCategory" value={selfCategory} />
-            <input type="hidden" name="selfBirthDate" value={selfBirthDate ?? ''} />
-            <input type="hidden" name="selfShirtSize" value={selfShirtSize} />
+            <input type="hidden" name="selfTierId" value={self.tierId} />
+            <input type="hidden" name="selfBirthDate" value={self.birthDate ?? ''} />
+            <input type="hidden" name="selfShirtSize" value={self.shirtSize ?? ''} />
+            <input type="hidden" name="selfAddressLine1" value={self.addressLine1} />
+            <input type="hidden" name="selfAddressLine2" value={self.addressLine2 ?? ''} />
+            <input type="hidden" name="selfAddressCity" value={self.addressCity} />
+            <input type="hidden" name="selfAddressState" value={self.addressState} />
+            <input type="hidden" name="selfAddressZip" value={self.addressZip} />
+            <input type="hidden" name="selfVegetarianMeal" value={self.vegetarianMeal} />
+            <input type="hidden" name="selfAttendedReunion2025" value={self.attendedReunion2025} />
             <input type="hidden" name="members" value={membersJson} />
 
             <div class="grid grid-cols-1 lg:grid-cols-[1fr_minmax(0,22rem)] gap-6">
@@ -140,17 +173,15 @@ function handleSuccess() {
                         bind:phone={contactPhone}
                         bind:firstName={selfFirstName}
                         bind:lastName={selfLastName}
-                        bind:birthDate={selfBirthDate}
-                        bind:shirtSize={selfShirtSize}
-                        bind:category={selfCategory}
-                        {adultPriceCents}
-                        {childPriceCents}
+                        bind:info={self}
+                        {tiers}
                         {shirtsEnabled} />
 
                     <PartyMembersBuilder
                         bind:members
-                        {adultPriceCents}
-                        {childPriceCents}
+                        {tiers}
+                        {contactName}
+                        {contactAddress}
                         {shirtsEnabled} />
                 </div>
 
@@ -158,10 +189,9 @@ function handleSuccess() {
                 <div class="self-start lg:sticky lg:top-6">
                     <OrderSummaryCard
                         {contactName}
-                        {selfCategory}
+                        selfTierId={self.tierId}
                         {members}
-                        {adultPriceCents}
-                        {childPriceCents}
+                        {tiers}
                         {subtotal}
                         {canSubmit}
                         submitLabel="Add Registration"

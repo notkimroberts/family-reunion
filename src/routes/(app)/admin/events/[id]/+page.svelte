@@ -33,37 +33,128 @@ let { data } = $props()
 <section class="col-span-12">
     <Card>
         <CardHeader>
-            <CardTitle>Pricing</CardTitle>
+            <CardTitle>Tiers</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent class="space-y-4">
+            {#each data.tiers as tier (tier.id)}
+                <div
+                    class="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_auto_auto_auto_auto] sm:items-end">
+                    <form method="POST" action="?/update_tier" use:enhance class="contents">
+                        <input type="hidden" name="tierId" value={tier.id} />
+                        <div class="space-y-1">
+                            <label
+                                for="tier-label-{tier.id}"
+                                class="text-xs font-medium text-muted-foreground">Label</label>
+                            <Input
+                                id="tier-label-{tier.id}"
+                                name="label"
+                                type="text"
+                                value={tier.label}
+                                required />
+                        </div>
+                        <div class="space-y-1">
+                            <label
+                                for="tier-price-{tier.id}"
+                                class="text-xs font-medium text-muted-foreground">Price ($)</label>
+                            <Input
+                                id="tier-price-{tier.id}"
+                                name="priceCents"
+                                type="number"
+                                step="0.01"
+                                value={formatPrice(tier.priceCents)}
+                                required />
+                        </div>
+                        <div class="space-y-1">
+                            <label
+                                for="tier-shirt-{tier.id}"
+                                class="text-xs font-medium text-muted-foreground"
+                                >Shirt sizing</label>
+                            <select
+                                id="tier-shirt-{tier.id}"
+                                name="shirtSizeCategory"
+                                value={tier.shirtSizeCategory}
+                                class="h-9 rounded-md border border-input bg-transparent px-3 text-sm">
+                                <option value="adult">Adult</option>
+                                <option value="child">Child</option>
+                            </select>
+                        </div>
+                        <Button type="submit" size="sm" variant="outline">Save</Button>
+                    </form>
+                    <form method="POST" action="?/delete_tier" use:enhance>
+                        <input type="hidden" name="tierId" value={tier.id} />
+                        <Button type="submit" size="sm" variant="ghost" class="text-destructive"
+                            >Delete</Button>
+                    </form>
+                </div>
+            {/each}
+
+            <Separator />
+
             <form
                 method="POST"
-                action="?/update_pricing"
+                action="?/add_tier"
                 use:enhance
-                class="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-[auto_auto_auto] md:items-end">
+                class="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_auto_auto_auto] sm:items-end">
                 <div class="space-y-1">
-                    <label for="adultPrice" class="text-xs font-medium text-muted-foreground"
-                        >Adult price ($)</label>
+                    <label for="new-tier-label" class="text-xs font-medium text-muted-foreground"
+                        >Label</label>
+                    <Input id="new-tier-label" name="label" type="text" required />
+                </div>
+                <div class="space-y-1">
+                    <label for="new-tier-price" class="text-xs font-medium text-muted-foreground"
+                        >Price ($)</label>
                     <Input
-                        id="adultPrice"
-                        name="adultPrice"
+                        id="new-tier-price"
+                        name="priceCents"
                         type="number"
                         step="0.01"
-                        value={formatPrice(data.event.adultPriceCents)}
                         required />
                 </div>
                 <div class="space-y-1">
-                    <label for="childPrice" class="text-xs font-medium text-muted-foreground"
-                        >Child price ($)</label>
-                    <Input
-                        id="childPrice"
-                        name="childPrice"
-                        type="number"
-                        step="0.01"
-                        value={formatPrice(data.event.childPriceCents)}
-                        required />
+                    <label for="new-tier-shirt" class="text-xs font-medium text-muted-foreground"
+                        >Shirt sizing</label>
+                    <select
+                        id="new-tier-shirt"
+                        name="shirtSizeCategory"
+                        class="h-9 rounded-md border border-input bg-transparent px-3 text-sm">
+                        <option value="adult">Adult</option>
+                        <option value="child">Child</option>
+                    </select>
                 </div>
-                <Button type="submit" size="sm">Save Pricing</Button>
+                <Button type="submit" size="sm">Add Tier</Button>
+            </form>
+        </CardContent>
+    </Card>
+</section>
+
+<section class="col-span-12">
+    <Card>
+        <CardHeader>
+            <CardTitle>Registration Lock Date</CardTitle>
+        </CardHeader>
+        <CardContent>
+            <p class="text-sm text-muted-foreground mb-3">
+                Once this date passes, registrants can no longer edit details, add or remove
+                members, or cancel — the registration is fully frozen. Leave blank for no lock.
+            </p>
+            <form
+                method="POST"
+                action="?/update_lock_date"
+                use:enhance
+                class="grid grid-cols-1 gap-3 sm:grid-cols-[auto_auto] sm:items-end">
+                <div class="space-y-1">
+                    <label
+                        for="registrationLockDate"
+                        class="text-xs font-medium text-muted-foreground">Lock date</label>
+                    <Input
+                        id="registrationLockDate"
+                        name="registrationLockDate"
+                        type="datetime-local"
+                        value={data.event.registrationLockDate
+                            ? new Date(data.event.registrationLockDate).toISOString().slice(0, 16)
+                            : ''} />
+                </div>
+                <Button type="submit" size="sm">Save Lock Date</Button>
             </form>
         </CardContent>
     </Card>

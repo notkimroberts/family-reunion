@@ -26,6 +26,13 @@ describe('encodeAddMemberMetadata / decode round-trip', () => {
             memberTierLabel: 'Adult',
             memberBirthDate: '1990-05-15',
             memberShirtSize: 'M',
+            memberAddressLine1: '123 Main St',
+            memberAddressLine2: 'Apt 4B',
+            memberAddressCity: 'Springfield',
+            memberAddressState: 'IL',
+            memberAddressZip: '62704',
+            memberVegetarianMeal: true,
+            memberAttendedReunion2025: false,
             memberPriceCents: 5000,
         })
         const decoded = decodeSessionMetadata(encoded)
@@ -37,6 +44,13 @@ describe('encodeAddMemberMetadata / decode round-trip', () => {
             memberTierLabel: 'Adult',
             memberBirthDate: '1990-05-15',
             memberShirtSize: 'M',
+            memberAddressLine1: '123 Main St',
+            memberAddressLine2: 'Apt 4B',
+            memberAddressCity: 'Springfield',
+            memberAddressState: 'IL',
+            memberAddressZip: '62704',
+            memberVegetarianMeal: 'true',
+            memberAttendedReunion2025: 'false',
             memberPriceCents: '5000',
         })
     })
@@ -51,6 +65,13 @@ describe('encodeAddMemberMetadata / decode round-trip', () => {
         })
         expect(encoded.memberBirthDate).toBe('')
         expect(encoded.memberShirtSize).toBe('')
+        expect(encoded.memberAddressLine1).toBe('')
+        expect(encoded.memberAddressLine2).toBe('')
+        expect(encoded.memberAddressCity).toBe('')
+        expect(encoded.memberAddressState).toBe('')
+        expect(encoded.memberAddressZip).toBe('')
+        expect(encoded.memberVegetarianMeal).toBe('')
+        expect(encoded.memberAttendedReunion2025).toBe('')
     })
 
     it('serialises memberPriceCents as a string', () => {

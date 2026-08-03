@@ -1,9 +1,9 @@
 import { db } from '$lib/server/db'
 import { partyMembers, registrations, registrationStatusEnum } from '$lib/server/db/schema'
-import type { RegistrationCategory } from '$lib/types/registrationCategory'
+import { resolveTierPricing } from '$lib/server/tiers'
 import { parseBirthDate } from '$lib/utils/age'
 import { generateManagementToken } from '../hashManagementToken'
-import { resolveCategoryPricing } from './_resolveCategoryPricing'
+import type { MemberInput } from './MemberInput'
 
 /* Inserts a registration directly at the given status (bypasses Stripe). Generates a managementToken so the contact can self-manage later; the DB stores only the SHA-256 hash, the plaintext is returned to the caller. */
 export async function createAdminRegistration(params: {
@@ -12,16 +12,11 @@ export async function createAdminRegistration(params: {
     contactEmail: string
     contactPhone?: string
     status: (typeof registrationStatusEnum.enumValues)[number]
-    members: Array<{
-        name: string
-        birthDate?: string
-        category: RegistrationCategory
-        shirtSize?: string
-    }>
+    members: MemberInput[]
 }): Promise<{ registrationId: string; managementToken: string }> {
-    const pricingByCategory = await resolveCategoryPricing(
+    const pricingByTierId = await resolveTierPricing(
         params.eventId,
-        params.members.map((m) => m.category),
+        params.members.map((m) => m.tierId),
     )
 
     const { plaintext: managementToken, hash: tokenHash } = generateManagementToken()
@@ -41,7 +36,7 @@ export async function createAdminRegistration(params: {
     await db.insert(partyMembers).values(
         params.members.map((m) => {
             const parsed = m.birthDate ? parseBirthDate(m.birthDate) : null
-            const pricing = pricingByCategory[m.category]
+            const pricing = pricingByTierId[m.tierId]
             return {
                 registrationId: registration.id,
                 name: m.name.trim(),
@@ -49,6 +44,13 @@ export async function createAdminRegistration(params: {
                 birthMonth: parsed?.birthMonth ?? null,
                 birthDay: parsed?.birthDay ?? null,
                 shirtSize: m.shirtSize || null,
+                addressLine1: m.addressLine1 || null,
+                addressLine2: m.addressLine2 || null,
+                addressCity: m.addressCity || null,
+                addressState: m.addressState || null,
+                addressZip: m.addressZip || null,
+                vegetarianMeal: m.vegetarianMeal ?? null,
+                attendedReunion2025: m.attendedReunion2025 ?? null,
                 tierLabel: pricing.label,
                 priceCents: pricing.priceCents,
             }

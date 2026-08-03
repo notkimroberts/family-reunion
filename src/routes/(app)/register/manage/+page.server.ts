@@ -10,6 +10,8 @@ import {
     removeMember,
     updateMemberDetails,
 } from '$lib/server/registrations'
+import { getTiersForEvent } from '$lib/server/tiers'
+import { parseYesNo } from '$lib/utils'
 import {
     addMemberSchema,
     cancelRegistrationSchema,
@@ -63,7 +65,10 @@ export const load: PageServerLoad = async ({ url, cookies }) => {
 
     const { event: reunionEvent } = result
 
-    const members = await getRegistrationMembers(registration.id)
+    const [members, tiers] = await Promise.all([
+        getRegistrationMembers(registration.id),
+        getTiersForEvent(reunionEvent.id),
+    ])
 
     /* Narrow projection: do not ship contactName/contactEmail/managementToken hash to the
        client. The Svelte components only need id, status, and the session id. */
@@ -78,6 +83,7 @@ export const load: PageServerLoad = async ({ url, cookies }) => {
         },
         event: reunionEvent,
         members,
+        tiers,
     }
 }
 
@@ -88,15 +94,36 @@ export const actions: Actions = {
             return fail(400, { form })
         }
 
-        const { token, registrationId, name, category, birthDate, shirtSize } = form.data
+        const {
+            token,
+            registrationId,
+            name,
+            tierId,
+            birthDate,
+            shirtSize,
+            addressLine1,
+            addressLine2,
+            addressCity,
+            addressState,
+            addressZip,
+            vegetarianMeal,
+            attendedReunion2025,
+        } = form.data
 
         const checkoutUrl = await addMember({
             registrationId,
             managementToken: token,
             name,
-            category,
+            tierId,
             birthDate: birthDate || undefined,
             shirtSize: shirtSize || undefined,
+            addressLine1,
+            addressLine2,
+            addressCity,
+            addressState,
+            addressZip,
+            vegetarianMeal: parseYesNo(vegetarianMeal),
+            attendedReunion2025: parseYesNo(attendedReunion2025),
             successUrl: `${event.url.origin}/register/manage?member_added=true`,
             cancelUrl: `${event.url.origin}/register/manage`,
         })
@@ -110,11 +137,11 @@ export const actions: Actions = {
             return fail(400, { form })
         }
 
-        const { token, memberId, birthDate, shirtSize } = form.data
+        const { token, memberId, birthDate, shirtSize, vegetarianMeal } = form.data
 
         /* Pass through the raw form values: undefined means the field wasn't in the form
            (preserve), '' means explicit clear. updateMemberDetails handles the distinction. */
-        await updateMemberDetails(memberId, { birthDate, shirtSize }, token)
+        await updateMemberDetails(memberId, { birthDate, shirtSize, vegetarianMeal }, token)
 
         return { success: true }
     },

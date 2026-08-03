@@ -38,6 +38,13 @@ export function decodeSessionMetadata(
             memberTierLabel: raw.memberTierLabel,
             memberBirthDate: raw.memberBirthDate ?? '',
             memberShirtSize: raw.memberShirtSize ?? '',
+            memberAddressLine1: raw.memberAddressLine1 ?? '',
+            memberAddressLine2: raw.memberAddressLine2 ?? '',
+            memberAddressCity: raw.memberAddressCity ?? '',
+            memberAddressState: raw.memberAddressState ?? '',
+            memberAddressZip: raw.memberAddressZip ?? '',
+            memberVegetarianMeal: raw.memberVegetarianMeal ?? '',
+            memberAttendedReunion2025: raw.memberAttendedReunion2025 ?? '',
             memberPriceCents: raw.memberPriceCents,
         }
     }

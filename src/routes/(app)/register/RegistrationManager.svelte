@@ -18,22 +18,27 @@ import AddMemberForm from './AddMemberForm.svelte'
 import CancelRegistrationDialog from './CancelRegistrationDialog.svelte'
 import EditMemberDialog from './EditMemberDialog.svelte'
 import RemoveMemberDialog from './RemoveMemberDialog.svelte'
-import type { EventDetails, PartyMember, RegistrationDetails } from './types'
+import type { EventDetails, PartyMember, RegistrationDetails, TierOption } from './types'
 
 let {
     token,
     registration,
     members: initialMembers,
     event,
+    tiers,
 }: {
     token: string
     registration: RegistrationDetails
     members: PartyMember[]
     event: EventDetails
+    tiers: TierOption[]
 } = $props()
 
 let members = $derived(initialMembers)
 let totalCents = $derived(members.reduce((sum, m) => sum + m.priceCents, 0))
+let isLocked = $derived(
+    event.registrationLockDate !== null && new Date(event.registrationLockDate) < new Date(),
+)
 let showAddForm = $state(false)
 let editingMember = $state<PartyMember | null>(null)
 let editDialogOpen = $state(false)
@@ -112,10 +117,12 @@ function handleRemoveClick(member: PartyMember) {
                                 <Button
                                     size="sm"
                                     variant="outline"
+                                    disabled={isLocked}
                                     onclick={() => handleEditClick(member)}>Edit</Button>
                                 <Button
                                     size="sm"
                                     variant="destructive"
+                                    disabled={isLocked}
                                     onclick={() => handleRemoveClick(member)}>Remove</Button>
                             </div>
                         </div>
@@ -130,7 +137,7 @@ function handleRemoveClick(member: PartyMember) {
                         <TableRow>
                             <TableHead>Name</TableHead>
                             <TableHead>Age</TableHead>
-                            <TableHead>Category</TableHead>
+                            <TableHead>Tier</TableHead>
                             {#if event.shirtsEnabled}
                                 <TableHead>T-Shirt</TableHead>
                             {/if}
@@ -162,10 +169,12 @@ function handleRemoveClick(member: PartyMember) {
                                         <Button
                                             size="sm"
                                             variant="outline"
+                                            disabled={isLocked}
                                             onclick={() => handleEditClick(member)}>Edit</Button>
                                         <Button
                                             size="sm"
                                             variant="destructive"
+                                            disabled={isLocked}
                                             onclick={() => handleRemoveClick(member)}
                                             >Remove</Button>
                                     </div>
@@ -189,13 +198,18 @@ function handleRemoveClick(member: PartyMember) {
 </div>
 
 <!-- Actions -->
-{#if showAddForm}
+{#if isLocked}
+    <div class="col-span-12">
+        <p class="text-sm text-muted-foreground rounded-lg border bg-card px-4 py-3">
+            Registration changes are closed for this event.
+        </p>
+    </div>
+{:else if showAddForm}
     <div class="col-span-12">
         <AddMemberForm
             {token}
             registrationId={registration.id}
-            adultPriceCents={event.adultPriceCents}
-            childPriceCents={event.childPriceCents}
+            {tiers}
             shirtsEnabled={event.shirtsEnabled}
             onCancel={() => (showAddForm = false)} />
     </div>

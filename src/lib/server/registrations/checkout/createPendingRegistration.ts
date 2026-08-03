@@ -3,12 +3,11 @@ import { db } from '$lib/server/db'
 import { partyMembers, registrations } from '$lib/server/db/schema'
 import { dbg } from '$lib/server/debug'
 import { createRegistrationCheckout } from '$lib/server/payments'
-import type { RegistrationCategory } from '$lib/types/registrationCategory'
+import { resolveTierPricing } from '$lib/server/tiers'
 import { parseBirthDate } from '$lib/utils/age'
 import { grossUpForStripe } from '$lib/utils/stripeFee'
 import { generateManagementToken } from '../hashManagementToken'
 import type { MemberInput } from './MemberInput'
-import { resolveCategoryPricing } from './_resolveCategoryPricing'
 import { calculateTotal } from './calculateTotal'
 
 /* Creates a 'pending' registration + party members, then opens a Stripe Checkout session.
@@ -26,22 +25,29 @@ export async function createPendingRegistration(params: {
     contactEmail: string
     contactPhone?: string
     eventId: string
-    selfCategory: RegistrationCategory
+    selfTierId: string
     selfBirthDate?: string
     selfShirtSize?: string
+    selfAddressLine1?: string
+    selfAddressLine2?: string
+    selfAddressCity?: string
+    selfAddressState?: string
+    selfAddressZip?: string
+    selfVegetarianMeal?: boolean
+    selfAttendedReunion2025?: boolean
     additionalMembers: MemberInput[]
     successUrl: (token: string) => string
     cancelUrl: (token: string) => string
 }): Promise<{ registrationId: string; managementToken: string; checkoutUrl: string }> {
-    const allCategories = [params.selfCategory, ...params.additionalMembers.map((m) => m.category)]
-    const pricingByCategory = await resolveCategoryPricing(params.eventId, allCategories)
-    const selfPricing = pricingByCategory[params.selfCategory]
+    const allTierIds = [params.selfTierId, ...params.additionalMembers.map((m) => m.tierId)]
+    const pricingByTierId = await resolveTierPricing(params.eventId, allTierIds)
+    const selfPricing = pricingByTierId[params.selfTierId]
 
     const { lineItems } = calculateTotal(
         params.contactName,
         selfPricing,
         params.additionalMembers,
-        pricingByCategory,
+        pricingByTierId,
     )
 
     const { plaintext: managementToken, hash: tokenHash } = generateManagementToken()
@@ -67,13 +73,20 @@ export async function createPendingRegistration(params: {
             birthMonth: selfParsed?.birthMonth ?? null,
             birthDay: selfParsed?.birthDay ?? null,
             shirtSize: params.selfShirtSize || null,
+            addressLine1: params.selfAddressLine1 || null,
+            addressLine2: params.selfAddressLine2 || null,
+            addressCity: params.selfAddressCity || null,
+            addressState: params.selfAddressState || null,
+            addressZip: params.selfAddressZip || null,
+            vegetarianMeal: params.selfVegetarianMeal ?? null,
+            attendedReunion2025: params.selfAttendedReunion2025 ?? null,
             tierLabel: selfPricing.label,
             /* Snapshot the gross — what the customer is being charged. Refund math reads this directly. */
             priceCents: grossUpForStripe(selfPricing.priceCents),
         },
         ...params.additionalMembers.map((m) => {
             const parsed = m.birthDate ? parseBirthDate(m.birthDate) : null
-            const pricing = pricingByCategory[m.category]
+            const pricing = pricingByTierId[m.tierId]
             return {
                 registrationId: registration.id,
                 name: m.name,
@@ -81,6 +94,13 @@ export async function createPendingRegistration(params: {
                 birthMonth: parsed?.birthMonth ?? null,
                 birthDay: parsed?.birthDay ?? null,
                 shirtSize: m.shirtSize || null,
+                addressLine1: m.addressLine1 || null,
+                addressLine2: m.addressLine2 || null,
+                addressCity: m.addressCity || null,
+                addressState: m.addressState || null,
+                addressZip: m.addressZip || null,
+                vegetarianMeal: m.vegetarianMeal ?? null,
+                attendedReunion2025: m.attendedReunion2025 ?? null,
                 tierLabel: pricing.label,
                 priceCents: grossUpForStripe(pricing.priceCents),
             }

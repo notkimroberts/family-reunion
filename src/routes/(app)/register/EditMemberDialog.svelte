@@ -13,6 +13,7 @@ import {
 import * as Select from '$lib/components/ui/select'
 import { SHIRT_SIZES } from '$lib/general/constants'
 import { formatBirthDate } from '$lib/utils/age'
+import YesNoSelect from './YesNoSelect.svelte'
 import type { EditableMember } from './types'
 
 let {
@@ -29,6 +30,9 @@ let {
 
 let birthDate = $state(formatBirthDate(member.birthYear, member.birthMonth, member.birthDay))
 let shirtSize = $state(member.shirtSize ?? '')
+let vegetarianMeal = $state<'yes' | 'no' | ''>(
+    member.vegetarianMeal === null ? '' : member.vegetarianMeal ? 'yes' : 'no',
+)
 </script>
 
 <Dialog bind:open>
@@ -78,6 +82,15 @@ let shirtSize = $state(member.shirtSize ?? '')
                         </Select.Root>
                     </div>
                 {/if}
+                <div class="space-y-2">
+                    <label for="edit-vegetarian" class="text-sm font-medium"
+                        >Vegetarian meal?</label>
+                    <YesNoSelect
+                        id="edit-vegetarian"
+                        name="vegetarianMeal"
+                        bind:value={vegetarianMeal}
+                        allowClear />
+                </div>
             </div>
 
             <DialogFooter>

@@ -14,6 +14,7 @@ import {
 } from 'drizzle-orm/pg-core'
 
 export const eventStatusEnum = pgEnum('event_status', ['draft', 'open', 'closed', 'archived'])
+export const shirtSizeCategoryEnum = pgEnum('shirt_size_category', ['adult', 'child'])
 export const registrationStatusEnum = pgEnum('registration_status', [
     'pending',
     'paid',
@@ -138,8 +139,7 @@ export const reunionEvents = pgTable(
             jsonb('recommended_activities').$type<{ name: string; description?: string }[]>(),
         schedule: jsonb('schedule').$type<{ day: string; time: string; activity: string }[]>(),
         shirtsEnabled: boolean('shirts_enabled').notNull().default(false),
-        adultPriceCents: integer('adult_price_cents').notNull(),
-        childPriceCents: integer('child_price_cents').notNull(),
+        registrationLockDate: timestamp('registration_lock_date'),
         externalShopUrl: text('external_shop_url'),
         shopProducts: jsonb('shop_products').$type<StorefrontProduct[]>(),
         shopActive: boolean('shop_active').notNull().default(false),
@@ -151,6 +151,22 @@ export const reunionEvents = pgTable(
             .on(t.status)
             .where(sql`${t.status} = 'open'`),
     ],
+)
+
+export const tiers = pgTable(
+    'tiers',
+    {
+        id: uuid('id').primaryKey().defaultRandom(),
+        eventId: uuid('event_id')
+            .notNull()
+            .references(() => reunionEvents.id, { onDelete: 'cascade' }),
+        label: text('label').notNull(),
+        priceCents: integer('price_cents').notNull(),
+        shirtSizeCategory: shirtSizeCategoryEnum('shirt_size_category').notNull().default('adult'),
+        createdAt: timestamp('created_at').notNull().defaultNow(),
+        updatedAt: timestamp('updated_at').notNull().defaultNow(),
+    },
+    (t) => [index('tiers_event_id_idx').on(t.eventId)],
 )
 
 export const registrations = pgTable(
@@ -191,6 +207,13 @@ export const partyMembers = pgTable(
         birthMonth: integer('birth_month'),
         birthDay: integer('birth_day'),
         shirtSize: text('shirt_size'),
+        addressLine1: text('address_line1'),
+        addressLine2: text('address_line2'),
+        addressCity: text('address_city'),
+        addressState: text('address_state'),
+        addressZip: text('address_zip'),
+        vegetarianMeal: boolean('vegetarian_meal'),
+        attendedReunion2025: boolean('attended_reunion_2025'),
         tierLabel: text('tier_label').notNull(),
         priceCents: integer('price_cents').notNull(),
         stripePaymentIntentId: text('stripe_payment_intent_id'),

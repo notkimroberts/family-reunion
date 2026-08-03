@@ -114,6 +114,25 @@ const memberPickerOptions = $derived(
                                     {a.familyMemberId ? 'Edit link' : 'Link'}
                                 </Button>
                             </div>
+                            <p class="text-xs text-muted-foreground mt-1">
+                                {#if a.addressLine1}
+                                    {a.addressLine1}{#if a.addressLine2}, {a.addressLine2}{/if},
+                                    {a.addressCity}, {a.addressState}
+                                    {a.addressZip}
+                                {/if}
+                            </p>
+                            <p class="text-xs text-muted-foreground mt-1">
+                                Vegetarian: {a.vegetarianMeal === null
+                                    ? '—'
+                                    : a.vegetarianMeal
+                                      ? 'Yes'
+                                      : 'No'}
+                                · Attended 2025: {a.attendedReunion2025 === null
+                                    ? '—'
+                                    : a.attendedReunion2025
+                                      ? 'Yes'
+                                      : 'No'}
+                            </p>
                             <div class="mt-2 text-xs">
                                 {#if a.linkedName}
                                     <span class="inline-flex items-center gap-1 text-primary">
@@ -143,6 +162,9 @@ const memberPickerOptions = $derived(
                                         <TableHead>Year</TableHead>
                                         <TableHead>Tier</TableHead>
                                         <TableHead>Born</TableHead>
+                                        <TableHead>Address</TableHead>
+                                        <TableHead>Vegetarian</TableHead>
+                                        <TableHead>Attended 2025</TableHead>
                                         <TableHead>Registered by</TableHead>
                                         <TableHead>Tree node</TableHead>
                                         <TableHead></TableHead>
@@ -163,6 +185,30 @@ const memberPickerOptions = $derived(
                                                 >{a.tierLabel}</TableCell>
                                             <TableCell class="text-muted-foreground"
                                                 >{born ?? '—'}</TableCell>
+                                            <TableCell class="text-muted-foreground text-sm">
+                                                {#if a.addressLine1}
+                                                    {a.addressLine1}{#if a.addressLine2}
+                                                        , {a.addressLine2}{/if}, {a.addressCity},
+                                                    {a.addressState}
+                                                    {a.addressZip}
+                                                {:else}
+                                                    —
+                                                {/if}
+                                            </TableCell>
+                                            <TableCell class="text-muted-foreground">
+                                                {a.vegetarianMeal === null
+                                                    ? '—'
+                                                    : a.vegetarianMeal
+                                                      ? 'Yes'
+                                                      : 'No'}
+                                            </TableCell>
+                                            <TableCell class="text-muted-foreground">
+                                                {a.attendedReunion2025 === null
+                                                    ? '—'
+                                                    : a.attendedReunion2025
+                                                      ? 'Yes'
+                                                      : 'No'}
+                                            </TableCell>
                                             <TableCell class="text-muted-foreground text-sm">
                                                 {a.contactName}
                                             </TableCell>

@@ -6,28 +6,21 @@ import { Button } from '$lib/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card'
 import { Input } from '$lib/components/ui/input'
 import * as Select from '$lib/components/ui/select'
+import { Separator } from '$lib/components/ui/separator'
 import { SHIRT_SIZES } from '$lib/general/constants'
-import type { RegistrationCategory } from '$lib/types/registrationCategory'
-import {
-    formatPhoneInput,
-    formatPrice,
-    getCategoryPriceCents,
-    getMemberAge,
-    isValidPhone,
-    REGISTRATION_CATEGORY_LABELS,
-} from '$lib/utils'
-import CategorySelect from './CategorySelect.svelte'
+import { formatPhoneInput, formatPrice, getMemberAge, isValidPhone, isValidZip } from '$lib/utils'
+import AdditionalQuestionsFields from './AdditionalQuestionsFields.svelte'
+import AddressFields from './AddressFields.svelte'
+import TierSelect from './TierSelect.svelte'
+import type { PersonDetails, TierOption } from './types'
 
 let {
     email = $bindable(''),
     phone = $bindable(''),
     firstName = $bindable(''),
     lastName = $bindable(''),
-    birthDate = $bindable(undefined as string | undefined),
-    shirtSize = $bindable(''),
-    category = $bindable<RegistrationCategory | ''>(''),
-    adultPriceCents,
-    childPriceCents,
+    info = $bindable(),
+    tiers,
     shirtsEnabled = false,
     errors,
 }: {
@@ -35,11 +28,8 @@ let {
     phone: string
     firstName: string
     lastName: string
-    birthDate: string | undefined
-    shirtSize: string
-    category: RegistrationCategory | ''
-    adultPriceCents: number
-    childPriceCents: number
+    info: PersonDetails
+    tiers: TierOption[]
     shirtsEnabled?: boolean
     errors?: { email?: string; name?: string }
 } = $props()
@@ -47,14 +37,23 @@ let {
 let saved = $state(false)
 
 let phoneValid = $derived(!phone.trim() || isValidPhone(phone))
+let zipValid = $derived(!info.addressZip.trim() || isValidZip(info.addressZip))
 let canSave = $derived(
-    !!firstName.trim() && !!lastName.trim() && !!email.trim() && !!category && phoneValid,
+    !!firstName.trim() &&
+        !!lastName.trim() &&
+        !!email.trim() &&
+        !!info.tierId &&
+        !!info.addressLine1.trim() &&
+        !!info.addressCity.trim() &&
+        !!info.addressState.trim() &&
+        !!info.addressZip.trim() &&
+        zipValid &&
+        !!info.vegetarianMeal &&
+        !!info.attendedReunion2025 &&
+        phoneValid,
 )
-let age = $derived(getMemberAge(birthDate))
-let categoryLabel = $derived(category ? REGISTRATION_CATEGORY_LABELS[category] : '')
-let priceCents = $derived(
-    category ? getCategoryPriceCents(category, { adultPriceCents, childPriceCents }) : 0,
-)
+let age = $derived(getMemberAge(info.birthDate))
+let selectedTier = $derived(tiers.find((t) => t.id === info.tierId))
 </script>
 
 <Card>
@@ -64,141 +63,181 @@ let priceCents = $derived(
             Your Information
         </CardTitle>
     </CardHeader>
-    <CardContent class="space-y-4">
+    <CardContent class="space-y-6">
         {#if saved}
-            <div class="flex items-center gap-3 rounded-lg border bg-card px-4 py-3">
+            <div class="flex items-center gap-3">
                 <div class="flex-1 min-w-0">
                     <p class="font-medium text-sm">{firstName} {lastName}</p>
                     <p class="text-xs text-muted-foreground">
-                        {categoryLabel}
+                        {selectedTier?.label ?? ''}
                         {#if age !== undefined}
                             · Age {age}
                         {/if}
-                        {#if shirtsEnabled && shirtSize}
-                            · Size {shirtSize}
+                        {#if shirtsEnabled && info.shirtSize}
+                            · Size {info.shirtSize}
                         {/if}
                     </p>
                 </div>
                 <span class="text-sm font-medium tabular-nums shrink-0"
-                    >${formatPrice(priceCents)}</span>
+                    >${formatPrice(selectedTier?.priceCents ?? 0)}</span>
                 <Button type="button" variant="outline" size="sm" onclick={() => (saved = false)}>
                     Edit
                 </Button>
             </div>
         {:else}
-            <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <div class="space-y-1.5">
-                    <label for="contactEmail" class="text-sm font-medium">
-                        Email <span class="text-destructive">*</span>
-                    </label>
-                    <Input
-                        id="contactEmail"
-                        name="contactEmail"
-                        type="email"
-                        bind:value={email}
-                        placeholder="you@example.com"
-                        autocomplete="email"
-                        required />
-                    {#if errors?.email}
-                        <p class="text-sm text-destructive">{errors.email}</p>
-                    {/if}
-                </div>
-                <div class="space-y-1.5">
-                    <label for="contactPhone" class="text-sm font-medium">
-                        Phone
-                        <span class="text-muted-foreground font-normal text-xs">(optional)</span>
-                    </label>
-                    <Input
-                        id="contactPhone"
-                        name="contactPhone"
-                        type="tel"
-                        value={phone}
-                        oninput={(e) => (phone = formatPhoneInput(e.currentTarget.value))}
-                        placeholder="(555) 555-5555"
-                        autocomplete="tel" />
-                    {#if phone.trim() && !phoneValid}
-                        <p class="text-sm text-destructive">Please enter a valid phone number</p>
-                    {/if}
-                </div>
-            </div>
-            <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <div class="space-y-1.5">
-                    <label for="contactFirstName" class="text-sm font-medium">
-                        First name <span class="text-destructive">*</span>
-                    </label>
-                    <Input
-                        id="contactFirstName"
-                        type="text"
-                        bind:value={firstName}
-                        placeholder="First"
-                        autocomplete="given-name"
-                        required />
-                </div>
-                <div class="space-y-1.5">
-                    <label for="contactLastName" class="text-sm font-medium">
-                        Last name <span class="text-destructive">*</span>
-                    </label>
-                    <Input
-                        id="contactLastName"
-                        type="text"
-                        bind:value={lastName}
-                        placeholder="Last"
-                        autocomplete="family-name"
-                        required />
-                    {#if errors?.name}
-                        <p class="text-sm text-destructive">{errors.name}</p>
-                    {/if}
-                </div>
-            </div>
-
-            <div
-                class="grid grid-cols-1 gap-3 sm:grid-cols-2 {shirtsEnabled
-                    ? 'lg:grid-cols-3'
-                    : ''}">
-                <div class="space-y-1.5">
-                    <label for="selfCategory" class="text-sm font-medium">
-                        Category <span class="text-destructive">*</span>
-                    </label>
-                    <CategorySelect
-                        id="selfCategory"
-                        bind:category
-                        {adultPriceCents}
-                        {childPriceCents} />
-                </div>
-
-                <div class="space-y-1.5">
-                    <label for="selfBirthDate" class="text-sm font-medium">
-                        Birthday
-                        <span class="text-muted-foreground font-normal text-xs">(optional)</span>
-                    </label>
-                    <DatePicker
-                        id="selfBirthDate"
-                        bind:value={birthDate}
-                        placeholder="Your birthday" />
-                </div>
-
-                {#if shirtsEnabled}
+            <div class="space-y-4">
+                <p class="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                    Contact Info
+                </p>
+                <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     <div class="space-y-1.5">
-                        <label for="selfShirtSize" class="text-sm font-medium">
-                            T-shirt
+                        <label for="contactEmail" class="text-sm font-medium">
+                            Email <span class="text-destructive">*</span>
+                        </label>
+                        <Input
+                            id="contactEmail"
+                            name="contactEmail"
+                            type="email"
+                            bind:value={email}
+                            placeholder="you@example.com"
+                            autocomplete="email"
+                            required />
+                        {#if errors?.email}
+                            <p class="text-sm text-destructive">{errors.email}</p>
+                        {/if}
+                    </div>
+                    <div class="space-y-1.5">
+                        <label for="contactPhone" class="text-sm font-medium">
+                            Phone
                             <span class="text-muted-foreground font-normal text-xs"
                                 >(optional)</span>
                         </label>
-                        <Select.Root
-                            type="single"
-                            value={shirtSize}
-                            onValueChange={(v) => (shirtSize = v)}>
-                            <Select.Trigger id="selfShirtSize">
-                                <BitsSelect.Value placeholder="Select size…" />
-                            </Select.Trigger>
-                            <Select.Content>
-                                {#each SHIRT_SIZES as size (size)}
-                                    <Select.Item value={size} label={size} />
-                                {/each}
-                            </Select.Content>
-                        </Select.Root>
+                        <Input
+                            id="contactPhone"
+                            name="contactPhone"
+                            type="tel"
+                            value={phone}
+                            oninput={(e) => (phone = formatPhoneInput(e.currentTarget.value))}
+                            placeholder="(555) 555-5555"
+                            autocomplete="tel" />
+                        {#if phone.trim() && !phoneValid}
+                            <p class="text-sm text-destructive">
+                                Please enter a valid phone number
+                            </p>
+                        {/if}
                     </div>
-                {/if}
+                </div>
+                <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <div class="space-y-1.5">
+                        <label for="contactFirstName" class="text-sm font-medium">
+                            First name <span class="text-destructive">*</span>
+                        </label>
+                        <Input
+                            id="contactFirstName"
+                            type="text"
+                            bind:value={firstName}
+                            placeholder="First"
+                            autocomplete="given-name"
+                            required />
+                    </div>
+                    <div class="space-y-1.5">
+                        <label for="contactLastName" class="text-sm font-medium">
+                            Last name <span class="text-destructive">*</span>
+                        </label>
+                        <Input
+                            id="contactLastName"
+                            type="text"
+                            bind:value={lastName}
+                            placeholder="Last"
+                            autocomplete="family-name"
+                            required />
+                        {#if errors?.name}
+                            <p class="text-sm text-destructive">{errors.name}</p>
+                        {/if}
+                    </div>
+                </div>
+            </div>
+
+            <Separator />
+
+            <div class="space-y-4">
+                <p class="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                    Mailing Address
+                </p>
+                <AddressFields
+                    idPrefix="selfAddress"
+                    bind:addressLine1={info.addressLine1}
+                    bind:addressLine2={info.addressLine2}
+                    bind:addressCity={info.addressCity}
+                    bind:addressState={info.addressState}
+                    bind:addressZip={info.addressZip}
+                    required />
+            </div>
+
+            <Separator />
+
+            <div class="space-y-4">
+                <p class="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                    Registration Details
+                </p>
+                <div
+                    class="grid grid-cols-1 gap-3 sm:grid-cols-2 {shirtsEnabled
+                        ? 'lg:grid-cols-3'
+                        : ''}">
+                    <div class="space-y-1.5">
+                        <label for="selfTier" class="text-sm font-medium">
+                            Tier <span class="text-destructive">*</span>
+                        </label>
+                        <TierSelect id="selfTier" bind:tierId={info.tierId} {tiers} />
+                    </div>
+
+                    <div class="space-y-1.5">
+                        <label for="selfBirthDate" class="text-sm font-medium">
+                            Birthday
+                            <span class="text-muted-foreground font-normal text-xs"
+                                >(optional)</span>
+                        </label>
+                        <DatePicker
+                            id="selfBirthDate"
+                            bind:value={info.birthDate}
+                            placeholder="Your birthday" />
+                    </div>
+
+                    {#if shirtsEnabled}
+                        <div class="space-y-1.5">
+                            <label for="selfShirtSize" class="text-sm font-medium">
+                                T-shirt
+                                <span class="text-muted-foreground font-normal text-xs"
+                                    >(optional)</span>
+                            </label>
+                            <Select.Root
+                                type="single"
+                                value={info.shirtSize ?? ''}
+                                onValueChange={(v) => (info.shirtSize = v)}>
+                                <Select.Trigger id="selfShirtSize" class="w-full">
+                                    <BitsSelect.Value placeholder="Select size…" />
+                                </Select.Trigger>
+                                <Select.Content>
+                                    {#each SHIRT_SIZES as size (size)}
+                                        <Select.Item value={size} label={size} />
+                                    {/each}
+                                </Select.Content>
+                            </Select.Root>
+                        </div>
+                    {/if}
+                </div>
+            </div>
+
+            <Separator />
+
+            <div class="space-y-4">
+                <p class="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                    Additional Questions
+                </p>
+                <AdditionalQuestionsFields
+                    idPrefix="self"
+                    bind:vegetarianMeal={info.vegetarianMeal}
+                    bind:attendedReunion2025={info.attendedReunion2025} />
             </div>
 
             <div class="flex justify-end">
