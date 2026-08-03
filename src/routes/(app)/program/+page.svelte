@@ -90,7 +90,7 @@ let hasThingsToDo = $derived(
                         <Users class="size-4" />
                         <span>
                             {data.registrantCount}
-                            {data.registrantCount === 1 ? 'family' : 'families'} registered
+                            {data.registrantCount === 1 ? 'person' : 'people'} registered
                         </span>
                     </div>
                 {/if}

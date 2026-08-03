@@ -188,7 +188,7 @@ const FAMILY_STATS = [
                         {#if data.registrantCount > 0}
                             <p class="text-muted-foreground text-sm">
                                 Join {data.registrantCount}
-                                {data.registrantCount === 1 ? 'family' : 'families'} already registered
+                                {data.registrantCount === 1 ? 'person' : 'people'} already registered
                             </p>
                         {/if}
                     {:else if eventState === 'happening'}
