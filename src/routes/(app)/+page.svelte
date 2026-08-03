@@ -8,7 +8,7 @@ import { Button } from '$lib/components/ui/button'
 import { Card, CardContent } from '$lib/components/ui/card'
 import { Input } from '$lib/components/ui/input'
 import { Textarea } from '$lib/components/ui/textarea'
-import { APP_NAME } from '$lib/general/constants'
+import { APP_NAME, FACEBOOK_GROUP_URL } from '$lib/general/constants'
 
 let { data, form } = $props()
 
@@ -104,7 +104,7 @@ let totalMonths = $derived(countdown.years * 12 + countdown.months)
 
 const FAMILY_STATS = [
     { value: '1819', label: 'Nelly arrives at the Port of New Orleans' },
-    { value: '1890', label: 'William & Roxie wed' },
+    { value: '1890', label: 'William & Roxie Married' },
     { value: '15 kids', label: 'Raised together' },
 ]
 </script>
@@ -252,8 +252,13 @@ const FAMILY_STATS = [
             </div>
 
             <div class="mt-6">
-                <Button href="/family-tree" variant="outline"
-                    >Explore the Full Family Tree →</Button>
+                <Button
+                    href={FACEBOOK_GROUP_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    variant="outline">
+                    Join the Family Facebook Group →
+                </Button>
             </div>
         </div>
     </div>
