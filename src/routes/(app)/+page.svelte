@@ -11,10 +11,17 @@ let { data } = $props()
 let now = $state(Date.now())
 let interval: ReturnType<typeof setInterval>
 
+/* Filled in only after mount so plain HTML scrapers never see the raw address/number —
+   the contact form's spam protections were dropped in favor of showing these directly. */
+let contactEmail = $state('')
+let contactPhone = $state('')
+
 onMount(() => {
     interval = setInterval(() => {
         now = Date.now()
     }, 1000)
+    contactEmail = CONTACT_EMAIL
+    contactPhone = CONTACT_PHONE
 })
 
 onDestroy(() => {
@@ -284,28 +291,36 @@ const FAMILY_STATS = [
     <Card class="max-w-2xl mx-auto">
         <CardContent class="pt-6">
             <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <a href="mailto:{CONTACT_EMAIL}" class="flex items-center gap-3 group">
-                    <div
-                        class="rounded-md bg-primary/10 p-2 text-primary shrink-0 group-hover:bg-primary/20 transition-colors">
-                        <Mail class="h-4 w-4" />
-                    </div>
-                    <div>
-                        <p class="text-xs text-muted-foreground">Email</p>
-                        <p class="text-sm font-medium group-hover:underline">{CONTACT_EMAIL}</p>
-                    </div>
-                </a>
-                <a
-                    href="tel:{CONTACT_PHONE.replace(/[^\d+]/g, '')}"
-                    class="flex items-center gap-3 group">
-                    <div
-                        class="rounded-md bg-primary/10 p-2 text-primary shrink-0 group-hover:bg-primary/20 transition-colors">
-                        <Phone class="h-4 w-4" />
-                    </div>
-                    <div>
-                        <p class="text-xs text-muted-foreground">Call</p>
-                        <p class="text-sm font-medium group-hover:underline">{CONTACT_PHONE}</p>
-                    </div>
-                </a>
+                {#if contactEmail}
+                    <a href="mailto:{contactEmail}" class="flex items-center gap-3 group">
+                        <div
+                            class="rounded-md bg-primary/10 p-2 text-primary shrink-0 group-hover:bg-primary/20 transition-colors">
+                            <Mail class="h-4 w-4" />
+                        </div>
+                        <div>
+                            <p class="text-xs text-muted-foreground">Email</p>
+                            <p class="text-sm font-medium group-hover:underline">
+                                {contactEmail}
+                            </p>
+                        </div>
+                    </a>
+                {/if}
+                {#if contactPhone}
+                    <a
+                        href="tel:{contactPhone.replace(/[^\d+]/g, '')}"
+                        class="flex items-center gap-3 group">
+                        <div
+                            class="rounded-md bg-primary/10 p-2 text-primary shrink-0 group-hover:bg-primary/20 transition-colors">
+                            <Phone class="h-4 w-4" />
+                        </div>
+                        <div>
+                            <p class="text-xs text-muted-foreground">Call</p>
+                            <p class="text-sm font-medium group-hover:underline">
+                                {contactPhone}
+                            </p>
+                        </div>
+                    </a>
+                {/if}
             </div>
         </CardContent>
     </Card>
