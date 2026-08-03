@@ -1,16 +1,12 @@
 <script lang="ts">
 import { Mail, Phone } from '@lucide/svelte'
 import { onMount, onDestroy } from 'svelte'
-import { enhance } from '$app/forms'
 import { StayConnected } from '$lib/components'
-import { Alert, AlertDescription } from '$lib/components/ui/alert'
 import { Button } from '$lib/components/ui/button'
 import { Card, CardContent } from '$lib/components/ui/card'
-import { Input } from '$lib/components/ui/input'
-import { Textarea } from '$lib/components/ui/textarea'
-import { APP_NAME, FACEBOOK_GROUP_URL } from '$lib/general/constants'
+import { APP_NAME, CONTACT_EMAIL, CONTACT_PHONE, FACEBOOK_GROUP_URL } from '$lib/general/constants'
 
-let { data, form } = $props()
+let { data } = $props()
 
 let now = $state(Date.now())
 let interval: ReturnType<typeof setInterval>
@@ -264,22 +260,6 @@ const FAMILY_STATS = [
     </div>
 </section>
 
-{#if form?.success}
-    <div class="col-span-12 mt-8">
-        <Alert>
-            <AlertDescription>Message sent! We'll get back to you soon.</AlertDescription>
-        </Alert>
-    </div>
-{/if}
-
-{#if form?.error}
-    <div class="col-span-12 mt-8">
-        <Alert variant="destructive">
-            <AlertDescription>{form.error}</AlertDescription>
-        </Alert>
-    </div>
-{/if}
-
 <!-- Stay Connected -->
 <section class="col-span-12 mt-8 md:mt-12">
     <div class="text-center max-w-xl mx-auto mb-8">
@@ -302,53 +282,28 @@ const FAMILY_STATS = [
         </p>
     </div>
     <Card class="max-w-2xl mx-auto">
-        <CardContent class="pt-6 space-y-6">
-            <form method="POST" action="?/contact" use:enhance class="space-y-4">
-                <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                    <div class="space-y-2">
-                        <label for="name" class="text-sm font-medium">Name</label>
-                        <Input id="name" name="name" type="text" required />
-                    </div>
-                    <div class="space-y-2">
-                        <label for="email" class="text-sm font-medium">Email</label>
-                        <Input id="email" name="email" type="email" required />
-                    </div>
-                </div>
-
-                <div class="space-y-2">
-                    <label for="message" class="text-sm font-medium">Message</label>
-                    <Textarea id="message" name="message" class="h-32" required />
-                </div>
-
-                <!-- Honeypot -->
-                <div class="hidden" aria-hidden="true">
-                    <input name="website" type="text" tabindex="-1" autocomplete="off" />
-                </div>
-
-                <Button type="submit" class="w-full sm:w-auto">Send Message</Button>
-            </form>
-
-            <div class="grid grid-cols-1 gap-4 border-t pt-6 sm:grid-cols-2">
-                <a href="tel:+1234567890" class="flex items-center gap-3 group">
-                    <div
-                        class="rounded-md bg-primary/10 p-2 text-primary shrink-0 group-hover:bg-primary/20 transition-colors">
-                        <Phone class="h-4 w-4" />
-                    </div>
-                    <div>
-                        <p class="text-xs text-muted-foreground">Call</p>
-                        <p class="text-sm font-medium group-hover:underline">+1 (234) 567-890</p>
-                    </div>
-                </a>
-                <a href="mailto:reunion@pattersons.com" class="flex items-center gap-3 group">
+        <CardContent class="pt-6">
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <a href="mailto:{CONTACT_EMAIL}" class="flex items-center gap-3 group">
                     <div
                         class="rounded-md bg-primary/10 p-2 text-primary shrink-0 group-hover:bg-primary/20 transition-colors">
                         <Mail class="h-4 w-4" />
                     </div>
                     <div>
                         <p class="text-xs text-muted-foreground">Email</p>
-                        <p class="text-sm font-medium group-hover:underline">
-                            reunion@pattersons.com
-                        </p>
+                        <p class="text-sm font-medium group-hover:underline">{CONTACT_EMAIL}</p>
+                    </div>
+                </a>
+                <a
+                    href="tel:{CONTACT_PHONE.replace(/[^\d+]/g, '')}"
+                    class="flex items-center gap-3 group">
+                    <div
+                        class="rounded-md bg-primary/10 p-2 text-primary shrink-0 group-hover:bg-primary/20 transition-colors">
+                        <Phone class="h-4 w-4" />
+                    </div>
+                    <div>
+                        <p class="text-xs text-muted-foreground">Call</p>
+                        <p class="text-sm font-medium group-hover:underline">{CONTACT_PHONE}</p>
                     </div>
                 </a>
             </div>

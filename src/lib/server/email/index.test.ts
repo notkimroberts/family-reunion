@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { sendRegistrationConfirmation, sendContactEmail, sendRecoveryEmail } from './index'
+import { sendRegistrationConfirmation, sendRecoveryEmail } from './index'
 
 const { mockEnv } = vi.hoisted(() => ({
     mockEnv: { RESEND_API_KEY: undefined as string | undefined, ADMIN_EMAIL: 'admin@example.com' },
@@ -52,11 +52,6 @@ describe('email module', () => {
             expect(mockEmailSend).not.toHaveBeenCalled()
         })
 
-        it('sendContactEmail returns without calling send', async () => {
-            await sendContactEmail({ name: 'Alice', email: 'alice@example.com' }, 'Hello!')
-            expect(mockEmailSend).not.toHaveBeenCalled()
-        })
-
         it('does not throw when key is missing', async () => {
             await expect(
                 sendRegistrationConfirmation('test@example.com', confirmData),
@@ -99,13 +94,6 @@ describe('email module', () => {
             const [payload] = mockEmailSend.mock.calls[0]
             expect(payload.to).toBe('test@example.com')
             expect(payload.text).toContain(manageUrl)
-        })
-
-        it('sendContactEmail sends to ADMIN_EMAIL', async () => {
-            await sendContactEmail({ name: 'Alice', email: 'alice@example.com' }, 'Hello!')
-            expect(mockEmailSend).toHaveBeenCalledWith(
-                expect.objectContaining({ to: 'admin@example.com' }),
-            )
         })
     })
 })

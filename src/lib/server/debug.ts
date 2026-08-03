@@ -8,7 +8,6 @@ export const dbg = {
     hooks: Debug('reunion:hooks'),
     stripe: Debug('reunion:stripe'),
     register: Debug('reunion:register'),
-    contact: Debug('reunion:contact'),
     upload: Debug('reunion:upload'),
     profile: Debug('reunion:profile'),
     admin: Debug('reunion:admin'),
