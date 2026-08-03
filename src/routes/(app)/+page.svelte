@@ -1,9 +1,16 @@
 <script lang="ts">
+import { Mail, Phone } from '@lucide/svelte'
 import { onMount, onDestroy } from 'svelte'
+import { enhance } from '$app/forms'
+import { StayConnected } from '$lib/components'
+import { Alert, AlertDescription } from '$lib/components/ui/alert'
 import { Button } from '$lib/components/ui/button'
+import { Card, CardContent } from '$lib/components/ui/card'
+import { Input } from '$lib/components/ui/input'
+import { Textarea } from '$lib/components/ui/textarea'
 import { APP_NAME } from '$lib/general/constants'
 
-let { data } = $props()
+let { data, form } = $props()
 
 let now = $state(Date.now())
 let interval: ReturnType<typeof setInterval>
@@ -92,6 +99,14 @@ let dateRange = $derived.by(() => {
     })
     return `${start} – ${end}`
 })
+
+let totalMonths = $derived(countdown.years * 12 + countdown.months)
+
+const FAMILY_TIMELINE = [
+    { year: '1819', label: 'Nelly arrives at the Port of New Orleans' },
+    { year: '1890', label: 'William & Roxie wed' },
+    { year: '15', label: 'Children raised together' },
+]
 </script>
 
 <svelte:head>
@@ -99,79 +114,239 @@ let dateRange = $derived.by(() => {
     <meta name="description" content="Family reunion — registration, events, and family tree" />
 </svelte:head>
 
-<section
-    class="col-span-12 flex flex-col justify-center min-h-[calc(100svh-12rem)] md:min-h-[calc(100svh-16rem)]">
-    <div class="flex flex-col items-center gap-10 lg:flex-row lg:items-center lg:gap-16">
-        <!-- Content -->
-        <div
-            class="flex flex-1 flex-col items-center gap-8 text-center lg:items-start lg:text-left">
-            <div class="flex flex-col gap-1">
-                <h1>{data.event?.title ?? `${APP_NAME} Family Reunion`}</h1>
-                {#if dateRange && eventState !== 'past'}
-                    <p class="text-muted-foreground text-lg">{dateRange}</p>
-                {/if}
+<!-- Hero -->
+{#if !data.event}
+    <section class="col-span-12">
+        <div class="rounded-xl border bg-card px-6 py-12 text-center">
+            <p class="text-4xl mb-3">😢</p>
+            <p class="text-lg font-semibold">No reunion events are open right now.</p>
+            <p class="text-muted-foreground text-sm mt-1">Check back soon!</p>
+        </div>
+    </section>
+{:else}
+    <section class="col-span-12">
+        <div class="rounded-xl border bg-card p-4 md:p-6">
+            <div class="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,22rem)_1fr] lg:items-center">
+                <!-- Framed portraits -->
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="flex flex-col gap-2 rounded-md bg-background p-3 shadow-sm">
+                        <img
+                            src="/will_portrait.png"
+                            alt="Will Patterson"
+                            class="w-full rounded-sm" />
+                        <div class="text-center">
+                            <p class="text-sm font-medium">Will Patterson</p>
+                            <p class="text-muted-foreground text-xs">b. 1869</p>
+                        </div>
+                    </div>
+                    <div class="flex flex-col gap-2 rounded-md bg-background p-3 shadow-sm">
+                        <img
+                            src="/roxie_portrait.png"
+                            alt="Roxie Patterson"
+                            class="w-full rounded-sm" />
+                        <div class="text-center">
+                            <p class="text-sm font-medium">Roxie Patterson</p>
+                            <p class="text-muted-foreground text-xs">b. 1872</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Content -->
+                <div class="flex flex-col gap-4 text-center lg:text-left">
+                    <h1 class="text-4xl font-bold tracking-tight md:text-6xl">
+                        {data.event.title}
+                    </h1>
+
+                    {#if dateRange && eventState !== 'past'}
+                        <p class="text-muted-foreground text-lg">{dateRange}</p>
+                    {/if}
+
+                    {#if eventState === 'upcoming'}
+                        <p class="text-2xl font-bold tabular-nums">
+                            {#if countdown.withinOneDay}
+                                {countdown.days}
+                                {countdown.days === 1 ? 'day' : 'days'}, {countdown.hours}
+                                {countdown.hours === 1 ? 'hour' : 'hours'} until we gather
+                            {:else if totalMonths > 0}
+                                {totalMonths}
+                                {totalMonths === 1 ? 'month' : 'months'} until we gather
+                            {:else}
+                                {countdown.days}
+                                {countdown.days === 1 ? 'day' : 'days'} until we gather
+                            {/if}
+                        </p>
+
+                        <div
+                            class="mt-2 flex flex-col items-center gap-3 sm:flex-row sm:justify-center lg:justify-start">
+                            <Button
+                                href="/register"
+                                size="lg"
+                                class="px-14 py-7 text-lg transition-transform duration-150 hover:scale-[1.03]">
+                                Register Now
+                            </Button>
+                        </div>
+                        {#if data.registrantCount > 0}
+                            <p class="text-muted-foreground text-sm">
+                                Join {data.registrantCount}
+                                {data.registrantCount === 1 ? 'family' : 'families'} already registered
+                            </p>
+                        {/if}
+                    {:else if eventState === 'happening'}
+                        <div>
+                            <p class="text-primary mb-2 text-3xl font-bold">It's happening!</p>
+                            <p class="text-muted-foreground">Enjoy every moment with the family.</p>
+                        </div>
+                    {:else if eventState === 'past'}
+                        <div>
+                            <p class="mb-4 text-2xl font-bold">Thanks for an amazing reunion!</p>
+                            <Button href="/gallery" size="lg">View Photos</Button>
+                        </div>
+                    {:else}
+                        <p class="text-muted-foreground">Stay tuned for the next reunion!</p>
+                    {/if}
+                </div>
+            </div>
+        </div>
+    </section>
+{/if}
+
+<!-- Family Story -->
+<section class="col-span-12 mt-8 md:mt-12">
+    <div class="rounded-xl border bg-card px-6 py-10 md:px-10 md:py-14">
+        <div class="mx-auto max-w-3xl">
+            <h2>Our Family Story</h2>
+
+            <div class="mt-6 grid grid-cols-1 gap-4 border-y py-6 sm:grid-cols-3">
+                {#each FAMILY_TIMELINE as unit (unit.label)}
+                    <div class="flex flex-col items-center gap-1 text-center">
+                        <span class="font-mono text-2xl font-bold tabular-nums md:text-3xl">
+                            {unit.year}
+                        </span>
+                        <span class="text-muted-foreground text-xs md:text-sm">
+                            {unit.label}
+                        </span>
+                    </div>
+                {/each}
             </div>
 
-            {#if eventState === 'upcoming'}
-                <div class="flex gap-6">
-                    {#if countdown.withinOneDay}
-                        {#each [{ label: 'Days', value: countdown.days }, { label: 'Hours', value: countdown.hours }] as unit}
-                            <div class="flex flex-col items-center gap-1">
-                                <span class="font-mono text-4xl font-bold tabular-nums lg:text-5xl">
-                                    {String(unit.value).padStart(2, '0')}
-                                </span>
-                                <span
-                                    class="text-muted-foreground text-xs uppercase tracking-widest">
-                                    {unit.label}
-                                </span>
-                            </div>
-                        {/each}
-                    {:else}
-                        {#each [{ label: 'Years', value: countdown.years }, { label: 'Months', value: countdown.months }, { label: 'Days', value: countdown.days }].filter((u) => u.value > 0 || u.label === 'Days') as unit}
-                            <div class="flex flex-col items-center gap-1">
-                                <span class="font-mono text-4xl font-bold tabular-nums lg:text-5xl">
-                                    {String(unit.value).padStart(2, '0')}
-                                </span>
-                                <span
-                                    class="text-muted-foreground text-xs uppercase tracking-widest">
-                                    {unit.label}
-                                </span>
-                            </div>
-                        {/each}
-                    {/if}
-                </div>
+            <div class="mt-6 space-y-4 text-muted-foreground">
+                <p>
+                    Our family's story begins with Nelly, a young African woman brought to the Port
+                    of New Orleans aboard the brig <em>Planter</em> on February 18, 1819, when she was
+                    about twenty years old. Nelly's daughter Caroline was born into slavery under Duncan
+                    T. Patterson, an early settler of the city of Kosciusko, and was the mother of eight
+                    children — among them Columbus Patterson, born in South Carolina in 1841.
+                </p>
+                <p>
+                    Columbus's son, William S. Patterson, was born in 1869. He married Roxieanna
+                    "Roxie" Lee Hawthorne Hickman — born around 1872 to Miss Arteal Hickman and
+                    raised by her aunt Gilly Lee and Gilly's husband, Andy Lee — on December 26,
+                    1890.
+                </p>
+                <p>
+                    William and Roxie raised fifteen children together: William, Alma, Caroline,
+                    Harvey, Columbus, Esau, Henderson, Solomon, Roxie, Hattie, Mary, Katie, Arthur,
+                    and Benjamin ("Bennie"). It's their descendants — generations of Pattersons —
+                    who gather every reunion to celebrate the family they built.
+                </p>
+            </div>
 
-                <div class="flex flex-col items-center gap-2 lg:items-start">
-                    <Button href="/register" size="lg" class="px-10">Register Now</Button>
-                    {#if data.registrantCount > 0}
-                        <p class="text-muted-foreground text-sm">
-                            {data.registrantCount}
-                            {data.registrantCount === 1 ? 'family' : 'families'} registered
-                        </p>
-                    {/if}
-                </div>
-            {:else if eventState === 'happening'}
-                <div>
-                    <p class="text-primary mb-2 text-3xl font-bold">It's happening!</p>
-                    <p class="text-muted-foreground">Enjoy every moment with the family.</p>
-                </div>
-            {:else if eventState === 'past'}
-                <div>
-                    <p class="mb-4 text-2xl font-bold">Thanks for an amazing reunion!</p>
-                    <Button href="/gallery" size="lg">View Photos</Button>
-                </div>
-            {:else}
-                <p class="text-muted-foreground">Stay tuned for the next reunion!</p>
-            {/if}
-        </div>
-
-        <!-- Photo -->
-        <div class="flex shrink-0 flex-col items-center gap-2">
-            <img
-                src="/will_and_roxie.png"
-                alt="Will and Roxie"
-                class="aspect-square w-64 rounded-3xl object-cover shadow-lg lg:w-80" />
-            <p class="text-muted-foreground/60 text-xs">Will &amp; Roxie Patterson</p>
+            <div class="mt-6">
+                <Button href="/family-tree" variant="outline"
+                    >Explore the Full Family Tree →</Button>
+            </div>
         </div>
     </div>
+</section>
+
+{#if form?.success}
+    <div class="col-span-12 mt-8">
+        <Alert>
+            <AlertDescription>Message sent! We'll get back to you soon.</AlertDescription>
+        </Alert>
+    </div>
+{/if}
+
+{#if form?.error}
+    <div class="col-span-12 mt-8">
+        <Alert variant="destructive">
+            <AlertDescription>{form.error}</AlertDescription>
+        </Alert>
+    </div>
+{/if}
+
+<!-- Stay Connected -->
+<section class="col-span-12 mt-8 md:mt-12">
+    <div class="text-center max-w-xl mx-auto mb-8">
+        <h2>Stay Connected</h2>
+        <p class="text-muted-foreground mt-2">
+            Join the family online between now and the reunion.
+        </p>
+    </div>
+    <div class="grid grid-cols-1 gap-6 max-w-3xl mx-auto md:grid-cols-2">
+        <StayConnected />
+    </div>
+</section>
+
+<!-- Get in Touch -->
+<section id="contact" class="col-span-12 mt-8 mb-8 scroll-mt-24 md:mt-12">
+    <div class="text-center max-w-xl mx-auto mb-8">
+        <h2>Get in Touch</h2>
+        <p class="text-muted-foreground mt-2">
+            Have a question about the reunion? Reach the organizers directly below.
+        </p>
+    </div>
+    <Card class="max-w-2xl mx-auto">
+        <CardContent class="pt-6 space-y-6">
+            <form method="POST" action="?/contact" use:enhance class="space-y-4">
+                <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <div class="space-y-2">
+                        <label for="name" class="text-sm font-medium">Name</label>
+                        <Input id="name" name="name" type="text" required />
+                    </div>
+                    <div class="space-y-2">
+                        <label for="email" class="text-sm font-medium">Email</label>
+                        <Input id="email" name="email" type="email" required />
+                    </div>
+                </div>
+
+                <div class="space-y-2">
+                    <label for="message" class="text-sm font-medium">Message</label>
+                    <Textarea id="message" name="message" class="h-32" required />
+                </div>
+
+                <!-- Honeypot -->
+                <div class="hidden" aria-hidden="true">
+                    <input name="website" type="text" tabindex="-1" autocomplete="off" />
+                </div>
+
+                <Button type="submit" class="w-full sm:w-auto">Send Message</Button>
+            </form>
+
+            <div class="grid grid-cols-1 gap-4 border-t pt-6 sm:grid-cols-2">
+                <a href="tel:+1234567890" class="flex items-center gap-3 group">
+                    <div
+                        class="rounded-md bg-primary/10 p-2 text-primary shrink-0 group-hover:bg-primary/20 transition-colors">
+                        <Phone class="h-4 w-4" />
+                    </div>
+                    <div>
+                        <p class="text-xs text-muted-foreground">Call</p>
+                        <p class="text-sm font-medium group-hover:underline">+1 (234) 567-890</p>
+                    </div>
+                </a>
+                <a href="mailto:reunion@pattersons.com" class="flex items-center gap-3 group">
+                    <div
+                        class="rounded-md bg-primary/10 p-2 text-primary shrink-0 group-hover:bg-primary/20 transition-colors">
+                        <Mail class="h-4 w-4" />
+                    </div>
+                    <div>
+                        <p class="text-xs text-muted-foreground">Email</p>
+                        <p class="text-sm font-medium group-hover:underline">
+                            reunion@pattersons.com
+                        </p>
+                    </div>
+                </a>
+            </div>
+        </CardContent>
+    </Card>
 </section>

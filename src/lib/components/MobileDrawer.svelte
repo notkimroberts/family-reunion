@@ -4,6 +4,7 @@ import {
     ClipboardPen,
     Home,
     Images,
+    Mail,
     Network,
     ShoppingBag,
     Users,
@@ -13,9 +14,9 @@ import { page } from '$app/state'
 import { Sheet, SheetContent } from '$lib/components/ui/sheet'
 import {
     APP_NAME,
+    CONTACT_NAV_LINK,
     LIGHT_THEME,
     PRIMARY_NAV_LINKS,
-    PROGRAM_NAV_LINK,
     REGISTER_NAV_LINK,
     SECONDARY_NAV_LINKS,
 } from '$lib/general/constants'
@@ -62,12 +63,9 @@ const linkClass = (active: boolean) =>
                 <Home class="h-4 w-4" />
                 Home
             </a>
-            <a
-                href={PROGRAM_NAV_LINK.href}
-                onclick={onClose}
-                class={linkClass(isActive(PROGRAM_NAV_LINK.href))}>
-                <CalendarClock class="h-4 w-4" />
-                {PROGRAM_NAV_LINK.label}
+            <a href={CONTACT_NAV_LINK.href} onclick={onClose} class={linkClass(false)}>
+                <Mail class="h-4 w-4" />
+                {CONTACT_NAV_LINK.label}
             </a>
             {#if PRIMARY_NAV_LINKS.length}
                 <p
