@@ -102,10 +102,10 @@ let dateRange = $derived.by(() => {
 
 let totalMonths = $derived(countdown.years * 12 + countdown.months)
 
-const FAMILY_TIMELINE = [
-    { year: '1819', label: 'Nelly arrives at the Port of New Orleans' },
-    { year: '1890', label: 'William & Roxie wed' },
-    { year: '15', label: 'Children raised together' },
+const FAMILY_STATS = [
+    { value: '1819', label: 'Nelly arrives at the Port of New Orleans' },
+    { value: '1890', label: 'William & Roxie wed' },
+    { value: '15 kids', label: 'Raised together' },
 ]
 </script>
 
@@ -217,10 +217,10 @@ const FAMILY_TIMELINE = [
             <h2>Our Family Story</h2>
 
             <div class="mt-6 grid grid-cols-1 gap-4 border-y py-6 sm:grid-cols-3">
-                {#each FAMILY_TIMELINE as unit (unit.label)}
+                {#each FAMILY_STATS as unit (unit.label)}
                     <div class="flex flex-col items-center gap-1 text-center">
                         <span class="font-mono text-2xl font-bold tabular-nums md:text-3xl">
-                            {unit.year}
+                            {unit.value}
                         </span>
                         <span class="text-muted-foreground text-xs md:text-sm">
                             {unit.label}
