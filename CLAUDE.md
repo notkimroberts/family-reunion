@@ -195,7 +195,7 @@ Route groups:
 
 - **Railway** with Node adapter. Internal Postgres at `postgres.railway.internal`
 - Build: `vite build` (DB is not reachable during build — Railway internal DNS is runtime-only)
-- Predeploy command (Railway setting): `drizzle-kit migrate` — runs migrations before the server starts
+- Predeploy command (Railway setting): `bun run db:migrate` (`scripts/migrate.ts`) — runs migrations before the server starts. It wraps `drizzle-orm`'s migrator directly instead of shelling out to `drizzle-kit migrate`, because drizzle-kit's spinner UI writes progress via carriage-return redraws that collapse to nothing useful over a non-TTY log pipe (Railway's), hiding the real error behind a bare "exited with code 1". The script also retries the initial connection for ~30s, since a scaled-to-zero Postgres only reliably wakes on public-proxy traffic, not the internal `DATABASE_URL` predeploy uses — without the retry, the first connection attempt can race a still-sleeping database and fail fast with no useful error at all.
 - Start: `node build/index.js`
 - DB migrations are idempotent — Drizzle tracks applied migrations and skips them on subsequent deploys
 - Required Railway environment variables: `SENTRY_AUTH_TOKEN`, `SENTRY_ENVIRONMENT=production`
