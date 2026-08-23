@@ -9,7 +9,7 @@
         "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
         "clean": "rm -rf .svelte-kit && rm -rf build && rm -rf node_modules/.vite",
         "db:generate": "drizzle-kit generate",
-        "db:migrate": "drizzle-kit migrate",
+        "db:migrate": "bun scripts/migrate.ts",
         "db:push": "drizzle-kit push",
         "db:studio": "drizzle-kit studio",
         "db:seed": "bun src/lib/server/db/seed.ts",
