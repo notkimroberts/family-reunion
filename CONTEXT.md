@@ -7,15 +7,13 @@ A full-stack app for organising family reunion events: registration and payment,
 ### Identity
 
 **User**:
-A person who has signed in via magic link email. Managed entirely by Better Auth (`user`, `session`, `account` tables). The source of truth for authentication.
-_Avoid_: account, member
-
-**User profile**:
-App-level extension of a **User** — one per user, created automatically on first sign-in. Stores contact details (phone, mailing address), birth date, and profile photo URL. Identified by `userId` (FK to `user.id`).
-_Avoid_: profile, account settings
+An organiser who signs in with email and password at `/login`. Managed entirely by Better Auth (`user`, `session`, `account` tables). Users exist only to administer the app — attendees never have one.
+_Avoid_: account, member, registrant
 
 **Admin**:
-A **User** with `role = 'admin'`. Granted via the Better Auth admin plugin; checked by `requireAdmin()` in guards.
+A **User** with `role = 'admin'`. Granted via the Better Auth admin plugin; checked by `requireAdmin()` in guards. In practice every user is an admin: there is no non-admin reason to sign in.
+
+> There is no app-level profile table. An earlier design had `user_profiles` holding contact details per user; it was removed along with magic-link sign-in when registration became public. Contact details now live on the **registration**.
 
 ### Genealogy
 
@@ -36,39 +34,43 @@ A single annual gathering. Has a status lifecycle: `draft` → `open` → `close
 _Avoid_: event (too generic in a SvelteKit codebase — `event` means `RequestEvent`)
 
 **Pricing tier**:
-An age bracket with a price in cents, scoped to a **reunion event**. Each **party member** is assigned one tier at registration time; the tier FK is the source of truth for what was charged.
+A named price bracket in cents, scoped to a **reunion event** (`tiers`). A tier is chosen per **party member** at registration time, but the tier is _not_ the record of what was charged: `party_members` snapshots `tierLabel` and `priceCents` onto the row, so renaming or repricing a tier never rewrites history or a refund amount.
 
 **Registration**:
-A record of a **user**'s intent (or payment) to attend a **reunion event**. Status: `pending` → `paid` (or `refunded` or `waived`). Holds the Stripe session ID and total amount. One user may have at most one registration per event.
+One party's record of attending a **reunion event**, owned by a **management token** rather than by a user. Status: `pending` → `paid`, or `waived` (comped / paid offline) or `refunded` (cancelled). Holds the Stripe session ID; there is no denormalised total — the amount is the sum of its **party members**' `priceCents`.
 _Avoid_: booking, sign-up
 
-**Registrant**:
-The **User** who creates and submits the registration form. They are always the first `party_members` row for a registration; the link is implicit via `registration.userId`. Shown with a "You" badge in the UI. There is no explicit column in `party_members` that marks a row as the registrant — the connection runs through the parent `registrations.userId`.
-_Avoid_: party member, attendee
-
-**Guest member**:
-An additional attendee added by the **Registrant** during or after registration. Stored in `party_members` alongside the registrant but has no link to a **User**, **user profile**, or **family member**. Need not have an app account or a genealogy record.
-_Avoid_: guest (too vague), party member, attendee
+**Management token**:
+The credential that owns a **registration** — 32 random bytes, base64url. The only credential: registration is fully public and there is no per-request auth check on `/register/manage`. The database stores only `sha256(token)`, so the plaintext exists exactly twice — in the URL sent to the registrant, and in Stripe session metadata so the webhook can build the manage link. It cannot be recovered, only rotated, which is why `/register/recover` must not rotate before a confirmed email delivery.
+_Avoid_: password, API key
 
 **Contact**:
-A free-text name and email stored on a **registration** (`contactName`, `contactEmail`). Used for admin-created registrations where no **user** account exists and for confirmation emails.
+The name, email and optional phone stored directly on a **registration** (`contactName`, `contactEmail`, `contactPhone`). This is the whole identity of whoever registered — there is no **user** behind it. Confirmation and recovery email go here.
+
+**Registrant**:
+The person the **contact** describes. They are always the first `party_members` row for a registration, inserted from the form's `self*` fields. Nothing in the schema marks that row as the registrant: it is first by insertion order and matches `contactName`.
+_Avoid_: party member, attendee, user
+
+**Guest member**:
+An additional attendee added by the **registrant** during or after registration. Stored in `party_members` alongside the registrant. Has no link to a **user** or **family member**, and need not have either.
+_Avoid_: guest (too vague), party member, attendee
 
 ### Three person models — why they're separate
 
 The app has three distinct ways of representing a person. This is intentional:
 
-| Model                             | Table                    | User FK?                              | Purpose                                                                     |
-| --------------------------------- | ------------------------ | ------------------------------------- | --------------------------------------------------------------------------- |
-| **User** + **User profile**       | `user` + `user_profiles` | required                              | Authentication and contact details for people who sign in                   |
-| **Family member**                 | `family_members`         | optional (nullable, no DB constraint) | Genealogy — includes historical figures and relatives who may never sign in |
-| **Registrant** + **Guest member** | `party_members`          | none                                  | Attendance at a specific event — the registrant and any guests they add     |
+| Model                             | Table            | Identified by                        | Purpose                                                                     |
+| --------------------------------- | ---------------- | ------------------------------------ | --------------------------------------------------------------------------- |
+| **User**                          | `user`           | email + password (Better Auth)       | Organisers signing in to administer the app                                 |
+| **Family member**                 | `family_members` | optional `userId` (no DB constraint) | Genealogy — includes historical figures and relatives who may never sign in |
+| **Registrant** + **Guest member** | `party_members`  | parent `registrations` row           | Attendance at a specific event — the registrant and any guests they add     |
 
 **Key invariants:**
 
-- A **user profile** always exists for every **user** — created atomically via a Better Auth `databaseHooks.user.create.after` hook on first sign-in.
-- A **family member** can be linked to a **user** by setting `familyMembers.userId` to `user.id`, but this is not enforced by a DB-level FK. The family tree left-joins `user_profiles` on this column to pull in profile photos.
-- Neither the **registrant** nor any **guest member** has a link to `user_profiles` or `family_members`. The registrant's identity is inferred through `registration.userId`; guest members have no user link at all. Someone can attend a reunion as a guest without being in either system.
-- All three person models store birth dates as split integers — `birthYear`, `birthMonth`, `birthDay` — to accommodate partial and historical dates (e.g. known year, unknown day). Age is always derived via `getAge()` from `$lib/utils/age`.
+- A **registration** is reached by **management token**, never by a user session. An attendee needs no account, and an organiser signing in gains no automatic view of their own registration.
+- A **family member** can be linked to a **user** by setting `familyMembers.userId`, but this is not enforced by a DB-level FK.
+- A **party member** may optionally be linked to a **family member** via `partyMembers.familyMemberId` (admin-set, `ON DELETE set null`) — the one bridge between attendance and genealogy. It is nullable and usually null: someone can attend without being in the tree, and be in the tree without attending.
+- All three person models store birth dates as split integers — `birthYear`, `birthMonth`, `birthDay` — to accommodate partial and historical dates (e.g. known year, unknown day). A CHECK constraint enforces prefix consistency: day implies month, month implies year. Age is always derived via `getAge()` from `$lib/utils/age`.
 
 ## Example dialogue
 
@@ -76,16 +78,22 @@ The app has three distinct ways of representing a person. This is intentional:
 >
 > **Domain**: No — the family tree and event registration are completely separate. Adding a family member just adds a genealogy node. They'd need to be added to a registration as a guest member (or register themselves as a registrant) to attend.
 
-> **Dev**: When a user signs up and registers for the reunion, how many "person" records are we creating?
+> **Dev**: When someone registers for the reunion, how many "person" records are we creating?
 >
-> **Domain**: Three potentially. The magic link sign-in creates a `user` record (Better Auth) and triggers the hook that creates a `user_profile`. The registration creates a `registration` and at least one `party_members` row — the registrant themselves. Their family tree entry, if any, is separate and only created if they go to the family tree page and add themselves.
+> **Domain**: One `registration` plus one `party_members` row per person in the party — the registrant is the first of those. No `user` is created: registration is public and creates no account. Their family tree entry, if any, is entirely separate.
 
-> **Dev**: Can I look up a guest member's user profile to get their email?
+> **Dev**: Can I look up a guest member's email?
 >
-> **Domain**: No — there's no FK. Guest members (and registrants too, within the `party_members` table) have no direct link to `user_profiles`. You'd go through `registration.userId` to get the registrant's email. The guest's data is limited to what was entered in the form (name, birth date, shirt size).
+> **Domain**: No. Only the **contact** has an email, and it lives on the parent `registrations` row. A guest member's data is limited to what the form collected — name, birth date, shirt size, address, and the two questions. If you need to reach a guest, you reach the contact.
+
+> **Dev**: Someone lost their management link. Can I look up their old one?
+>
+> **Domain**: No — the database only has `sha256(token)`. `/register/recover` generates a _new_ token and emails it, which invalidates the old one. That is why the rotation only commits after the email send is confirmed: rotating on a failed send locks the registrant out permanently.
 
 ## Flagged ambiguities
 
 **"member"** is overloaded: the codebase uses `familyMembers`, `partyMembers`, and Better Auth's implicit "member" concept. Always qualify with context: **family member**, **registrant**, or **guest member**. Never use bare "member."
 
-**`familyMembers.userId` non-FK**: The `userId` column on `family_members` is a plain `text` column with no DB-level FK constraint to `user.id`. This supports the genealogy use case (historical figures, deceased relatives who never had an account) but means app-level consistency is not enforced. Whether to add a DB-level FK (with `ON DELETE SET NULL`) is pending deeper investigation of how the genealogy and identity sub-domains relate to each other.
+**`familyMembers.userId` non-FK**: The `userId` column on `family_members` is a plain `text` column with no DB-level FK constraint to `user.id`. This supported the genealogy use case (historical figures, deceased relatives who never had an account) but means app-level consistency is not enforced. Now that users are organisers only, it is unclear this column has any remaining purpose — resolve whether to drop it rather than constrain it.
+
+**"registration" as status vs. record**: `registrations.status` is `pending` for a row whose Stripe checkout has not completed, so an abandoned checkout leaves a permanent `pending` row that is not a registration in any meaningful sense. These are deliberately not cleaned up (deleting by contact email would let anyone clobber a stranger's in-flight checkout). When counting registrations, filter on `paid`/`waived`.

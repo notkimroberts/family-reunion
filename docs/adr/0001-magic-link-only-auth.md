@@ -1,7 +1,17 @@
 # ADR 0001 — Magic link as the only authentication method
 
-**Status:** Accepted  
-**Date:** 2026-06-03
+**Status:** Superseded by [ADR 0002](./0002-management-token-as-registration-credential.md)  
+**Date:** 2026-06-03  
+**Superseded:** 2026-08-23
+
+> **This decision no longer describes the system.** Magic link has been removed. Admins sign
+> in at `/login` with email and password, and attendees do not sign in at all — registration
+> is public and owned by a management token. The reasoning below is kept because it explains
+> why SSO was dropped, which still holds; only the "magic link is the answer" part changed.
+>
+> What replaced it: attendees needed accounts under this design purely so a registration could
+> have an owner. Making the registration itself the owned thing removed the requirement, and
+> with it the last reason for a non-admin to have credentials at all.
 
 ## Context
 
