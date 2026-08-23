@@ -1,7 +1,7 @@
 <script lang="ts">
 import { Mail, MessageSquare } from '@lucide/svelte'
 import { onMount, onDestroy } from 'svelte'
-import { StayConnected } from '$lib/components'
+import { StayConnected, ReunionLocations } from '$lib/components'
 import { Button } from '$lib/components/ui/button'
 import { Card, CardContent } from '$lib/components/ui/card'
 import { APP_NAME, CONTACT_EMAIL, CONTACT_PHONE, FACEBOOK_GROUP_URL } from '$lib/general/constants'
@@ -264,6 +264,19 @@ const FAMILY_STATS = [
                 </Button>
             </div>
         </div>
+    </div>
+</section>
+
+<!-- Venue & Hotel -->
+<section class="col-span-12 mt-8 md:mt-12">
+    <div class="text-center max-w-xl mx-auto mb-8">
+        <h2>Venue &amp; Where to Stay</h2>
+        <p class="text-muted-foreground mt-2">
+            Both are in Uptown Oakland, a short walk from each other.
+        </p>
+    </div>
+    <div class="grid grid-cols-1 gap-6 max-w-5xl mx-auto md:grid-cols-2">
+        <ReunionLocations />
     </div>
 </section>
 
