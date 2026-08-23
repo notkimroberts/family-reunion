@@ -8,7 +8,7 @@ import { decodeSessionMetadata } from '$lib/server/payments'
 import { formatPrice } from '$lib/utils'
 import { getAge, parseBirthDate } from '$lib/utils/age'
 
-/* Webhook handler: branches on metadata.type to either insert an add_member row or mark the registration 'paid'; confirmation email is sent outside the transaction so a send failure never rolls back payment. Both branches are idempotent — Stripe redelivers checkout.session.completed events on transient failures. */
+/* Webhook handler: branches on metadata.type to either insert an add_member row or mark the registration 'paid'; confirmation email is sent outside the transaction so a send failure never rolls back payment. Stripe redelivers checkout.session.completed on transient failures, so both branches are idempotent — add_member dedupes on paymentIntent, and the registration branch transitions pending → paid conditionally. The confirmation email additionally carries a Resend idempotency key. */
 export async function fulfillCheckout(
     session: Stripe.Checkout.Session,
     origin: string,
@@ -107,18 +107,38 @@ export async function fulfillCheckout(
 
     dbg.stripe('checkout.session.completed registrationId=%s', registrationId)
 
-    /* Use returning() so we can detect the orphan-payment case where the registration was
-       deleted (or never existed) between checkout creation and webhook arrival. */
+    /* Conditional pending → paid transition. Doing it in one statement makes concurrent
+       Stripe redeliveries serialise: exactly one matches and returns a row, so exactly one
+       confirmation email is sent. An unconditional update would re-send on every redelivery.
+       'pending' is the only legal source state — a waived or refunded registration must not
+       be flipped by a stray webhook. */
     const updated = await db
         .update(registrations)
         .set({ status: 'paid', updatedAt: new Date() })
-        .where(eq(registrations.id, registrationId))
+        .where(and(eq(registrations.id, registrationId), eq(registrations.status, 'pending')))
         .returning({ id: registrations.id })
 
     if (updated.length === 0) {
+        /* Nothing matched: either the row is gone, or it was not pending. Distinguish the two
+           so an orphaned charge stays loud while a routine redelivery stays quiet. */
+        const [existing] = await db
+            .select({ status: registrations.status })
+            .from(registrations)
+            .where(eq(registrations.id, registrationId))
+            .limit(1)
+
+        if (!existing) {
+            dbg.stripe(
+                'ORPHAN PAYMENT: webhook for registrationId=%s but no DB row exists. Stripe charge is captured.',
+                registrationId,
+            )
+            return
+        }
+
         dbg.stripe(
-            'ORPHAN PAYMENT: webhook for registrationId=%s but no DB row exists. Stripe charge is captured.',
+            'checkout.session.completed for registration=%s status=%s; already fulfilled, ignoring',
             registrationId,
+            existing.status,
         )
         return
     }
@@ -171,22 +191,26 @@ export async function fulfillCheckout(
 
     dbg.stripe('sending confirmation email for registration %s', registrationId)
     try {
-        await sendRegistrationConfirmation(registration.contactEmail, {
-            name: registration.contactName,
-            eventTitle: reunionEvent.title,
-            partyMembers: members.map((m) => {
-                const extras: string[] = []
-                if (m.birthYear) {
-                    extras.push(`age ${getAge(m.birthYear, m.birthMonth, m.birthDay)}`)
-                }
-                if (m.shirtSize) {
-                    extras.push(`shirt ${m.shirtSize}`)
-                }
-                return extras.length > 0 ? `${m.name} (${extras.join(', ')})` : m.name
-            }),
-            totalAmount: `$${formatPrice(totalAmountCents)}`,
-            manageUrl,
-        })
+        await sendRegistrationConfirmation(
+            registration.contactEmail,
+            {
+                name: registration.contactName,
+                eventTitle: reunionEvent.title,
+                partyMembers: members.map((m) => {
+                    const extras: string[] = []
+                    if (m.birthYear) {
+                        extras.push(`age ${getAge(m.birthYear, m.birthMonth, m.birthDay)}`)
+                    }
+                    if (m.shirtSize) {
+                        extras.push(`shirt ${m.shirtSize}`)
+                    }
+                    return extras.length > 0 ? `${m.name} (${extras.join(', ')})` : m.name
+                }),
+                totalAmount: `$${formatPrice(totalAmountCents)}`,
+                manageUrl,
+            },
+            `confirm/${registrationId}`,
+        )
     } catch (err) {
         dbg.stripe('confirmation email failed for registration %s: %o', registrationId, err)
     }

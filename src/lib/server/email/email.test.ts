@@ -1,9 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
-import { renderRecoveryEmail, renderRegistrationConfirmation } from './index'
+import { renderRecoveryEmail, renderRegistrationConfirmation } from './templates'
 
-vi.mock('$env/dynamic/private', () => ({ env: {} }))
 vi.mock('$lib/general/constants', () => ({ APP_NAME: 'Family Reunion', APP_DOMAIN: 'example.com' }))
-vi.mock('$lib/server/debug', () => ({ dbg: { email: vi.fn() } }))
 
 describe('renderRecoveryEmail', () => {
     it('includes the management URL in the body', () => {
