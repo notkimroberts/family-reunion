@@ -16,6 +16,7 @@ export {
 
 export type { RegistrationMember } from './queries'
 export {
+    getConfirmationEmailData,
     getOpenEvent,
     getRegistrationByToken,
     getRegistrationsByEmail,

@@ -25,14 +25,23 @@ vi.mock('$app/environment', () => ({
     },
 }))
 vi.mock('resend', () => ({ Resend: MockResend }))
-vi.mock('$lib/general/constants', () => ({ APP_NAME: 'Test App', APP_DOMAIN: 'example.com' }))
+vi.mock('$lib/general/constants', () => ({
+    APP_NAME: 'Test App',
+    APP_DOMAIN: 'example.com',
+    CONTACT_EMAIL: 'organiser@example.com',
+    CONTACT_PHONE: '+1 555 0100',
+}))
 vi.mock('$lib/server/debug', () => ({ dbg: { email: vi.fn() } }))
 
 const confirmData = {
     name: 'Alice',
     eventTitle: 'Family Reunion 2026',
-    partyMembers: ['Alice (Adult)', 'Bob (Child)'],
-    totalAmount: '$50.00',
+    status: 'paid' as const,
+    partyMembers: [
+        { name: 'Alice', tierLabel: 'Adult', priceCents: 3000 },
+        { name: 'Bob', tierLabel: 'Child', priceCents: 2000, detail: 'age 8' },
+    ],
+    totalCents: 5000,
     manageUrl: 'https://example.com/register/manage?token=tok-abc',
 }
 
@@ -152,10 +161,17 @@ describe('email module', () => {
         it('sendRegistrationConfirmation includes party members, total, and manage link', async () => {
             await sendRegistrationConfirmation('test@example.com', confirmData)
             const [payload] = mockEmailSend.mock.calls[0]
-            expect(payload.text).toContain('Alice (Adult)')
-            expect(payload.text).toContain('Bob (Child)')
+            expect(payload.text).toContain('Alice')
+            expect(payload.text).toContain('Bob')
             expect(payload.text).toContain('$50.00')
             expect(payload.text).toContain('https://example.com/register/manage?token=tok-abc')
+        })
+
+        it('sends both an html and a plain-text body', async () => {
+            await sendRegistrationConfirmation('test@example.com', confirmData)
+            const [payload] = mockEmailSend.mock.calls[0]
+            expect(payload.html).toContain('<!doctype html>')
+            expect(payload.text).not.toContain('<')
         })
 
         it('sendRecoveryEmail sends the manage URL to the given address', async () => {

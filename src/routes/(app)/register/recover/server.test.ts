@@ -48,7 +48,12 @@ vi.mock('drizzle-orm', () => ({ eq: vi.fn() }))
 vi.mock('resend', () => ({ Resend: MockResend }))
 vi.mock('$env/dynamic/private', () => ({ env: mockEnv }))
 vi.mock('$app/environment', () => ({ dev: false }))
-vi.mock('$lib/general/constants', () => ({ APP_NAME: 'Test App', APP_DOMAIN: 'example.com' }))
+vi.mock('$lib/general/constants', () => ({
+    APP_NAME: 'Test App',
+    APP_DOMAIN: 'example.com',
+    CONTACT_EMAIL: 'organiser@example.com',
+    CONTACT_PHONE: '+1 555 0100',
+}))
 
 function makeEvent() {
     return {

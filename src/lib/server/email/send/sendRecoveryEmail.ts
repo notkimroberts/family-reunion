@@ -10,6 +10,6 @@ export async function sendRecoveryEmail(
     data: { eventTitle: string; manageUrl: string },
 ): Promise<void> {
     dbg.email('sendRecoveryEmail to=%s event=%s', to, data.eventTitle)
-    const { subject, text } = renderRecoveryEmail(data)
-    await send({ to, subject, text })
+    const { subject, text, html } = renderRecoveryEmail(data)
+    await send({ to, subject, text, html })
 }

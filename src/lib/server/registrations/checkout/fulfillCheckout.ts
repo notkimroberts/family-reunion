@@ -1,12 +1,14 @@
 import { and, eq } from 'drizzle-orm'
 import type Stripe from 'stripe'
 import { db } from '$lib/server/db'
-import { partyMembers, registrations, reunionEvents } from '$lib/server/db/schema'
+import { partyMembers, registrations } from '$lib/server/db/schema'
 import { dbg } from '$lib/server/debug'
 import { sendRegistrationConfirmation } from '$lib/server/email'
 import { decodeSessionMetadata } from '$lib/server/payments'
-import { formatPrice } from '$lib/utils'
-import { getAge, parseBirthDate } from '$lib/utils/age'
+import { parseBirthDate } from '$lib/utils/age'
+/* Relative import, not the $lib/server/registrations barrel: that barrel re-exports this
+   folder, so going through it would be a circular import. */
+import { getConfirmationEmailData } from '../queries'
 
 /* Webhook handler: branches on metadata.type to either insert an add_member row or mark the registration 'paid'; confirmation email is sent outside the transaction so a send failure never rolls back payment. Stripe redelivers checkout.session.completed on transient failures, so both branches are idempotent — add_member dedupes on paymentIntent, and the registration branch transitions pending → paid conditionally. The confirmation email additionally carries a Resend idempotency key. */
 export async function fulfillCheckout(
@@ -151,64 +153,20 @@ export async function fulfillCheckout(
         dbg.stripe('backfilled payment_intent on party members for registration %s', registrationId)
     }
 
-    /* Email outside the transaction — a transient email failure should not roll back payment. */
-    const [registration] = await db
-        .select({
-            eventId: registrations.eventId,
-            contactName: registrations.contactName,
-            contactEmail: registrations.contactEmail,
-        })
-        .from(registrations)
-        .where(eq(registrations.id, registrationId))
-    if (!registration) {
-        return
-    }
-
-    const [[reunionEvent], members] = await Promise.all([
-        db
-            .select({ title: reunionEvents.title })
-            .from(reunionEvents)
-            .where(eq(reunionEvents.id, registration.eventId)),
-        db
-            .select({
-                name: partyMembers.name,
-                birthYear: partyMembers.birthYear,
-                birthMonth: partyMembers.birthMonth,
-                birthDay: partyMembers.birthDay,
-                shirtSize: partyMembers.shirtSize,
-                priceCents: partyMembers.priceCents,
-            })
-            .from(partyMembers)
-            .where(eq(partyMembers.registrationId, registrationId)),
-    ])
-    if (!reunionEvent) {
-        return
-    }
-
-    const totalAmountCents = members.reduce((sum, m) => sum + m.priceCents, 0)
-    /* Plaintext token came through Stripe metadata; the DB only ever holds the hash. */
+    /* Email outside the transaction — a transient email failure should not roll back payment.
+       Plaintext token came through Stripe metadata; the DB only ever holds the hash. */
     const manageUrl = `${origin}/register/manage?token=${managementToken}`
+    const confirmation = await getConfirmationEmailData({ registrationId, manageUrl })
+    if (!confirmation) {
+        dbg.stripe('no confirmation data for registration %s; skipping email', registrationId)
+        return
+    }
 
     dbg.stripe('sending confirmation email for registration %s', registrationId)
     try {
         await sendRegistrationConfirmation(
-            registration.contactEmail,
-            {
-                name: registration.contactName,
-                eventTitle: reunionEvent.title,
-                partyMembers: members.map((m) => {
-                    const extras: string[] = []
-                    if (m.birthYear) {
-                        extras.push(`age ${getAge(m.birthYear, m.birthMonth, m.birthDay)}`)
-                    }
-                    if (m.shirtSize) {
-                        extras.push(`shirt ${m.shirtSize}`)
-                    }
-                    return extras.length > 0 ? `${m.name} (${extras.join(', ')})` : m.name
-                }),
-                totalAmount: `$${formatPrice(totalAmountCents)}`,
-                manageUrl,
-            },
+            confirmation.to,
+            confirmation.data,
             `confirm/${registrationId}`,
         )
     } catch (err) {

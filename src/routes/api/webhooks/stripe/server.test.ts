@@ -282,7 +282,8 @@ describe('POST /api/webhooks/stripe', () => {
             expect.objectContaining({
                 eventTitle: 'Family Reunion 2026',
                 manageUrl: expect.stringContaining('token=plaintext-tok'),
-                totalAmount: '$50.00',
+                status: 'paid',
+                totalCents: 5000,
             }),
             'confirm/reg-123',
         )
