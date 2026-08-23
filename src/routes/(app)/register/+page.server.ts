@@ -3,22 +3,12 @@ import { defaults } from 'sveltekit-superforms'
 import { zod4 as zod } from 'sveltekit-superforms/adapters'
 import { superValidate } from 'sveltekit-superforms/server'
 import { dbg } from '$lib/server/debug'
-import {
-    createPendingRegistration,
-    getOpenEvent,
-    type MemberInput,
-} from '$lib/server/registrations'
+import { createPendingRegistration, getOpenEvent } from '$lib/server/registrations'
 import { getTiersForEvent } from '$lib/server/tiers'
 import { parseYesNo } from '$lib/utils'
 import type { PageServerLoad, Actions } from './$types'
+import { parseFormMembers } from './parseFormMembers'
 import { registrationSchema } from './schema'
-
-/* Wire shape of a member as serialized by PartyMembersBuilder's FormMember — yes/no as
-   raw strings, converted to boolean below before reaching createPendingRegistration. */
-type RawMemberInput = Omit<MemberInput, 'vegetarianMeal' | 'attendedReunion2025'> & {
-    vegetarianMeal?: string
-    attendedReunion2025?: string
-}
 
 export const load: PageServerLoad = async ({ locals }) => {
     const openEvent = await getOpenEvent()
@@ -71,12 +61,12 @@ export const actions: Actions = {
             selfAttendedReunion2025,
             members: membersJson,
         } = form.data
-        const rawMembers: RawMemberInput[] = JSON.parse(membersJson)
-        const additionalMembers: MemberInput[] = rawMembers.map((m) => ({
-            ...m,
-            vegetarianMeal: parseYesNo(m.vegetarianMeal),
-            attendedReunion2025: parseYesNo(m.attendedReunion2025),
-        }))
+        let additionalMembers
+        try {
+            additionalMembers = parseFormMembers(membersJson)
+        } catch {
+            return fail(400, { form })
+        }
 
         dbg.register(
             'email=%s eventId=%s members=%d',

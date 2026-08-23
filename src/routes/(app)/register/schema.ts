@@ -74,6 +74,17 @@ export const memberSchema = z.object({
     ...personDetailsShape,
 })
 
+/* Admin paper entry validates identically to the public form — the address, ZIP, state and
+   both yes/no answers are required — so catering and shirt counts are complete whichever way
+   a registration arrives. Built by extending registrationSchema rather than restating the
+   rules, so the two can only ever agree.
+
+   The one addition is status: an admin records whether the money already arrived, was
+   waived, or is still outstanding, since this path bypasses Stripe entirely. */
+export const adminRegistrationSchema = registrationSchema.extend({
+    status: z.enum(['paid', 'pending', 'waived'], 'Please choose a payment status'),
+})
+
 export const addMemberSchema = z.object({
     token: z.string().min(1),
     registrationId: z.string().min(1),
@@ -102,6 +113,7 @@ export const cancelRegistrationSchema = z.object({
 })
 
 export type RegistrationFormData = z.infer<typeof registrationSchema>
+export type AdminRegistrationFormData = z.infer<typeof adminRegistrationSchema>
 export type MemberData = z.infer<typeof memberSchema>
 export type AddMemberData = z.infer<typeof addMemberSchema>
 export type UpdateMemberData = z.infer<typeof updateMemberSchema>

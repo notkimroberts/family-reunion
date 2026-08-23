@@ -1,30 +1,19 @@
 <script lang="ts">
+import { Check, Copy, TriangleAlert } from '@lucide/svelte'
 import { getContext } from 'svelte'
-import { enhance } from '$app/forms'
+import { superForm } from 'sveltekit-superforms'
+import { zod4Client as zodClient } from 'sveltekit-superforms/adapters'
 import { Button } from '$lib/components/ui/button'
 import { Card, CardContent } from '$lib/components/ui/card'
 import type { AdminContext } from '$lib/types/adminContext'
-import { getTierPriceCents, isValidPhone } from '$lib/utils'
+import { getTierPriceCents, isValidZip } from '$lib/utils'
 import OrderSummaryCard from '../../register/OrderSummaryCard.svelte'
 import PartyMembersBuilder from '../../register/PartyMembersBuilder.svelte'
 import YourInformationCard from '../../register/YourInformationCard.svelte'
+import { adminRegistrationSchema } from '../../register/schema'
 import type { FormMember, PersonDetails } from '../../register/types'
 
-let { data, form } = $props()
-
-const adminCtx = getContext<AdminContext>('admin')
-
-let targetEventId = $derived(
-    adminCtx.selectedEventId !== 'all' ? adminCtx.selectedEventId : (data.events[0]?.id ?? ''),
-)
-
-const tiers = $derived(data.tiers)
-
-let selfFirstName = $state('')
-let selfLastName = $state('')
-let contactEmail = $state('')
-let contactPhone = $state('')
-let self = $state<PersonDetails>({
+const EMPTY_SELF: PersonDetails = {
     tierId: '',
     birthDate: undefined,
     shirtSize: '',
@@ -35,10 +24,33 @@ let self = $state<PersonDetails>({
     addressZip: '',
     vegetarianMeal: '',
     attendedReunion2025: '',
+}
+
+let { data, form: actionData } = $props()
+
+const adminCtx = getContext<AdminContext>('admin')
+
+const { form, errors, enhance } = superForm(data.form, {
+    validators: zodClient(adminRegistrationSchema),
+    dataType: 'form',
+    /* Keep the page's own $state (party builder, self details) in charge of resetting —
+       superforms resetting the form would not clear those. */
+    resetForm: false,
 })
+
+let targetEventId = $derived(
+    adminCtx.selectedEventId !== 'all' ? adminCtx.selectedEventId : (data.events[0]?.id ?? ''),
+)
+
+const tiers = $derived(data.tiers)
+const shirtsEnabled = $derived(data.events[0]?.shirtsEnabled ?? false)
+
+let selfFirstName = $state('')
+let selfLastName = $state('')
+let self = $state<PersonDetails>({ ...EMPTY_SELF })
 let status = $state<'paid' | 'pending' | 'waived'>('paid')
 let members = $state<FormMember[]>([])
-let submitted = $state(false)
+let copied = $state(false)
 
 let contactName = $derived(`${selfFirstName.trim()} ${selfLastName.trim()}`.trim())
 let contactAddress = $derived({
@@ -49,59 +61,43 @@ let contactAddress = $derived({
     addressZip: self.addressZip,
 })
 
-let membersJson = $derived(
-    JSON.stringify(
-        members.map((m) => ({
-            name: m.name,
-            birthDate: m.birthDate ?? '',
-            tierId: m.tierId,
-            shirtSize: m.shirtSize || undefined,
-            addressLine1: m.addressLine1,
-            addressLine2: m.addressLine2,
-            addressCity: m.addressCity,
-            addressState: m.addressState,
-            addressZip: m.addressZip,
-            vegetarianMeal: m.vegetarianMeal,
-            attendedReunion2025: m.attendedReunion2025,
-        })),
-    ),
-)
+let membersJson = $derived(JSON.stringify(members))
 
 let subtotal = $derived(
     (self.tierId ? getTierPriceCents(self.tierId, tiers) : 0) +
-        members.reduce((sum, m) => sum + getTierPriceCents(m.tierId, tiers), 0),
+        members.reduce((sum, member) => sum + getTierPriceCents(member.tierId, tiers), 0),
 )
+
+/* Mirrors the public form's gate, so an admin cannot submit a paper entry that the schema
+   would reject server-side. */
 let canSubmit = $derived(
     !!selfFirstName.trim() &&
         !!selfLastName.trim() &&
-        !!contactEmail.trim() &&
+        !!$form.contactEmail.trim() &&
         !!self.tierId &&
-        (!contactPhone.trim() || isValidPhone(contactPhone)),
+        !!self.addressLine1.trim() &&
+        !!self.addressCity.trim() &&
+        !!self.addressState.trim() &&
+        !!self.addressZip.trim() &&
+        isValidZip(self.addressZip) &&
+        !!self.vegetarianMeal &&
+        !!self.attendedReunion2025,
 )
 
-const shirtsEnabled = $derived(data.events[0]?.shirtsEnabled ?? false)
-
-function handleSuccess() {
+function handleReset() {
     selfFirstName = ''
     selfLastName = ''
-    contactEmail = ''
-    contactPhone = ''
-    self = {
-        tierId: '',
-        birthDate: undefined,
-        shirtSize: '',
-        addressLine1: '',
-        addressLine2: '',
-        addressCity: '',
-        addressState: '',
-        addressZip: '',
-        vegetarianMeal: '',
-        attendedReunion2025: '',
-    }
+    $form.contactEmail = ''
+    $form.contactPhone = ''
+    self = { ...EMPTY_SELF }
     status = 'paid'
     members = []
-    submitted = true
-    setTimeout(() => (submitted = false), 3000)
+    copied = false
+}
+
+async function handleCopy(url: string) {
+    await navigator.clipboard.writeText(url)
+    copied = true
 }
 </script>
 
@@ -114,7 +110,8 @@ function handleSuccess() {
         <a href="/admin" class="text-sm text-muted-foreground hover:text-foreground">← Admin</a>
         <h1>Add Paper Registration</h1>
         <p class="text-muted-foreground text-sm">
-            Manually register someone who submitted on paper.
+            Manually register someone who submitted on paper. The same details are required as the
+            public form, so catering and shirt counts stay complete.
         </p>
     </div>
 
@@ -126,33 +123,58 @@ function handleSuccess() {
             </CardContent>
         </Card>
     {:else}
-        {#if submitted || form?.success}
+        {#if actionData?.success}
             <div
-                class="mb-4 rounded-md border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800 dark:border-green-800 dark:bg-green-950 dark:text-green-200">
-                Registration added successfully.
+                class="mb-4 flex flex-col gap-3 rounded-md border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-900 dark:border-green-800 dark:bg-green-950 dark:text-green-100">
+                <p class="font-medium">Registration added.</p>
+
+                {#if actionData.emailSent}
+                    <p>A confirmation email was sent with their management link.</p>
+                {:else}
+                    <p class="flex items-start gap-2">
+                        <TriangleAlert class="mt-0.5 h-4 w-4 shrink-0" />
+                        <span>
+                            The registration was saved, but the confirmation email did not send{actionData.emailError
+                                ? ` (${actionData.emailError})`
+                                : ''}. Pass the link below on directly.
+                        </span>
+                    </p>
+                {/if}
+
+                <!-- Shown even on success: the plaintext token exists only in this response. -->
+                <div class="flex flex-col gap-2">
+                    <span class="text-xs font-semibold uppercase tracking-wide"
+                        >Management link</span>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <code
+                            class="min-w-0 flex-1 break-all rounded bg-background/60 px-2 py-1.5 text-xs">
+                            {actionData.manageUrl}
+                        </code>
+                        <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onclick={() => handleCopy(actionData.manageUrl)}>
+                            {#if copied}
+                                <Check class="h-4 w-4" /> Copied
+                            {:else}
+                                <Copy class="h-4 w-4" /> Copy
+                            {/if}
+                        </Button>
+                    </div>
+                </div>
+
+                <div>
+                    <Button type="button" variant="outline" size="sm" onclick={handleReset}>
+                        Add another
+                    </Button>
+                </div>
             </div>
         {/if}
 
-        {#if form?.error}
-            <div
-                class="mb-4 rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-                {form.error}
-            </div>
-        {/if}
-
-        <form
-            method="POST"
-            use:enhance={() => {
-                return ({ result, update }) => {
-                    if (result.type === 'success') {
-                        handleSuccess()
-                    }
-                    update({ reset: false })
-                }
-            }}>
+        <form method="POST" use:enhance>
             <input type="hidden" name="eventId" value={targetEventId} />
             <input type="hidden" name="contactName" value={contactName} />
-            <input type="hidden" name="contactPhone" value={contactPhone} />
             <input type="hidden" name="selfTierId" value={self.tierId} />
             <input type="hidden" name="selfBirthDate" value={self.birthDate ?? ''} />
             <input type="hidden" name="selfShirtSize" value={self.shirtSize ?? ''} />
@@ -169,20 +191,25 @@ function handleSuccess() {
                 <!-- Left: party builder -->
                 <div class="flex flex-col gap-4">
                     <YourInformationCard
-                        bind:email={contactEmail}
-                        bind:phone={contactPhone}
+                        bind:email={$form.contactEmail}
+                        bind:phone={$form.contactPhone}
                         bind:firstName={selfFirstName}
                         bind:lastName={selfLastName}
                         bind:info={self}
                         {tiers}
-                        {shirtsEnabled} />
+                        {shirtsEnabled}
+                        errors={{
+                            email: $errors.contactEmail?.[0],
+                            name: $errors.contactName?.[0],
+                        }} />
 
                     <PartyMembersBuilder
                         bind:members
                         {tiers}
                         {contactName}
                         {contactAddress}
-                        {shirtsEnabled} />
+                        {shirtsEnabled}
+                        error={$errors.members?.[0]} />
                 </div>
 
                 <!-- Right: order summary (sticky on desktop) -->
@@ -195,10 +222,13 @@ function handleSuccess() {
                         {subtotal}
                         {canSubmit}
                         submitLabel="Add Registration"
-                        placeholderText="Enter the contact's name, email, and birthday to get started."
+                        placeholderText="Enter the contact's name, email, address, and answers to get started."
                         contactSuffix="contact"
                         showStatus
                         bind:status />
+                    {#if $errors.status?.[0]}
+                        <p class="mt-2 text-sm text-destructive">{$errors.status[0]}</p>
+                    {/if}
                 </div>
             </div>
         </form>
