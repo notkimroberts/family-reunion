@@ -2,7 +2,7 @@
 import { CalendarDays, MapPin, Sparkles } from '@lucide/svelte'
 import { superForm } from 'sveltekit-superforms'
 import { zod4Client as zodClient } from 'sveltekit-superforms/adapters'
-import { APP_NAME } from '$lib/general/constants'
+import { APP_NAME, CONTACT_EMAIL, CONTACT_PHONE } from '$lib/general/constants'
 import {
     formatDateRange,
     formatPrice,
@@ -93,6 +93,13 @@ let dateRange = $derived(
           )
         : '',
 )
+
+/* Same check the server applies in createPendingRegistration. Without it the form renders,
+   accepts a full party, and only fails with a 403 at submit — after the registrant has done
+   all the work. Mirrors RegistrationManager's isLocked. */
+let isLocked = $derived(
+    !!data.event?.registrationLockDate && new Date(data.event.registrationLockDate) < new Date(),
+)
 </script>
 
 <svelte:head>
@@ -144,64 +151,81 @@ let dateRange = $derived(
         </div>
     </section>
 
-    <form method="POST" action="?/register" use:enhance class="col-span-12">
-        <input type="hidden" name="eventId" bind:value={$form.eventId} />
-        <input type="hidden" name="contactName" value={contactName} />
-        <input type="hidden" name="selfTierId" value={self.tierId} />
-        <input type="hidden" name="selfBirthDate" value={self.birthDate ?? ''} />
-        <input type="hidden" name="selfShirtSize" value={self.shirtSize ?? ''} />
-        <input type="hidden" name="selfAddressLine1" value={self.addressLine1} />
-        <input type="hidden" name="selfAddressLine2" value={self.addressLine2 ?? ''} />
-        <input type="hidden" name="selfAddressCity" value={self.addressCity} />
-        <input type="hidden" name="selfAddressState" value={self.addressState} />
-        <input type="hidden" name="selfAddressZip" value={self.addressZip} />
-        <input type="hidden" name="selfVegetarianMeal" value={self.vegetarianMeal} />
-        <input type="hidden" name="selfAttendedReunion2025" value={self.attendedReunion2025} />
-        <input type="hidden" name="members" value={membersJson} />
-
-        <div class="grid grid-cols-1 lg:grid-cols-[1fr_minmax(0,22rem)] gap-6">
-            <!-- Left: party builder -->
-            <div class="flex flex-col gap-4">
-                <YourInformationCard
-                    bind:email={$form.contactEmail}
-                    bind:phone={$form.contactPhone}
-                    bind:firstName={selfFirstName}
-                    bind:lastName={selfLastName}
-                    bind:info={self}
-                    {tiers}
-                    shirtsEnabled={data.event.shirtsEnabled}
-                    errors={{
-                        email: $errors.contactEmail?.[0],
-                        name: $errors.contactName?.[0],
-                    }} />
-
-                <PartyMembersBuilder
-                    bind:members
-                    {tiers}
-                    {contactName}
-                    {contactAddress}
-                    shirtsEnabled={data.event.shirtsEnabled}
-                    error={$errors.members?.[0]} />
-            </div>
-
-            <!-- Right: order summary (sticky on desktop) -->
-            <div class="self-start lg:sticky lg:top-6">
-                <OrderSummaryCard
-                    {contactName}
-                    selfTierId={self.tierId}
-                    {members}
-                    {tiers}
-                    {subtotal}
-                    {processingFee}
-                    {canSubmit}
-                    submitLabel={`Pay $${formatPrice(total)} & Register`}
-                    placeholderText="Enter your name, email, and birthday above to get started."
-                    submitFootnote="You'll be redirected to a secure checkout." />
-                <p class="text-xs text-muted-foreground text-center mt-3">
-                    Already registered? <a class="underline" href="/register/recover"
-                        >Resend management link</a>
+    {#if isLocked}
+        <section class="col-span-12">
+            <div class="rounded-xl border bg-card px-6 py-12 text-center">
+                <p class="text-lg font-semibold">Registration for this reunion has closed.</p>
+                <p class="text-muted-foreground text-sm mt-1">
+                    If you have already registered, you can still
+                    <a class="underline" href="/register/recover">manage your registration</a>.
+                </p>
+                <p class="text-muted-foreground text-sm mt-3">
+                    Need to register late? Contact
+                    <a class="underline" href="mailto:{CONTACT_EMAIL}">{CONTACT_EMAIL}</a>
+                    or call <a class="underline" href="sms:{CONTACT_PHONE}">{CONTACT_PHONE}</a>.
                 </p>
             </div>
-        </div>
-    </form>
+        </section>
+    {:else}
+        <form method="POST" action="?/register" use:enhance class="col-span-12">
+            <input type="hidden" name="eventId" bind:value={$form.eventId} />
+            <input type="hidden" name="contactName" value={contactName} />
+            <input type="hidden" name="selfTierId" value={self.tierId} />
+            <input type="hidden" name="selfBirthDate" value={self.birthDate ?? ''} />
+            <input type="hidden" name="selfShirtSize" value={self.shirtSize ?? ''} />
+            <input type="hidden" name="selfAddressLine1" value={self.addressLine1} />
+            <input type="hidden" name="selfAddressLine2" value={self.addressLine2 ?? ''} />
+            <input type="hidden" name="selfAddressCity" value={self.addressCity} />
+            <input type="hidden" name="selfAddressState" value={self.addressState} />
+            <input type="hidden" name="selfAddressZip" value={self.addressZip} />
+            <input type="hidden" name="selfVegetarianMeal" value={self.vegetarianMeal} />
+            <input type="hidden" name="selfAttendedReunion2025" value={self.attendedReunion2025} />
+            <input type="hidden" name="members" value={membersJson} />
+
+            <div class="grid grid-cols-1 lg:grid-cols-[1fr_minmax(0,22rem)] gap-6">
+                <!-- Left: party builder -->
+                <div class="flex flex-col gap-4">
+                    <YourInformationCard
+                        bind:email={$form.contactEmail}
+                        bind:phone={$form.contactPhone}
+                        bind:firstName={selfFirstName}
+                        bind:lastName={selfLastName}
+                        bind:info={self}
+                        {tiers}
+                        shirtsEnabled={data.event.shirtsEnabled}
+                        errors={{
+                            email: $errors.contactEmail?.[0],
+                            name: $errors.contactName?.[0],
+                        }} />
+
+                    <PartyMembersBuilder
+                        bind:members
+                        {tiers}
+                        {contactName}
+                        {contactAddress}
+                        shirtsEnabled={data.event.shirtsEnabled}
+                        error={$errors.members?.[0]} />
+                </div>
+
+                <!-- Right: order summary (sticky on desktop) -->
+                <div class="self-start lg:sticky lg:top-6">
+                    <OrderSummaryCard
+                        {contactName}
+                        selfTierId={self.tierId}
+                        {members}
+                        {tiers}
+                        {subtotal}
+                        {processingFee}
+                        {canSubmit}
+                        submitLabel={`Pay $${formatPrice(total)} & Register`}
+                        placeholderText="Enter your name, email, and birthday above to get started."
+                        submitFootnote="You'll be redirected to a secure checkout." />
+                    <p class="text-xs text-muted-foreground text-center mt-3">
+                        Already registered? <a class="underline" href="/register/recover"
+                            >Resend management link</a>
+                    </p>
+                </div>
+            </div>
+        </form>
+    {/if}
 {/if}

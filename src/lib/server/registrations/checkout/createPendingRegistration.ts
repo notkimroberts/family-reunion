@@ -6,6 +6,8 @@ import { createRegistrationCheckout } from '$lib/server/payments'
 import { resolveTierPricing } from '$lib/server/tiers'
 import { parseBirthDate } from '$lib/utils/age'
 import { grossUpForStripe } from '$lib/utils/stripeFee'
+import { assertRegistrationEditable } from '../assertRegistrationEditable'
+import { getRegistrationLockDate } from '../getRegistrationLockDate'
 import { generateManagementToken } from '../hashManagementToken'
 import type { MemberInput } from './MemberInput'
 import { calculateTotal } from './calculateTotal'
@@ -39,6 +41,12 @@ export async function createPendingRegistration(params: {
     successUrl: (token: string) => string
     cancelUrl: (token: string) => string
 }): Promise<{ registrationId: string; managementToken: string; checkoutUrl: string }> {
+    /* Freeze new registrations once the lock date passes, not just changes to existing ones.
+       Without this the add/edit/remove/cancel paths are closed while the front door stays
+       open, so a late registrant can still pay for a place nobody is catering for.
+       Admin paper entry deliberately skips this check — see admin/registrations. */
+    assertRegistrationEditable(await getRegistrationLockDate(params.eventId))
+
     const allTierIds = [params.selfTierId, ...params.additionalMembers.map((m) => m.tierId)]
     const pricingByTierId = await resolveTierPricing(params.eventId, allTierIds)
     const selfPricing = pricingByTierId[params.selfTierId]

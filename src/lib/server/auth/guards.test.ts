@@ -1,6 +1,6 @@
 import { isRedirect } from '@sveltejs/kit'
 import { describe, expect, it } from 'vitest'
-import { requireAdmin, requireAuth } from './guards'
+import { isPublicPath, requireAdmin, requireAuth } from './guards'
 
 type MockEvent = { locals: { user?: unknown } }
 
@@ -53,4 +53,36 @@ describe('requireAdmin', () => {
         expect(isRedirect(caught)).toBe(true)
         expect((caught as { location: string }).location).toBe('/login')
     })
+})
+
+describe('isPublicPath', () => {
+    /* Registration funnel — must stay reachable with no session. */
+    it.each(['/', '/register', '/register/manage', '/register/recover'])(
+        'allows %s',
+        (pathname) => {
+            expect(isPublicPath(pathname)).toBe(true)
+        },
+    )
+
+    /* Locked for launch: admin-only. */
+    it.each([
+        '/family-tree',
+        '/family-tree/abc-123',
+        '/gallery',
+        '/shop',
+        '/program',
+        '/changelog',
+        '/admin',
+        '/admin/registrations',
+    ])('blocks %s', (pathname) => {
+        expect(isPublicPath(pathname)).toBe(false)
+    })
+
+    /* A public prefix must not leak to a path that merely starts with the same letters. */
+    it.each(['/registerfoo', '/registration', '/register-now'])(
+        'does not treat %s as public',
+        (pathname) => {
+            expect(isPublicPath(pathname)).toBe(false)
+        },
+    )
 })

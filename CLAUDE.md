@@ -112,7 +112,11 @@ The token is the only credential — no per-request auth check. Email enumeratio
 Route groups:
 
 - `(auth)` — `/login` only, no nav, full-screen card layout. Admin sign-in only.
-- `(app)` — public paths include `/`, `/family-tree`, `/gallery`, `/program`, `/shop`, `/register`. Everything else (e.g. `/admin/*`) requires sign-in. Contact is a section on `/` (`#contact`), not its own route.
+- `(app)` — public paths are **only** `/` and `/register` (which covers `/register/manage` and `/register/recover`). Everything else in the group — `/family-tree`, `/gallery`, `/shop`, `/program`, `/changelog`, `/admin/*` — redirects to `/login`. The allowlist is `isPublicPath()` in `$lib/server/auth/guards`; widen it there to reopen a page (the gallery, most likely, after the reunion). Contact is a section on `/` (`#contact`), not its own route.
+
+> **The route lock covers page views only.** A SvelteKit layout `load` runs _after_ a form action, so `(app)/+layout.server.ts` cannot protect actions — those carry their own `requireAuth`/`requireAdmin` guards. Routes outside the `(app)` group are not covered at all, and must stay reachable: `/api/webhooks/stripe` (Stripe sends no session — blocking it breaks every payment), `/api/registration/status`, `/api/auth/*`, and `/api/health`.
+>
+> **Dev cannot demonstrate the lock.** `hooks.server.ts` substitutes a hardcoded admin whenever there is no session, so locally you are always signed in as an admin. Verify against a deployed environment in a private window.
 
 ### Remote Functions
 
@@ -145,6 +149,15 @@ Route groups:
 - `party_members` are denormalized: tier label and price are snapshotted onto the row at registration time so subsequent tier rename/reprice don't change historical refund amounts
 - Stripe session metadata is typed via `encodeRegistrationMetadata` / `encodeAddMemberMetadata` / `decodeSessionMetadata` in `$lib/server/payments/stripeMetadata` — never access `session.metadata` keys directly. `decodeSessionMetadata` fails closed (returns null) when required fields are missing
 - Refund flows pass a stable Stripe idempotency key (`remove-member-<id>`, `cancel-registration-<id>-<intent>`) so retries cannot double-refund
+
+### Email
+
+- **Resend** for delivery, via `send()` in `$lib/server/email/send/_resend.ts`.
+- **The Resend SDK never throws.** It resolves with `{ data, error }`. `send()` inspects `error` and throws; never wrap the SDK call in try/catch expecting it to reject. Any caller that commits state only on a successful send depends on this — `/register/recover` rotates the management token, and since the DB holds only the hash, rotating on a failed send locks the registrant out permanently.
+- A missing `RESEND_API_KEY` **throws in production** and only skips silently in dev. A silently skipped confirmation email is worse than a loud failure.
+- Templates return `{ subject, text, html }` and both bodies are always sent: html-only is a deliverability penalty. HTML is table-based with fully inline styles (Outlook has no flexbox; Gmail strips `<head><style>`), and every cell sets both `background-color` and `color` so dark-mode auto-inversion cannot make text unreadable. Escape anything registrant-supplied with `escapeHtml`.
+- Confirmation content is assembled in `getConfirmationEmailData` so the Stripe webhook and admin paper entry cannot drift. Copy is keyed off registration status (`paid` / `waived` / `pending`).
+- Pass a Resend `idempotencyKey` (`confirm/<registrationId>`) wherever a webhook could redeliver.
 
 ### Family Tree
 
@@ -199,7 +212,8 @@ Route groups:
 - Start: `node build/index.js`
 - DB migrations are idempotent — Drizzle tracks applied migrations and skips them on subsequent deploys
 - Required Railway environment variables: `SENTRY_AUTH_TOKEN`, `SENTRY_ENVIRONMENT=production`
-- **Watch paths**: `family-reunion-app`'s Railway build config sets `watchPatterns` to `["src/**", "static/**", "drizzle/**", "package.json", "bun.lock", "svelte.config.js", "vite.config.ts", "tsconfig.json"]`, so pushes to `main` that only touch docs/tooling (`CLAUDE.md`, `.claude/**`, `.agents/**`, `skills-lock.json`, etc.) don't trigger a deploy. If you add a new source directory, config file, or build input outside these paths, update the pattern list (`railway environment edit --environment production --service-config family-reunion-app build.watchPatterns '[...]'`) or it'll silently stop deploying real changes.
+- **Watch paths**: `family-reunion-app`'s Railway build config sets `watchPatterns` to `["src/**", "static/**", "drizzle/**", "scripts/**", "package.json", "bun.lock", "svelte.config.js", "vite.config.ts", "tsconfig.json", "drizzle.config.ts"]`, so pushes to `main` that only touch docs/tooling (`CLAUDE.md`, `.claude/**`, `.agents/**`, `skills-lock.json`, etc.) don't trigger a deploy. `scripts/**` is in the list because the predeploy command lives there — without it, a fix to `scripts/migrate.ts` would not deploy. If you add a new source directory, config file, or build input outside these paths, update the pattern list (`railway environment edit --environment production --service-config family-reunion-app build.watchPatterns '[...]'`) or it'll silently stop deploying real changes.
+- **Health check**: Railway's `healthcheckPath` is `/api/health`, which runs a `select 1` rather than only confirming the process listens — an instance that boots with an unreachable database would otherwise replace a working deployment.
 
 #### Resetting production
 

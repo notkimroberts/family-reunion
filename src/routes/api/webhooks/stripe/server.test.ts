@@ -48,6 +48,10 @@ const { mockSendEmail } = vi.hoisted(() => ({
     mockSendEmail: vi.fn().mockResolvedValue(undefined),
 }))
 
+const { mockDbgStripe } = vi.hoisted(() => ({
+    mockDbgStripe: vi.fn(),
+}))
+
 vi.mock('$env/dynamic/private', () => ({
     env: { STRIPE_SECRET_KEY: 'sk_test_mock', STRIPE_WEBHOOK_SECRET: 'whsec_test_mock' },
 }))
@@ -67,7 +71,7 @@ vi.mock('$lib/server/db/schema', () => ({
     reunionEvents: {},
     partyMembers: {},
 }))
-vi.mock('$lib/server/debug', () => ({ dbg: { stripe: vi.fn() } }))
+vi.mock('$lib/server/debug', () => ({ dbg: { stripe: mockDbgStripe } }))
 vi.mock('$lib/server/email', () => ({ sendRegistrationConfirmation: mockSendEmail }))
 vi.mock('$lib/utils/age', () => ({ getAge: vi.fn().mockReturnValue(30), parseBirthDate: vi.fn() }))
 
@@ -132,6 +136,12 @@ function queueRegistrationHappyPath(
 describe('POST /api/webhooks/stripe', () => {
     beforeEach(() => {
         vi.clearAllMocks()
+        /* mockReset (not just clearAllMocks) is required: clearAllMocks resets recorded calls
+           but leaves queued mockResolvedValueOnce values in place, and one leaked value
+           desynchronises the terminal queue for every test that follows. */
+        mockTerminal.mockReset()
+        mockReturning.mockReset()
+        mockSendEmail.mockReset()
         mockSendEmail.mockResolvedValue(undefined)
         mockTerminal.mockResolvedValue([])
         mockReturning.mockResolvedValue([])
@@ -189,10 +199,74 @@ describe('POST /api/webhooks/stripe', () => {
             data: { object: validSession },
         })
         mockReturning.mockResolvedValueOnce([])
+        mockTerminal.mockResolvedValueOnce([]) // status lookup finds no row
 
         const res = await POST(makeRequest('{}', 'sig'))
         expect(res.status).toBe(200)
         expect(mockSendEmail).not.toHaveBeenCalled()
+        expect(mockDbgStripe).toHaveBeenCalledWith(
+            expect.stringContaining('ORPHAN PAYMENT'),
+            'reg-123',
+        )
+    })
+
+    /* Stripe redelivers checkout.session.completed on transient failures. The conditional
+       UPDATE (pending → paid) matches nothing the second time, so no second email goes out.
+       Asserted via the log line as well as the absence of an email, because "no email" alone
+       is also true of the orphan-payment path — the two must stay distinguishable. */
+    it('sends no second email when Stripe redelivers an already-paid session', async () => {
+        mockConstructEvent.mockReturnValue({
+            type: 'checkout.session.completed',
+            data: { object: validSession },
+        })
+        mockReturning.mockResolvedValueOnce([]) // conditional update matched no row
+        mockTerminal.mockResolvedValueOnce([{ status: 'paid' }]) // already fulfilled
+
+        const res = await POST(makeRequest('{}', 'sig'))
+        expect(res.status).toBe(200)
+        expect(mockSendEmail).not.toHaveBeenCalled()
+        expect(mockDbgStripe).toHaveBeenCalledWith(
+            expect.stringContaining('already fulfilled'),
+            'reg-123',
+            'paid',
+        )
+        expect(mockDbgStripe).not.toHaveBeenCalledWith(
+            expect.stringContaining('ORPHAN PAYMENT'),
+            expect.anything(),
+        )
+    })
+
+    it('does not flip a waived registration to paid on a stray webhook', async () => {
+        mockConstructEvent.mockReturnValue({
+            type: 'checkout.session.completed',
+            data: { object: validSession },
+        })
+        mockReturning.mockResolvedValueOnce([])
+        mockTerminal.mockResolvedValueOnce([{ status: 'waived' }])
+
+        const res = await POST(makeRequest('{}', 'sig'))
+        expect(res.status).toBe(200)
+        expect(mockSendEmail).not.toHaveBeenCalled()
+        expect(mockDbgStripe).toHaveBeenCalledWith(
+            expect.stringContaining('already fulfilled'),
+            'reg-123',
+            'waived',
+        )
+    })
+
+    it('passes a per-registration idempotency key to the confirmation email', async () => {
+        mockConstructEvent.mockReturnValue({
+            type: 'checkout.session.completed',
+            data: { object: validSession },
+        })
+        queueRegistrationHappyPath()
+
+        await POST(makeRequest('{}', 'sig'))
+        expect(mockSendEmail).toHaveBeenCalledWith(
+            'alice@example.com',
+            expect.any(Object),
+            'confirm/reg-123',
+        )
     })
 
     it('sends confirmation email to registration.contactEmail with the manage URL and total', async () => {
@@ -208,8 +282,10 @@ describe('POST /api/webhooks/stripe', () => {
             expect.objectContaining({
                 eventTitle: 'Family Reunion 2026',
                 manageUrl: expect.stringContaining('token=plaintext-tok'),
-                totalAmount: '$50.00',
+                status: 'paid',
+                totalCents: 5000,
             }),
+            'confirm/reg-123',
         )
     })
 
