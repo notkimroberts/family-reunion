@@ -11,7 +11,7 @@ import { parseBirthDate } from '$lib/utils/age'
    folder, so going through it would be a circular import. */
 import { getConfirmationEmailData } from '../queries'
 
-/* Webhook handler: branches on metadata.type to either insert an add_member row or mark the registration 'paid'; confirmation email is sent outside the transaction so a send failure never rolls back payment. Stripe redelivers checkout.session.completed on transient failures, so both branches are idempotent — add_member dedupes on paymentIntent, and the registration branch transitions pending → paid conditionally. The confirmation email additionally carries a Resend idempotency key. */
+/* Webhook handler: branches on metadata.type to either insert an add_member row or mark the registration 'paid'; confirmation email is sent outside the transaction so a send failure never rolls back payment. Stripe redelivers checkout.session.completed on transient failures, so both branches are idempotent at the database level — add_member relies on a UNIQUE index over the checkout session id, and the registration branch on a conditional pending → paid transition. Neither uses a read-then-insert, which a concurrent redelivery could pass. The confirmation email additionally carries a Resend idempotency key. */
 export async function fulfillCheckout(
     session: Stripe.Checkout.Session,
     origin: string,
@@ -53,56 +53,65 @@ export async function fulfillCheckout(
             return
         }
 
-        /* Idempotency: Stripe retries deliver the same paymentIntent. Skip insert if already present. */
-        if (paymentIntentId) {
-            const [existing] = await db
-                .select({ id: partyMembers.id })
-                .from(partyMembers)
-                .where(
-                    and(
-                        eq(partyMembers.registrationId, registrationId),
-                        eq(partyMembers.stripePaymentIntentId, paymentIntentId),
-                        eq(partyMembers.name, memberName),
-                    ),
-                )
-                .limit(1)
-            if (existing) {
-                dbg.stripe('add_member redelivery; party_member already exists id=%s', existing.id)
-                return
-            }
-        }
+        /* Atomic idempotency. The UNIQUE index on stripe_checkout_session_id lets the database
+           reject a redelivered insert, replacing a read-then-insert that two concurrent
+           deliveries could both pass — and that was skipped entirely when payment_intent was
+           null, leaving no guard at all on that path.
 
-        await db.transaction(async (tx) => {
-            const parsed = memberBirthDate ? parseBirthDate(memberBirthDate) : null
-            await tx.insert(partyMembers).values({
-                registrationId,
-                name: memberName,
-                birthYear: parsed?.birthYear ?? null,
-                birthMonth: parsed?.birthMonth ?? null,
-                birthDay: parsed?.birthDay ?? null,
-                shirtSize: memberShirtSize || null,
-                addressLine1: metadata.memberAddressLine1 || null,
-                addressLine2: metadata.memberAddressLine2 || null,
-                addressCity: metadata.memberAddressCity || null,
-                addressState: metadata.memberAddressState || null,
-                addressZip: metadata.memberAddressZip || null,
-                vegetarianMeal:
-                    metadata.memberVegetarianMeal === ''
-                        ? null
-                        : metadata.memberVegetarianMeal === 'true',
-                attendedReunion2025:
-                    metadata.memberAttendedReunion2025 === ''
-                        ? null
-                        : metadata.memberAttendedReunion2025 === 'true',
-                tierLabel: memberTierLabel,
-                priceCents: memberPriceCents,
-                stripePaymentIntentId: paymentIntentId,
-            })
-            await tx
-                .update(registrations)
-                .set({ updatedAt: new Date() })
-                .where(eq(registrations.id, registrationId))
+           Transition note: add_member rows created before this column existed have it NULL, so
+           a redelivery of one of those is not deduped by this key. Stripe only redelivers within
+           a few days and no live add_member charges predate this change. */
+        const parsed = memberBirthDate ? parseBirthDate(memberBirthDate) : null
+        const inserted = await db.transaction(async (tx) => {
+            const rows = await tx
+                .insert(partyMembers)
+                .values({
+                    registrationId,
+                    name: memberName,
+                    birthYear: parsed?.birthYear ?? null,
+                    birthMonth: parsed?.birthMonth ?? null,
+                    birthDay: parsed?.birthDay ?? null,
+                    shirtSize: memberShirtSize || null,
+                    addressLine1: metadata.memberAddressLine1 || null,
+                    addressLine2: metadata.memberAddressLine2 || null,
+                    addressCity: metadata.memberAddressCity || null,
+                    addressState: metadata.memberAddressState || null,
+                    addressZip: metadata.memberAddressZip || null,
+                    vegetarianMeal:
+                        metadata.memberVegetarianMeal === ''
+                            ? null
+                            : metadata.memberVegetarianMeal === 'true',
+                    attendedReunion2025:
+                        metadata.memberAttendedReunion2025 === ''
+                            ? null
+                            : metadata.memberAttendedReunion2025 === 'true',
+                    tierLabel: memberTierLabel,
+                    priceCents: memberPriceCents,
+                    stripePaymentIntentId: paymentIntentId,
+                    stripeCheckoutSessionId: session.id,
+                })
+                .onConflictDoNothing({ target: partyMembers.stripeCheckoutSessionId })
+                .returning({ id: partyMembers.id })
+
+            /* Only touch the parent when a row was actually added — on a redelivery nothing
+               about the registration has changed. */
+            if (rows.length > 0) {
+                await tx
+                    .update(registrations)
+                    .set({ updatedAt: new Date() })
+                    .where(eq(registrations.id, registrationId))
+            }
+            return rows
         })
+
+        if (inserted.length === 0) {
+            dbg.stripe(
+                'add_member redelivery for session %s; party_member already exists, ignoring',
+                session.id,
+            )
+        } else {
+            dbg.stripe('add_member inserted party_member id=%s', inserted[0].id)
+        }
         return
     }
 

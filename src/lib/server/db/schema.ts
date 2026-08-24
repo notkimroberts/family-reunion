@@ -217,11 +217,25 @@ export const partyMembers = pgTable(
         tierLabel: text('tier_label').notNull(),
         priceCents: integer('price_cents').notNull(),
         stripePaymentIntentId: text('stripe_payment_intent_id'),
+        /* Idempotency key for add_member inserts. One Stripe Checkout session per added
+           member, stable across webhook redeliveries, so a UNIQUE index on it lets the
+           database reject a duplicate insert atomically instead of relying on a
+           read-then-insert that two concurrent deliveries can both pass.
+
+           NULL for every member created by the registration branch; Postgres treats NULLs as
+           distinct, so those rows never collide with each other.
+
+           Deliberately NOT keyed on (registration_id, stripe_payment_intent_id, name): the
+           registration branch backfills a single payment intent onto every member of a
+           registration, so a party containing two people with the same name (Jr/Sr) would
+           violate that index on the backfill UPDATE and take the webhook down with it. */
+        stripeCheckoutSessionId: text('stripe_checkout_session_id'),
         createdAt: timestamp('created_at').notNull().defaultNow(),
     },
     (t) => [
         index('party_members_registration_id_idx').on(t.registrationId),
         index('party_members_family_member_id_idx').on(t.familyMemberId),
+        uniqueIndex('party_members_stripe_checkout_session_id_key').on(t.stripeCheckoutSessionId),
         check(
             'party_members_birth_date_prefix',
             sql`(${t.birthDay} IS NULL OR ${t.birthMonth} IS NOT NULL) AND (${t.birthMonth} IS NULL OR ${t.birthYear} IS NOT NULL)`,

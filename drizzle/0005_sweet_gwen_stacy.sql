@@ -1,0 +1,2 @@
+ALTER TABLE "party_members" ADD COLUMN "stripe_checkout_session_id" text;--> statement-breakpoint
+CREATE UNIQUE INDEX "party_members_stripe_checkout_session_id_key" ON "party_members" USING btree ("stripe_checkout_session_id");

@@ -5,7 +5,7 @@ const { mockConstructEvent } = vi.hoisted(() => ({
     mockConstructEvent: vi.fn(),
 }))
 
-const { mockTerminal, mockSet, mockReturning, mockDb } = vi.hoisted(() => {
+const { mockTerminal, mockSet, mockReturning, mockValues, mockDb } = vi.hoisted(() => {
     /* Single terminal queue: each `await` on a builder pulls the next mocked value.
        Tests configure with `mockTerminal.mockResolvedValueOnce(...)` in call order. */
     const mockTerminal = vi.fn().mockResolvedValue([])
@@ -22,6 +22,7 @@ const { mockTerminal, mockSet, mockReturning, mockDb } = vi.hoisted(() => {
         returning: mockReturning,
         insert: vi.fn(),
         values: vi.fn(),
+        onConflictDoNothing: vi.fn(),
         transaction: vi.fn(),
     }
     chain.select.mockReturnValue(chain)
@@ -31,6 +32,7 @@ const { mockTerminal, mockSet, mockReturning, mockDb } = vi.hoisted(() => {
     chain.update.mockReturnValue(chain)
     chain.insert.mockReturnValue(chain)
     chain.values.mockReturnValue(chain)
+    chain.onConflictDoNothing.mockReturnValue(chain)
     mockSet.mockReturnValue(chain)
     chain.transaction.mockImplementation(async (cb: (tx: typeof chain) => Promise<void>) =>
         cb(chain),
@@ -41,7 +43,7 @@ const { mockTerminal, mockSet, mockReturning, mockDb } = vi.hoisted(() => {
             onFulfilled as (value: unknown) => unknown,
             onRejected as (reason: unknown) => unknown,
         )
-    return { mockTerminal, mockSet, mockReturning, mockDb: chain }
+    return { mockTerminal, mockSet, mockReturning, mockValues: chain.values, mockDb: chain }
 })
 
 const { mockSendEmail } = vi.hoisted(() => ({
@@ -101,6 +103,20 @@ const validSession = {
         type: 'registration',
         registrationId: 'reg-123',
         managementToken: 'plaintext-tok',
+    },
+}
+
+const addMemberSession = {
+    id: 'cs_test_addmember_1',
+    metadata: {
+        type: 'add_member',
+        registrationId: 'reg-123',
+        memberName: 'Marcus Patterson',
+        memberTierId: 'tier-adult',
+        memberTierLabel: 'Adult',
+        memberPriceCents: '10300',
+        memberVegetarianMeal: 'true',
+        memberAttendedReunion2025: '',
     },
 }
 
@@ -338,5 +354,121 @@ describe('POST /api/webhooks/stripe', () => {
         const res = await POST(makeRequest('{}', 'sig'))
         expect(res.status).toBe(200)
         expect(mockSendEmail).not.toHaveBeenCalled()
+    })
+
+    /* The add_member branch had no coverage at all, despite being a money path. Its dedupe was
+       a read-then-insert with no constraint behind it: two concurrent redeliveries could both
+       pass the SELECT and insert two rows for one charge, and the guard was skipped entirely
+       when payment_intent was null. It is now a UNIQUE index on the checkout session id. */
+    describe('add_member', () => {
+        function queueAddMemberHappyPath(parentStatus = 'paid') {
+            mockTerminal.mockResolvedValueOnce([{ status: parentStatus }]) // parent lookup
+            mockReturning.mockResolvedValueOnce([{ id: 'member-new' }]) // insert returned a row
+        }
+
+        it('inserts the member keyed on the checkout session id', async () => {
+            mockConstructEvent.mockReturnValue({
+                type: 'checkout.session.completed',
+                data: { object: addMemberSession },
+            })
+            queueAddMemberHappyPath()
+
+            const res = await POST(makeRequest('{}', 'sig'))
+
+            expect(res.status).toBe(200)
+            expect(mockValues).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    registrationId: 'reg-123',
+                    name: 'Marcus Patterson',
+                    tierLabel: 'Adult',
+                    priceCents: 10300,
+                    stripeCheckoutSessionId: 'cs_test_addmember_1',
+                    vegetarianMeal: true,
+                }),
+            )
+            expect(mockDb.onConflictDoNothing).toHaveBeenCalled()
+        })
+
+        /* An unanswered question must stay unknown rather than becoming false — catering reads
+           this column and "no answer" is not "no". */
+        it('keeps an unanswered question null rather than false', async () => {
+            mockConstructEvent.mockReturnValue({
+                type: 'checkout.session.completed',
+                data: { object: addMemberSession },
+            })
+            queueAddMemberHappyPath()
+
+            await POST(makeRequest('{}', 'sig'))
+
+            expect(mockValues).toHaveBeenCalledWith(
+                expect.objectContaining({ attendedReunion2025: null }),
+            )
+        })
+
+        /* The conflict path: the insert returns no rows, so the parent must not be touched. */
+        it('does not touch the registration when a redelivery conflicts', async () => {
+            mockConstructEvent.mockReturnValue({
+                type: 'checkout.session.completed',
+                data: { object: addMemberSession },
+            })
+            mockTerminal.mockResolvedValueOnce([{ status: 'paid' }])
+            mockReturning.mockResolvedValueOnce([]) // UNIQUE index rejected the duplicate
+
+            const res = await POST(makeRequest('{}', 'sig'))
+
+            expect(res.status).toBe(200)
+            expect(mockSet).not.toHaveBeenCalled()
+            expect(mockDbgStripe).toHaveBeenCalledWith(
+                expect.stringContaining('already exists'),
+                'cs_test_addmember_1',
+            )
+        })
+
+        it('ignores add_member for a registration that no longer exists', async () => {
+            mockConstructEvent.mockReturnValue({
+                type: 'checkout.session.completed',
+                data: { object: addMemberSession },
+            })
+            mockTerminal.mockResolvedValueOnce([]) // parent gone
+
+            const res = await POST(makeRequest('{}', 'sig'))
+
+            expect(res.status).toBe(200)
+            expect(mockValues).not.toHaveBeenCalled()
+        })
+
+        it.each(['pending', 'refunded'])(
+            'ignores add_member when the parent is %s',
+            async (status) => {
+                mockConstructEvent.mockReturnValue({
+                    type: 'checkout.session.completed',
+                    data: { object: addMemberSession },
+                })
+                mockTerminal.mockResolvedValueOnce([{ status }])
+
+                const res = await POST(makeRequest('{}', 'sig'))
+
+                expect(res.status).toBe(200)
+                expect(mockValues).not.toHaveBeenCalled()
+            },
+        )
+
+        it('still inserts when Stripe sends no payment_intent', async () => {
+            mockConstructEvent.mockReturnValue({
+                type: 'checkout.session.completed',
+                data: { object: { ...addMemberSession, payment_intent: null } },
+            })
+            queueAddMemberHappyPath()
+
+            await POST(makeRequest('{}', 'sig'))
+
+            /* The old guard was inside `if (paymentIntentId)`, so this path had none. */
+            expect(mockValues).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    stripePaymentIntentId: null,
+                    stripeCheckoutSessionId: 'cs_test_addmember_1',
+                }),
+            )
+        })
     })
 })
