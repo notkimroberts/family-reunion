@@ -66,6 +66,9 @@ let contactAddress = $derived({
 
 let members = $state<FormMember[]>([])
 let membersJson = $derived(JSON.stringify(members))
+/* Mirrors YourInformationCard's internal Save state — the registrant must commit their own
+   details before paying. */
+let contactSaved = $state(false)
 
 /* Subtotal in net cents (sum of selected tier prices). */
 let subtotal = $derived(
@@ -79,10 +82,13 @@ let processingFee = $derived(
         members.reduce((sum, m) => sum + stripeFeeCents(getTierPriceCents(m.tierId, tiers)), 0),
 )
 let total = $derived(subtotal + processingFee)
+/* `?? ''` is deliberate: a rejected submit rebinds $form from the server's parse result, which
+   omits any field the POST was missing. Reading .trim() straight off that crashed the page. */
 let canSubmit = $derived(
-    !!selfFirstName.trim() &&
+    contactSaved &&
+        !!selfFirstName.trim() &&
         !!selfLastName.trim() &&
-        !!$form.contactEmail.trim() &&
+        !!($form.contactEmail ?? '').trim() &&
         !!self.tierId &&
         !!self.addressLine1.trim() &&
         !!self.addressCity.trim() &&
@@ -91,7 +97,7 @@ let canSubmit = $derived(
         isValidZip(self.addressZip) &&
         !!self.vegetarianMeal &&
         !!self.attendedReunion2025 &&
-        (!$form.contactPhone.trim() || isValidPhone($form.contactPhone)),
+        (!($form.contactPhone ?? '').trim() || isValidPhone($form.contactPhone ?? '')),
 )
 
 let dateRange = $derived(
@@ -227,7 +233,7 @@ let isLocked = $derived(
                         {processingFee}
                         {canSubmit}
                         submitLabel={`Pay $${formatPrice(total)} & Register`}
-                        placeholderText="Enter your name, email, and birthday above to get started."
+                        placeholderText="Fill in your details above and press Save to continue."
                         submitFootnote="You'll be redirected to a secure checkout." />
                     <p class="text-xs text-muted-foreground text-center mt-3">
                         Already registered? <a class="underline" href="/register/recover"

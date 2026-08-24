@@ -53,6 +53,9 @@ let self = $state<PersonDetails>({ ...EMPTY_SELF })
 let status = $state<'paid' | 'pending' | 'waived'>('paid')
 let members = $state<FormMember[]>([])
 let copied = $state(false)
+/* Mirrors YourInformationCard's internal Save state, so the contact must be committed before
+   the registration can be submitted. */
+let contactSaved = $state(false)
 
 let contactName = $derived(`${selfFirstName.trim()} ${selfLastName.trim()}`.trim())
 let contactAddress = $derived({
@@ -71,11 +74,15 @@ let subtotal = $derived(
 )
 
 /* Mirrors the public form's gate, so an admin cannot submit a paper entry that the schema
-   would reject server-side. */
+   would reject server-side.
+
+   `?? ''` is deliberate: a rejected submit rebinds $form from the server's parse result, which
+   omits any field the POST was missing. Reading .trim() straight off that crashed the page. */
 let canSubmit = $derived(
-    !!selfFirstName.trim() &&
+    contactSaved &&
+        !!selfFirstName.trim() &&
         !!selfLastName.trim() &&
-        !!$form.contactEmail.trim() &&
+        !!($form.contactEmail ?? '').trim() &&
         !!self.tierId &&
         !!self.addressLine1.trim() &&
         !!self.addressCity.trim() &&
@@ -95,6 +102,7 @@ function handleReset() {
     status = 'paid'
     members = []
     copied = false
+    contactSaved = false
 }
 
 async function handleCopy(url: string) {
@@ -198,6 +206,7 @@ async function handleCopy(url: string) {
                         bind:firstName={selfFirstName}
                         bind:lastName={selfLastName}
                         bind:info={self}
+                        bind:saved={contactSaved}
                         {tiers}
                         {shirtsEnabled}
                         errors={{
@@ -224,7 +233,7 @@ async function handleCopy(url: string) {
                         {subtotal}
                         {canSubmit}
                         submitLabel="Add Registration"
-                        placeholderText="Enter the contact's name, email, address, and answers to get started."
+                        placeholderText="Fill in the contact's details above and press Save to continue."
                         contactSuffix="contact"
                         showStatus
                         bind:status />
