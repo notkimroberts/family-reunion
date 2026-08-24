@@ -5,6 +5,14 @@ import { adminRegistrationSchema, registrationSchema } from './schema'
 
 /* Pins the architecture that two production bugs came out of.
 
+   Note on what is achievable here. superforms' $form is a Svelte STORE, not $state, so $form.self
+   is a plain object and binding to its nested properties is untrackable — Svelte warns
+   "binding_property_non_reactive" and edits silently do not stick. superforms offers only
+   store-based fieldProxy for nested paths, which would mean ten props on a card designed to take
+   one. So the editing surface is $state and there is exactly ONE sync into $form, in onSubmit,
+   which superforms runs before client validation. That is one mechanical assignment instead of
+   thirteen hand-maintained hidden inputs.
+
    Previously these forms split their data between $form and unbound hidden inputs. A field missing
    from $form made superforms cancel every submit with no request (it validates the store, not the
    DOM). A field missing from the DOM produced an incomplete POST, which came back as a partial
@@ -62,6 +70,15 @@ describe('$form is the single source of truth', () => {
        exact pattern both bugs came from. */
     it.each(PAGES)('$name has no hidden inputs mirroring state', ({ path }) => {
         expect(readFileSync(path, 'utf8')).not.toMatch(/type="hidden"/)
+    })
+
+    /* The single sync point. Without it $form never receives self/members, client validation
+       cancels every submit, and the JSON post carries blanks — the first bug, exactly. */
+    it.each(PAGES)('$name syncs the editing state into $form on submit', ({ path }) => {
+        const source = readFileSync(path, 'utf8')
+        expect(source).toMatch(/onSubmit: \(\) => \{/)
+        expect(source).toMatch(/\$form\.self = \{ \.\.\.self \}/)
+        expect(source).toMatch(/\$form\.members = members\.map/)
     })
 
     /* The old architecture's defining failure: $form could not satisfy the schema no matter what

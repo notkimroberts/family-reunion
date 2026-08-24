@@ -13,65 +13,69 @@ import PartyMembersBuilder from '../../register/PartyMembersBuilder.svelte'
 import YourInformationCard from '../../register/YourInformationCard.svelte'
 import { isContactComplete } from '../../register/isContactComplete'
 import { adminRegistrationSchema } from '../../register/schema'
+import type { FormMember, PersonDetails } from '../../register/types'
 
 let { data, form: actionData } = $props()
 
 const adminCtx = getContext<AdminContext>('admin')
 
-/* $form is the single source of truth — see the note on the public register page. Because every
-   field now lives in the store, `validators` is meaningful again and dataType 'json' posts the
-   store verbatim, so no hidden inputs mirror state into the DOM. */
+/* superforms' $form is a STORE, not $state, so $form.self is a plain object and binding to its
+   nested properties is untrackable ("binding_property_non_reactive"). See the fuller note on the
+   public register page: $state is the editing surface, and exactly ONE sync into $form happens in
+   onSubmit — which superforms runs before client validation, so validators still see fresh data,
+   and dataType 'json' means nothing is mirrored into the DOM. */
 const { form, errors, enhance } = superForm(data.form, {
     validators: zodClient(adminRegistrationSchema),
     dataType: 'json',
-    /* handleReset below clears the store explicitly, so that superforms does not also reset it
-       out from under the success banner (which reads the returned manage URL). */
+    onSubmit: () => {
+        $form.eventId = targetEventId
+        $form.self = { ...self }
+        $form.members = members.map((member) => ({ ...member }))
+    },
+    /* handleReset clears state explicitly, so superforms must not also reset $form out from under
+       the success banner, which reads the returned manage URL. */
     resetForm: false,
 })
+
+let targetEventId = $derived(
+    adminCtx.selectedEventId !== 'all' ? adminCtx.selectedEventId : (data.events[0]?.id ?? ''),
+)
 
 const tiers = $derived(data.tiers)
 const shirtsEnabled = $derived(data.events[0]?.shirtsEnabled ?? false)
 
+let self = $state<PersonDetails>({ ...EMPTY_PERSON_DETAILS })
+let members = $state<FormMember[]>([])
 let copied = $state(false)
 /* Mirrors YourInformationCard's internal Save state, so the contact must be committed before the
    registration can be submitted. UI state, so it stays out of $form. */
 let contactSaved = $state(false)
 
-/* The admin shell's event picker drives which event a paper entry lands on. Writing it into the
-   store keeps $form authoritative rather than re-deriving it at submit time. */
-$effect(() => {
-    const selected =
-        adminCtx.selectedEventId !== 'all' ? adminCtx.selectedEventId : (data.events[0]?.id ?? '')
-    if (selected && $form.eventId !== selected) {
-        $form.eventId = selected
-    }
-})
-
 let contactName = $derived(
     `${$form.contactFirstName.trim()} ${$form.contactLastName.trim()}`.trim(),
 )
 let contactAddress = $derived({
-    addressLine1: $form.self.addressLine1,
-    addressLine2: $form.self.addressLine2,
-    addressCity: $form.self.addressCity,
-    addressState: $form.self.addressState,
-    addressZip: $form.self.addressZip,
+    addressLine1: self.addressLine1,
+    addressLine2: self.addressLine2,
+    addressCity: self.addressCity,
+    addressState: self.addressState,
+    addressZip: self.addressZip,
 })
 
 let subtotal = $derived(
-    ($form.self.tierId ? getTierPriceCents($form.self.tierId, tiers) : 0) +
-        $form.members.reduce((sum, member) => sum + getTierPriceCents(member.tierId, tiers), 0),
+    (self.tierId ? getTierPriceCents(self.tierId, tiers) : 0) +
+        members.reduce((sum, member) => sum + getTierPriceCents(member.tierId, tiers), 0),
 )
 
-/* Mirrors the public form's gate, so an admin cannot submit a paper entry the schema would
-   reject server-side. */
+/* Mirrors the public form's gate, so an admin cannot submit a paper entry the schema would reject
+   server-side. */
 let canSubmit = $derived(
     contactSaved &&
         isContactComplete({
             firstName: $form.contactFirstName,
             lastName: $form.contactLastName,
             email: $form.contactEmail,
-            details: $form.self,
+            details: self,
         }),
 )
 
@@ -80,9 +84,9 @@ function handleReset() {
     $form.contactLastName = ''
     $form.contactEmail = ''
     $form.contactPhone = ''
-    $form.self = { ...EMPTY_PERSON_DETAILS }
-    $form.members = []
     $form.status = 'paid'
+    self = { ...EMPTY_PERSON_DETAILS }
+    members = []
     contactSaved = false
     copied = false
 }
@@ -173,7 +177,7 @@ async function handleCopy(url: string) {
                         bind:phone={$form.contactPhone}
                         bind:firstName={$form.contactFirstName}
                         bind:lastName={$form.contactLastName}
-                        bind:info={$form.self}
+                        bind:info={self}
                         bind:saved={contactSaved}
                         {tiers}
                         {shirtsEnabled}
@@ -183,7 +187,7 @@ async function handleCopy(url: string) {
                         }} />
 
                     <PartyMembersBuilder
-                        bind:members={$form.members}
+                        bind:members
                         {tiers}
                         {contactName}
                         {contactAddress}
@@ -195,8 +199,8 @@ async function handleCopy(url: string) {
                 <div class="self-start lg:sticky lg:top-6">
                     <OrderSummaryCard
                         {contactName}
-                        selfTierId={$form.self.tierId}
-                        members={$form.members}
+                        selfTierId={self.tierId}
+                        {members}
                         {tiers}
                         {subtotal}
                         {canSubmit}

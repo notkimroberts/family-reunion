@@ -5,30 +5,41 @@ import { zod4Client as zodClient } from 'sveltekit-superforms/adapters'
 import { APP_NAME, CONTACT_EMAIL, CONTACT_PHONE } from '$lib/general/constants'
 import { formatDateRange, formatPrice, getTierPriceCents, isValidPhone } from '$lib/utils'
 import { stripeFeeCents } from '$lib/utils/stripeFee'
+import { EMPTY_PERSON_DETAILS } from './EMPTY_PERSON_DETAILS'
 import OrderSummaryCard from './OrderSummaryCard.svelte'
 import PartyMembersBuilder from './PartyMembersBuilder.svelte'
 import YourInformationCard from './YourInformationCard.svelte'
 import { isContactComplete } from './isContactComplete'
 import { registrationSchema } from './schema'
+import type { FormMember, PersonDetails } from './types'
 
 let { data } = $props()
 
-/* $form is the single source of truth. Every field the schema declares lives in it — including
-   the nested `self` object and the `members` array — and dataType 'json' posts it verbatim, so
-   there are no hidden inputs mirroring state into the DOM.
+/* superforms' $form is a STORE, not $state — so $form.self is a plain object and binding to its
+   nested properties is untrackable ("binding_property_non_reactive"). The editing surface therefore
+   has to be $state; superforms offers only store-based fieldProxy for nested paths, and one proxy
+   per field would mean ten props on a card designed to take one.
 
-   That is what makes `validators` safe to use. Superforms validates the $form store on submit
-   (superForm.js: `dataToValidate = opts.formData ?? Data.form`) and cancels when it fails; while
-   fields lived outside $form, client validation could never pass and every submit was silently
-   cancelled. Now the store is complete, so validation is meaningful and errors surface per field
-   before a request is made. */
+   So: $state for editing, and exactly ONE sync into $form, in onSubmit. That keeps both bugs
+   fixed. $form is complete before validation runs (superForm.js runs onSubmit handlers at :1206,
+   client validation at :1229), so validators are meaningful; and dataType 'json' posts $form, so
+   no hidden inputs mirror state into the DOM.
+
+   The contact's own scalar fields bind straight to $form — top-level `$form.x = v` compiles to a
+   store update, which is reactive. Only nested mutation is not. */
 const { form, errors, enhance } = superForm(data.form, {
     validators: zodClient(registrationSchema),
     dataType: 'json',
+    onSubmit: () => {
+        $form.self = { ...self }
+        $form.members = members.map((member) => ({ ...member }))
+    },
 })
 
 const tiers = data.tiers
 
+let self = $state<PersonDetails>({ ...EMPTY_PERSON_DETAILS })
+let members = $state<FormMember[]>([])
 /* Mirrors YourInformationCard's internal Save state — the registrant must commit their own
    details before paying. UI state, so it stays out of $form. */
 let contactSaved = $state(false)
@@ -37,26 +48,23 @@ let contactName = $derived(
     `${$form.contactFirstName.trim()} ${$form.contactLastName.trim()}`.trim(),
 )
 let contactAddress = $derived({
-    addressLine1: $form.self.addressLine1,
-    addressLine2: $form.self.addressLine2,
-    addressCity: $form.self.addressCity,
-    addressState: $form.self.addressState,
-    addressZip: $form.self.addressZip,
+    addressLine1: self.addressLine1,
+    addressLine2: self.addressLine2,
+    addressCity: self.addressCity,
+    addressState: self.addressState,
+    addressZip: self.addressZip,
 })
 
 /* Subtotal in net cents (sum of selected tier prices). */
 let subtotal = $derived(
-    ($form.self.tierId ? getTierPriceCents($form.self.tierId, tiers) : 0) +
-        $form.members.reduce((sum, m) => sum + getTierPriceCents(m.tierId, tiers), 0),
+    (self.tierId ? getTierPriceCents(self.tierId, tiers) : 0) +
+        members.reduce((sum, m) => sum + getTierPriceCents(m.tierId, tiers), 0),
 )
 /* Fee is the sum of per-member gross-ups so it never disagrees with what Stripe will actually
    charge (the server uses the same per-member gross-up). */
 let processingFee = $derived(
-    ($form.self.tierId ? stripeFeeCents(getTierPriceCents($form.self.tierId, tiers)) : 0) +
-        $form.members.reduce(
-            (sum, m) => sum + stripeFeeCents(getTierPriceCents(m.tierId, tiers)),
-            0,
-        ),
+    (self.tierId ? stripeFeeCents(getTierPriceCents(self.tierId, tiers)) : 0) +
+        members.reduce((sum, m) => sum + stripeFeeCents(getTierPriceCents(m.tierId, tiers)), 0),
 )
 let total = $derived(subtotal + processingFee)
 
@@ -66,7 +74,7 @@ let canSubmit = $derived(
             firstName: $form.contactFirstName,
             lastName: $form.contactLastName,
             email: $form.contactEmail,
-            details: $form.self,
+            details: self,
         }) &&
         /* Phone is optional here, so only its validity matters. */
         (!$form.contactPhone.trim() || isValidPhone($form.contactPhone)),
@@ -163,7 +171,7 @@ let isLocked = $derived(
                         bind:phone={$form.contactPhone}
                         bind:firstName={$form.contactFirstName}
                         bind:lastName={$form.contactLastName}
-                        bind:info={$form.self}
+                        bind:info={self}
                         bind:saved={contactSaved}
                         {tiers}
                         shirtsEnabled={data.event.shirtsEnabled}
@@ -173,7 +181,7 @@ let isLocked = $derived(
                         }} />
 
                     <PartyMembersBuilder
-                        bind:members={$form.members}
+                        bind:members
                         {tiers}
                         {contactName}
                         {contactAddress}
@@ -185,8 +193,8 @@ let isLocked = $derived(
                 <div class="self-start lg:sticky lg:top-6">
                     <OrderSummaryCard
                         {contactName}
-                        selfTierId={$form.self.tierId}
-                        members={$form.members}
+                        selfTierId={self.tierId}
+                        {members}
                         {tiers}
                         {subtotal}
                         {processingFee}
