@@ -8,6 +8,7 @@ import { dbg } from '$lib/server/debug'
 import { sendRecoveryEmail } from '$lib/server/email'
 import { getRegistrationsByEmail } from '$lib/server/registrations'
 import { generateManagementToken } from '$lib/server/registrations/hashManagementToken'
+import { reportError } from '$lib/server/reportError'
 import type { PageServerLoad, Actions } from './$types'
 import { recoverSchema } from './schema'
 
@@ -42,11 +43,12 @@ export const actions: Actions = {
                         manageUrl,
                     })
                 } catch (err) {
-                    dbg.register(
-                        'recover email send failed for registration=%s; not rotating: %o',
-                        registration.id,
-                        err,
-                    )
+                    /* Not rotating is the correct outcome — the old link still works — but the
+                       registrant asked for an email and got nothing, and the generic success
+                       response hides that from them. Somebody has to know. */
+                    reportError('recovery email send failed; token not rotated', err, {
+                        registrationId: registration.id,
+                    })
                     return
                 }
                 await db

@@ -36,6 +36,11 @@ let {
 
 let members = $derived(initialMembers)
 let totalCents = $derived(members.reduce((sum, m) => sum + m.priceCents, 0))
+/* addMember rejects any status other than paid/waived (addMember.ts:34), so offering the
+   button on a payment-outstanding registration would hand the registrant a 409. They can
+   still edit details and cancel — only paying to add someone is unavailable until the
+   organisers record their payment. */
+let canAddMembers = $derived(registration.status === 'paid' || registration.status === 'waived')
 let isLocked = $derived(
     event.registrationLockDate !== null && new Date(event.registrationLockDate) < new Date(),
 )
@@ -215,7 +220,13 @@ function handleRemoveClick(member: PartyMember) {
     </div>
 {:else}
     <div class="col-span-12 flex flex-wrap gap-3 justify-between">
-        <Button onclick={() => (showAddForm = true)}>Add a Member</Button>
+        {#if canAddMembers}
+            <Button onclick={() => (showAddForm = true)}>Add a Member</Button>
+        {:else}
+            <p class="text-sm text-muted-foreground self-center">
+                Adding members is available once your payment is recorded.
+            </p>
+        {/if}
         <Button
             variant="outline"
             class="text-destructive border-destructive hover:bg-destructive/10"

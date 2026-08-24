@@ -32,11 +32,14 @@ const { mockEnv, mockEmailSend, MockResend } = vi.hoisted(() => {
     return { mockEnv, mockEmailSend, MockResend: vi.fn(MockResendConstructor) }
 })
 
+const { mockReportError } = vi.hoisted(() => ({ mockReportError: vi.fn() }))
+
 vi.mock('sveltekit-superforms/server', () => ({ superValidate: mockSuperValidate }))
 vi.mock('sveltekit-superforms/adapters', () => ({ zod4: (s: unknown) => s }))
 vi.mock('$lib/server/db', () => ({ db: mockDb }))
 vi.mock('$lib/server/db/schema', () => ({ registrations: { id: 'id' } }))
 vi.mock('$lib/server/debug', () => ({ dbg: { register: vi.fn(), email: vi.fn() } }))
+vi.mock('$lib/server/reportError', () => ({ reportError: mockReportError }))
 vi.mock('$lib/server/registrations', () => ({
     getRegistrationsByEmail: mockGetRegistrationsByEmail,
 }))
@@ -109,6 +112,14 @@ describe('POST /register/recover', () => {
         expect(mockUpdate).not.toHaveBeenCalled()
         /* Still a generic success, to avoid leaking which addresses are registered. */
         expect(result).toMatchObject({ sent: true })
+        /* The registrant asked for a link and silently got nothing, and the generic response
+           hides that from them — so it has to reach an operator. dbg alone does not: the debug
+           package is never enabled under `node build/index.js`. */
+        expect(mockReportError).toHaveBeenCalledWith(
+            expect.stringContaining('not rotated'),
+            expect.any(Error),
+            { registrationId: 'reg-1' },
+        )
     })
 
     it('does NOT rotate the token when RESEND_API_KEY is missing in production', async () => {

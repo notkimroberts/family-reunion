@@ -5,7 +5,7 @@ import { toast } from 'svelte-sonner'
 import { Alert, AlertDescription, AlertTitle } from '$lib/components/ui/alert'
 import { Button } from '$lib/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card'
-import { APP_NAME } from '$lib/general/constants'
+import { APP_NAME, CONTACT_EMAIL, CONTACT_PHONE } from '$lib/general/constants'
 import RegistrationManager from '../RegistrationManager.svelte'
 
 const POLL_INTERVAL_MS = 2000
@@ -16,6 +16,18 @@ let { data } = $props()
 let status = $state(untrack(() => (data.missingToken ? null : data.registration.status)))
 let timedOut = $state(false)
 
+/* A 'pending' registration means two very different things. From the public flow it means a
+   Stripe payment is settling and the webhook is about to flip it — worth polling for. From
+   admin paper entry there is no Stripe session and no webhook will ever arrive, so polling
+   would spin for 30s and then promise a confirmation email that never comes, leaving the
+   registrant unable to see their own party. stripeSessionId is what distinguishes them. */
+let awaitingStripe = $derived(
+    !data.missingToken && status === 'pending' && data.registration.stripeSessionId !== null,
+)
+let paymentOwed = $derived(
+    !data.missingToken && status === 'pending' && data.registration.stripeSessionId === null,
+)
+
 onMount(() => {
     if (!data.missingToken && data.memberAdded) {
         toast.success('Member added successfully!')
@@ -23,7 +35,7 @@ onMount(() => {
 })
 
 $effect(() => {
-    if (status !== 'pending') {
+    if (!awaitingStripe) {
         return
     }
 
@@ -75,13 +87,13 @@ $effect(() => {
             </CardContent>
         </Card>
     </section>
-{:else if status === 'pending' && !timedOut}
+{:else if awaitingStripe && !timedOut}
     <section class="col-span-12 text-center py-12">
         <LoaderCircle class="mx-auto mb-4 h-10 w-10 animate-spin text-primary" />
         <p class="text-lg font-semibold">Processing Payment…</p>
         <p class="text-muted-foreground mt-1 text-sm">Hang tight, we're confirming your payment.</p>
     </section>
-{:else if status === 'pending' && timedOut}
+{:else if awaitingStripe && timedOut}
     <section class="col-span-12 text-center py-12">
         <p class="text-lg font-semibold">Payment Is Processing</p>
         <p class="text-muted-foreground mt-2 text-sm">
@@ -118,6 +130,23 @@ $effect(() => {
             registration.
         </p>
     </section>
+
+    {#if paymentOwed}
+        <!-- Admin-entered registration with payment still outstanding. No Stripe session
+             exists, so there is nothing to poll for; say what is owed and let them manage
+             their party in the meantime. -->
+        <section class="col-span-12">
+            <Alert>
+                <AlertTitle>Payment outstanding</AlertTitle>
+                <AlertDescription>
+                    Your place is recorded but payment hasn't been received yet. Contact
+                    <a class="underline" href="mailto:{CONTACT_EMAIL}">{CONTACT_EMAIL}</a>
+                    or call <a class="underline" href="sms:{CONTACT_PHONE}">{CONTACT_PHONE}</a>
+                    to arrange it.
+                </AlertDescription>
+            </Alert>
+        </section>
+    {/if}
 
     <RegistrationManager
         token={data.token}

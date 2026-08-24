@@ -15,12 +15,15 @@ const {
     mockSendConfirmation: vi.fn(),
 }))
 
+const { mockReportError } = vi.hoisted(() => ({ mockReportError: vi.fn() }))
+
 vi.mock('sveltekit-superforms/server', () => ({ superValidate: mockSuperValidate }))
 vi.mock('sveltekit-superforms', () => ({ defaults: vi.fn() }))
 vi.mock('sveltekit-superforms/adapters', () => ({ zod4: (s: unknown) => s }))
 vi.mock('$lib/server/auth/guards', () => ({ requireAdmin: mockRequireAdmin }))
 vi.mock('$lib/server/debug', () => ({ dbg: { register: vi.fn() } }))
 vi.mock('$lib/server/email', () => ({ sendRegistrationConfirmation: mockSendConfirmation }))
+vi.mock('$lib/server/reportError', () => ({ reportError: mockReportError }))
 vi.mock('$lib/server/registrations', () => ({
     createAdminRegistration: mockCreateAdminRegistration,
     getConfirmationEmailData: mockGetConfirmationEmailData,

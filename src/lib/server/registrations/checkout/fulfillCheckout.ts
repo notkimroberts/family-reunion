@@ -5,6 +5,7 @@ import { partyMembers, registrations } from '$lib/server/db/schema'
 import { dbg } from '$lib/server/debug'
 import { sendRegistrationConfirmation } from '$lib/server/email'
 import { decodeSessionMetadata } from '$lib/server/payments'
+import { reportError } from '$lib/server/reportError'
 import { parseBirthDate } from '$lib/utils/age'
 /* Relative import, not the $lib/server/registrations barrel: that barrel re-exports this
    folder, so going through it would be a circular import. */
@@ -170,6 +171,10 @@ export async function fulfillCheckout(
             `confirm/${registrationId}`,
         )
     } catch (err) {
-        dbg.stripe('confirmation email failed for registration %s: %o', registrationId, err)
+        /* Deliberately not rethrown: the payment is captured and the row is correct, and a 500
+           here would make Stripe retry an event whose DB work is already done. But the
+           conditional pending -> paid transition means a redelivery will NOT re-attempt this
+           send, so this is the only attempt — it has to reach a human. */
+        reportError('confirmation email failed', err, { registrationId })
     }
 }

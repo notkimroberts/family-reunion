@@ -52,6 +52,8 @@ const { mockDbgStripe } = vi.hoisted(() => ({
     mockDbgStripe: vi.fn(),
 }))
 
+const { mockReportError } = vi.hoisted(() => ({ mockReportError: vi.fn() }))
+
 vi.mock('$env/dynamic/private', () => ({
     env: { STRIPE_SECRET_KEY: 'sk_test_mock', STRIPE_WEBHOOK_SECRET: 'whsec_test_mock' },
 }))
@@ -72,6 +74,7 @@ vi.mock('$lib/server/db/schema', () => ({
     partyMembers: {},
 }))
 vi.mock('$lib/server/debug', () => ({ dbg: { stripe: mockDbgStripe } }))
+vi.mock('$lib/server/reportError', () => ({ reportError: mockReportError }))
 vi.mock('$lib/server/email', () => ({ sendRegistrationConfirmation: mockSendEmail }))
 vi.mock('$lib/utils/age', () => ({ getAge: vi.fn().mockReturnValue(30), parseBirthDate: vi.fn() }))
 
@@ -299,6 +302,26 @@ describe('POST /api/webhooks/stripe', () => {
 
         const res = await POST(makeRequest('{}', 'sig'))
         expect(res.status).toBe(200)
+    })
+
+    /* The conditional pending -> paid transition means a Stripe redelivery will not re-attempt
+       the confirmation, so this send is the only one that will ever happen. A failure that
+       reaches nobody leaves a paid registrant with no management link. */
+    it('reports a failed confirmation email rather than swallowing it', async () => {
+        mockConstructEvent.mockReturnValue({
+            type: 'checkout.session.completed',
+            data: { object: validSession },
+        })
+        queueRegistrationHappyPath()
+        mockSendEmail.mockRejectedValue(new Error('Resend unavailable'))
+
+        await POST(makeRequest('{}', 'sig'))
+
+        expect(mockReportError).toHaveBeenCalledWith(
+            expect.stringContaining('confirmation email failed'),
+            expect.any(Error),
+            { registrationId: 'reg-123' },
+        )
     })
 
     it('skips email when reunionEvent is not found', async () => {
