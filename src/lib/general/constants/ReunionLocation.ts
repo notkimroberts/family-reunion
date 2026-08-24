@@ -6,6 +6,7 @@ export type ReunionLocation = {
     name: string
     tagline: string
     websiteUrl: string
+    instagramUrl?: string
     /* Path under static/, or undefined to fall back to a flat placeholder. */
     imageUrl?: string
     /* Business name Google Maps can geocode — drives both the embed and the directions link. */
