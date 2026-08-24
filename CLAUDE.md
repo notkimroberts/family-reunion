@@ -115,7 +115,7 @@ Route groups:
 - `(auth)` — `/login` only, no nav, full-screen card layout. Admin sign-in only.
 - `(app)` — public paths are **only** `/` and `/register` (which covers `/register/manage` and `/register/recover`). Everything else in the group — `/family-tree`, `/gallery`, `/shop`, `/program`, `/changelog`, `/admin/*` — redirects to `/login`. The allowlist is `isPublicPath()` in `$lib/server/auth/guards`; widen it there to reopen a page (the gallery, most likely, after the reunion). Contact is a section on `/` (`#contact`), not its own route.
 
-> **The route lock covers page views only.** A SvelteKit layout `load` runs _after_ a form action, so `(app)/+layout.server.ts` cannot protect actions — those carry their own `requireAuth`/`requireAdmin` guards. Routes outside the `(app)` group are not covered at all, and must stay reachable: `/api/webhooks/stripe` (Stripe sends no session — blocking it breaks every payment), `/api/registration/status`, `/api/auth/*`, and `/api/health`.
+> **The route lock covers page views only.** A SvelteKit layout `load` runs _after_ a form action, so `(app)/+layout.server.ts` cannot protect actions — those carry their own `requireAuth`/`requireAdmin` guards. Routes outside the `(app)` group are not covered at all, and must stay reachable: `/api/webhooks/stripe` (Stripe sends no session — blocking it breaks every payment), `/api/webhooks/resend` (same, and blocking it hides every bounce), `/api/registration/status`, `/api/auth/*`, and `/api/health`.
 >
 > **Dev cannot demonstrate the lock.** `hooks.server.ts` substitutes a hardcoded admin whenever there is no session, so locally you are always signed in as an admin. Verify against a deployed environment in a private window.
 
@@ -159,6 +159,8 @@ Route groups:
 - Templates return `{ subject, text, html }` and both bodies are always sent: html-only is a deliverability penalty. HTML is table-based with fully inline styles (Outlook has no flexbox; Gmail strips `<head><style>`), and every cell sets both `background-color` and `color` so dark-mode auto-inversion cannot make text unreadable. Escape anything registrant-supplied with `escapeHtml`.
 - Confirmation content is assembled in `getConfirmationEmailData` so the Stripe webhook and admin paper entry cannot drift. Copy is keyed off registration status (`paid` / `waived` / `pending`).
 - Pass a Resend `idempotencyKey` (`confirm/<registrationId>`) wherever a webhook could redeliver.
+- **Bounces are reported, not retried.** `/api/webhooks/resend` verifies the svix signature and routes `email.bounced` / `email.complained` / `email.failed` to Sentry via `reportError`, naming the affected registration ids. It exists because the confirmation is a _single un-retried attempt_ — the conditional `pending → paid` transition means a Stripe redelivery will not send it again — so without this a typo'd address fails silently and the registrant simply never gets their management link. Needs `RESEND_WEBHOOK_SECRET`; without it the endpoint returns 500 and reports the misconfiguration rather than dropping events quietly.
+- **`webhooks.verify()` does not match Resend's published snippet.** In the installed SDK it is synchronous and _throws_ (no `{ data, error }`), the option is `webhookSecret` not `secret`, and `headers` wants the svix header _values_ as `{ id, timestamp, signature }` — not a Web API `Headers` object. Following the published example type-errors, and would have silently rejected every webhook.
 
 ### Family Tree
 
