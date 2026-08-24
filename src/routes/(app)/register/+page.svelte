@@ -7,13 +7,15 @@ import {
     formatPrice,
     getTierPriceCents,
     isValidPhone,
-    isValidZip,
     splitFullName,
 } from '$lib/utils'
 import { stripeFeeCents } from '$lib/utils/stripeFee'
+import { EMPTY_PERSON_DETAILS } from './EMPTY_PERSON_DETAILS'
 import OrderSummaryCard from './OrderSummaryCard.svelte'
 import PartyMembersBuilder from './PartyMembersBuilder.svelte'
+import RegistrationHiddenFields from './RegistrationHiddenFields.svelte'
 import YourInformationCard from './YourInformationCard.svelte'
+import { isContactComplete } from './isContactComplete'
 import type { FormMember, PersonDetails } from './types'
 
 let { data } = $props()
@@ -36,18 +38,7 @@ const { form, errors, enhance } = superForm(data.form, {
 
 const tiers = data.tiers
 
-let self = $state<PersonDetails>({
-    tierId: '',
-    birthDate: undefined,
-    shirtSize: '',
-    addressLine1: '',
-    addressLine2: '',
-    addressCity: '',
-    addressState: '',
-    addressZip: '',
-    vegetarianMeal: '',
-    attendedReunion2025: '',
-})
+let self = $state<PersonDetails>({ ...EMPTY_PERSON_DETAILS })
 
 /* Split the initial contactName (server-prefilled if user is logged in) into first/last.
    The two visible inputs are the source of truth; we send a derived "First Last" through
@@ -86,17 +77,13 @@ let total = $derived(subtotal + processingFee)
    omits any field the POST was missing. Reading .trim() straight off that crashed the page. */
 let canSubmit = $derived(
     contactSaved &&
-        !!selfFirstName.trim() &&
-        !!selfLastName.trim() &&
-        !!($form.contactEmail ?? '').trim() &&
-        !!self.tierId &&
-        !!self.addressLine1.trim() &&
-        !!self.addressCity.trim() &&
-        !!self.addressState.trim() &&
-        !!self.addressZip.trim() &&
-        isValidZip(self.addressZip) &&
-        !!self.vegetarianMeal &&
-        !!self.attendedReunion2025 &&
+        isContactComplete({
+            firstName: selfFirstName,
+            lastName: selfLastName,
+            email: $form.contactEmail ?? '',
+            details: self,
+        }) &&
+        /* Phone is optional here, so only its validity matters. */
         (!($form.contactPhone ?? '').trim() || isValidPhone($form.contactPhone ?? '')),
 )
 
@@ -183,19 +170,11 @@ let isLocked = $derived(
         </section>
     {:else}
         <form method="POST" action="?/register" use:enhance class="col-span-12">
-            <input type="hidden" name="eventId" bind:value={$form.eventId} />
-            <input type="hidden" name="contactName" value={contactName} />
-            <input type="hidden" name="selfTierId" value={self.tierId} />
-            <input type="hidden" name="selfBirthDate" value={self.birthDate ?? ''} />
-            <input type="hidden" name="selfShirtSize" value={self.shirtSize ?? ''} />
-            <input type="hidden" name="selfAddressLine1" value={self.addressLine1} />
-            <input type="hidden" name="selfAddressLine2" value={self.addressLine2 ?? ''} />
-            <input type="hidden" name="selfAddressCity" value={self.addressCity} />
-            <input type="hidden" name="selfAddressState" value={self.addressState} />
-            <input type="hidden" name="selfAddressZip" value={self.addressZip} />
-            <input type="hidden" name="selfVegetarianMeal" value={self.vegetarianMeal} />
-            <input type="hidden" name="selfAttendedReunion2025" value={self.attendedReunion2025} />
-            <input type="hidden" name="members" value={membersJson} />
+            <RegistrationHiddenFields
+                eventId={$form.eventId}
+                {contactName}
+                details={self}
+                {membersJson} />
 
             <div class="grid grid-cols-1 lg:grid-cols-[1fr_minmax(0,22rem)] gap-6">
                 <!-- Left: party builder -->
