@@ -1,5 +1,4 @@
 <script lang="ts">
-import { Select as BitsSelect } from 'bits-ui'
 import { Button } from '$lib/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card'
 import * as Select from '$lib/components/ui/select'
@@ -8,6 +7,15 @@ import { formatPrice, getTierPriceCents } from '$lib/utils'
 import type { FormMember, TierOption } from './types'
 
 type Status = 'paid' | 'pending' | 'waived'
+
+/* Explicit labels rather than relying on Select.Value to resolve one. The items live inside
+   Select.Content, which bits-ui renders lazily, so before the menu is first opened the trigger
+   fell back to printing the raw value — "paid" in lowercase. */
+const statusLabelsValue: Record<Status, string> = {
+    paid: 'Paid',
+    pending: 'Pending',
+    waived: 'Waived',
+}
 
 let {
     contactName,
@@ -94,12 +102,12 @@ let total = $derived(subtotal + processingFee)
                         onValueChange={(v) => (status = v as Status)}
                         name="status">
                         <Select.Trigger id="orderStatus" class="w-full">
-                            <BitsSelect.Value placeholder="Select status…" />
+                            {statusLabelsValue[status]}
                         </Select.Trigger>
                         <Select.Content>
-                            <Select.Item value="paid" label="Paid" />
-                            <Select.Item value="pending" label="Pending" />
-                            <Select.Item value="waived" label="Waived" />
+                            {#each Object.entries(statusLabelsValue) as [value, label] (value)}
+                                <Select.Item {value} {label} />
+                            {/each}
                         </Select.Content>
                     </Select.Root>
                 </div>

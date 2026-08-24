@@ -74,3 +74,47 @@ describe('superforms client validators must stay off the registration forms', ()
         expect(result.success).toBe(false)
     })
 })
+
+/* Second failure mode on the same forms, from the same root cause: the form's fields are spread
+   between page-level hidden inputs and YourInformationCard's live inputs.
+
+   Clicking Save in that card swaps its inputs for a summary, which UNMOUNTED name="contactEmail"
+   and name="contactPhone" — the only two fields with no page-level hidden input. The POST then
+   omitted them, superValidate returned data with those keys undefined, superforms rebound $form
+   from it, and the page's canSubmit crashed on undefined.trim():
+
+       TypeError: undefined is not an object (evaluating 'm().contactEmail.trim')
+
+   The card now renders hidden fallbacks in its saved state. This pins the server half: a POST
+   missing those fields must not yield undefined values that a caller would dereference. */
+describe('a POST missing contactEmail (card in saved state)', () => {
+    const postedAfterSave = {
+        eventId: 'evt-1',
+        contactName: 'test ing',
+        selfTierId: 'tier-adult',
+        selfAddressLine1: '123 Fake Street',
+        selfAddressCity: 'SF',
+        selfAddressState: 'CA',
+        selfAddressZip: '12345',
+        selfVegetarianMeal: 'yes',
+        selfAttendedReunion2025: 'yes',
+        members: '[]',
+        status: 'paid',
+    }
+
+    it('is rejected rather than silently accepted', () => {
+        expect(adminRegistrationSchema.safeParse(postedAfterSave).success).toBe(false)
+    })
+
+    it('YourInformationCard keeps contactEmail and contactPhone in the DOM when saved', () => {
+        const card = readFileSync('src/routes/(app)/register/YourInformationCard.svelte', 'utf8')
+        const savedBranch = card.slice(card.indexOf('{#if saved}'), card.indexOf('{:else}'))
+        expect(savedBranch).toContain('name="contactEmail"')
+        expect(savedBranch).toContain('name="contactPhone"')
+    })
+
+    /* Defensive: even if a partial form is ever rebound again, canSubmit must not dereference it. */
+    it.each(FORM_PAGES)('$name guards contactEmail against undefined', ({ path }) => {
+        expect(readFileSync(path, 'utf8')).toMatch(/\$form\.contactEmail \?\? ''/)
+    })
+})
