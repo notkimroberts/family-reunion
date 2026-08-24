@@ -1,11 +1,13 @@
 <script lang="ts">
 import { CalendarDays, MapPin, Sparkles } from '@lucide/svelte'
+import * as Sentry from '@sentry/sveltekit'
 import { superForm } from 'sveltekit-superforms'
 import { zod4Client as zodClient } from 'sveltekit-superforms/adapters'
 import { APP_NAME, CONTACT_EMAIL, CONTACT_PHONE } from '$lib/general/constants'
 import { formatDateRange, formatPrice, getTierPriceCents, isValidPhone } from '$lib/utils'
 import { stripeFeeCents } from '$lib/utils/stripeFee'
 import { EMPTY_PERSON_DETAILS } from './EMPTY_PERSON_DETAILS'
+import FormErrorSummary from './FormErrorSummary.svelte'
 import OrderSummaryCard from './OrderSummaryCard.svelte'
 import PartyMembersBuilder from './PartyMembersBuilder.svelte'
 import YourInformationCard from './YourInformationCard.svelte'
@@ -27,9 +29,18 @@ let { data } = $props()
 
    The contact's own scalar fields bind straight to $form — top-level `$form.x = v` compiles to a
    store update, which is reactive. Only nested mutation is not. */
-const { form, errors, enhance } = superForm(data.form, {
+const { form, errors, message, enhance } = superForm(data.form, {
     validators: zodClient(registrationSchema),
     dataType: 'json',
+    /* Superforms swallows a failed submit into $errors and, for a transport/server error, into
+       onError. Neither was surfaced, so every failure looked like an inert button. FormErrorSummary
+       shows the validation half; this reports the rest. */
+    onError: ({ result }) => {
+        Sentry.captureException(
+            new Error(`public registration submit failed: ${result.error?.message ?? 'unknown'}`),
+            { tags: { source: 'superforms-onError' }, extra: { status: result.status } },
+        )
+    },
     onSubmit: () => {
         $form.self = { ...self }
         $form.members = members.map((member) => ({ ...member }))
@@ -163,6 +174,10 @@ let isLocked = $derived(
         </section>
     {:else}
         <form method="POST" action="?/register" use:enhance class="col-span-12">
+            <div class="mb-4">
+                <FormErrorSummary errors={$errors} message={$message} />
+            </div>
+
             <div class="grid grid-cols-1 lg:grid-cols-[1fr_minmax(0,22rem)] gap-6">
                 <!-- Left: party builder -->
                 <div class="flex flex-col gap-4">

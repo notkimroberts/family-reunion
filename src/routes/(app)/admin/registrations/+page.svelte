@@ -1,5 +1,6 @@
 <script lang="ts">
 import { Check, Copy, TriangleAlert } from '@lucide/svelte'
+import * as Sentry from '@sentry/sveltekit'
 import { getContext } from 'svelte'
 import { superForm } from 'sveltekit-superforms'
 import { zod4Client as zodClient } from 'sveltekit-superforms/adapters'
@@ -8,6 +9,7 @@ import { Card, CardContent } from '$lib/components/ui/card'
 import type { AdminContext } from '$lib/types/adminContext'
 import { getTierPriceCents } from '$lib/utils'
 import { EMPTY_PERSON_DETAILS } from '../../register/EMPTY_PERSON_DETAILS'
+import FormErrorSummary from '../../register/FormErrorSummary.svelte'
 import OrderSummaryCard from '../../register/OrderSummaryCard.svelte'
 import PartyMembersBuilder from '../../register/PartyMembersBuilder.svelte'
 import YourInformationCard from '../../register/YourInformationCard.svelte'
@@ -24,9 +26,20 @@ const adminCtx = getContext<AdminContext>('admin')
    public register page: $state is the editing surface, and exactly ONE sync into $form happens in
    onSubmit — which superforms runs before client validation, so validators still see fresh data,
    and dataType 'json' means nothing is mirrored into the DOM. */
-const { form, errors, enhance } = superForm(data.form, {
+const { form, errors, message, enhance } = superForm(data.form, {
     validators: zodClient(adminRegistrationSchema),
     dataType: 'json',
+    /* Superforms swallows a failed submit into $errors and, for a transport/server error, into
+       onError. Neither was surfaced, so every failure looked like an inert button. FormErrorSummary
+       shows the validation half; this reports the rest. */
+    onError: ({ result }) => {
+        Sentry.captureException(
+            new Error(
+                `admin paper registration submit failed: ${result.error?.message ?? 'unknown'}`,
+            ),
+            { tags: { source: 'superforms-onError' }, extra: { status: result.status } },
+        )
+    },
     onSubmit: () => {
         $form.eventId = targetEventId
         $form.self = { ...self }
@@ -169,6 +182,10 @@ async function handleCopy(url: string) {
         {/if}
 
         <form method="POST" use:enhance>
+            <div class="mb-4">
+                <FormErrorSummary errors={$errors} message={$message} />
+            </div>
+
             <div class="grid grid-cols-1 lg:grid-cols-[1fr_minmax(0,22rem)] gap-6">
                 <!-- Left: party builder -->
                 <div class="flex flex-col gap-4">
