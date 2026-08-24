@@ -66,12 +66,6 @@ let selectedTier = $derived(tiers.find((t) => t.id === info.tierId))
     </CardHeader>
     <CardContent class="space-y-6">
         {#if saved}
-            <!-- The edit inputs below are unmounted in this state, so these carry the two
-                 fields that have no page-level hidden input. Without them the POST omits
-                 contactEmail/contactPhone, the server rejects it, and superforms rebinds
-                 $form with those keys undefined — which crashed the page's canSubmit. -->
-            <input type="hidden" name="contactEmail" value={email} />
-            <input type="hidden" name="contactPhone" value={phone} />
             <div class="flex items-center gap-3">
                 <div class="flex-1 min-w-0">
                     <p class="font-medium text-sm">{firstName} {lastName}</p>
