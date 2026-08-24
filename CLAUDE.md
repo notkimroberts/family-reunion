@@ -90,8 +90,9 @@ Server logic lives under `src/lib/server/`, one domain per folder. Each exported
 
 - **Better Auth** with admin plugin and email + password sign-in
 - Magic link has been removed — admins sign in at `/login` with credentials only
+- **Public sign-up is disabled** (`disableSignUp: true`). This is load-bearing, not tidiness: Better Auth exposes `POST /api/auth/sign-up/email` whenever email+password is enabled, and its handler is mounted _ahead of SvelteKit routing_ — so there is no route file to guard and `(app)/+layout.server.ts` never sees the request. With sign-up open, anyone could mint a `role='user'` account and read the whole family tree and gallery. Pinned by `src/lib/server/auth/auth.test.ts`. Admins come from `bun run admin:create`.
 - `hooks.server.ts` populates `event.locals.user` per request. In dev mode, falls back to a hardcoded admin user when no session exists
-- Guards: `requireAuth()` and `requireAdmin()` in `$lib/server/auth/guards`. Used by `/admin/*` and the `restoreSnapshot` family-tree action only — registration is fully public
+- Guards: `requireAuth()`, `requireAdmin()` and `isPublicPath()` in `$lib/server/auth/guards`. `(app)/+layout.server.ts` requires `role === 'admin'` for any non-public path — **test for the role, never merely for a session**, since any account satisfies presence. `/admin/*`, the `restoreSnapshot` family-tree action and the gallery `upload` action all carry their own `requireAdmin`. Registration itself is fully public.
 - Better Auth manages its own tables (`user`, `session`, `account`)
 - **Lazy-init typing**: `betterAuth({...})` returns a concrete parameterized type that TypeScript can't directly assign to `ReturnType<typeof betterAuth>`. To avoid `any`, extract the call into a `createAuthInstance()` function and type the singleton as `ReturnType<typeof createAuthInstance> | undefined`
 
@@ -213,7 +214,8 @@ Route groups:
 - DB migrations are idempotent — Drizzle tracks applied migrations and skips them on subsequent deploys
 - Required Railway environment variables: `SENTRY_AUTH_TOKEN`, `SENTRY_ENVIRONMENT=production`
 - **Watch paths**: `family-reunion-app`'s Railway build config sets `watchPatterns` to `["src/**", "static/**", "drizzle/**", "scripts/**", "package.json", "bun.lock", "svelte.config.js", "vite.config.ts", "tsconfig.json", "drizzle.config.ts"]`, so pushes to `main` that only touch docs/tooling (`CLAUDE.md`, `.claude/**`, `.agents/**`, `skills-lock.json`, etc.) don't trigger a deploy. `scripts/**` is in the list because the predeploy command lives there — without it, a fix to `scripts/migrate.ts` would not deploy. If you add a new source directory, config file, or build input outside these paths, update the pattern list (`railway environment edit --environment production --service-config family-reunion-app build.watchPatterns '[...]'`) or it'll silently stop deploying real changes.
-- **Health check**: Railway's `healthcheckPath` is `/api/health`, which runs a `select 1` rather than only confirming the process listens — an instance that boots with an unreachable database would otherwise replace a working deployment.
+- **Health check**: Railway's `healthcheckPath` is `/api/health`. It is a **liveness** check and deliberately does not touch the database. A DB probe there would be redundant with the predeploy migration (which already retries the connection for ~30s and fails the deploy loudly), and refusing to promote a deployment because the database is down gains nothing — the deployment it keeps serving has the same database. Use `/api/health?probe=db` to check the database explicitly; it retries, so a brief blip reports `ok` rather than `unreachable`.
+- **The database does not sleep.** `family-reunion-db` had "Sleep when inactive" enabled, which made the first query after any idle period fail: `postgres.js` rejects the in-flight query on a connection error (`connection.js` `queryError`) and only reconnects for a _later_ query, so a real visitor got an error page and a refresh fixed it. It idles at ~50MB, so keeping it warm is cheap. Do not re-enable sleep on a service that serves public page loads.
 
 #### Resetting production
 
