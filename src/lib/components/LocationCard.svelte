@@ -1,5 +1,6 @@
 <script lang="ts">
 import { ExternalLink, Hotel, MapPin, Navigation } from '@lucide/svelte'
+import { InstagramIcon } from '$lib/components'
 import { Badge } from '$lib/components/ui/badge'
 import { Button } from '$lib/components/ui/button'
 import { Card, CardContent } from '$lib/components/ui/card'
@@ -37,7 +38,20 @@ let directionsUrl = $derived(
 
     <CardContent class="flex flex-1 flex-col gap-4 pt-6">
         <div class="flex flex-col gap-2">
-            <Badge variant="secondary" class="w-fit">{location.badge}</Badge>
+            <div class="flex items-center justify-between gap-2">
+                <Badge variant="secondary" class="w-fit">{location.badge}</Badge>
+                {#if location.instagramUrl}
+                    <a
+                        href={location.instagramUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5 text-xs transition-colors"
+                        aria-label="{location.name} on Instagram">
+                        <InstagramIcon class="size-4" />
+                        Instagram
+                    </a>
+                {/if}
+            </div>
             <h3>{location.name}</h3>
             <p class="text-muted-foreground text-sm">{location.tagline}</p>
         </div>

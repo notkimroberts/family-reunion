@@ -10,6 +10,7 @@ import {
     getConfirmationEmailData,
     getOpenEvent,
 } from '$lib/server/registrations'
+import { reportError } from '$lib/server/reportError'
 import { getTiersForEvent } from '$lib/server/tiers'
 import { parseYesNo } from '$lib/utils'
 import { parseFormMembers } from '../../register/parseFormMembers'
@@ -134,7 +135,7 @@ export const actions: Actions = {
                 emailError = 'Could not assemble the confirmation email.'
             }
         } catch (err) {
-            dbg.register('admin confirmation email failed for %s: %o', registrationId, err)
+            reportError('admin confirmation email failed', err, { registrationId })
             emailError = err instanceof Error ? err.message : 'Unknown email error'
         }
 

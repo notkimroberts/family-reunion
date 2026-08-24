@@ -1,6 +1,6 @@
 import { fail } from '@sveltejs/kit'
 import { eq, desc } from 'drizzle-orm'
-import { requireAuth } from '$lib/server/auth/guards'
+import { requireAdmin } from '$lib/server/auth/guards'
 import { db } from '$lib/server/db'
 import { photos, reunionEvents } from '$lib/server/db/schema'
 import { dbg } from '$lib/server/debug'
@@ -27,7 +27,9 @@ export const load: PageServerLoad = async () => {
 
 export const actions: Actions = {
     upload: async (event) => {
-        const user = requireAuth(event)
+        /* requireAdmin, not requireAuth: this writes a 10MB-capped file to the R2 bucket and a
+           row to `photos`. A presence-only check made it an upload endpoint for any account. */
+        const user = requireAdmin(event)
         const formData = await event.request.formData()
         const caption = formData.get('caption') as string
         const file = formData.get('photo') as File
