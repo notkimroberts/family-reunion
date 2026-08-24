@@ -90,8 +90,9 @@ Server logic lives under `src/lib/server/`, one domain per folder. Each exported
 
 - **Better Auth** with admin plugin and email + password sign-in
 - Magic link has been removed — admins sign in at `/login` with credentials only
+- **Public sign-up is disabled** (`disableSignUp: true`). This is load-bearing, not tidiness: Better Auth exposes `POST /api/auth/sign-up/email` whenever email+password is enabled, and its handler is mounted _ahead of SvelteKit routing_ — so there is no route file to guard and `(app)/+layout.server.ts` never sees the request. With sign-up open, anyone could mint a `role='user'` account and read the whole family tree and gallery. Pinned by `src/lib/server/auth/auth.test.ts`. Admins come from `bun run admin:create`.
 - `hooks.server.ts` populates `event.locals.user` per request. In dev mode, falls back to a hardcoded admin user when no session exists
-- Guards: `requireAuth()` and `requireAdmin()` in `$lib/server/auth/guards`. Used by `/admin/*` and the `restoreSnapshot` family-tree action only — registration is fully public
+- Guards: `requireAuth()`, `requireAdmin()` and `isPublicPath()` in `$lib/server/auth/guards`. `(app)/+layout.server.ts` requires `role === 'admin'` for any non-public path — **test for the role, never merely for a session**, since any account satisfies presence. `/admin/*`, the `restoreSnapshot` family-tree action and the gallery `upload` action all carry their own `requireAdmin`. Registration itself is fully public.
 - Better Auth manages its own tables (`user`, `session`, `account`)
 - **Lazy-init typing**: `betterAuth({...})` returns a concrete parameterized type that TypeScript can't directly assign to `ReturnType<typeof betterAuth>`. To avoid `any`, extract the call into a `createAuthInstance()` function and type the singleton as `ReturnType<typeof createAuthInstance> | undefined`
 
