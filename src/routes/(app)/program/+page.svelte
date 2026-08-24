@@ -63,7 +63,7 @@ let hasThingsToDo = $derived(
         <div class="bg-primary text-primary-foreground rounded-2xl px-6 py-10 md:px-12 md:py-14">
             <p
                 class="text-primary-foreground/70 mb-3 text-sm font-semibold uppercase tracking-widest">
-                Patterson Family
+                {data.isPastProgram ? 'Past Reunion' : 'Patterson Family'}
             </p>
             <h1>{data.event.title}</h1>
             <div class="mb-6 mt-5 flex flex-col gap-2">
@@ -82,9 +82,11 @@ let hasThingsToDo = $derived(
                 {/if}
             </div>
             <div class="flex flex-col items-start gap-3 sm:flex-row sm:items-center">
-                <Button href="/register" size="lg" variant="secondary" class="font-semibold">
-                    Register Now
-                </Button>
+                {#if !data.isPastProgram}
+                    <Button href="/register" size="lg" variant="secondary" class="font-semibold">
+                        Register Now
+                    </Button>
+                {/if}
                 {#if data.registrantCount > 0}
                     <div class="text-primary-foreground/70 flex items-center gap-1.5 text-sm">
                         <Users class="size-4" />
