@@ -10,6 +10,7 @@
      requireAdmin in family-tree, requireAuth in gallery, requireAdmin across /admin.
    - Routes outside the (app) group are not covered here at all, and must stay reachable:
      /api/webhooks/stripe (Stripe sends no session — blocking it breaks every payment),
+     /api/webhooks/resend (Resend sends no session; blocking it hides every bounce),
      /api/registration/status (polled while payment settles), /api/auth/* (Better Auth),
      and /api/health (Railway's health check).
 
