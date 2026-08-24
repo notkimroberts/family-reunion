@@ -2,7 +2,6 @@
 import { Check, Copy, TriangleAlert } from '@lucide/svelte'
 import { getContext } from 'svelte'
 import { superForm } from 'sveltekit-superforms'
-import { zod4Client as zodClient } from 'sveltekit-superforms/adapters'
 import { Button } from '$lib/components/ui/button'
 import { Card, CardContent } from '$lib/components/ui/card'
 import type { AdminContext } from '$lib/types/adminContext'
@@ -10,7 +9,6 @@ import { getTierPriceCents, isValidZip } from '$lib/utils'
 import OrderSummaryCard from '../../register/OrderSummaryCard.svelte'
 import PartyMembersBuilder from '../../register/PartyMembersBuilder.svelte'
 import YourInformationCard from '../../register/YourInformationCard.svelte'
-import { adminRegistrationSchema } from '../../register/schema'
 import type { FormMember, PersonDetails } from '../../register/types'
 
 const EMPTY_SELF: PersonDetails = {
@@ -30,8 +28,12 @@ let { data, form: actionData } = $props()
 
 const adminCtx = getContext<AdminContext>('admin')
 
+/* No `validators` here, deliberately — see the same note on the public register page.
+   Superforms validates the $form store rather than the DOM and cancels the submit on
+   failure; this form's fields live in unbound hidden inputs, so client validation could
+   never pass and "Add Registration" did nothing at all. The action still validates
+   server-side with adminRegistrationSchema. */
 const { form, errors, enhance } = superForm(data.form, {
-    validators: zodClient(adminRegistrationSchema),
     dataType: 'form',
     /* Keep the page's own $state (party builder, self details) in charge of resetting —
        superforms resetting the form would not clear those. */

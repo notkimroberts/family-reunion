@@ -1,7 +1,6 @@
 <script lang="ts">
 import { CalendarDays, MapPin, Sparkles } from '@lucide/svelte'
 import { superForm } from 'sveltekit-superforms'
-import { zod4Client as zodClient } from 'sveltekit-superforms/adapters'
 import { APP_NAME, CONTACT_EMAIL, CONTACT_PHONE } from '$lib/general/constants'
 import {
     formatDateRange,
@@ -15,13 +14,23 @@ import { stripeFeeCents } from '$lib/utils/stripeFee'
 import OrderSummaryCard from './OrderSummaryCard.svelte'
 import PartyMembersBuilder from './PartyMembersBuilder.svelte'
 import YourInformationCard from './YourInformationCard.svelte'
-import { registrationSchema } from './schema'
 import type { FormMember, PersonDetails } from './types'
 
 let { data } = $props()
 
+/* No `validators` here, deliberately — adding them silently breaks submission.
+
+   Superforms validates the $form STORE on submit, not the DOM
+   (superForm.js: `const dataToValidate = opts.formData ?? Data.form`), and cancels the
+   submit when it fails. This form carries most of its fields in unbound hidden inputs
+   driven by `self` and `members`, so $form never holds selfTierId, the address fields or
+   the two yes/no answers — client validation could never pass, and the submit was cancelled
+   with no network request at all.
+
+   Submission integrity does not depend on this: `dataType: 'form'` posts the real DOM
+   FormData, the `register` action validates it with the same schema server-side, and a
+   failure comes back as $errors. `canSubmit` below gates the obvious cases up front. */
 const { form, errors, enhance } = superForm(data.form, {
-    validators: zodClient(registrationSchema),
     dataType: 'form',
 })
 
