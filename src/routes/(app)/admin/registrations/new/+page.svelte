@@ -66,10 +66,14 @@ const shirtsEnabled = $derived(data.events[0]?.shirtsEnabled ?? false)
 let self = $state<PersonDetails>({ ...EMPTY_PERSON_DETAILS })
 let members = $state<FormMember[]>([])
 let copied = $state(false)
-/* actionData persists after the action returns, so the success banner alone cannot decide whether
-   to show the form — "Add another" needs its own signal to bring it back. */
+/* The confirmation and the form are mutually exclusive: a success replaces the form with the
+   registrant's management link, and "Add another" swaps back. Derived as one value rather than two
+   flags so they cannot both be on screen — a stale confirmation above a blank form invites the
+   admin to copy the previous registrant's link. actionData persists after the action returns, so
+   success alone cannot decide; addingAnother is what dismisses it. */
 let addingAnother = $state(false)
-let showForm = $derived(!actionData?.success || addingAnother)
+let confirmation = $derived(actionData?.success && !addingAnother ? actionData : undefined)
+let showForm = $derived(!confirmation)
 /* Mirrors YourInformationCard's internal Save state, so the contact must be committed before the
    registration can be submitted. UI state, so it stays out of $form. */
 let contactSaved = $state(false)
@@ -143,19 +147,19 @@ async function handleCopy(url: string) {
             </CardContent>
         </Card>
     {:else}
-        {#if actionData?.success}
+        {#if confirmation}
             <div
                 class="mb-4 flex flex-col gap-3 rounded-md border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-900 dark:border-green-800 dark:bg-green-950 dark:text-green-100">
                 <p class="font-medium">Registration added.</p>
 
-                {#if actionData.emailSent}
+                {#if confirmation.emailSent}
                     <p>A confirmation email was sent with their management link.</p>
                 {:else}
                     <p class="flex items-start gap-2">
                         <TriangleAlert class="mt-0.5 h-4 w-4 shrink-0" />
                         <span>
-                            The registration was saved, but the confirmation email did not send{actionData.emailError
-                                ? ` (${actionData.emailError})`
+                            The registration was saved, but the confirmation email did not send{confirmation.emailError
+                                ? ` (${confirmation.emailError})`
                                 : ''}. Pass the link below on directly.
                         </span>
                     </p>
@@ -168,13 +172,13 @@ async function handleCopy(url: string) {
                     <div class="flex flex-wrap items-center gap-2">
                         <code
                             class="min-w-0 flex-1 break-all rounded bg-background/60 px-2 py-1.5 text-xs">
-                            {actionData.manageUrl}
+                            {confirmation.manageUrl}
                         </code>
                         <Button
                             type="button"
                             variant="outline"
                             size="sm"
-                            onclick={() => handleCopy(actionData.manageUrl)}>
+                            onclick={() => handleCopy(confirmation.manageUrl)}>
                             {#if copied}
                                 <Check class="h-4 w-4" /> Copied
                             {:else}
