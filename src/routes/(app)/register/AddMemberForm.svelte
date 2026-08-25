@@ -14,18 +14,34 @@ import AddressFields from './AddressFields.svelte'
 import TierSelect from './TierSelect.svelte'
 import type { TierOption } from './types'
 
+/* Shared by the registrant's manage page and the admin registration detail page. The fields
+   collected are identical; what differs is the action behind it — the registrant's goes through
+   Stripe Checkout, the admin's inserts offline. So the action is a prop and the token is optional,
+   since an admin has no plaintext token to send (the DB stores only the hash). */
 let {
-    token,
+    token = undefined,
     registrationId,
     tiers,
     shirtsEnabled,
     onCancel,
+    action = '?/add_member',
+    title = 'Add a Member',
+    submitNote = undefined,
+    submitLabel = 'Continue to Payment',
+    submittingLabel = 'Redirecting to checkout…',
 }: {
-    token: string
+    token?: string
     registrationId: string
     tiers: TierOption[]
     shirtsEnabled: boolean
     onCancel?: () => void
+    action?: string
+    title?: string
+    submitNote?: string
+    /* The registrant's path ends at Stripe; the admin's saves directly. The wording has to differ
+       or an offline addition tells the organiser it is about to take a payment. */
+    submitLabel?: string
+    submittingLabel?: string
 } = $props()
 
 let name = $state('')
@@ -56,12 +72,12 @@ let canSubmit = $derived(
 
 <Card>
     <CardHeader>
-        <CardTitle>Add a Member</CardTitle>
+        <CardTitle>{title}</CardTitle>
     </CardHeader>
     <CardContent>
         <form
             method="POST"
-            action="?/add_member"
+            {action}
             use:enhance={() => {
                 submitting = true
                 return ({ result, update }) => {
@@ -71,7 +87,9 @@ let canSubmit = $derived(
                     }
                 }
             }}>
-            <input type="hidden" name="token" value={token} />
+            {#if token}
+                <input type="hidden" name="token" value={token} />
+            {/if}
             <input type="hidden" name="registrationId" value={registrationId} />
             <input type="hidden" name="birthDate" value={birthDate ?? ''} />
             <input type="hidden" name="tierId" value={tierId} />
@@ -154,13 +172,20 @@ let canSubmit = $derived(
                         bind:addressZip />
                 </div>
 
-                <div class="flex gap-2 justify-end pt-2">
-                    {#if onCancel}
-                        <Button type="button" variant="outline" onclick={onCancel}>Cancel</Button>
+                <div class="flex flex-col gap-2 pt-2">
+                    {#if submitNote}
+                        <p class="text-muted-foreground text-right text-xs">{submitNote}</p>
                     {/if}
-                    <Button type="submit" disabled={submitting || !canSubmit}>
-                        {submitting ? 'Redirecting to checkout…' : 'Continue to Payment'}
-                    </Button>
+                    <div class="flex justify-end gap-2">
+                        {#if onCancel}
+                            <Button type="button" variant="outline" onclick={onCancel}>
+                                Cancel
+                            </Button>
+                        {/if}
+                        <Button type="submit" disabled={submitting || !canSubmit}>
+                            {submitting ? submittingLabel : submitLabel}
+                        </Button>
+                    </div>
                 </div>
             </div>
         </form>

@@ -11,7 +11,7 @@ export const ADMIN_NAV_GROUP: NavGroup = {
     icon: 'shield-check',
     children: [
         { href: '/admin', label: 'Overview' },
-        { href: '/admin/registrations', label: 'Add Registration' },
+        { href: '/admin/registrations', label: 'Registrations' },
         { href: '/admin/attendees', label: 'Attendees' },
         { href: '/admin/events', label: 'Events' },
         { href: '/admin/users', label: 'Users' },

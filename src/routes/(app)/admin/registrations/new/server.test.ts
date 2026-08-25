@@ -30,7 +30,7 @@ vi.mock('$lib/server/registrations', () => ({
     getOpenEvent: vi.fn(),
 }))
 vi.mock('$lib/server/tiers', () => ({ getTiersForEvent: vi.fn() }))
-vi.mock('../../register/schema', () => ({ adminRegistrationSchema: {} }))
+vi.mock('../../../register/schema', () => ({ adminRegistrationSchema: {} }))
 
 const SELF = {
     tierId: 'tier-adult',

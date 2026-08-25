@@ -12,12 +12,18 @@ export {
     cancelRegistration,
     updateMemberDetails,
     linkPartyMember,
+    addAdminMember,
+    setRegistrationStatus,
+    reissueManagementLink,
 } from './management'
+export type { AdminSettableStatus } from './management'
 
 export type { RegistrationMember } from './queries'
+export type { RegistrationSummary } from './queries'
 export {
     getConfirmationEmailData,
     getOpenEvent,
+    getRegistrationsForEvent,
     getRegistrationByToken,
     getRegistrationsByEmail,
     getRegistrationWithEvent,
