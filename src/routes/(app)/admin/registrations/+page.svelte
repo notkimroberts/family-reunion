@@ -5,24 +5,14 @@ import { superForm } from 'sveltekit-superforms'
 import { Button } from '$lib/components/ui/button'
 import { Card, CardContent } from '$lib/components/ui/card'
 import type { AdminContext } from '$lib/types/adminContext'
-import { getTierPriceCents, isValidZip } from '$lib/utils'
+import { getTierPriceCents } from '$lib/utils'
+import { EMPTY_PERSON_DETAILS } from '../../register/EMPTY_PERSON_DETAILS'
 import OrderSummaryCard from '../../register/OrderSummaryCard.svelte'
 import PartyMembersBuilder from '../../register/PartyMembersBuilder.svelte'
+import RegistrationHiddenFields from '../../register/RegistrationHiddenFields.svelte'
 import YourInformationCard from '../../register/YourInformationCard.svelte'
+import { isContactComplete } from '../../register/isContactComplete'
 import type { FormMember, PersonDetails } from '../../register/types'
-
-const EMPTY_SELF: PersonDetails = {
-    tierId: '',
-    birthDate: undefined,
-    shirtSize: '',
-    addressLine1: '',
-    addressLine2: '',
-    addressCity: '',
-    addressState: '',
-    addressZip: '',
-    vegetarianMeal: '',
-    attendedReunion2025: '',
-}
 
 let { data, form: actionData } = $props()
 
@@ -49,7 +39,7 @@ const shirtsEnabled = $derived(data.events[0]?.shirtsEnabled ?? false)
 
 let selfFirstName = $state('')
 let selfLastName = $state('')
-let self = $state<PersonDetails>({ ...EMPTY_SELF })
+let self = $state<PersonDetails>({ ...EMPTY_PERSON_DETAILS })
 let status = $state<'paid' | 'pending' | 'waived'>('paid')
 let members = $state<FormMember[]>([])
 let copied = $state(false)
@@ -80,17 +70,12 @@ let subtotal = $derived(
    omits any field the POST was missing. Reading .trim() straight off that crashed the page. */
 let canSubmit = $derived(
     contactSaved &&
-        !!selfFirstName.trim() &&
-        !!selfLastName.trim() &&
-        !!($form.contactEmail ?? '').trim() &&
-        !!self.tierId &&
-        !!self.addressLine1.trim() &&
-        !!self.addressCity.trim() &&
-        !!self.addressState.trim() &&
-        !!self.addressZip.trim() &&
-        isValidZip(self.addressZip) &&
-        !!self.vegetarianMeal &&
-        !!self.attendedReunion2025,
+        isContactComplete({
+            firstName: selfFirstName,
+            lastName: selfLastName,
+            email: $form.contactEmail ?? '',
+            details: self,
+        }),
 )
 
 function handleReset() {
@@ -98,7 +83,7 @@ function handleReset() {
     selfLastName = ''
     $form.contactEmail = ''
     $form.contactPhone = ''
-    self = { ...EMPTY_SELF }
+    self = { ...EMPTY_PERSON_DETAILS }
     status = 'paid'
     members = []
     copied = false
@@ -183,19 +168,11 @@ async function handleCopy(url: string) {
         {/if}
 
         <form method="POST" use:enhance>
-            <input type="hidden" name="eventId" value={targetEventId} />
-            <input type="hidden" name="contactName" value={contactName} />
-            <input type="hidden" name="selfTierId" value={self.tierId} />
-            <input type="hidden" name="selfBirthDate" value={self.birthDate ?? ''} />
-            <input type="hidden" name="selfShirtSize" value={self.shirtSize ?? ''} />
-            <input type="hidden" name="selfAddressLine1" value={self.addressLine1} />
-            <input type="hidden" name="selfAddressLine2" value={self.addressLine2 ?? ''} />
-            <input type="hidden" name="selfAddressCity" value={self.addressCity} />
-            <input type="hidden" name="selfAddressState" value={self.addressState} />
-            <input type="hidden" name="selfAddressZip" value={self.addressZip} />
-            <input type="hidden" name="selfVegetarianMeal" value={self.vegetarianMeal} />
-            <input type="hidden" name="selfAttendedReunion2025" value={self.attendedReunion2025} />
-            <input type="hidden" name="members" value={membersJson} />
+            <RegistrationHiddenFields
+                eventId={targetEventId}
+                {contactName}
+                details={self}
+                {membersJson} />
 
             <div class="grid grid-cols-1 lg:grid-cols-[1fr_minmax(0,22rem)] gap-6">
                 <!-- Left: party builder -->
