@@ -1,16 +1,14 @@
 <script lang="ts">
-import { Select as BitsSelect } from 'bits-ui'
 import { enhance } from '$app/forms'
 import { DatePicker } from '$lib/components'
 import { Button } from '$lib/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card'
 import { Input } from '$lib/components/ui/input'
-import * as Select from '$lib/components/ui/select'
 import { Separator } from '$lib/components/ui/separator'
-import { SHIRT_SIZES } from '$lib/general/constants'
 import { isValidZip } from '$lib/utils'
 import AdditionalQuestionsFields from './AdditionalQuestionsFields.svelte'
 import AddressFields from './AddressFields.svelte'
+import ShirtSizeSelect from './ShirtSizeSelect.svelte'
 import TierSelect from './TierSelect.svelte'
 import type { TierOption } from './types'
 
@@ -124,21 +122,11 @@ let canSubmit = $derived(
                             <label for="add-shirt" class="text-sm font-medium">
                                 T-Shirt Size <span class="text-muted-foreground">(optional)</span>
                             </label>
-                            <Select.Root
-                                type="single"
-                                value={shirtSize}
-                                onValueChange={(v) => (shirtSize = v)}
-                                name="shirtSize">
-                                <Select.Trigger id="add-shirt" class="w-full">
-                                    <BitsSelect.Value placeholder="No shirt" />
-                                </Select.Trigger>
-                                <Select.Content>
-                                    <Select.Item value="" label="No shirt" />
-                                    {#each SHIRT_SIZES as size (size)}
-                                        <Select.Item value={size} label={size} />
-                                    {/each}
-                                </Select.Content>
-                            </Select.Root>
+                            <ShirtSizeSelect
+                                id="add-shirt"
+                                name="shirtSize"
+                                bind:value={shirtSize}
+                                emptyLabel="No shirt" />
                         </div>
                     {/if}
                 </div>

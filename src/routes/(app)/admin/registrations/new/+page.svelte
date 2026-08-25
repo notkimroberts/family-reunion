@@ -26,7 +26,7 @@ const adminCtx = getContext<AdminContext>('admin')
    public register page: $state is the editing surface, and exactly ONE sync into $form happens in
    onSubmit — which superforms runs before client validation, so validators still see fresh data,
    and dataType 'json' means nothing is mirrored into the DOM. */
-const { form, errors, message, enhance } = superForm(data.form, {
+const { form, errors, message, submitting, enhance } = superForm(data.form, {
     validators: zodClient(adminRegistrationSchema),
     dataType: 'json',
     /* Superforms swallows a failed submit into $errors and, for a transport/server error, into
@@ -234,6 +234,8 @@ async function handleCopy(url: string) {
                             {subtotal}
                             {canSubmit}
                             submitLabel="Add Registration"
+                            submitting={$submitting}
+                            submittingLabel="Adding…"
                             placeholderText="Fill in the contact's details above and press Save to continue."
                             contactSuffix="contact"
                             showStatus

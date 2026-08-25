@@ -1,5 +1,4 @@
 <script lang="ts">
-import { Select as BitsSelect } from 'bits-ui'
 import { enhance } from '$app/forms'
 import { DatePicker } from '$lib/components'
 import { Button } from '$lib/components/ui/button'
@@ -10,9 +9,8 @@ import {
     DialogHeader,
     DialogTitle,
 } from '$lib/components/ui/dialog'
-import * as Select from '$lib/components/ui/select'
-import { SHIRT_SIZES } from '$lib/general/constants'
 import { formatBirthDate } from '$lib/utils/age'
+import ShirtSizeSelect from './ShirtSizeSelect.svelte'
 import YesNoSelect from './YesNoSelect.svelte'
 import type { EditableMember } from './types'
 
@@ -65,21 +63,11 @@ let vegetarianMeal = $state<'yes' | 'no' | ''>(
                 {#if shirtsEnabled}
                     <div class="space-y-2">
                         <label for="edit-shirtSize" class="text-sm font-medium">T-Shirt Size</label>
-                        <Select.Root
-                            type="single"
-                            value={shirtSize}
-                            onValueChange={(v) => (shirtSize = v)}
-                            name="shirtSize">
-                            <Select.Trigger id="edit-shirtSize">
-                                <BitsSelect.Value placeholder="No shirt" />
-                            </Select.Trigger>
-                            <Select.Content>
-                                <Select.Item value="" label="No shirt" />
-                                {#each SHIRT_SIZES as size (size)}
-                                    <Select.Item value={size} label={size} />
-                                {/each}
-                            </Select.Content>
-                        </Select.Root>
+                        <ShirtSizeSelect
+                            id="edit-shirtSize"
+                            name="shirtSize"
+                            bind:value={shirtSize}
+                            emptyLabel="No shirt" />
                     </div>
                 {/if}
                 <div class="space-y-2">

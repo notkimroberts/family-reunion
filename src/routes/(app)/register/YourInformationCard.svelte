@@ -1,16 +1,14 @@
 <script lang="ts">
 import { UserCircle } from '@lucide/svelte'
-import { Select as BitsSelect } from 'bits-ui'
 import { DatePicker } from '$lib/components'
 import { Button } from '$lib/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card'
 import { Input } from '$lib/components/ui/input'
-import * as Select from '$lib/components/ui/select'
 import { Separator } from '$lib/components/ui/separator'
-import { SHIRT_SIZES } from '$lib/general/constants'
 import { formatPhoneInput, formatPrice, getMemberAge, isValidPhone, isValidZip } from '$lib/utils'
 import AdditionalQuestionsFields from './AdditionalQuestionsFields.svelte'
 import AddressFields from './AddressFields.svelte'
+import ShirtSizeSelect from './ShirtSizeSelect.svelte'
 import TierSelect from './TierSelect.svelte'
 import type { PersonDetails, TierOption } from './types'
 
@@ -211,19 +209,11 @@ let selectedTier = $derived(tiers.find((t) => t.id === info.tierId))
                                 <span class="text-muted-foreground font-normal text-xs"
                                     >(optional)</span>
                             </label>
-                            <Select.Root
-                                type="single"
-                                value={info.shirtSize ?? ''}
-                                onValueChange={(v) => (info.shirtSize = v)}>
-                                <Select.Trigger id="selfShirtSize" class="w-full">
-                                    <BitsSelect.Value placeholder="Select size…" />
-                                </Select.Trigger>
-                                <Select.Content>
-                                    {#each SHIRT_SIZES as size (size)}
-                                        <Select.Item value={size} label={size} />
-                                    {/each}
-                                </Select.Content>
-                            </Select.Root>
+                            <ShirtSizeSelect
+                                id="selfShirtSize"
+                                bind:value={
+                                    () => info.shirtSize ?? '', (v) => (info.shirtSize = v)
+                                } />
                         </div>
                     {/if}
                 </div>

@@ -1,7 +1,5 @@
 <script lang="ts">
-import * as Select from '$lib/components/ui/select'
-
-const LABELS = { yes: 'Yes', no: 'No' } as const
+import { NativeSelect } from '$lib/components/ui/native-select'
 
 let {
     value = $bindable<'yes' | 'no' | ''>(''),
@@ -20,19 +18,9 @@ let {
 } = $props()
 </script>
 
-<Select.Root type="single" {value} onValueChange={(v) => (value = v as 'yes' | 'no')} {name}>
-    <Select.Trigger {id} class="w-full">
-        {#if value}
-            {LABELS[value]}
-        {:else}
-            <span class="text-muted-foreground">{allowClear ? clearLabel : placeholder}</span>
-        {/if}
-    </Select.Trigger>
-    <Select.Content>
-        {#if allowClear}
-            <Select.Item value="" label={clearLabel} />
-        {/if}
-        <Select.Item value="yes" label="Yes" />
-        <Select.Item value="no" label="No" />
-    </Select.Content>
-</Select.Root>
+<NativeSelect {id} {name} bind:value>
+    <!-- Selectable where the field may be left unanswered, a disabled prompt where it may not. -->
+    <option value="" disabled={!allowClear}>{allowClear ? clearLabel : placeholder}</option>
+    <option value="yes">Yes</option>
+    <option value="no">No</option>
+</NativeSelect>

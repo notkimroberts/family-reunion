@@ -1,13 +1,10 @@
 <script lang="ts">
 import { Plus, Trash2 } from '@lucide/svelte'
-import { Select as BitsSelect } from 'bits-ui'
 import { DatePicker } from '$lib/components'
 import { Button } from '$lib/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card'
 import { Input } from '$lib/components/ui/input'
-import * as Select from '$lib/components/ui/select'
 import { Separator } from '$lib/components/ui/separator'
-import { SHIRT_SIZES } from '$lib/general/constants'
 import {
     formatPrice,
     getMemberAge,
@@ -18,6 +15,7 @@ import {
 } from '$lib/utils'
 import AdditionalQuestionsFields from './AdditionalQuestionsFields.svelte'
 import AddressFields from './AddressFields.svelte'
+import ShirtSizeSelect from './ShirtSizeSelect.svelte'
 import TierSelect from './TierSelect.svelte'
 import type { ContactAddress, FormMember, TierOption } from './types'
 
@@ -245,19 +243,7 @@ function handleRemoveMember(index: number) {
                                 <span class="text-muted-foreground font-normal text-xs"
                                     >(optional)</span>
                             </label>
-                            <Select.Root
-                                type="single"
-                                value={newShirtSize}
-                                onValueChange={(v) => (newShirtSize = v)}>
-                                <Select.Trigger id="new-shirt" class="w-full">
-                                    <BitsSelect.Value placeholder="Select size…" />
-                                </Select.Trigger>
-                                <Select.Content>
-                                    {#each SHIRT_SIZES as size (size)}
-                                        <Select.Item value={size} label={size} />
-                                    {/each}
-                                </Select.Content>
-                            </Select.Root>
+                            <ShirtSizeSelect id="new-shirt" bind:value={newShirtSize} />
                         </div>
                     {/if}
                 </div>
