@@ -15,6 +15,12 @@ import { describe, it, expect } from 'vitest'
    pins the import, not the behaviour: any bits-ui Select reintroduced into these files brings the
    Safari skip back with it. */
 const REGISTER_DIR = 'src/routes/(app)/register'
+/* The admin registration forms are as form-heavy as the public one and reuse the same field
+   components, so the same Safari defect applies to them. */
+const ADMIN_DIRS = [
+    'src/routes/(app)/admin/registrations/[id]',
+    'src/routes/(app)/admin/registrations/new',
+]
 
 /* Fields the registrant fills. DatePicker is excluded — it is a Popover with a text input, so the
    input itself is the Tab stop. */
@@ -35,17 +41,21 @@ describe('registration form fields are keyboard reachable', () => {
 
     /* The four inline copies of the shirt-size Select are why this is a component now. Catch a new
        inline Select anywhere in the registration form, not just in the files listed above. */
-    it('no component in the registration form reintroduces a bits-ui Select', () => {
-        const offenders = readdirSync(REGISTER_DIR)
-            .filter((file) => file.endsWith('.svelte'))
-            .filter((file) =>
-                /Select\.Trigger|from 'bits-ui'/.test(
-                    readFileSync(`${REGISTER_DIR}/${file}`, 'utf8'),
-                ),
-            )
+    it.each([REGISTER_DIR, ...ADMIN_DIRS])(
+        'no component in %s reintroduces a bits-ui Select',
+        (dir) => {
+            const offenders = readdirSync(dir)
+                .filter((file) => file.endsWith('.svelte'))
+                .filter((file) =>
+                    /Select\.Trigger|from 'bits-ui'/.test(readFileSync(`${dir}/${file}`, 'utf8')),
+                )
 
-        expect(offenders, 'these render a bits-ui Select, unreachable by Tab in Safari').toEqual([])
-    })
+            expect(
+                offenders,
+                'these render a bits-ui Select, unreachable by Tab in Safari',
+            ).toEqual([])
+        },
+    )
 
     it('the shared native select is styled to match Input and carries its own chevron', () => {
         const source = readFileSync(

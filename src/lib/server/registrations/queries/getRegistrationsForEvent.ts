@@ -8,6 +8,7 @@ export type RegistrationSummary = {
     contactEmail: string
     contactPhone: string | null
     status: string
+    stripeSessionId: string | null
     memberCount: number
     totalCents: number
     createdAt: Date
@@ -24,7 +25,11 @@ export type RegistrationSummary = {
    person actually cost, which is the honest figure, so a mixed party's total is a mix by design.
 
    Includes every status, cancelled ones too — an organiser needs to see that a registration was
-   refunded, not have it vanish. */
+   refunded, not have it vanish.
+
+   stripeSessionId is returned so the list can distinguish a public registration abandoned at
+   checkout from a paper one awaiting a cheque. Both are 'pending' and they need opposite
+   follow-ups — see getPaymentState. */
 export async function getRegistrationsForEvent(eventId: string): Promise<RegistrationSummary[]> {
     const rows = await db
         .select({
@@ -33,6 +38,7 @@ export async function getRegistrationsForEvent(eventId: string): Promise<Registr
             contactEmail: registrations.contactEmail,
             contactPhone: registrations.contactPhone,
             status: registrations.status,
+            stripeSessionId: registrations.stripeSessionId,
             createdAt: registrations.createdAt,
             memberCount: count(partyMembers.id),
             totalCents: sum(partyMembers.priceCents),

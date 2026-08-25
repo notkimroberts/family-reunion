@@ -27,4 +27,12 @@ export type RegistrationConfirmationData = {
     partyMembers: ConfirmationPartyMember[]
     totalCents: number
     manageUrl: string
+    /* Set when an organiser changed an existing registration rather than a new one arriving. Swaps
+       the heading and adds a lead saying so, but keeps the status money sentence below it — the
+       amount owed or covered is just as relevant on an update as on a first confirmation. */
+    isUpdate?: boolean
+    /* Human-readable lines describing what the organiser changed, e.g. "Payment recorded as paid".
+       Only rendered for an update. Without it the registrant gets a fresh copy of their details with
+       no indication of what moved. */
+    changeSummary?: string[]
 }

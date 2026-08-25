@@ -45,8 +45,10 @@ export const personDetailsSchema = z.object({
     ),
 })
 
+/* min(2), not min(1): a single character got saved as a party member's whole name. Not a full-name
+   requirement — mononyms are real and a surname must not be forced. */
 export const memberSchema = personDetailsSchema.extend({
-    name: z.string().min(1, 'Name is required'),
+    name: z.string().trim().min(2, 'Please enter a name'),
 })
 
 /* The registration form's complete shape. Every field the form collects lives here and nowhere
@@ -85,7 +87,7 @@ export const adminRegistrationSchema = registrationSchema.extend({
 export const addMemberSchema = personDetailsSchema.extend({
     token: z.string().min(1),
     registrationId: z.string().min(1),
-    name: z.string().min(1, 'Name is required'),
+    name: z.string().trim().min(2, 'Please enter a name'),
 })
 
 export const updateMemberSchema = z.object({

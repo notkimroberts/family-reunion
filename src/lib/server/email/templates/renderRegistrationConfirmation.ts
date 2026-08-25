@@ -52,6 +52,13 @@ export function renderRegistrationConfirmation(data: RegistrationConfirmationDat
     const copy = STATUS_COPY[data.status]
     const { insetBackground, border, text: textColor, muted, fontStack } = emailThemeValue
 
+    /* An update keeps the status money sentence — what is owed or covered still applies — and gains
+       a heading and lead saying an organiser changed something. Calling an edit "Registration
+       confirmed" a second time reads as a duplicate and hides the change. */
+    const heading = data.isUpdate ? 'Registration updated' : copy.heading
+    const updateLead = 'An organiser updated your registration. Here is how it now stands.'
+    const changes = data.isUpdate ? (data.changeSummary ?? []) : []
+
     const eventLines = [data.eventDateRange, data.venueName, data.venueAddress].filter(
         (line): line is string => Boolean(line),
     )
@@ -60,6 +67,10 @@ export function renderRegistrationConfirmation(data: RegistrationConfirmationDat
     const textBody = [
         `Hi ${data.name},`,
         '',
+        ...(data.isUpdate ? [updateLead, ''] : []),
+        ...(changes.length > 0
+            ? ['What changed:', ...changes.map((line) => `  - ${line}`), '']
+            : []),
         copy.lead,
         '',
         data.eventTitle,
@@ -124,8 +135,27 @@ ${memberRows}
         ? `<p style="margin:0 0 24px 0;font-family:${fontStack};font-size:14px;line-height:1.6;color:${muted};">${escapeHtml(copy.note)}</p>`
         : '<div style="height:16px;"></div>'
 
+    const changeBlock =
+        changes.length > 0
+            ? `<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin:0 0 24px 0;">
+  <tr>
+    <td bgcolor="${insetBackground}" style="background-color:${insetBackground};border:1px solid ${border};border-radius:8px;padding:16px 18px;">
+      <p style="margin:0 0 8px 0;font-family:${fontStack};font-size:13px;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;color:${muted};">What changed</p>
+      ${changes
+          .map(
+              (line) =>
+                  `<p style="margin:0 0 4px 0;font-family:${fontStack};font-size:15px;line-height:1.5;color:${textColor};">${escapeHtml(line)}</p>`,
+          )
+          .join('\n      ')}
+    </td>
+  </tr>
+</table>`
+            : ''
+
     const bodyHtml = [
         paragraph(`Hi ${escapeHtml(data.name)},`),
+        ...(data.isUpdate ? [paragraph(escapeHtml(updateLead))] : []),
+        changeBlock,
         paragraph(escapeHtml(copy.lead)),
         eventBlock,
         sectionLabel('Your party'),
@@ -139,11 +169,11 @@ ${memberRows}
     ].join('\n')
 
     return {
-        subject: `${copy.heading}: ${data.eventTitle}`,
+        subject: `${heading}: ${data.eventTitle}`,
         text: textBody,
         html: emailLayout({
             preheader: `${copy.totalLabel} $${formatPrice(data.totalCents)} — ${data.partyMembers.length} ${data.partyMembers.length === 1 ? 'person' : 'people'} registered for ${data.eventTitle}.`,
-            heading: copy.heading,
+            heading,
             bodyHtml,
         }),
     }

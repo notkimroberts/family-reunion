@@ -19,6 +19,7 @@ export {
     updateAdminMemberDetails,
     removeAdminMember,
     recordRegistrationAudit,
+    notifyRegistrationUpdated,
 } from './management'
 export type { AdminSettableStatus, RegistrationAuditAction } from './management'
 

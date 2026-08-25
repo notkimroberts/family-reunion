@@ -69,7 +69,7 @@ SvelteKit full-stack app (Svelte 5 with runes). Node adapter for Railway deploym
 
 - **PostgreSQL** via `postgres` driver + **Drizzle ORM** (schema at `src/lib/server/db/schema.ts`)
 - DB connection uses lazy init with SvelteKit's `$env/dynamic/private` — standalone scripts (like seed.ts) must create their own `postgres()` client directly
-- All person records store birth date as split nullable integers (`birthYear`, `birthMonth`, `birthDay`); a CHECK constraint enforces prefix-consistency (day ⇒ month, month ⇒ year). `family_members` allows partial dates (year-only is fine for ancestors); registration party members come through the form which requires a full date
+- All person records store birth date as split nullable integers (`birthYear`, `birthMonth`, `birthDay`); a CHECK constraint enforces prefix-consistency (day ⇒ month, month ⇒ year). `family_members` allows partial dates (year-only is fine for ancestors). **Birth date is optional for registration party members too** — `personDetailsSchema.birthDate` is `.optional()`, so plenty of rows have none and the admin party table shows "—". Nothing load-bearing needs it: shirt sizing comes from the tier's `shirtSizeCategory`, and the confirmation email prints an age only when one exists. Do not "fix" this by making it required without deciding that catering actually needs ages — that adds a required field to a live public form.
 
 ### Server modules
 
