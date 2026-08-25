@@ -1,32 +1,52 @@
 <script lang="ts">
 import { Check, Copy, TriangleAlert } from '@lucide/svelte'
+import * as Sentry from '@sentry/sveltekit'
 import { getContext } from 'svelte'
 import { superForm } from 'sveltekit-superforms'
+import { zod4Client as zodClient } from 'sveltekit-superforms/adapters'
 import { Button } from '$lib/components/ui/button'
 import { Card, CardContent } from '$lib/components/ui/card'
 import type { AdminContext } from '$lib/types/adminContext'
 import { getTierPriceCents } from '$lib/utils'
 import { EMPTY_PERSON_DETAILS } from '../../register/EMPTY_PERSON_DETAILS'
+import FormErrorSummary from '../../register/FormErrorSummary.svelte'
 import OrderSummaryCard from '../../register/OrderSummaryCard.svelte'
 import PartyMembersBuilder from '../../register/PartyMembersBuilder.svelte'
-import RegistrationHiddenFields from '../../register/RegistrationHiddenFields.svelte'
 import YourInformationCard from '../../register/YourInformationCard.svelte'
 import { isContactComplete } from '../../register/isContactComplete'
+import { adminRegistrationSchema } from '../../register/schema'
 import type { FormMember, PersonDetails } from '../../register/types'
 
 let { data, form: actionData } = $props()
 
 const adminCtx = getContext<AdminContext>('admin')
 
-/* No `validators` here, deliberately — see the same note on the public register page.
-   Superforms validates the $form store rather than the DOM and cancels the submit on
-   failure; this form's fields live in unbound hidden inputs, so client validation could
-   never pass and "Add Registration" did nothing at all. The action still validates
-   server-side with adminRegistrationSchema. */
-const { form, errors, enhance } = superForm(data.form, {
-    dataType: 'form',
-    /* Keep the page's own $state (party builder, self details) in charge of resetting —
-       superforms resetting the form would not clear those. */
+/* superforms' $form is a STORE, not $state, so $form.self is a plain object and binding to its
+   nested properties is untrackable ("binding_property_non_reactive"). See the fuller note on the
+   public register page: $state is the editing surface, and exactly ONE sync into $form happens in
+   onSubmit — which superforms runs before client validation, so validators still see fresh data,
+   and dataType 'json' means nothing is mirrored into the DOM. */
+const { form, errors, message, enhance } = superForm(data.form, {
+    validators: zodClient(adminRegistrationSchema),
+    dataType: 'json',
+    /* Superforms swallows a failed submit into $errors and, for a transport/server error, into
+       onError. Neither was surfaced, so every failure looked like an inert button. FormErrorSummary
+       shows the validation half; this reports the rest. */
+    onError: ({ result }) => {
+        Sentry.captureException(
+            new Error(
+                `admin paper registration submit failed: ${result.error?.message ?? 'unknown'}`,
+            ),
+            { tags: { source: 'superforms-onError' }, extra: { status: result.status } },
+        )
+    },
+    onSubmit: () => {
+        $form.eventId = targetEventId
+        $form.self = { ...self }
+        $form.members = members.map((member) => ({ ...member }))
+    },
+    /* handleReset clears state explicitly, so superforms must not also reset $form out from under
+       the success banner, which reads the returned manage URL. */
     resetForm: false,
 })
 
@@ -37,17 +57,16 @@ let targetEventId = $derived(
 const tiers = $derived(data.tiers)
 const shirtsEnabled = $derived(data.events[0]?.shirtsEnabled ?? false)
 
-let selfFirstName = $state('')
-let selfLastName = $state('')
 let self = $state<PersonDetails>({ ...EMPTY_PERSON_DETAILS })
-let status = $state<'paid' | 'pending' | 'waived'>('paid')
 let members = $state<FormMember[]>([])
 let copied = $state(false)
-/* Mirrors YourInformationCard's internal Save state, so the contact must be committed before
-   the registration can be submitted. */
+/* Mirrors YourInformationCard's internal Save state, so the contact must be committed before the
+   registration can be submitted. UI state, so it stays out of $form. */
 let contactSaved = $state(false)
 
-let contactName = $derived(`${selfFirstName.trim()} ${selfLastName.trim()}`.trim())
+let contactName = $derived(
+    `${$form.contactFirstName.trim()} ${$form.contactLastName.trim()}`.trim(),
+)
 let contactAddress = $derived({
     addressLine1: self.addressLine1,
     addressLine2: self.addressLine2,
@@ -56,38 +75,33 @@ let contactAddress = $derived({
     addressZip: self.addressZip,
 })
 
-let membersJson = $derived(JSON.stringify(members))
-
 let subtotal = $derived(
     (self.tierId ? getTierPriceCents(self.tierId, tiers) : 0) +
         members.reduce((sum, member) => sum + getTierPriceCents(member.tierId, tiers), 0),
 )
 
-/* Mirrors the public form's gate, so an admin cannot submit a paper entry that the schema
-   would reject server-side.
-
-   `?? ''` is deliberate: a rejected submit rebinds $form from the server's parse result, which
-   omits any field the POST was missing. Reading .trim() straight off that crashed the page. */
+/* Mirrors the public form's gate, so an admin cannot submit a paper entry the schema would reject
+   server-side. */
 let canSubmit = $derived(
     contactSaved &&
         isContactComplete({
-            firstName: selfFirstName,
-            lastName: selfLastName,
-            email: $form.contactEmail ?? '',
+            firstName: $form.contactFirstName,
+            lastName: $form.contactLastName,
+            email: $form.contactEmail,
             details: self,
         }),
 )
 
 function handleReset() {
-    selfFirstName = ''
-    selfLastName = ''
+    $form.contactFirstName = ''
+    $form.contactLastName = ''
     $form.contactEmail = ''
     $form.contactPhone = ''
+    $form.status = 'paid'
     self = { ...EMPTY_PERSON_DETAILS }
-    status = 'paid'
     members = []
-    copied = false
     contactSaved = false
+    copied = false
 }
 
 async function handleCopy(url: string) {
@@ -168,11 +182,9 @@ async function handleCopy(url: string) {
         {/if}
 
         <form method="POST" use:enhance>
-            <RegistrationHiddenFields
-                eventId={targetEventId}
-                {contactName}
-                details={self}
-                {membersJson} />
+            <div class="mb-4">
+                <FormErrorSummary errors={$errors} message={$message} />
+            </div>
 
             <div class="grid grid-cols-1 lg:grid-cols-[1fr_minmax(0,22rem)] gap-6">
                 <!-- Left: party builder -->
@@ -180,15 +192,15 @@ async function handleCopy(url: string) {
                     <YourInformationCard
                         bind:email={$form.contactEmail}
                         bind:phone={$form.contactPhone}
-                        bind:firstName={selfFirstName}
-                        bind:lastName={selfLastName}
+                        bind:firstName={$form.contactFirstName}
+                        bind:lastName={$form.contactLastName}
                         bind:info={self}
                         bind:saved={contactSaved}
                         {tiers}
                         {shirtsEnabled}
                         errors={{
                             email: $errors.contactEmail?.[0],
-                            name: $errors.contactName?.[0],
+                            name: $errors.contactFirstName?.[0] ?? $errors.contactLastName?.[0],
                         }} />
 
                     <PartyMembersBuilder
@@ -197,7 +209,7 @@ async function handleCopy(url: string) {
                         {contactName}
                         {contactAddress}
                         {shirtsEnabled}
-                        error={$errors.members?.[0]} />
+                        error={$errors.members?._errors?.[0]} />
                 </div>
 
                 <!-- Right: order summary (sticky on desktop) -->
@@ -213,7 +225,7 @@ async function handleCopy(url: string) {
                         placeholderText="Fill in the contact's details above and press Save to continue."
                         contactSuffix="contact"
                         showStatus
-                        bind:status />
+                        bind:status={$form.status} />
                     {#if $errors.status?.[0]}
                         <p class="mt-2 text-sm text-destructive">{$errors.status[0]}</p>
                     {/if}

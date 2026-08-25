@@ -32,23 +32,29 @@ vi.mock('$lib/server/registrations', () => ({
 vi.mock('$lib/server/tiers', () => ({ getTiersForEvent: vi.fn() }))
 vi.mock('../../register/schema', () => ({ adminRegistrationSchema: {} }))
 
+const SELF = {
+    tierId: 'tier-adult',
+    birthDate: '1980-05-05',
+    shirtSize: 'L',
+    addressLine1: '1 Main St',
+    addressLine2: '',
+    addressCity: 'Shreveport',
+    addressState: 'LA',
+    addressZip: '71101',
+    vegetarianMeal: 'no',
+    attendedReunion2025: 'yes',
+}
+
+/* The nested shape $form now posts as JSON, rather than the old flat self*-prefixed keys. */
 const validFormData = {
     eventId: 'event-1',
-    contactName: 'Alice Patterson',
-    contactEmail: 'alice@example.com',
+    contactFirstName: 'Alice',
+    contactLastName: 'Patterson',
+    contactEmail: 'Alice@Example.COM',
     contactPhone: '',
     status: 'paid',
-    selfTierId: 'tier-adult',
-    selfBirthDate: '1980-05-05',
-    selfShirtSize: 'L',
-    selfAddressLine1: '1 Main St',
-    selfAddressLine2: '',
-    selfAddressCity: 'Shreveport',
-    selfAddressState: 'LA',
-    selfAddressZip: '71101',
-    selfVegetarianMeal: 'no',
-    selfAttendedReunion2025: 'yes',
-    members: '[]',
+    self: { ...SELF },
+    members: [],
 }
 
 function makeEvent() {
@@ -91,9 +97,7 @@ describe('POST /admin/registrations', () => {
             valid: true,
             data: {
                 ...validFormData,
-                members: JSON.stringify([
-                    { name: 'Marcus', tierId: 'tier-adult', vegetarianMeal: 'yes' },
-                ]),
+                members: [{ ...SELF, name: 'Marcus', vegetarianMeal: 'yes' }],
             },
         })
 
@@ -163,15 +167,28 @@ describe('POST /admin/registrations', () => {
         expect(result).toMatchObject({ success: true, emailSent: false })
     })
 
-    it('fails the request on malformed member JSON', async () => {
+    /* Email is lowercased in the action, not the schema — a schema transform would rewrite what
+       the user is typing during client-side validation. /register/recover matches on exact
+       contact email, so this normalisation is what makes recovery work. */
+    it('normalises the contact email before storing it', async () => {
+        await actions.default(makeEvent())
+        expect(mockCreateAdminRegistration).toHaveBeenCalledWith(
+            expect.objectContaining({ contactEmail: 'alice@example.com' }),
+        )
+    })
+
+    it('composes contactName from the first and last name fields', async () => {
         mockSuperValidate.mockResolvedValue({
             valid: true,
-            data: { ...validFormData, members: 'not json' },
+            data: {
+                ...validFormData,
+                contactFirstName: '  Alice  ',
+                contactLastName: ' Patterson ',
+            },
         })
-
-        const result = await actions.default(makeEvent())
-
-        expect(mockCreateAdminRegistration).not.toHaveBeenCalled()
-        expect(result).toMatchObject({ status: 400 })
+        await actions.default(makeEvent())
+        expect(mockCreateAdminRegistration).toHaveBeenCalledWith(
+            expect.objectContaining({ contactName: 'Alice Patterson' }),
+        )
     })
 })

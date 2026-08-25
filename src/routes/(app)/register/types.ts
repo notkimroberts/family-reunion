@@ -1,3 +1,5 @@
+import type { MemberInputData } from './schema'
+
 /* Shared domain types for the /register route */
 
 /* Mailing address fields, shared by FormMember and the "same as contact" copy source */
@@ -9,19 +11,17 @@ export type Address = {
     addressZip: string
 }
 
-/* Member being built in the new-registration form before submission */
-export type FormMember = {
-    name: string
-    tierId: string
-    birthDate?: string
-    shirtSize?: string
-    vegetarianMeal: 'yes' | 'no' | ''
-    attendedReunion2025: 'yes' | 'no' | ''
-} & Address
+/* Member being built in the form before submission.
 
-/* Every field collected about a person besides their name (tier, birthday, shirt, address,
-   extra questions) — grouped into one object so components binding all of it (YourInformationCard)
-   take a single prop instead of growing a bindable prop per field. */
+   The schema's INPUT type, not its output: a freshly added person has not answered the yes/no
+   questions yet, so those are still ''. Deriving it rather than restating the shape means the UI
+   and the server validation cannot drift — and validation is precisely what converts this into
+   MemberData. */
+export type FormMember = MemberInputData
+
+/* Every field collected about a person besides their name (tier, birthday, shirt, address, extra
+   questions) — one object so components binding all of it take a single prop rather than a
+   bindable prop per field, and so $form can hold it as a single nested value. */
 export type PersonDetails = Omit<FormMember, 'name'>
 
 /* Full party member row returned from the DB (used in RegistrationManager and EditMemberDialog) */
