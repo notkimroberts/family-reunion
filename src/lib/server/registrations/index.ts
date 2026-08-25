@@ -18,6 +18,10 @@ export {
 } from './management'
 export type { AdminSettableStatus } from './management'
 
+export { rotateManagementToken } from './rotateManagementToken'
+export { isManagementTokenValid, MANAGEMENT_TOKEN_GRACE_PERIOD_MS } from './isManagementTokenValid'
+export type { ManagementTokenColumns } from './isManagementTokenValid'
+
 export type { RegistrationMember } from './queries'
 export type { RegistrationSummary } from './queries'
 export {

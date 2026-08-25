@@ -174,6 +174,16 @@ export const registrations = pgTable(
     {
         id: uuid('id').primaryKey().defaultRandom(),
         managementToken: text('management_token').notNull().unique(),
+        /* The previous token's hash, kept briefly after a rotation.
+
+           Rotation is unavoidable whenever a link has to be re-sent — only the hash is stored, so
+           the original plaintext cannot be recovered by anyone. But rotating alone would invalidate
+           every link already in the registrant's inbox AND log out an open manage session, because
+           the plaintext lives in their reg_token cookie. Honouring the previous hash for a short
+           window means an organiser can edit a registration without silently breaking the
+           registrant's access. */
+        previousManagementToken: text('previous_management_token').unique(),
+        previousTokenExpiresAt: timestamp('previous_token_expires_at'),
         contactName: text('contact_name').notNull(),
         contactEmail: text('contact_email').notNull(),
         contactPhone: text('contact_phone'),
@@ -298,4 +308,37 @@ export const photos = pgTable(
         createdAt: timestamp('created_at').notNull().defaultNow(),
     },
     (t) => [index('photos_event_id_idx').on(t.eventId)],
+)
+
+export const registrationAuditActionEnum = pgEnum('registration_audit_action', [
+    'status_changed',
+    'member_added',
+    'member_updated',
+    'member_removed',
+    'contact_updated',
+    'link_reissued',
+])
+
+/* Append-only record of admin changes to someone else's registration.
+
+   registrations.updated_at was the only trace, so with several organisers sharing the admin panel
+   "who marked this paid?" and "who removed that person?" had no answer. These changes involve money
+   and other people's places, which is exactly what wants a history.
+
+   actor_user_id is set null rather than cascade on user delete: removing an organiser's account must
+   not erase the record that a change happened. detail carries the shape of that action — a status
+   change stores { from, to }, a member change stores the name and what altered. */
+export const registrationAudit = pgTable(
+    'registration_audit',
+    {
+        id: uuid('id').primaryKey().defaultRandom(),
+        registrationId: uuid('registration_id')
+            .notNull()
+            .references(() => registrations.id, { onDelete: 'cascade' }),
+        actorUserId: text('actor_user_id').references(() => user.id, { onDelete: 'set null' }),
+        action: registrationAuditActionEnum('action').notNull(),
+        detail: jsonb('detail'),
+        createdAt: timestamp('created_at').notNull().defaultNow(),
+    },
+    (t) => [index('registration_audit_registration_id_idx').on(t.registrationId)],
 )

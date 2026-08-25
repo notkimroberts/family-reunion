@@ -7,6 +7,7 @@ import { parseBirthDate } from '$lib/utils/age'
 import { parseYesNo } from '$lib/utils/parseYesNo'
 import { assertRegistrationEditable } from '../assertRegistrationEditable'
 import { hashManagementToken } from '../hashManagementToken'
+import { isManagementTokenValid } from '../isManagementTokenValid'
 
 /* Updates mutable fields on a party_member. Each field is only written when the caller
    explicitly passed it; passing `undefined` means "leave the existing value alone". This
@@ -26,7 +27,9 @@ export async function updateMemberDetails(
         .select({
             id: partyMembers.id,
             registrationId: partyMembers.registrationId,
-            registrationToken: registrations.managementToken,
+            managementToken: registrations.managementToken,
+            previousManagementToken: registrations.previousManagementToken,
+            previousTokenExpiresAt: registrations.previousTokenExpiresAt,
             registrationLockDate: reunionEvents.registrationLockDate,
         })
         .from(partyMembers)
@@ -35,7 +38,9 @@ export async function updateMemberDetails(
         .where(eq(partyMembers.id, memberId))
         .limit(1)
 
-    if (!member || member.registrationToken !== tokenHash) {
+    /* Grace-period aware, via the same predicate the page load uses. Comparing only against the
+       current hash here would let the manage page render and then 403 every save on it. */
+    if (!member || !isManagementTokenValid(member, tokenHash)) {
         throw error(403)
     }
 

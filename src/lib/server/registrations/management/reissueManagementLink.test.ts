@@ -1,29 +1,17 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-const { mockUpdate, mockSet, mockWhere, mockDb } = vi.hoisted(() => {
-    const mockUpdate = vi.fn()
-    const mockSet = vi.fn()
-    const mockWhere = vi.fn().mockResolvedValue(undefined)
-    const chain = { update: mockUpdate, set: mockSet, where: mockWhere }
-    mockUpdate.mockReturnValue(chain)
-    mockSet.mockReturnValue(chain)
-    return { mockUpdate, mockSet, mockWhere, mockDb: chain }
-})
-
-const { mockGetRegistrationWithEvent, mockSendRecoveryEmail, mockGenerateToken } = vi.hoisted(
-    () => ({
+const { mockGetRegistrationWithEvent, mockSendRecoveryEmail, mockGenerateToken, mockRotate } =
+    vi.hoisted(() => ({
         mockGetRegistrationWithEvent: vi.fn(),
         mockSendRecoveryEmail: vi.fn(),
         mockGenerateToken: vi.fn(),
-    }),
-)
+        mockRotate: vi.fn(),
+    }))
 
-vi.mock('$lib/server/db', () => ({ db: mockDb }))
-vi.mock('$lib/server/db/schema', () => ({ registrations: {} }))
 vi.mock('$lib/server/debug', () => ({ dbg: { register: vi.fn() } }))
 vi.mock('$lib/server/email', () => ({ sendRecoveryEmail: mockSendRecoveryEmail }))
-vi.mock('drizzle-orm', () => ({ eq: vi.fn() }))
 vi.mock('../hashManagementToken', () => ({ generateManagementToken: mockGenerateToken }))
+vi.mock('../rotateManagementToken', () => ({ rotateManagementToken: mockRotate }))
 vi.mock('../queries/getRegistrationWithEvent', () => ({
     getRegistrationWithEvent: mockGetRegistrationWithEvent,
 }))
@@ -39,12 +27,18 @@ describe('reissueManagementLink', () => {
         })
         mockGenerateToken.mockReturnValue({ plaintext: 'fresh-plain', hash: 'fresh-hash' })
         mockSendRecoveryEmail.mockResolvedValue(undefined)
-        mockUpdate.mockReturnValue(mockDb)
-        mockSet.mockReturnValue(mockDb)
-        mockWhere.mockResolvedValue(undefined)
+        mockRotate.mockResolvedValue(undefined)
     })
 
     it('emails the fresh link and then persists its hash', async () => {
+        const callOrder: string[] = []
+        mockSendRecoveryEmail.mockImplementation(async () => {
+            callOrder.push('send')
+        })
+        mockRotate.mockImplementation(async () => {
+            callOrder.push('rotate')
+        })
+
         await reissueManagementLink({
             registrationId: 'reg-1',
             manageUrl: (token) => `https://example.com/register/manage?token=${token}`,
@@ -54,14 +48,21 @@ describe('reissueManagementLink', () => {
             eventTitle: 'Patterson Family Reunion 2027',
             manageUrl: 'https://example.com/register/manage?token=fresh-plain',
         })
-        expect(mockSet).toHaveBeenCalledWith(
-            expect.objectContaining({ managementToken: 'fresh-hash' }),
-        )
+        expect(mockRotate).toHaveBeenCalledWith({
+            registrationId: 'reg-1',
+            newHash: 'fresh-hash',
+        })
+        /* Asserting the sequence, not just that both happened — the ordering IS the guarantee. */
+        expect(callOrder).toEqual(['send', 'rotate'])
     })
 
     /* The regression this file exists for. The DB stores only the hash, so rotating before a
        confirmed delivery is unrecoverable: the registrant's old link no longer hashes to anything
-       stored and the new one never arrived. Locked out permanently, by an admin trying to help. */
+       stored and the new one never arrived. Locked out permanently, by an admin trying to help.
+
+       The grace period does not soften this. It preserves the token being rotated AWAY from, which
+       is only written once the rotation happens at all — so a rotation before a failed send still
+       strands the registrant. */
     it('does NOT rotate the token when the email fails', async () => {
         mockSendRecoveryEmail.mockRejectedValue(new Error('Resend rejected the email'))
 
@@ -72,8 +73,7 @@ describe('reissueManagementLink', () => {
             }),
         ).rejects.toThrow()
 
-        expect(mockSet).not.toHaveBeenCalled()
-        expect(mockUpdate).not.toHaveBeenCalled()
+        expect(mockRotate).not.toHaveBeenCalled()
     })
 
     it('404s on a missing registration without sending or rotating', async () => {
@@ -84,6 +84,6 @@ describe('reissueManagementLink', () => {
         ).rejects.toThrow()
 
         expect(mockSendRecoveryEmail).not.toHaveBeenCalled()
-        expect(mockSet).not.toHaveBeenCalled()
+        expect(mockRotate).not.toHaveBeenCalled()
     })
 })

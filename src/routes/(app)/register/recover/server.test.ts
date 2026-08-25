@@ -5,6 +5,8 @@ const { mockSuperValidate } = vi.hoisted(() => ({
     mockSuperValidate: vi.fn(),
 }))
 
+const { mockRotate } = vi.hoisted(() => ({ mockRotate: vi.fn() }))
+
 const { mockUpdate, mockSet, mockWhere, mockDb } = vi.hoisted(() => {
     const mockUpdate = vi.fn()
     const mockSet = vi.fn()
@@ -46,6 +48,9 @@ vi.mock('$lib/server/registrations', () => ({
 vi.mock('$lib/server/registrations/hashManagementToken', () => ({
     generateManagementToken: mockGenerateToken,
 }))
+vi.mock('$lib/server/registrations/rotateManagementToken', () => ({
+    rotateManagementToken: mockRotate,
+}))
 vi.mock('./schema', () => ({ recoverSchema: {} }))
 vi.mock('drizzle-orm', () => ({ eq: vi.fn() }))
 vi.mock('resend', () => ({ Resend: MockResend }))
@@ -84,6 +89,8 @@ describe('POST /register/recover', () => {
         mockUpdate.mockReturnValue(mockDb)
         mockSet.mockReturnValue(mockDb)
         mockWhere.mockResolvedValue(undefined)
+        mockRotate.mockReset()
+        mockRotate.mockResolvedValue(undefined)
     })
 
     it('rotates the token after a successful send', async () => {
@@ -92,9 +99,7 @@ describe('POST /register/recover', () => {
         const [payload] = mockEmailSend.mock.calls[0]
         expect(payload.to).toBe('alice@example.com')
         expect(payload.text).toContain('http://localhost/register/manage?token=new-plain')
-        expect(mockSet).toHaveBeenCalledWith(
-            expect.objectContaining({ managementToken: 'new-hash' }),
-        )
+        expect(mockRotate).toHaveBeenCalledWith({ registrationId: 'reg-1', newHash: 'new-hash' })
         expect(result).toMatchObject({ sent: true })
     })
 
@@ -108,8 +113,7 @@ describe('POST /register/recover', () => {
         const result = await actions.default(makeEvent())
 
         expect(mockEmailSend).toHaveBeenCalledOnce()
-        expect(mockSet).not.toHaveBeenCalled()
-        expect(mockUpdate).not.toHaveBeenCalled()
+        expect(mockRotate).not.toHaveBeenCalled()
         /* Still a generic success, to avoid leaking which addresses are registered. */
         expect(result).toMatchObject({ sent: true })
         /* The registrant asked for a link and silently got nothing, and the generic response
@@ -126,7 +130,7 @@ describe('POST /register/recover', () => {
         mockEnv.RESEND_API_KEY = ''
         try {
             await actions.default(makeEvent())
-            expect(mockSet).not.toHaveBeenCalled()
+            expect(mockRotate).not.toHaveBeenCalled()
         } finally {
             mockEnv.RESEND_API_KEY = 're_test_key'
         }
@@ -142,7 +146,7 @@ describe('POST /register/recover', () => {
         await actions.default(makeEvent())
 
         expect(mockEmailSend).toHaveBeenCalledTimes(2)
-        expect(mockSet).toHaveBeenCalledTimes(1)
+        expect(mockRotate).toHaveBeenCalledTimes(1)
     })
 
     it('reports generic success when no registration matches the email', async () => {
@@ -151,7 +155,7 @@ describe('POST /register/recover', () => {
         const result = await actions.default(makeEvent())
 
         expect(mockEmailSend).not.toHaveBeenCalled()
-        expect(mockSet).not.toHaveBeenCalled()
+        expect(mockRotate).not.toHaveBeenCalled()
         expect(result).toMatchObject({ sent: true })
     })
 })
