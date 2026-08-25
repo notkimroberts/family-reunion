@@ -15,8 +15,12 @@ export {
     addAdminMember,
     setRegistrationStatus,
     reissueManagementLink,
+    updateRegistrationContact,
+    updateAdminMemberDetails,
+    removeAdminMember,
+    recordRegistrationAudit,
 } from './management'
-export type { AdminSettableStatus } from './management'
+export type { AdminSettableStatus, RegistrationAuditAction } from './management'
 
 export { rotateManagementToken } from './rotateManagementToken'
 export { isManagementTokenValid, MANAGEMENT_TOKEN_GRACE_PERIOD_MS } from './isManagementTokenValid'
