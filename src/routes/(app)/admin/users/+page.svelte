@@ -1,5 +1,4 @@
 <script lang="ts">
-import { getContext } from 'svelte'
 import { AdminDataView } from '$lib/components'
 import { Badge } from '$lib/components/ui/badge'
 import { Card, CardContent } from '$lib/components/ui/card'
@@ -11,10 +10,8 @@ import {
     TableHeader,
     TableRow,
 } from '$lib/components/ui/table'
-import type { AdminContext } from '$lib/types/adminContext'
 import { getAdminUsers } from '../getAdminUsers.remote'
 
-const adminCtx = getContext<AdminContext>('admin')
 const usersQuery = getAdminUsers()
 </script>
 
@@ -23,28 +20,23 @@ const usersQuery = getAdminUsers()
 </svelte:head>
 
 {#await usersQuery then users}
-    {@const filteredUsers =
-        adminCtx.selectedEventId === 'all'
-            ? users
-            : users.filter((u) => u.registeredEventIds.includes(adminCtx.selectedEventId))}
-
     <section class="col-span-12">
         <div class="flex items-center gap-3">
             <h1>Users</h1>
-            <Badge variant="secondary">{filteredUsers.length}</Badge>
+            <Badge variant="secondary">{users.length}</Badge>
         </div>
     </section>
 
-    {#if filteredUsers.length === 0}
+    {#if users.length === 0}
         <section class="col-span-12">
-            <p class="text-muted-foreground">No users found for the selected year.</p>
+            <p class="text-muted-foreground">No accounts yet.</p>
         </section>
     {:else}
         <section class="col-span-12">
             <AdminDataView>
                 {#snippet mobileCards()}
                     <div class="space-y-3">
-                        {#each filteredUsers as u}
+                        {#each users as u}
                             <div class="rounded-lg border bg-card p-4">
                                 <div class="flex items-center justify-between">
                                     <span class="font-medium text-sm">{u.name}</span>
@@ -73,7 +65,7 @@ const usersQuery = getAdminUsers()
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                        {#each filteredUsers as u}
+                                        {#each users as u}
                                             <TableRow>
                                                 <TableCell class="font-medium">{u.name}</TableCell>
                                                 <TableCell class="text-sm text-muted-foreground"

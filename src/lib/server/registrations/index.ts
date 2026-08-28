@@ -29,7 +29,9 @@ export type { ManagementTokenColumns } from './isManagementTokenValid'
 
 export type { RegistrationMember } from './queries'
 export type { RegistrationSummary } from './queries'
+export type { EventAttendees } from './queries'
 export {
+    getAttendeesForEvent,
     getConfirmationEmailData,
     getOpenEvent,
     getRegistrationsForEvent,

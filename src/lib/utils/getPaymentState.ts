@@ -1,6 +1,6 @@
 import type { registrationStatusEnum } from '$lib/server/db/schema'
 
-type RegistrationStatus = (typeof registrationStatusEnum.enumValues)[number]
+export type RegistrationStatus = (typeof registrationStatusEnum.enumValues)[number]
 
 export type PaymentState =
     | 'paid_online'

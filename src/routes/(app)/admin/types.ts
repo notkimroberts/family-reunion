@@ -1,11 +1,5 @@
 import type { EventStatus } from '$lib/general/constants'
 
-export type EventMetric = {
-    eventId: string
-    registrationCount: number
-    revenueCents: string | null
-}
-
 export type ReunionEvent = {
     id: string
     title: string
@@ -21,7 +15,6 @@ export type AdminUser = {
     email: string
     role: string | null
     createdAt: Date
-    registeredEventIds: string[]
 }
 
 export type Photo = {

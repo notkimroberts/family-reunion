@@ -1,11 +1,8 @@
 <script lang="ts">
-import { getContext } from 'svelte'
 import { enhance } from '$app/forms'
 import { Button } from '$lib/components/ui/button'
-import type { AdminContext } from '$lib/types/adminContext'
 import { getAdminPhotos } from '../getAdminPhotos.remote'
 
-const adminCtx = getContext<AdminContext>('admin')
 const photosQuery = getAdminPhotos()
 </script>
 
@@ -18,19 +15,16 @@ const photosQuery = getAdminPhotos()
 </section>
 
 {#await photosQuery then photos}
-    {@const filteredPhotos =
-        adminCtx.selectedEventId === 'all'
-            ? photos
-            : photos.filter((p) => p.eventId === adminCtx.selectedEventId)}
-
-    {#if filteredPhotos.length === 0}
+    {#if photos.length === 0}
         <section class="col-span-12">
-            <p class="text-muted-foreground">No photos for the selected year.</p>
+            <p class="text-muted-foreground">
+                No photos uploaded yet. They are added from the gallery page.
+            </p>
         </section>
     {:else}
         <section class="col-span-12">
             <div class="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-4">
-                {#each filteredPhotos as photo}
+                {#each photos as photo}
                     <div class="overflow-hidden rounded-lg border bg-card shadow-xs">
                         <figure>
                             <img

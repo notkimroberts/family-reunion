@@ -24,7 +24,10 @@ import { adminRegistrationSchema, registrationSchema } from './schema'
 
 const PAGES = [
     { name: 'public register', path: 'src/routes/(app)/register/+page.svelte' },
-    { name: 'admin paper entry', path: 'src/routes/(app)/admin/registrations/new/+page.svelte' },
+    {
+        name: 'admin paper entry',
+        path: 'src/routes/(app)/admin/event/[eventId]/registrations/new/+page.svelte',
+    },
 ]
 
 /* Every guard below is a source match against a path, so a page that MOVES takes its guards with

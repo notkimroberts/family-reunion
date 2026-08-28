@@ -1,18 +1,18 @@
 import { fail } from '@sveltejs/kit'
 import { eq } from 'drizzle-orm'
-import { requireAdmin } from '$lib/server/auth/guards'
+import { requireOwner } from '$lib/server/auth/guards'
 import { db } from '$lib/server/db'
-import { photos, reunionEvents } from '$lib/server/db/schema'
+import { photos } from '$lib/server/db/schema'
 import { deleteFile } from '$lib/server/storage'
 import type { PageServerLoad, Actions } from './$types'
 
 export const load: PageServerLoad = async (event) => {
-    requireAdmin(event)
+    requireOwner(event)
 }
 
 export const actions: Actions = {
     delete_photo: async (event) => {
-        requireAdmin(event)
+        requireOwner(event)
         const data = await event.request.formData()
         const photoId = data.get('photoId') as string
         const r2Key = data.get('r2Key') as string

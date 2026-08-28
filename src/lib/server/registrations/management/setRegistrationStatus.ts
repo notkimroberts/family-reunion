@@ -1,11 +1,16 @@
 import { error } from '@sveltejs/kit'
 import { eq } from 'drizzle-orm'
 import { db } from '$lib/server/db'
-import { registrations } from '$lib/server/db/schema'
+import { registrations, registrationStatusEnum } from '$lib/server/db/schema'
 import { dbg } from '$lib/server/debug'
 
-/* The statuses an organiser may set by hand. */
-export type AdminSettableStatus = 'pending' | 'paid' | 'waived'
+/* The statuses an organiser may set by hand — the enum minus 'refunded', which must go through
+   cancelRegistration so the money actually goes back. Derived rather than spelled out, so adding a
+   status to the enum cannot leave this list silently stale. */
+export type AdminSettableStatus = Exclude<
+    (typeof registrationStatusEnum.enumValues)[number],
+    'refunded'
+>
 
 /* Records that a paper registration's money arrived, was waived, or is still outstanding.
 

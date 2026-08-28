@@ -1,6 +1,12 @@
 import { isRedirect } from '@sveltejs/kit'
-import { describe, expect, it } from 'vitest'
-import { isPublicPath, requireAdmin, requireAuth } from './guards'
+import { describe, expect, it, vi } from 'vitest'
+
+/* The guards barrel now re-exports requireOwner, which imports $env/dynamic/private — a SvelteKit
+   virtual module vitest cannot resolve. Mocked here rather than importing each guard by path, so this
+   file keeps testing the public surface an app file actually imports. */
+vi.mock('$env/dynamic/private', () => ({ env: {} }))
+
+const { isPublicPath, requireAdmin, requireAuth } = await import('./guards')
 
 type MockEvent = { locals: { user?: unknown } }
 
@@ -64,7 +70,9 @@ describe('isPublicPath', () => {
         },
     )
 
-    /* Locked for launch: admin-only. */
+    /* Locked for launch: admin-only. The /admin/event/… and /admin/setup shapes are new, and the
+       prefix list already fails them closed — these pin that, so a later "reopen the gallery" edit to
+       PUBLIC_PATH_PREFIXES cannot quietly widen to an admin path. */
     it.each([
         '/family-tree',
         '/family-tree/abc-123',
@@ -73,7 +81,12 @@ describe('isPublicPath', () => {
         '/program',
         '/changelog',
         '/admin',
-        '/admin/registrations',
+        '/admin/event/abc-123/registrations',
+        '/admin/event/abc-123/registrations/def-456',
+        '/admin/event/abc-123/attendees',
+        '/admin/event/abc-123/settings',
+        '/admin/setup',
+        '/admin/setup/events',
     ])('blocks %s', (pathname) => {
         expect(isPublicPath(pathname)).toBe(false)
     })

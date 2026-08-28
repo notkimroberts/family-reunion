@@ -1,12 +1,12 @@
 import { fail } from '@sveltejs/kit'
 import { eq } from 'drizzle-orm'
-import { requireAdmin } from '$lib/server/auth/guards'
+import { requireOwner } from '$lib/server/auth/guards'
 import { db } from '$lib/server/db'
 import { reunionEvents, type StorefrontProduct } from '$lib/server/db/schema'
 import type { PageServerLoad, Actions } from './$types'
 
 export const load: PageServerLoad = async (event) => {
-    requireAdmin(event)
+    requireOwner(event)
     const [openEvent] = await db
         .select()
         .from(reunionEvents)
@@ -17,7 +17,7 @@ export const load: PageServerLoad = async (event) => {
 
 export const actions: Actions = {
     default: async (event) => {
-        requireAdmin(event)
+        requireOwner(event)
         const data = await event.request.formData()
         const externalShopUrl = data.get('externalShopUrl') as string
         const productsRaw = data.get('products') as string

@@ -18,8 +18,8 @@ const REGISTER_DIR = 'src/routes/(app)/register'
 /* The admin registration forms are as form-heavy as the public one and reuse the same field
    components, so the same Safari defect applies to them. */
 const ADMIN_DIRS = [
-    'src/routes/(app)/admin/registrations/[id]',
-    'src/routes/(app)/admin/registrations/new',
+    'src/routes/(app)/admin/event/[eventId]/registrations/[registrationId]',
+    'src/routes/(app)/admin/event/[eventId]/registrations/new',
 ]
 
 /* Fields the registrant fills. DatePicker is excluded — it is a Popover with a text input, so the
