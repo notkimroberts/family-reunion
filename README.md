@@ -10,13 +10,12 @@ A web application for managing family reunions — registration, payments, famil
 
 - **Framework**: SvelteKit (full-stack, Svelte 5 with runes)
 - **Database**: PostgreSQL + Drizzle ORM
-- **Auth**: Better Auth (Google, Apple, Facebook SSO + magic link)
+- **Auth**: Better Auth (email + password, admin only — public sign-up disabled)
 - **Payments**: Stripe Checkout
 - **Storage**: Cloudflare R2
 - **Email**: Resend
 - **Error monitoring**: Sentry
 - **Styling**: Tailwind CSS v4 + shadcn-svelte
-- **Family tree**: family-chart
 - **Hosting**: Railway
 
 ## Prerequisites
