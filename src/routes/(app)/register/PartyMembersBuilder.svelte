@@ -221,6 +221,13 @@ function handleRemoveMember(index: number) {
                     </div>
 
                     <div class="space-y-1.5">
+                        <label for="new-shirt" class="text-sm font-medium">
+                            T-shirt <span class="text-destructive">*</span>
+                        </label>
+                        <ShirtSizeSelect id="new-shirt" bind:value={newShirtSize} />
+                    </div>
+
+                    <div class="space-y-1.5">
                         <label for="new-bday" class="text-sm font-medium">
                             Birthday
                             <span class="text-muted-foreground font-normal text-xs"
@@ -230,13 +237,6 @@ function handleRemoveMember(index: number) {
                             id="new-bday"
                             bind:value={newBirthDate}
                             placeholder="Their birthday" />
-                    </div>
-
-                    <div class="space-y-1.5">
-                        <label for="new-shirt" class="text-sm font-medium">
-                            T-shirt <span class="text-destructive">*</span>
-                        </label>
-                        <ShirtSizeSelect id="new-shirt" bind:value={newShirtSize} />
                     </div>
                 </div>
             </div>

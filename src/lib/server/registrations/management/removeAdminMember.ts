@@ -26,6 +26,7 @@ export async function removeAdminMember(params: {
         .select({
             id: partyMembers.id,
             name: partyMembers.name,
+            isContact: partyMembers.isContact,
             registrationId: partyMembers.registrationId,
             registrationStatus: registrations.status,
         })
@@ -47,6 +48,17 @@ export async function removeAdminMember(params: {
 
     if (member.registrationStatus === 'refunded') {
         throw error(409, 'This registration was cancelled and refunded.')
+    }
+
+    /* The contact's own attendee row carries the identity the registration is addressed to, and their
+       name is written from registrations.contactName. Deleting it would leave a booking whose contact
+       is not in the party, with no way to reach that state deliberately. Cancelling is the operation
+       for "they are not coming". */
+    if (member.isContact) {
+        throw error(
+            409,
+            'This is the contact’s own place. Cancel the registration instead, or change who the contact is first.',
+        )
     }
 
     const [{ total }] = await db

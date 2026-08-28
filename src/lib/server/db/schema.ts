@@ -239,10 +239,26 @@ export const partyMembers = pgTable(
            registration, so a party containing two people with the same name (Jr/Sr) would
            violate that index on the backfill UPDATE and take the webhook down with it. */
         stripeCheckoutSessionId: text('stripe_checkout_session_id'),
+        /* Marks the attendee row belonging to the registration's contact.
+
+           The contact is always an attendee — the public form makes them pick their own tier — so the
+           same person exists as registrations.contactName AND as a party_members row. Nothing linked
+           the two, so both were independently editable and they drifted in practice.
+
+           registrations keeps the contact's identity, alongside contactEmail and contactPhone, which
+           are booking-level data nobody would derive from an attendee. This flag says which attendee
+           is that person, so their name has one editable field and one writer rather than two copies
+           quietly disagreeing. See updateRegistrationContact. */
+        isContact: boolean('is_contact').notNull().default(false),
         createdAt: timestamp('created_at').notNull().defaultNow(),
     },
     (t) => [
         index('party_members_registration_id_idx').on(t.registrationId),
+        /* At most one contact per registration, enforced rather than assumed — two flagged rows would
+           make "the contact's name" ambiguous again, which is the whole problem. */
+        uniqueIndex('party_members_one_contact_per_registration')
+            .on(t.registrationId)
+            .where(sql`${t.isContact}`),
         index('party_members_family_member_id_idx').on(t.familyMemberId),
         uniqueIndex('party_members_stripe_checkout_session_id_key').on(t.stripeCheckoutSessionId),
         check(

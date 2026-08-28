@@ -187,6 +187,15 @@ let selectedTier = $derived(tiers.find((t) => t.id === info.tierId))
                     </div>
 
                     <div class="space-y-1.5">
+                        <label for="selfShirtSize" class="text-sm font-medium">
+                            T-shirt <span class="text-destructive">*</span>
+                        </label>
+                        <ShirtSizeSelect
+                            id="selfShirtSize"
+                            bind:value={() => info.shirtSize ?? '', (v) => (info.shirtSize = v)} />
+                    </div>
+
+                    <div class="space-y-1.5">
                         <label for="selfBirthDate" class="text-sm font-medium">
                             Birthday
                             <span class="text-muted-foreground font-normal text-xs"
@@ -196,15 +205,6 @@ let selectedTier = $derived(tiers.find((t) => t.id === info.tierId))
                             id="selfBirthDate"
                             bind:value={info.birthDate}
                             placeholder="Your birthday" />
-                    </div>
-
-                    <div class="space-y-1.5">
-                        <label for="selfShirtSize" class="text-sm font-medium">
-                            T-shirt <span class="text-destructive">*</span>
-                        </label>
-                        <ShirtSizeSelect
-                            id="selfShirtSize"
-                            bind:value={() => info.shirtSize ?? '', (v) => (info.shirtSize = v)} />
                     </div>
                 </div>
             </div>

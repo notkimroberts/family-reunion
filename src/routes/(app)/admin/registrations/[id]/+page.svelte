@@ -8,6 +8,7 @@ import { Button } from '$lib/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card'
 import { Separator } from '$lib/components/ui/separator'
 import * as Table from '$lib/components/ui/table'
+import { Tooltip, TooltipContent, TooltipTrigger } from '$lib/components/ui/tooltip'
 import { formatPrice, getMemberPaymentOrigin, getPaymentState } from '$lib/utils'
 import { formatPartialBirthDate } from '$lib/utils/age'
 import RegistrationStatusBadge from '../RegistrationStatusBadge.svelte'
@@ -161,16 +162,33 @@ async function handleCopyEmail() {
         </div>
         {#if !editing}
             <div class="flex flex-wrap items-center gap-2">
-                <!-- No warning attached, deliberately. It used to need one: rotation killed the
-                     registrant's existing link the moment an organiser pressed this. The grace period
-                     means their current link keeps working for a week, so there is nothing to caution
-                     against — and the toast afterwards says exactly that. -->
-                <form method="POST" action="?/reissue_link" use:enhance>
-                    <Button type="submit" variant="outline" size="sm">
-                        <Mail class="size-4" />
-                        Email new link
-                    </Button>
-                </form>
+                <Tooltip>
+                    <!-- `child` rather than the default trigger: bits-ui's trigger renders its own
+                         <button>, and a <form> inside a button is invalid markup.
+
+                         type="submit" comes AFTER the spread, deliberately. bits-ui defaults its
+                         trigger to type="button" and merges that into these props, so spreading them
+                         last would leave a button that opens a tooltip and never submits — a failure
+                         nothing but clicking it would reveal. -->
+                    <TooltipTrigger>
+                        {#snippet child({ props })}
+                            <form method="POST" action="?/reissue_link" use:enhance>
+                                <Button {...props} type="submit" variant="outline" size="sm">
+                                    <Mail class="size-4" />
+                                    Email new link
+                                </Button>
+                            </form>
+                        {/snippet}
+                    </TooltipTrigger>
+                    <!-- Written for an organiser, not an engineer. "Only a hash is stored" says
+                         nothing to the person deciding whether to press this; what they need to know
+                         is that it is safe and what the registrant ends up with. -->
+                    <TooltipContent class="max-w-xs">
+                        Emails them a new link for managing their own registration. We can't look up
+                        the link they already have, so this makes a fresh one — their old link still
+                        works for another week.
+                    </TooltipContent>
+                </Tooltip>
                 {#if !isCancelled}
                     <Button onclick={() => (editing = true)}>
                         <Pencil class="size-4" />

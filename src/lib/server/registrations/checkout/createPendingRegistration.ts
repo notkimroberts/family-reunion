@@ -77,6 +77,9 @@ export async function createPendingRegistration(params: {
         {
             registrationId: registration.id,
             name: params.contactName,
+            /* This row is the contact attending their own reunion. Flagged so their name has one
+               editable field rather than two copies that drift — see party_members.isContact. */
+            isContact: true,
             birthYear: selfParsed?.birthYear ?? null,
             birthMonth: selfParsed?.birthMonth ?? null,
             birthDay: selfParsed?.birthDay ?? null,

@@ -34,12 +34,15 @@ export async function createAdminRegistration(params: {
         .returning()
 
     await db.insert(partyMembers).values(
-        params.members.map((m) => {
+        params.members.map((m, index) => {
             const parsed = m.birthDate ? parseBirthDate(m.birthDate) : null
             const pricing = pricingByTierId[m.tierId]
             return {
                 registrationId: registration.id,
                 name: m.name.trim(),
+                /* The caller puts the contact first — see admin/registrations/new. Flagged so their
+                   name has a single editable field; see party_members.isContact. */
+                isContact: index === 0,
                 birthYear: parsed?.birthYear ?? null,
                 birthMonth: parsed?.birthMonth ?? null,
                 birthDay: parsed?.birthDay ?? null,
