@@ -2,6 +2,7 @@
 import { page } from '$app/state'
 import { AppHeader, Footer } from '$lib/components'
 import { Toaster } from '$lib/components/ui/sonner'
+import { TooltipProvider } from '$lib/components/ui/tooltip'
 import { cn } from '$lib/utils'
 
 let { children } = $props()
@@ -16,20 +17,24 @@ let { children } = $props()
 let isAdmin = $derived(page.url.pathname.startsWith('/admin'))
 </script>
 
-<div class="min-h-screen flex flex-col">
-    <AppHeader />
+<!-- TooltipProvider wraps everything: bits-ui's Tooltip.Root throws without one as an ancestor, and it
+     renders no markup of its own. -->
+<TooltipProvider>
+    <div class="min-h-screen flex flex-col">
+        <AppHeader />
 
-    <main
-        class={cn(
-            'mx-auto w-full px-4 py-6 md:px-6 md:py-6 flex-1',
-            isAdmin ? 'max-w-[110rem]' : 'max-w-6xl',
-        )}>
-        <div class="grid grid-cols-12 gap-y-8 md:gap-y-10">
-            {@render children()}
-        </div>
-    </main>
+        <main
+            class={cn(
+                'mx-auto w-full px-4 py-6 md:px-6 md:py-6 flex-1',
+                isAdmin ? 'max-w-[110rem]' : 'max-w-6xl',
+            )}>
+            <div class="grid grid-cols-12 gap-y-8 md:gap-y-10">
+                {@render children()}
+            </div>
+        </main>
 
-    <Footer />
-</div>
+        <Footer />
+    </div>
+</TooltipProvider>
 
 <Toaster richColors closeButton />

@@ -144,6 +144,23 @@ function handleRestore(memberId: string) {
 <form method="POST" action="?/save" use:enhance class="flex flex-col gap-6">
     <FormErrorSummary errors={$errors} message={$message} />
 
+    <!-- Money, not who to contact, so it gets its own section. -->
+    <Card>
+        <CardHeader class="pb-3">
+            <CardTitle class="text-base">Payment status</CardTitle>
+        </CardHeader>
+        <CardContent class="flex flex-col gap-2">
+            <NativeSelect id="editStatus" bind:value={$form.status}>
+                {#each SETTABLE_STATUSES as status (status.value)}
+                    <option value={status.value}>{status.label}</option>
+                {/each}
+            </NativeSelect>
+            <p class="text-muted-foreground text-xs">
+                Changing this emails the registrant to tell them where their payment stands.
+            </p>
+        </CardContent>
+    </Card>
+
     <!-- The contact and their own attendance in one card. They are one person, so: one Name field, and
          an email and phone that plainly belong to them rather than floating above a separate card
          labelled CONTACT. -->
@@ -185,23 +202,6 @@ function handleRestore(memberId: string) {
                     {isPaid}
                     showName={false} />
             {/if}
-        </CardContent>
-    </Card>
-
-    <!-- Money, not who to contact, so it gets its own section. -->
-    <Card>
-        <CardHeader class="pb-3">
-            <CardTitle class="text-base">Payment status</CardTitle>
-        </CardHeader>
-        <CardContent class="flex flex-col gap-2">
-            <NativeSelect id="editStatus" bind:value={$form.status}>
-                {#each SETTABLE_STATUSES as status (status.value)}
-                    <option value={status.value}>{status.label}</option>
-                {/each}
-            </NativeSelect>
-            <p class="text-muted-foreground text-xs">
-                Changing this emails the registrant to tell them where their payment stands.
-            </p>
         </CardContent>
     </Card>
 
