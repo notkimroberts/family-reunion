@@ -1,13 +1,5 @@
 import { z } from 'zod'
-import { personDetailsSchema } from '../../../register/schema'
-
-/* Offline add-member. Reuses personDetailsSchema so an admin addition is validated to exactly the
-   same standard as the public form and admin paper entry — catering and shirt counts stay complete
-   however a person arrives. Posted form-encoded (a small flat form), unlike the registration forms
-   which post $form as JSON. */
-export const adminAddMemberSchema = personDetailsSchema.extend({
-    name: z.string().trim().min(2, 'Please enter a name'),
-})
+import { memberSchema } from '../../../register/schema'
 
 /* One member's editable fields.
 
@@ -43,6 +35,12 @@ export const adminEditRegistrationSchema = z.object({
     contactPhone: z.string().optional(),
     status: z.enum(['pending', 'paid', 'waived'], 'Please choose a status'),
     members: z.array(adminEditMemberSchema),
+    /* People staged for addition during this sitting.
+
+       memberSchema is the PUBLIC form's member shape, reused deliberately: an organiser adding someone
+       must not be held to a weaker standard than a registrant adding the same person, or catering and
+       shirt counts end up complete only for people who registered themselves. */
+    newMembers: z.array(memberSchema),
     /* Ids removed during this sitting. Collected rather than acted on immediately, so the whole edit
        stays one save the registrant hears about once. */
     removedMemberIds: z.array(z.string()),

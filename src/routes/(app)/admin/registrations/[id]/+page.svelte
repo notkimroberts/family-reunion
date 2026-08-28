@@ -1,5 +1,5 @@
 <script lang="ts">
-import { Check, Copy, Mail, Pencil, TriangleAlert, UserPlus } from '@lucide/svelte'
+import { Check, Copy, Mail, Pencil, TriangleAlert } from '@lucide/svelte'
 import { enhance } from '$app/forms'
 import { AdminDataView } from '$lib/components'
 import { Alert, AlertDescription, AlertTitle } from '$lib/components/ui/alert'
@@ -10,7 +10,6 @@ import { Separator } from '$lib/components/ui/separator'
 import * as Table from '$lib/components/ui/table'
 import { formatPrice, getMemberPaymentOrigin, getPaymentState } from '$lib/utils'
 import { formatPartialBirthDate } from '$lib/utils/age'
-import AddMemberForm from '../../../register/AddMemberForm.svelte'
 import RegistrationEditForm from './RegistrationEditForm.svelte'
 import RegistrationHistory from './RegistrationHistory.svelte'
 
@@ -57,7 +56,6 @@ let { data, form: actionData } = $props()
 
 let savedChanges = $derived(actionData?.changes ?? [])
 let editing = $state(false)
-let showAddForm = $state(false)
 let copiedEmail = $state(false)
 
 let payment = $derived(getPaymentState(data.registration))
@@ -193,7 +191,6 @@ async function handleCopyEmail() {
             form={data.form}
             members={data.members}
             tiers={data.tiers}
-            shirtsEnabled={data.event.shirtsEnabled}
             {isPaid}
             onCancel={() => (editing = false)} />
     {:else}
@@ -318,29 +315,6 @@ async function handleCopyEmail() {
                 {/if}
             </CardContent>
         </Card>
-
-        {#if !isCancelled}
-            {#if showAddForm}
-                <AddMemberForm
-                    registrationId={data.registration.id}
-                    tiers={data.tiers}
-                    shirtsEnabled={data.event.shirtsEnabled}
-                    action="?/add_member"
-                    title="Add a member (no payment)"
-                    submitLabel="Add to party"
-                    submittingLabel="Adding…"
-                    submitNote="Records their place at the tier's face value. No payment is taken and
-                        no checkout is opened."
-                    onCancel={() => (showAddForm = false)} />
-            {:else}
-                <div>
-                    <Button variant="outline" onclick={() => (showAddForm = true)}>
-                        <UserPlus class="size-4" />
-                        Add a member
-                    </Button>
-                </div>
-            {/if}
-        {/if}
 
         <Card>
             <CardHeader class="pb-3">

@@ -50,6 +50,13 @@
       "when": 1787630820018,
       "tag": "0006_premium_meggan",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1787939025832,
+      "tag": "0007_steady_princess_powerful",
+      "breakpoints": true
     }
   ]
 }

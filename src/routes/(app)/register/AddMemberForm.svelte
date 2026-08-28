@@ -20,7 +20,6 @@ let {
     token = undefined,
     registrationId,
     tiers,
-    shirtsEnabled,
     onCancel,
     action = '?/add_member',
     title = 'Add a Member',
@@ -31,7 +30,6 @@ let {
     token?: string
     registrationId: string
     tiers: TierOption[]
-    shirtsEnabled: boolean
     onCancel?: () => void
     action?: string
     title?: string
@@ -78,11 +76,13 @@ let canSubmit = $derived(
             {action}
             use:enhance={() => {
                 submitting = true
-                return ({ result, update }) => {
+                /* Apply EVERY result, not just redirects. Gating this on result.type === 'redirect'
+                   covered only the registrant's Stripe path: an admin addition returns success and a
+                   validation failure returns fail(400), and both were dropped — nothing re-rendered,
+                   so a member that had genuinely been created looked like a no-op. */
+                return async ({ update }) => {
                     submitting = false
-                    if (result.type === 'redirect') {
-                        update()
-                    }
+                    await update()
                 }
             }}>
             {#if token}
@@ -95,7 +95,9 @@ let canSubmit = $derived(
             <div class="space-y-6">
                 <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <div class="space-y-2">
-                        <label for="add-name" class="text-sm font-medium">Name</label>
+                        <label for="add-name" class="text-sm font-medium">
+                            Name <span class="text-destructive">*</span>
+                        </label>
                         <Input
                             id="add-name"
                             name="name"
@@ -105,7 +107,9 @@ let canSubmit = $derived(
                             required />
                     </div>
                     <div class="space-y-2">
-                        <label for="add-tier" class="text-sm font-medium">Tier</label>
+                        <label for="add-tier" class="text-sm font-medium">
+                            Tier <span class="text-destructive">*</span>
+                        </label>
                         <TierSelect id="add-tier" bind:tierId {tiers} />
                     </div>
                     <div class="space-y-2">
@@ -117,18 +121,16 @@ let canSubmit = $derived(
                             bind:value={birthDate}
                             placeholder="Select birthday" />
                     </div>
-                    {#if shirtsEnabled}
-                        <div class="space-y-2">
-                            <label for="add-shirt" class="text-sm font-medium">
-                                T-Shirt Size <span class="text-muted-foreground">(optional)</span>
-                            </label>
-                            <ShirtSizeSelect
-                                id="add-shirt"
-                                name="shirtSize"
-                                bind:value={shirtSize}
-                                emptyLabel="No shirt" />
-                        </div>
-                    {/if}
+                    <div class="space-y-2">
+                        <label for="add-shirt" class="text-sm font-medium">
+                            T-Shirt Size <span class="text-muted-foreground">(optional)</span>
+                        </label>
+                        <ShirtSizeSelect
+                            id="add-shirt"
+                            name="shirtSize"
+                            bind:value={shirtSize}
+                            emptyLabel="No shirt" />
+                    </div>
                 </div>
 
                 <Separator />

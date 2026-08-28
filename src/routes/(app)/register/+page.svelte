@@ -189,7 +189,6 @@ let isLocked = $derived(
                         bind:info={self}
                         bind:saved={contactSaved}
                         {tiers}
-                        shirtsEnabled={data.event.shirtsEnabled}
                         errors={{
                             email: $errors.contactEmail?.[0],
                             name: $errors.contactFirstName?.[0] ?? $errors.contactLastName?.[0],
@@ -200,7 +199,6 @@ let isLocked = $derived(
                         {tiers}
                         {contactName}
                         {contactAddress}
-                        shirtsEnabled={data.event.shirtsEnabled}
                         error={$errors.members?._errors?.[0]} />
                 </div>
 

@@ -17,12 +17,10 @@ import type { EditableMember } from './types'
 let {
     token,
     member,
-    shirtsEnabled,
     open = $bindable(false),
 }: {
     token: string
     member: EditableMember
-    shirtsEnabled: boolean
     open: boolean
 } = $props()
 
@@ -60,16 +58,14 @@ let vegetarianMeal = $state<'yes' | 'no' | ''>(
                         bind:value={birthDate}
                         placeholder="Select birthday" />
                 </div>
-                {#if shirtsEnabled}
-                    <div class="space-y-2">
-                        <label for="edit-shirtSize" class="text-sm font-medium">T-Shirt Size</label>
-                        <ShirtSizeSelect
-                            id="edit-shirtSize"
-                            name="shirtSize"
-                            bind:value={shirtSize}
-                            emptyLabel="No shirt" />
-                    </div>
-                {/if}
+                <div class="space-y-2">
+                    <label for="edit-shirtSize" class="text-sm font-medium">T-Shirt Size</label>
+                    <ShirtSizeSelect
+                        id="edit-shirtSize"
+                        name="shirtSize"
+                        bind:value={shirtSize}
+                        emptyLabel="No shirt" />
+                </div>
                 <div class="space-y-2">
                     <label for="edit-vegetarian" class="text-sm font-medium"
                         >Vegetarian meal?</label>

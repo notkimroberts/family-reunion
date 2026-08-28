@@ -74,7 +74,6 @@ export type RegistrationDetails = {
 export type EventDetails = {
     id: string
     title: string
-    shirtsEnabled: boolean
     registrationLockDate: Date | null
 }
 

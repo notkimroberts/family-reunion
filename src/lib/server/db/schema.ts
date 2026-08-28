@@ -138,7 +138,6 @@ export const reunionEvents = pgTable(
         recommendedActivities:
             jsonb('recommended_activities').$type<{ name: string; description?: string }[]>(),
         schedule: jsonb('schedule').$type<{ day: string; time: string; activity: string }[]>(),
-        shirtsEnabled: boolean('shirts_enabled').notNull().default(false),
         registrationLockDate: timestamp('registration_lock_date'),
         externalShopUrl: text('external_shop_url'),
         shopProducts: jsonb('shop_products').$type<StorefrontProduct[]>(),
@@ -336,6 +335,13 @@ export const registrationAudit = pgTable(
             .notNull()
             .references(() => registrations.id, { onDelete: 'cascade' }),
         actorUserId: text('actor_user_id').references(() => user.id, { onDelete: 'set null' }),
+        /* Snapshot of who acted, kept alongside the FK rather than relying on it.
+
+           Two reasons. On delete set null erases the actor when an organiser's account is removed,
+           which defeats the purpose of a history. And in dev there is no session, so hooks.server.ts
+           substitutes a user id that has no row — the FK rejected it and the whole audit write was
+           lost silently. A name that is only ever read back needs no referential integrity. */
+        actorName: text('actor_name'),
         action: registrationAuditActionEnum('action').notNull(),
         detail: jsonb('detail'),
         createdAt: timestamp('created_at').notNull().defaultNow(),

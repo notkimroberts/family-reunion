@@ -24,7 +24,7 @@ import { getTiersForEvent } from '$lib/server/tiers'
 import { parseYesNo } from '$lib/utils'
 import type { PageServerLoad, Actions } from './$types'
 import type { RegistrationActionFeedback } from './registrationActionFeedback'
-import { adminAddMemberSchema, adminEditRegistrationSchema } from './schema'
+import { adminEditRegistrationSchema } from './schema'
 
 const AUDIT_HISTORY_LIMIT = 50
 
@@ -52,11 +52,14 @@ export const load: PageServerLoad = async (event) => {
                 action: registrationAudit.action,
                 detail: registrationAudit.detail,
                 createdAt: registrationAudit.createdAt,
-                actorName: userTable.name,
+                /* The snapshot is the reliable one; the join is only a fallback for rows written
+                   before actor_name existed. See recordRegistrationAudit. */
+                actorName: registrationAudit.actorName,
+                joinedActorName: userTable.name,
             })
             .from(registrationAudit)
-            /* Left join: an organiser whose account was later deleted leaves actorUserId null, and
-               the change still has to appear in the history. */
+            /* Left join: a row whose organiser account was deleted has a null actorUserId, and the
+               change still has to appear in the history. */
             .leftJoin(userTable, eq(registrationAudit.actorUserId, userTable.id))
             .where(eq(registrationAudit.registrationId, event.params.id))
             .orderBy(desc(registrationAudit.createdAt))
@@ -74,6 +77,7 @@ export const load: PageServerLoad = async (event) => {
             status:
                 found.registration.status === 'refunded' ? 'pending' : found.registration.status,
             members: [],
+            newMembers: [],
             removedMemberIds: [],
         },
         zod(adminEditRegistrationSchema),
@@ -135,7 +139,7 @@ export const actions: Actions = {
                 )
                 await recordRegistrationAudit({
                     registrationId: event.params.id,
-                    actorUserId: admin.id,
+                    actor: admin,
                     action: 'contact_updated',
                     detail: contact.emailChanged
                         ? { previousEmail: contact.previousEmail, email: form.data.contactEmail }
@@ -149,7 +153,7 @@ export const actions: Actions = {
                 changes.push(`${removed.name} was removed from the party`)
                 await recordRegistrationAudit({
                     registrationId: event.params.id,
-                    actorUserId: admin.id,
+                    actor: admin,
                     action: 'member_removed',
                     detail: { memberId, name: removed.name },
                 })
@@ -175,11 +179,41 @@ export const actions: Actions = {
                     changes.push(`${updated.name}'s details were updated`)
                     await recordRegistrationAudit({
                         registrationId: event.params.id,
-                        actorUserId: admin.id,
+                        actor: admin,
                         action: 'member_updated',
                         detail: { memberId: member.memberId, name: updated.name },
                     })
                 }
+            }
+
+            /* Additions last among the party changes, so a staged person cannot be caught by the
+               removal loop or the edit loop above. Allowed even when the registration is paid: adding
+               an offline place at face value owes nobody a refund, unlike a reprice or a removal. */
+            for (const newMember of form.data.newMembers) {
+                const { memberId } = await addAdminMember({
+                    registrationId: event.params.id,
+                    member: {
+                        name: newMember.name,
+                        tierId: newMember.tierId,
+                        birthDate: newMember.birthDate || undefined,
+                        shirtSize: newMember.shirtSize || undefined,
+                        addressLine1: newMember.addressLine1,
+                        addressLine2: newMember.addressLine2,
+                        addressCity: newMember.addressCity,
+                        addressState: newMember.addressState,
+                        addressZip: newMember.addressZip,
+                        vegetarianMeal: parseYesNo(newMember.vegetarianMeal),
+                        attendedReunion2025: parseYesNo(newMember.attendedReunion2025),
+                    },
+                })
+
+                changes.push(`${newMember.name} was added to your party`)
+                await recordRegistrationAudit({
+                    registrationId: event.params.id,
+                    actor: admin,
+                    action: 'member_added',
+                    detail: { memberId, name: newMember.name },
+                })
             }
 
             if (form.data.status !== previousStatus) {
@@ -190,7 +224,7 @@ export const actions: Actions = {
                 changes.push(statusChangeCopyValue[form.data.status])
                 await recordRegistrationAudit({
                     registrationId: event.params.id,
-                    actorUserId: admin.id,
+                    actor: admin,
                     action: 'status_changed',
                     detail: { from: previousStatus, to: form.data.status },
                 })
@@ -246,62 +280,6 @@ export const actions: Actions = {
         return { form, ...feedback }
     },
 
-    /* Adding a member stays its own action: it collects a full person's details, which is a different
-       form from the inline edit grid, and it must never reach Stripe — see addAdminMember. */
-    add_member: async (event) => {
-        const admin = requireAdmin(event)
-
-        const form = await superValidate(event.request, zod(adminAddMemberSchema))
-        if (!form.valid) {
-            return fail(400, { form })
-        }
-
-        const { name, tierId, birthDate, shirtSize, ...address } = form.data
-
-        const { memberId } = await addAdminMember({
-            registrationId: event.params.id,
-            member: {
-                name,
-                tierId,
-                birthDate: birthDate || undefined,
-                shirtSize: shirtSize || undefined,
-                addressLine1: address.addressLine1,
-                addressLine2: address.addressLine2,
-                addressCity: address.addressCity,
-                addressState: address.addressState,
-                addressZip: address.addressZip,
-                vegetarianMeal: parseYesNo(address.vegetarianMeal),
-                attendedReunion2025: parseYesNo(address.attendedReunion2025),
-            },
-        })
-
-        await recordRegistrationAudit({
-            registrationId: event.params.id,
-            actorUserId: admin.id,
-            action: 'member_added',
-            detail: { memberId, name },
-        })
-
-        dbg.register('admin added member %s to registration %s', memberId, event.params.id)
-
-        let notifyError: string | undefined
-        try {
-            await notifyRegistrationUpdated({
-                registrationId: event.params.id,
-                changeSummary: [`${name} was added to your party`],
-                manageUrl: (token) => `${event.url.origin}/register/manage?token=${token}`,
-            })
-        } catch (err) {
-            reportError('registration update notification failed', err, {
-                registrationId: event.params.id,
-            })
-            notifyError = 'They were added, but the notification email did not send.'
-        }
-
-        const feedback: RegistrationActionFeedback = { memberAdded: true, notifyError }
-        return { form, ...feedback }
-    },
-
     /* Rotates the token and emails a fresh link, for a registrant who has lost theirs. Their previous
        link keeps working for the grace period — see isManagementTokenValid. */
     reissue_link: async (event) => {
@@ -330,7 +308,7 @@ export const actions: Actions = {
 
         await recordRegistrationAudit({
             registrationId: event.params.id,
-            actorUserId: admin.id,
+            actor: admin,
             action: 'link_reissued',
         })
 

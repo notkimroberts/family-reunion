@@ -13,10 +13,11 @@ import type { RegistrationMember } from '$lib/server/registrations'
 import { formatPrice } from '$lib/utils'
 import { formatBirthDate } from '$lib/utils/age'
 import FormErrorSummary from '../../../register/FormErrorSummary.svelte'
+import PartyMembersBuilder from '../../../register/PartyMembersBuilder.svelte'
 import ShirtSizeSelect from '../../../register/ShirtSizeSelect.svelte'
 import TierSelect from '../../../register/TierSelect.svelte'
 import YesNoSelect from '../../../register/YesNoSelect.svelte'
-import type { TierOption } from '../../../register/types'
+import type { FormMember, TierOption } from '../../../register/types'
 import { adminEditRegistrationSchema } from './schema'
 
 const SETTABLE_STATUSES = [
@@ -43,14 +44,12 @@ let {
     form: initialForm,
     members,
     tiers,
-    shirtsEnabled,
     isPaid,
     onCancel,
 }: {
     form: SuperValidated<Infer<typeof adminEditRegistrationSchema>>
     members: RegistrationMember[]
     tiers: TierOption[]
-    shirtsEnabled: boolean
     /* Drives the money guardrail in the UI. The server refuses these too — this only explains why
        before the organiser tries. */
     isPaid: boolean
@@ -77,6 +76,7 @@ const { form, errors, message, submitting, enhance } = superForm(initialForm, {
                 vegetarianMeal: row.vegetarianMeal,
                 attendedReunion2025: row.attendedReunion2025,
             }))
+        $form.newMembers = newMembers.map((member) => ({ ...member }))
         $form.removedMemberIds = [...removed]
     },
 })
@@ -104,6 +104,19 @@ function toRow(member: RegistrationMember): MemberRow {
 
 let rows = $state<MemberRow[]>(members.map(toRow))
 let removed = new SvelteSet<string>()
+/* Staged, not written. They land on Save with everything else, so the registrant gets one email for
+   the whole sitting rather than one per person added. */
+let newMembers = $state<FormMember[]>([])
+
+/* PartyMembersBuilder offers "same address as the contact" for a new person. The contact's address is
+   not on the registration — it lives on their party_member row, which is normally the first one. */
+let contactAddress = $derived({
+    addressLine1: members[0]?.addressLine1 ?? '',
+    addressLine2: members[0]?.addressLine2 ?? '',
+    addressCity: members[0]?.addressCity ?? '',
+    addressState: members[0]?.addressState ?? '',
+    addressZip: members[0]?.addressZip ?? '',
+})
 
 let remainingCount = $derived(rows.filter((row) => !removed.has(row.memberId)).length)
 
@@ -229,17 +242,15 @@ function handleRestore(memberId: string) {
                                 bind:value={row.birthDate}
                                 placeholder="Not recorded" />
                         </div>
-                        {#if shirtsEnabled}
-                            <div class="flex flex-col gap-1.5">
-                                <label for="shirt-{row.memberId}" class="text-sm font-medium">
-                                    T-shirt
-                                </label>
-                                <ShirtSizeSelect
-                                    id="shirt-{row.memberId}"
-                                    bind:value={row.shirtSize}
-                                    emptyLabel="Not recorded" />
-                            </div>
-                        {/if}
+                        <div class="flex flex-col gap-1.5">
+                            <label for="shirt-{row.memberId}" class="text-sm font-medium">
+                                T-shirt
+                            </label>
+                            <ShirtSizeSelect
+                                id="shirt-{row.memberId}"
+                                bind:value={row.shirtSize}
+                                emptyLabel="Not recorded" />
+                        </div>
                     </div>
 
                     <div class="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2">
@@ -272,6 +283,21 @@ function handleRestore(memberId: string) {
                     A registration must keep at least one person. Cancel it instead of emptying it.
                 </p>
             {/if}
+
+            <Separator />
+
+            <!-- Staged additions. Reuses the public form's builder, so an admin addition collects and
+                 validates exactly what a registrant's does. -->
+            <PartyMembersBuilder
+                bind:members={newMembers}
+                {tiers}
+                contactName={$form.contactName}
+                {contactAddress} />
+
+            <p class="text-muted-foreground text-xs">
+                Anyone added here joins the party when you save, at the tier's face value. No
+                payment is taken.
+            </p>
         </CardContent>
     </Card>
 

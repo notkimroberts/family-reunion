@@ -18,6 +18,7 @@ type Entry = {
     detail: unknown
     createdAt: Date | string
     actorName: string | null
+    joinedActorName: string | null
 }
 
 let { history }: { history: Entry[] } = $props()
@@ -75,7 +76,7 @@ function detailLabel(detail: unknown): string {
                         </span>
                         <span class="text-muted-foreground text-xs">
                             {dateFormatter.format(new Date(entry.createdAt))} ·
-                            {entry.actorName ?? 'a removed account'}
+                            {entry.actorName ?? entry.joinedActorName ?? 'a removed account'}
                         </span>
                     </li>
                 {/each}

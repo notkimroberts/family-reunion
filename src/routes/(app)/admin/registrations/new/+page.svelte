@@ -61,7 +61,6 @@ let targetEventId = $derived(
 )
 
 const tiers = $derived(data.tiers)
-const shirtsEnabled = $derived(data.events[0]?.shirtsEnabled ?? false)
 
 let self = $state<PersonDetails>({ ...EMPTY_PERSON_DETAILS })
 let members = $state<FormMember[]>([])
@@ -213,7 +212,6 @@ async function handleCopy(url: string) {
                             bind:info={self}
                             bind:saved={contactSaved}
                             {tiers}
-                            {shirtsEnabled}
                             errors={{
                                 email: $errors.contactEmail?.[0],
                                 name: $errors.contactFirstName?.[0] ?? $errors.contactLastName?.[0],
@@ -224,7 +222,6 @@ async function handleCopy(url: string) {
                             {tiers}
                             {contactName}
                             {contactAddress}
-                            {shirtsEnabled}
                             error={$errors.members?._errors?.[0]} />
                     </div>
 

@@ -53,11 +53,7 @@ vi.mock('$lib/server/registrations', () => ({
     getRegistrationMembers: vi.fn(),
     getRegistrationWithEvent: mockGetRegistrationWithEvent,
 }))
-vi.mock('./schema', () => ({
-    adminAddMemberSchema: {},
-    adminEditRegistrationSchema: {},
-    adminSetStatusSchema: {},
-}))
+vi.mock('./schema', () => ({ adminEditRegistrationSchema: {} }))
 
 const { actions } = await import('./+page.server')
 
@@ -81,7 +77,22 @@ const EDIT_FORM = {
     contactPhone: '',
     status: 'pending',
     members: [],
+    newMembers: [],
     removedMemberIds: [],
+}
+
+const STAGED_MEMBER = {
+    name: 'Marcus Patterson',
+    tierId: 'tier-adult',
+    birthDate: '1990-05-05',
+    shirtSize: 'L',
+    addressLine1: '1 Main St',
+    addressLine2: '',
+    addressCity: 'Oakland',
+    addressState: 'CA',
+    addressZip: '94612',
+    vegetarianMeal: 'yes',
+    attendedReunion2025: 'no',
 }
 
 function makeEvent() {
@@ -155,7 +166,7 @@ describe('POST /admin/registrations/[id] save', () => {
         expect(mockAudit).toHaveBeenCalledWith(
             expect.objectContaining({
                 action: 'status_changed',
-                actorUserId: 'admin-1',
+                actor: { id: 'admin-1', role: 'admin' },
                 detail: { from: 'pending', to: 'paid' },
             }),
         )
@@ -270,18 +281,17 @@ describe('POST /admin/registrations/[id] save', () => {
     })
 })
 
-describe('POST /admin/registrations/[id] add_member', () => {
-    beforeEach(() => {
-        mockSuperValidate.mockResolvedValue({ valid: true, data: { ...MEMBER_FORM } })
-    })
+describe('save: staged additions', () => {
+    /* Additions used to be their own action with their own immediate write and its own email. Batching
+       them into the save is the point: three people added in one sitting must not mean three rotations
+       of the management token and three emails. */
+    it('adds each staged member through addAdminMember, never Stripe', async () => {
+        mockSuperValidate.mockResolvedValue({
+            valid: true,
+            data: { ...EDIT_FORM, newMembers: [STAGED_MEMBER] },
+        })
 
-    it('requires an admin', async () => {
-        await actions.add_member(makeEvent())
-        expect(mockRequireAdmin).toHaveBeenCalled()
-    })
-
-    it('adds the member to the registration in the URL, converting the yes/no answers', async () => {
-        await actions.add_member(makeEvent())
+        await actions.save(makeEvent())
 
         expect(mockAddAdminMember).toHaveBeenCalledWith({
             registrationId: 'reg-1',
@@ -294,31 +304,55 @@ describe('POST /admin/registrations/[id] add_member', () => {
         })
     })
 
-    it('returns 400 without adding when validation fails', async () => {
-        mockSuperValidate.mockResolvedValue({ valid: false, data: {} })
+    it('sends ONE email however many people were added', async () => {
+        mockSuperValidate.mockResolvedValue({
+            valid: true,
+            data: {
+                ...EDIT_FORM,
+                newMembers: [STAGED_MEMBER, { ...STAGED_MEMBER, name: 'Dana Patterson' }],
+            },
+        })
 
-        const result = await actions.add_member(makeEvent())
+        await actions.save(makeEvent())
 
-        expect(mockAddAdminMember).not.toHaveBeenCalled()
-        expect(result).toMatchObject({ status: 400 })
+        expect(mockAddAdminMember).toHaveBeenCalledTimes(2)
+        expect(mockNotify).toHaveBeenCalledOnce()
+        const [params] = mockNotify.mock.calls[0]
+        expect(params.changeSummary).toHaveLength(2)
     })
 
-    it('audits the addition and notifies the registrant', async () => {
-        await actions.add_member(makeEvent())
+    it('audits every addition', async () => {
+        mockSuperValidate.mockResolvedValue({
+            valid: true,
+            data: { ...EDIT_FORM, newMembers: [STAGED_MEMBER] },
+        })
+
+        await actions.save(makeEvent())
 
         expect(mockAudit).toHaveBeenCalledWith(
-            expect.objectContaining({ action: 'member_added', actorUserId: 'admin-1' }),
+            expect.objectContaining({
+                action: 'member_added',
+                actor: { id: 'admin-1', role: 'admin' },
+            }),
         )
-        expect(mockNotify).toHaveBeenCalledOnce()
     })
 
-    it('reports the member as added even when the notification fails', async () => {
-        mockNotify.mockRejectedValue(new Error('Resend rejected the email'))
+    /* The money guardrails are about money already taken. Adding an offline place at face value owes
+       nobody a refund, so it stays allowed on a paid party — unlike a reprice or a removal. */
+    it('allows adding to a PAID registration', async () => {
+        mockGetRegistrationWithEvent.mockResolvedValue({
+            registration: { id: 'reg-1', status: 'paid', eventId: 'evt-1' },
+            event: { title: 'Reunion 2027' },
+        })
+        mockSuperValidate.mockResolvedValue({
+            valid: true,
+            data: { ...EDIT_FORM, status: 'paid', newMembers: [STAGED_MEMBER] },
+        })
 
-        const result = await actions.add_member(makeEvent())
+        const result = await actions.save(makeEvent())
 
-        expect(mockReportError).toHaveBeenCalled()
-        expect(result).toMatchObject({ memberAdded: true })
+        expect(mockAddAdminMember).toHaveBeenCalledOnce()
+        expect(result).toMatchObject({ saved: true })
     })
 })
 

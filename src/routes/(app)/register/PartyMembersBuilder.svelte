@@ -24,14 +24,12 @@ let {
     tiers,
     contactName,
     contactAddress,
-    shirtsEnabled = false,
     error,
 }: {
     members: FormMember[]
     tiers: TierOption[]
     contactName: string
     contactAddress: ContactAddress
-    shirtsEnabled?: boolean
     error?: string
 } = $props()
 
@@ -150,7 +148,7 @@ function handleRemoveMember(index: number) {
                             {#if member.birthDate}
                                 · Age {getMemberAge(member.birthDate)}
                             {/if}
-                            {#if shirtsEnabled && member.shirtSize}
+                            {#if member.shirtSize}
                                 · Size {member.shirtSize}
                             {/if}
                         </p>
@@ -213,10 +211,7 @@ function handleRemoveMember(index: number) {
                             placeholder="Last" />
                     </div>
                 </div>
-                <div
-                    class="grid grid-cols-1 gap-3 sm:grid-cols-2 {shirtsEnabled
-                        ? 'lg:grid-cols-3'
-                        : ''}">
+                <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
                     <div class="space-y-1.5">
                         <label for="new-tier" class="text-sm font-medium">
                             Tier <span class="text-destructive">*</span>
@@ -236,16 +231,14 @@ function handleRemoveMember(index: number) {
                             placeholder="Their birthday" />
                     </div>
 
-                    {#if shirtsEnabled}
-                        <div class="space-y-1.5">
-                            <label for="new-shirt" class="text-sm font-medium">
-                                T-shirt
-                                <span class="text-muted-foreground font-normal text-xs"
-                                    >(optional)</span>
-                            </label>
-                            <ShirtSizeSelect id="new-shirt" bind:value={newShirtSize} />
-                        </div>
-                    {/if}
+                    <div class="space-y-1.5">
+                        <label for="new-shirt" class="text-sm font-medium">
+                            T-shirt
+                            <span class="text-muted-foreground font-normal text-xs"
+                                >(optional)</span>
+                        </label>
+                        <ShirtSizeSelect id="new-shirt" bind:value={newShirtSize} />
+                    </div>
                 </div>
             </div>
 
