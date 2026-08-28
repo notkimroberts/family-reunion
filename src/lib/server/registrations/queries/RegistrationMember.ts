@@ -15,4 +15,7 @@ export type RegistrationMember = {
     tierLabel: string
     priceCents: number
     stripePaymentIntentId: string | null
+    /* Set only by the add-member checkout, so it is the one signal that identifies a member who paid
+       for their own place separately — see getMemberPaymentOrigin. */
+    stripeCheckoutSessionId: string | null
 }

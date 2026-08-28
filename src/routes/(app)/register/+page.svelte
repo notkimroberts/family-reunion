@@ -29,7 +29,7 @@ let { data } = $props()
 
    The contact's own scalar fields bind straight to $form — top-level `$form.x = v` compiles to a
    store update, which is reactive. Only nested mutation is not. */
-const { form, errors, message, enhance } = superForm(data.form, {
+const { form, errors, message, submitting, enhance } = superForm(data.form, {
     validators: zodClient(registrationSchema),
     dataType: 'json',
     /* Superforms swallows a failed submit into $errors and, for a transport/server error, into
@@ -189,7 +189,6 @@ let isLocked = $derived(
                         bind:info={self}
                         bind:saved={contactSaved}
                         {tiers}
-                        shirtsEnabled={data.event.shirtsEnabled}
                         errors={{
                             email: $errors.contactEmail?.[0],
                             name: $errors.contactFirstName?.[0] ?? $errors.contactLastName?.[0],
@@ -200,7 +199,6 @@ let isLocked = $derived(
                         {tiers}
                         {contactName}
                         {contactAddress}
-                        shirtsEnabled={data.event.shirtsEnabled}
                         error={$errors.members?._errors?.[0]} />
                 </div>
 
@@ -215,6 +213,7 @@ let isLocked = $derived(
                         {processingFee}
                         {canSubmit}
                         submitLabel={`Pay $${formatPrice(total)} & Register`}
+                        submitting={$submitting}
                         placeholderText="Fill in your details above and press Save to continue."
                         submitFootnote="You'll be redirected to a secure checkout." />
                     <p class="text-xs text-muted-foreground text-center mt-3">

@@ -1,5 +1,5 @@
 <script lang="ts">
-import * as Select from '$lib/components/ui/select'
+import { NativeSelect } from '$lib/components/ui/native-select'
 import { formatPrice } from '$lib/utils'
 import type { TierOption } from './types'
 
@@ -12,21 +12,11 @@ let {
     tiers: TierOption[]
     id?: string
 } = $props()
-
-let selected = $derived(tiers.find((t) => t.id === tierId))
 </script>
 
-<Select.Root type="single" value={tierId} onValueChange={(v) => (tierId = v)}>
-    <Select.Trigger {id} class="w-full">
-        {#if selected}
-            {selected.label} — ${formatPrice(selected.priceCents)}
-        {:else}
-            <span class="text-muted-foreground">Select tier…</span>
-        {/if}
-    </Select.Trigger>
-    <Select.Content>
-        {#each tiers as tier (tier.id)}
-            <Select.Item value={tier.id} label="{tier.label} — ${formatPrice(tier.priceCents)}" />
-        {/each}
-    </Select.Content>
-</Select.Root>
+<NativeSelect {id} bind:value={tierId}>
+    <option value="" disabled>Select tier…</option>
+    {#each tiers as tier (tier.id)}
+        <option value={tier.id}>{tier.label} — ${formatPrice(tier.priceCents)}</option>
+    {/each}
+</NativeSelect>

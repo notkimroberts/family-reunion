@@ -1,16 +1,14 @@
 <script lang="ts">
 import { UserCircle } from '@lucide/svelte'
-import { Select as BitsSelect } from 'bits-ui'
 import { DatePicker } from '$lib/components'
 import { Button } from '$lib/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card'
 import { Input } from '$lib/components/ui/input'
-import * as Select from '$lib/components/ui/select'
 import { Separator } from '$lib/components/ui/separator'
-import { SHIRT_SIZES } from '$lib/general/constants'
 import { formatPhoneInput, formatPrice, getMemberAge, isValidPhone, isValidZip } from '$lib/utils'
 import AdditionalQuestionsFields from './AdditionalQuestionsFields.svelte'
 import AddressFields from './AddressFields.svelte'
+import ShirtSizeSelect from './ShirtSizeSelect.svelte'
 import TierSelect from './TierSelect.svelte'
 import type { PersonDetails, TierOption } from './types'
 
@@ -21,7 +19,6 @@ let {
     lastName = $bindable(''),
     info = $bindable(),
     tiers,
-    shirtsEnabled = false,
     errors,
     saved = $bindable(false),
 }: {
@@ -31,7 +28,6 @@ let {
     lastName: string
     info: PersonDetails
     tiers: TierOption[]
-    shirtsEnabled?: boolean
     errors?: { email?: string; name?: string }
     /* Bindable so the page can require the contact to be saved before allowing submit. */
     saved?: boolean
@@ -49,6 +45,7 @@ let canSave = $derived(
         !!info.addressState.trim() &&
         !!info.addressZip.trim() &&
         zipValid &&
+        !!info.shirtSize &&
         !!info.vegetarianMeal &&
         !!info.attendedReunion2025 &&
         phoneValid,
@@ -74,7 +71,7 @@ let selectedTier = $derived(tiers.find((t) => t.id === info.tierId))
                         {#if age !== undefined}
                             · Age {age}
                         {/if}
-                        {#if shirtsEnabled && info.shirtSize}
+                        {#if info.shirtSize}
                             · Size {info.shirtSize}
                         {/if}
                     </p>
@@ -181,10 +178,7 @@ let selectedTier = $derived(tiers.find((t) => t.id === info.tierId))
                 <p class="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
                     Registration Details
                 </p>
-                <div
-                    class="grid grid-cols-1 gap-3 sm:grid-cols-2 {shirtsEnabled
-                        ? 'lg:grid-cols-3'
-                        : ''}">
+                <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
                     <div class="space-y-1.5">
                         <label for="selfTier" class="text-sm font-medium">
                             Tier <span class="text-destructive">*</span>
@@ -204,28 +198,14 @@ let selectedTier = $derived(tiers.find((t) => t.id === info.tierId))
                             placeholder="Your birthday" />
                     </div>
 
-                    {#if shirtsEnabled}
-                        <div class="space-y-1.5">
-                            <label for="selfShirtSize" class="text-sm font-medium">
-                                T-shirt
-                                <span class="text-muted-foreground font-normal text-xs"
-                                    >(optional)</span>
-                            </label>
-                            <Select.Root
-                                type="single"
-                                value={info.shirtSize ?? ''}
-                                onValueChange={(v) => (info.shirtSize = v)}>
-                                <Select.Trigger id="selfShirtSize" class="w-full">
-                                    <BitsSelect.Value placeholder="Select size…" />
-                                </Select.Trigger>
-                                <Select.Content>
-                                    {#each SHIRT_SIZES as size (size)}
-                                        <Select.Item value={size} label={size} />
-                                    {/each}
-                                </Select.Content>
-                            </Select.Root>
-                        </div>
-                    {/if}
+                    <div class="space-y-1.5">
+                        <label for="selfShirtSize" class="text-sm font-medium">
+                            T-shirt <span class="text-destructive">*</span>
+                        </label>
+                        <ShirtSizeSelect
+                            id="selfShirtSize"
+                            bind:value={() => info.shirtSize ?? '', (v) => (info.shirtSize = v)} />
+                    </div>
                 </div>
             </div>
 

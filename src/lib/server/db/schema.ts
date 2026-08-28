@@ -138,7 +138,6 @@ export const reunionEvents = pgTable(
         recommendedActivities:
             jsonb('recommended_activities').$type<{ name: string; description?: string }[]>(),
         schedule: jsonb('schedule').$type<{ day: string; time: string; activity: string }[]>(),
-        shirtsEnabled: boolean('shirts_enabled').notNull().default(false),
         registrationLockDate: timestamp('registration_lock_date'),
         externalShopUrl: text('external_shop_url'),
         shopProducts: jsonb('shop_products').$type<StorefrontProduct[]>(),
@@ -174,6 +173,16 @@ export const registrations = pgTable(
     {
         id: uuid('id').primaryKey().defaultRandom(),
         managementToken: text('management_token').notNull().unique(),
+        /* The previous token's hash, kept briefly after a rotation.
+
+           Rotation is unavoidable whenever a link has to be re-sent — only the hash is stored, so
+           the original plaintext cannot be recovered by anyone. But rotating alone would invalidate
+           every link already in the registrant's inbox AND log out an open manage session, because
+           the plaintext lives in their reg_token cookie. Honouring the previous hash for a short
+           window means an organiser can edit a registration without silently breaking the
+           registrant's access. */
+        previousManagementToken: text('previous_management_token').unique(),
+        previousTokenExpiresAt: timestamp('previous_token_expires_at'),
         contactName: text('contact_name').notNull(),
         contactEmail: text('contact_email').notNull(),
         contactPhone: text('contact_phone'),
@@ -298,4 +307,49 @@ export const photos = pgTable(
         createdAt: timestamp('created_at').notNull().defaultNow(),
     },
     (t) => [index('photos_event_id_idx').on(t.eventId)],
+)
+
+export const registrationAuditActionEnum = pgEnum('registration_audit_action', [
+    'status_changed',
+    'member_added',
+    'member_updated',
+    'member_removed',
+    'contact_updated',
+    'link_reissued',
+])
+
+/* Append-only record of admin changes to someone else's registration.
+
+   registrations.updated_at was the only trace, so with several organisers sharing the admin panel
+   "who marked this paid?" and "who removed that person?" had no answer. These changes involve money
+   and other people's places, which is exactly what wants a history.
+
+   actor_user_id is set null rather than cascade on user delete: removing an organiser's account must
+   not erase the record that a change happened. detail carries the shape of that action — a status
+   change stores { from, to }, a member change stores the name and what altered. */
+export const registrationAudit = pgTable(
+    'registration_audit',
+    {
+        id: uuid('id').primaryKey().defaultRandom(),
+        registrationId: uuid('registration_id')
+            .notNull()
+            .references(() => registrations.id, { onDelete: 'cascade' }),
+        actorUserId: text('actor_user_id').references(() => user.id, { onDelete: 'set null' }),
+        /* Snapshot of who acted, kept alongside the FK rather than relying on it.
+
+           Two reasons. On delete set null erases the actor when an organiser's account is removed,
+           which defeats the purpose of a history. And in dev there is no session, so hooks.server.ts
+           substitutes a user id that has no row — the FK rejected it and the whole audit write was
+           lost silently. A name that is only ever read back needs no referential integrity. */
+        actorName: text('actor_name'),
+        action: registrationAuditActionEnum('action').notNull(),
+        detail: jsonb('detail'),
+        /* withTimezone, unlike the other tables here — this is the only column whose time of day is
+           ever shown to anyone. A plain `timestamp` is stored without an offset while holding a UTC
+           instant, so postgres.js parses it as server-local and the offset is silently lost: the
+           history rendered 4:06 AM for a change made at 9:06 PM Pacific. timestamptz makes the value
+           an instant, so it survives the trip regardless of where the server runs. */
+        createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    },
+    (t) => [index('registration_audit_registration_id_idx').on(t.registrationId)],
 )

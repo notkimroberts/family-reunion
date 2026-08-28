@@ -33,7 +33,10 @@ const yesNoRequired = (message: string) =>
 export const personDetailsSchema = z.object({
     tierId: tierIdSchema,
     birthDate: z.string().optional(),
-    shirtSize: z.string().optional(),
+    /* Required, unlike birthDate. Shirts are being made per attendee, so a missing size is a person
+       without one — the reason the field exists at all. Accepts '' in the type for the same reason the
+       yes/no answers do: a freshly rendered form has to be representable in $form. */
+    shirtSize: z.string().min(1, 'Please choose a T-shirt size'),
     addressLine1: z.string().min(1, 'Street address is required'),
     addressLine2: z.string().optional(),
     addressCity: z.string().min(1, 'City is required'),
@@ -45,8 +48,10 @@ export const personDetailsSchema = z.object({
     ),
 })
 
+/* min(2), not min(1): a single character got saved as a party member's whole name. Not a full-name
+   requirement — mononyms are real and a surname must not be forced. */
 export const memberSchema = personDetailsSchema.extend({
-    name: z.string().min(1, 'Name is required'),
+    name: z.string().trim().min(2, 'Please enter a name'),
 })
 
 /* The registration form's complete shape. Every field the form collects lives here and nowhere
@@ -85,14 +90,17 @@ export const adminRegistrationSchema = registrationSchema.extend({
 export const addMemberSchema = personDetailsSchema.extend({
     token: z.string().min(1),
     registrationId: z.string().min(1),
-    name: z.string().min(1, 'Name is required'),
+    name: z.string().trim().min(2, 'Please enter a name'),
 })
 
 export const updateMemberSchema = z.object({
     token: z.string().min(1),
     memberId: z.string().min(1),
     birthDate: z.string().optional(),
-    shirtSize: z.string().optional(),
+    /* Required, so a registrant editing their own party cannot save a member without a size — the same
+       standard the registration form now holds. Deliberately NOT the ''-clears convention the field
+       below keeps: '' would mean "remove this person's size", and a size is no longer removable. */
+    shirtSize: z.string().min(1, 'Please choose a T-shirt size'),
     /* Raw 'yes'/'no'/'' string, same undefined-preserve/''-clear convention as shirtSize —
        see updateMemberDetails.ts. Not a yes/no zod enum since '' (clear) must stay valid. */
     vegetarianMeal: z.string().optional(),

@@ -1,7 +1,8 @@
 <script lang="ts">
+import { LoaderCircle } from '@lucide/svelte'
 import { Button } from '$lib/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card'
-import * as Select from '$lib/components/ui/select'
+import { NativeSelect } from '$lib/components/ui/native-select'
 import { Separator } from '$lib/components/ui/separator'
 import { formatPrice, getTierPriceCents } from '$lib/utils'
 import type { FormMember, TierOption } from './types'
@@ -26,6 +27,8 @@ let {
     processingFee = 0,
     canSubmit,
     submitLabel,
+    submitting = false,
+    submittingLabel = 'Redirecting to checkout…',
     placeholderText = 'Enter your name, email, and birthday above to get started.',
     contactSuffix = 'you',
     status = $bindable<Status>('paid'),
@@ -40,6 +43,8 @@ let {
     processingFee?: number
     canSubmit: boolean
     submitLabel: string
+    submitting?: boolean
+    submittingLabel?: string
     placeholderText?: string
     contactSuffix?: string
     status?: Status
@@ -96,23 +101,21 @@ let total = $derived(subtotal + processingFee)
                 <Separator />
                 <div class="space-y-1.5">
                     <label for="orderStatus" class="text-sm font-medium">Payment status</label>
-                    <Select.Root
-                        type="single"
-                        value={status}
-                        onValueChange={(v) => (status = v as Status)}
-                        name="status">
-                        <Select.Trigger id="orderStatus" class="w-full">
-                            {statusLabelsValue[status]}
-                        </Select.Trigger>
-                        <Select.Content>
-                            {#each Object.entries(statusLabelsValue) as [value, label] (value)}
-                                <Select.Item {value} {label} />
-                            {/each}
-                        </Select.Content>
-                    </Select.Root>
+                    <NativeSelect id="orderStatus" name="status" bind:value={status}>
+                        {#each Object.entries(statusLabelsValue) as [value, label] (value)}
+                            <option {value}>{label}</option>
+                        {/each}
+                    </NativeSelect>
                 </div>
             {/if}
-            <Button type="submit" class="w-full">{submitLabel}</Button>
+            <Button type="submit" class="w-full" disabled={submitting}>
+                {#if submitting}
+                    <LoaderCircle class="size-4 animate-spin" />
+                    {submittingLabel}
+                {:else}
+                    {submitLabel}
+                {/if}
+            </Button>
             {#if submitFootnote}
                 <p class="text-xs text-muted-foreground text-center">{submitFootnote}</p>
             {/if}

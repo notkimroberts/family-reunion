@@ -24,8 +24,14 @@ import { adminRegistrationSchema, registrationSchema } from './schema'
 
 const PAGES = [
     { name: 'public register', path: 'src/routes/(app)/register/+page.svelte' },
-    { name: 'admin paper entry', path: 'src/routes/(app)/admin/registrations/+page.svelte' },
+    { name: 'admin paper entry', path: 'src/routes/(app)/admin/registrations/new/+page.svelte' },
 ]
+
+/* Every guard below is a source match against a path, so a page that MOVES takes its guards with
+   it silently: the negative assertions ("no hidden inputs") keep passing against whatever file now
+   sits at the old path. That happened — the admin form moved to new/ and the guard began reading
+   the registrations list page, which trivially satisfied it. So first prove each path really is a
+   superforms page before trusting anything else said about it. */
 
 /* $form's shape at first render, per each load's defaults(). */
 const BLANK_FORM = {
@@ -46,6 +52,7 @@ const COMPLETE_FORM = {
     self: {
         ...EMPTY_PERSON_DETAILS,
         tierId: 'tier-adult',
+        shirtSize: 'L',
         addressLine1: '123 Fake Street',
         addressCity: 'Oakland',
         addressState: 'CA',
@@ -56,6 +63,10 @@ const COMPLETE_FORM = {
 }
 
 describe('$form is the single source of truth', () => {
+    it.each(PAGES)('$name is a superforms page at the expected path', ({ path }) => {
+        expect(readFileSync(path, 'utf8')).toMatch(/superForm\(/)
+    })
+
     it.each(PAGES)('$name posts the store as JSON, not DOM form data', ({ path }) => {
         expect(readFileSync(path, 'utf8')).toMatch(/dataType: 'json'/)
     })
@@ -109,6 +120,7 @@ describe('$form is the single source of truth', () => {
             'self.addressCity',
             'self.addressState',
             'self.addressZip',
+            'self.shirtSize',
             'self.vegetarianMeal',
             'self.attendedReunion2025',
         ]) {
@@ -130,6 +142,26 @@ describe('$form is the single source of truth', () => {
         expect(
             result.error!.issues.some((i) => i.path.join('.') === 'members.0.vegetarianMeal'),
         ).toBe(true)
+    })
+
+    /* An admin added a member and the page showed nothing — no alert, no updated party, no history —
+       so it read as "adding a member doesn't work". The member had in fact been created. The form's
+       enhance callback applied the result only when it was a redirect, which is the registrant's Stripe
+       path; the admin action returns success and the registrant's own validation failure returns
+       fail(400), and both were dropped on the floor.
+
+       Gating an enhance callback on the result type means silently ignoring the types you did not think
+       of, so the guard is that it is not gated at all.
+
+       Comments are stripped before matching: the component explains this bug in prose, and a raw match
+       cannot tell an explanation from the code it warns about. */
+    it('AddMemberForm applies every action result, not just redirects', () => {
+        const source = readFileSync('src/routes/(app)/register/AddMemberForm.svelte', 'utf8')
+            .replace(/\/\*[\s\S]*?\*\//g, '')
+            .replace(/\/\/.*$/gm, '')
+
+        expect(source, 'enhance must not branch on the result type').not.toMatch(/result\.type/)
+        expect(source).toMatch(/await update\(\)/)
     })
 
     /* Collapsing the contact card unmounts its inputs. Under the old DOM-mirroring architecture

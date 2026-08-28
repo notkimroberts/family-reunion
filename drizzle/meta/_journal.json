@@ -43,6 +43,27 @@
       "when": 1787601618272,
       "tag": "0005_sweet_gwen_stacy",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1787630820018,
+      "tag": "0006_premium_meggan",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1787939025832,
+      "tag": "0007_steady_princess_powerful",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1787940659045,
+      "tag": "0008_careful_kingpin",
+      "breakpoints": true
     }
   ]
 }

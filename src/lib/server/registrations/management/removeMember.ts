@@ -6,6 +6,7 @@ import { dbg } from '$lib/server/debug'
 import { refundPaymentIntent, retrieveSessionPaymentIntent } from '$lib/server/payments'
 import { assertRegistrationEditable } from '../assertRegistrationEditable'
 import { hashManagementToken } from '../hashManagementToken'
+import { isManagementTokenValid } from '../isManagementTokenValid'
 
 /* Issues a partial refund for the member's recorded price (using the member id as a Stripe
    idempotency key so retries cannot double-refund), deletes the member row, then marks the
@@ -20,7 +21,9 @@ export async function removeMember(memberId: string, managementToken: string): P
             registrationId: partyMembers.registrationId,
             stripePaymentIntentId: partyMembers.stripePaymentIntentId,
             priceCents: partyMembers.priceCents,
-            registrationToken: registrations.managementToken,
+            managementToken: registrations.managementToken,
+            previousManagementToken: registrations.previousManagementToken,
+            previousTokenExpiresAt: registrations.previousTokenExpiresAt,
             registrationStripeSessionId: registrations.stripeSessionId,
             registrationLockDate: reunionEvents.registrationLockDate,
         })
@@ -30,7 +33,8 @@ export async function removeMember(memberId: string, managementToken: string): P
         .where(eq(partyMembers.id, memberId))
         .limit(1)
 
-    if (!member || member.registrationToken !== tokenHash) {
+    /* Grace-period aware, via the same predicate the page load uses. */
+    if (!member || !isManagementTokenValid(member, tokenHash)) {
         throw error(403)
     }
 

@@ -59,16 +59,24 @@ describe('isContactComplete', () => {
         ).toBe(false)
     })
 
-    /* Optional fields must not gate submission. birthDate and shirtSize are optional in the
-       schema, and addressLine2 is too — an apartment-less address is valid. */
+    /* Optional fields must not gate submission. birthDate is optional in the schema, and addressLine2
+       is too — an apartment-less address is valid. */
     it.each([
         ['birthDate', { birthDate: undefined }],
-        ['shirtSize', { shirtSize: '' }],
         ['addressLine2', { addressLine2: '' }],
     ])('still accepts when optional %s is absent', (_label, override) => {
         expect(
             isContactComplete({ ...COMPLETE, details: { ...COMPLETE_DETAILS, ...override } }),
         ).toBe(true)
+    })
+
+    /* Shirt size is REQUIRED now — shirts are made per attendee, so a blank is a person without one.
+       This predicate exists to mirror registrationSchema, so it has to move when the schema does or the
+       button stays enabled on a form the server will reject. */
+    it('rejects a missing shirt size', () => {
+        expect(
+            isContactComplete({ ...COMPLETE, details: { ...COMPLETE_DETAILS, shirtSize: '' } }),
+        ).toBe(false)
     })
 
     /* Phone is deliberately outside this predicate: it is optional, and only its *validity*

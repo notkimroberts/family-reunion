@@ -11,11 +11,12 @@ export const ADMIN_NAV_GROUP: NavGroup = {
     icon: 'shield-check',
     children: [
         { href: '/admin', label: 'Overview' },
-        { href: '/admin/registrations', label: 'Add Registration' },
+        { href: '/admin/registrations', label: 'Registrations' },
         { href: '/admin/attendees', label: 'Attendees' },
         { href: '/admin/events', label: 'Events' },
         { href: '/admin/users', label: 'Users' },
-        { href: '/admin/photos', label: 'Photos' },
-        { href: '/admin/storefront', label: 'Storefront' },
+        /* Photos and Storefront are deliberately absent, not forgotten. Both routes still exist and
+           keep their own requireAdmin guards, so they stay reachable by URL — the gallery upload
+           action lives in admin/photos, so dropping it would leave no way to add reunion photos. */
     ],
 }

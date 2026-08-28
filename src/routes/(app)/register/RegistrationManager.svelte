@@ -143,9 +143,7 @@ function handleRemoveClick(member: PartyMember) {
                             <TableHead>Name</TableHead>
                             <TableHead>Age</TableHead>
                             <TableHead>Tier</TableHead>
-                            {#if event.shirtsEnabled}
-                                <TableHead>T-Shirt</TableHead>
-                            {/if}
+                            <TableHead>T-Shirt</TableHead>
                             <TableHead>Price</TableHead>
                             <TableHead></TableHead>
                         </TableRow>
@@ -164,9 +162,7 @@ function handleRemoveClick(member: PartyMember) {
                                         : '—'}
                                 </TableCell>
                                 <TableCell>{member.tierLabel}</TableCell>
-                                {#if event.shirtsEnabled}
-                                    <TableCell>{member.shirtSize || '—'}</TableCell>
-                                {/if}
+                                <TableCell>{member.shirtSize || '—'}</TableCell>
                                 <TableCell class="tabular-nums"
                                     >${formatPrice(member.priceCents)}</TableCell>
                                 <TableCell>
@@ -215,7 +211,6 @@ function handleRemoveClick(member: PartyMember) {
             {token}
             registrationId={registration.id}
             {tiers}
-            shirtsEnabled={event.shirtsEnabled}
             onCancel={() => (showAddForm = false)} />
     </div>
 {:else}
@@ -238,11 +233,7 @@ function handleRemoveClick(member: PartyMember) {
 
 {#if editingMember}
     {#key editingMember.id}
-        <EditMemberDialog
-            {token}
-            member={editingMember}
-            shirtsEnabled={event.shirtsEnabled}
-            bind:open={editDialogOpen} />
+        <EditMemberDialog {token} member={editingMember} bind:open={editDialogOpen} />
     {/key}
 {/if}
 

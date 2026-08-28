@@ -1,31 +1,43 @@
 <script lang="ts">
-import { Select as BitsSelect } from 'bits-ui'
 import { enhance } from '$app/forms'
 import { DatePicker } from '$lib/components'
 import { Button } from '$lib/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card'
 import { Input } from '$lib/components/ui/input'
-import * as Select from '$lib/components/ui/select'
 import { Separator } from '$lib/components/ui/separator'
-import { SHIRT_SIZES } from '$lib/general/constants'
 import { isValidZip } from '$lib/utils'
 import AdditionalQuestionsFields from './AdditionalQuestionsFields.svelte'
 import AddressFields from './AddressFields.svelte'
+import ShirtSizeSelect from './ShirtSizeSelect.svelte'
 import TierSelect from './TierSelect.svelte'
 import type { TierOption } from './types'
 
+/* Shared by the registrant's manage page and the admin registration detail page. The fields
+   collected are identical; what differs is the action behind it — the registrant's goes through
+   Stripe Checkout, the admin's inserts offline. So the action is a prop and the token is optional,
+   since an admin has no plaintext token to send (the DB stores only the hash). */
 let {
-    token,
+    token = undefined,
     registrationId,
     tiers,
-    shirtsEnabled,
     onCancel,
+    action = '?/add_member',
+    title = 'Add a Member',
+    submitNote = undefined,
+    submitLabel = 'Continue to Payment',
+    submittingLabel = 'Redirecting to checkout…',
 }: {
-    token: string
+    token?: string
     registrationId: string
     tiers: TierOption[]
-    shirtsEnabled: boolean
     onCancel?: () => void
+    action?: string
+    title?: string
+    submitNote?: string
+    /* The registrant's path ends at Stripe; the admin's saves directly. The wording has to differ
+       or an offline addition tells the organiser it is about to take a payment. */
+    submitLabel?: string
+    submittingLabel?: string
 } = $props()
 
 let name = $state('')
@@ -44,6 +56,7 @@ let submitting = $state(false)
 let canSubmit = $derived(
     !!name.trim() &&
         !!tierId &&
+        !!shirtSize &&
         !!addressLine1.trim() &&
         !!addressCity.trim() &&
         !!addressState.trim() &&
@@ -56,22 +69,26 @@ let canSubmit = $derived(
 
 <Card>
     <CardHeader>
-        <CardTitle>Add a Member</CardTitle>
+        <CardTitle>{title}</CardTitle>
     </CardHeader>
     <CardContent>
         <form
             method="POST"
-            action="?/add_member"
+            {action}
             use:enhance={() => {
                 submitting = true
-                return ({ result, update }) => {
+                /* Apply EVERY result, not just redirects. Gating this on result.type === 'redirect'
+                   covered only the registrant's Stripe path: an admin addition returns success and a
+                   validation failure returns fail(400), and both were dropped — nothing re-rendered,
+                   so a member that had genuinely been created looked like a no-op. */
+                return async ({ update }) => {
                     submitting = false
-                    if (result.type === 'redirect') {
-                        update()
-                    }
+                    await update()
                 }
             }}>
-            <input type="hidden" name="token" value={token} />
+            {#if token}
+                <input type="hidden" name="token" value={token} />
+            {/if}
             <input type="hidden" name="registrationId" value={registrationId} />
             <input type="hidden" name="birthDate" value={birthDate ?? ''} />
             <input type="hidden" name="tierId" value={tierId} />
@@ -79,7 +96,9 @@ let canSubmit = $derived(
             <div class="space-y-6">
                 <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <div class="space-y-2">
-                        <label for="add-name" class="text-sm font-medium">Name</label>
+                        <label for="add-name" class="text-sm font-medium">
+                            Name <span class="text-destructive">*</span>
+                        </label>
                         <Input
                             id="add-name"
                             name="name"
@@ -89,7 +108,9 @@ let canSubmit = $derived(
                             required />
                     </div>
                     <div class="space-y-2">
-                        <label for="add-tier" class="text-sm font-medium">Tier</label>
+                        <label for="add-tier" class="text-sm font-medium">
+                            Tier <span class="text-destructive">*</span>
+                        </label>
                         <TierSelect id="add-tier" bind:tierId {tiers} />
                     </div>
                     <div class="space-y-2">
@@ -101,28 +122,16 @@ let canSubmit = $derived(
                             bind:value={birthDate}
                             placeholder="Select birthday" />
                     </div>
-                    {#if shirtsEnabled}
-                        <div class="space-y-2">
-                            <label for="add-shirt" class="text-sm font-medium">
-                                T-Shirt Size <span class="text-muted-foreground">(optional)</span>
-                            </label>
-                            <Select.Root
-                                type="single"
-                                value={shirtSize}
-                                onValueChange={(v) => (shirtSize = v)}
-                                name="shirtSize">
-                                <Select.Trigger id="add-shirt" class="w-full">
-                                    <BitsSelect.Value placeholder="No shirt" />
-                                </Select.Trigger>
-                                <Select.Content>
-                                    <Select.Item value="" label="No shirt" />
-                                    {#each SHIRT_SIZES as size (size)}
-                                        <Select.Item value={size} label={size} />
-                                    {/each}
-                                </Select.Content>
-                            </Select.Root>
-                        </div>
-                    {/if}
+                    <div class="space-y-2">
+                        <label for="add-shirt" class="text-sm font-medium">
+                            T-Shirt Size <span class="text-destructive">*</span>
+                        </label>
+                        <ShirtSizeSelect
+                            id="add-shirt"
+                            name="shirtSize"
+                            bind:value={shirtSize}
+                            emptyLabel="No shirt" />
+                    </div>
                 </div>
 
                 <Separator />
@@ -154,13 +163,20 @@ let canSubmit = $derived(
                         bind:addressZip />
                 </div>
 
-                <div class="flex gap-2 justify-end pt-2">
-                    {#if onCancel}
-                        <Button type="button" variant="outline" onclick={onCancel}>Cancel</Button>
+                <div class="flex flex-col gap-2 pt-2">
+                    {#if submitNote}
+                        <p class="text-muted-foreground text-right text-xs">{submitNote}</p>
                     {/if}
-                    <Button type="submit" disabled={submitting || !canSubmit}>
-                        {submitting ? 'Redirecting to checkout…' : 'Continue to Payment'}
-                    </Button>
+                    <div class="flex justify-end gap-2">
+                        {#if onCancel}
+                            <Button type="button" variant="outline" onclick={onCancel}>
+                                Cancel
+                            </Button>
+                        {/if}
+                        <Button type="submit" disabled={submitting || !canSubmit}>
+                            {submitting ? submittingLabel : submitLabel}
+                        </Button>
+                    </div>
                 </div>
             </div>
         </form>

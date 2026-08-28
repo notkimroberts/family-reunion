@@ -1,13 +1,11 @@
 import { fail } from '@sveltejs/kit'
-import { eq } from 'drizzle-orm'
 import { zod4 as zod } from 'sveltekit-superforms/adapters'
 import { superValidate } from 'sveltekit-superforms/server'
-import { db } from '$lib/server/db'
-import { registrations } from '$lib/server/db/schema'
 import { dbg } from '$lib/server/debug'
 import { sendRecoveryEmail } from '$lib/server/email'
 import { getRegistrationsByEmail } from '$lib/server/registrations'
 import { generateManagementToken } from '$lib/server/registrations/hashManagementToken'
+import { rotateManagementToken } from '$lib/server/registrations/rotateManagementToken'
 import { reportError } from '$lib/server/reportError'
 import type { PageServerLoad, Actions } from './$types'
 import { recoverSchema } from './schema'
@@ -32,7 +30,11 @@ export const actions: Actions = {
         /* The DB stores only token hashes; we cannot reuse the original plaintext.
            Rotate per match — but ONLY persist the new hash if the email send succeeded.
            Otherwise the user is locked out: their old plaintext no longer hashes to anything
-           in the DB and they never received the new one. Email-first, then commit. */
+           in the DB and they never received the new one. Email-first, then commit.
+
+           Rotation demotes the outgoing hash rather than dropping it, so a registrant who
+           recovers a link while still holding a working one does not lose the old one — and an
+           open manage tab, whose cookie holds that plaintext, survives. */
         await Promise.all(
             matches.map(async (registration) => {
                 const { plaintext, hash } = generateManagementToken()
@@ -51,10 +53,7 @@ export const actions: Actions = {
                     })
                     return
                 }
-                await db
-                    .update(registrations)
-                    .set({ managementToken: hash, updatedAt: new Date() })
-                    .where(eq(registrations.id, registration.id))
+                await rotateManagementToken({ registrationId: registration.id, newHash: hash })
             }),
         )
 

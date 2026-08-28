@@ -51,7 +51,7 @@ export function emailLayout(params: {
         </tr>
         <tr>
           <td align="center" style="padding:20px 8px 0 8px;font-family:${fontStack};font-size:12px;line-height:1.6;color:${muted};">
-            You received this email because you registered for a ${escapeHtml(APP_NAME)} family reunion.
+            You received this email because you registered for a ${escapeHtml(APP_NAME).slice(0, -1)} Family Reunion.
           </td>
         </tr>
       </table>

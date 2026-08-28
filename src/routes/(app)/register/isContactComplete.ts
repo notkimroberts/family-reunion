@@ -28,6 +28,7 @@ export function isContactComplete(contact: {
         !!details.addressState.trim() &&
         !!details.addressZip.trim() &&
         isValidZip(details.addressZip) &&
+        !!details.shirtSize &&
         !!details.vegetarianMeal &&
         !!details.attendedReunion2025
     )
