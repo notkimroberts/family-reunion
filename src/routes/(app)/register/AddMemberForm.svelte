@@ -56,6 +56,7 @@ let submitting = $state(false)
 let canSubmit = $derived(
     !!name.trim() &&
         !!tierId &&
+        !!shirtSize &&
         !!addressLine1.trim() &&
         !!addressCity.trim() &&
         !!addressState.trim() &&
@@ -123,7 +124,7 @@ let canSubmit = $derived(
                     </div>
                     <div class="space-y-2">
                         <label for="add-shirt" class="text-sm font-medium">
-                            T-Shirt Size <span class="text-muted-foreground">(optional)</span>
+                            T-Shirt Size <span class="text-destructive">*</span>
                         </label>
                         <ShirtSizeSelect
                             id="add-shirt"

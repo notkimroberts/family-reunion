@@ -255,7 +255,7 @@ function handleRestore(memberId: string) {
                         </div>
                         <div class="flex flex-col gap-1.5">
                             <label for="shirt-{row.memberId}" class="text-sm font-medium">
-                                T-shirt
+                                T-shirt <span class="text-destructive">*</span>
                             </label>
                             <ShirtSizeSelect
                                 id="shirt-{row.memberId}"

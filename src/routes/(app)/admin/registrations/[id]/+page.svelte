@@ -101,9 +101,17 @@ let isPaid = $derived(data.registration.status === 'paid')
 let origins = $derived(
     data.members.map((member) => getMemberPaymentOrigin(member, data.registration)),
 )
+
+/* Only these two are certainly grossed up. Testing for "not recorded offline" was wrong the moment
+   'comped' existed: a waived party carries the net tier price and read "$160.00 incl. card fee". An
+   abandoned checkout is grossed up too, but nothing was charged, so a fee note there says nothing. */
+const GROSSED_UP_ORIGINS = ['paid_online', 'added_online']
+
+function includesCardFee(origin: string): boolean {
+    return GROSSED_UP_ORIGINS.includes(origin)
+}
 let hasMixedPriceBasis = $derived(
-    origins.includes('recorded_offline') &&
-        origins.some((origin) => origin === 'paid_online' || origin === 'added_online'),
+    origins.includes('recorded_offline') && origins.some(includesCardFee),
 )
 
 async function handleCopyEmail() {
@@ -142,20 +150,34 @@ async function handleCopyEmail() {
                     <span class="text-muted-foreground">·</span>
                     <span class="font-medium">{data.registration.contactPhone}</span>
                 {/if}
+                <span class="text-muted-foreground">·</span>
+                <span class="text-muted-foreground">
+                    Party of {data.members.length} · ${formatPrice(data.totalCents)}
+                </span>
             </div>
-            <p class="text-muted-foreground text-sm">
-                {data.event.title} · {data.members.length}
-                {data.members.length === 1 ? 'person' : 'people'} · ${formatPrice(data.totalCents)}
-            </p>
             {#if pendingReason}
                 <p class="text-muted-foreground text-xs">{pendingReason}</p>
             {/if}
         </div>
-        {#if !editing && !isCancelled}
-            <Button onclick={() => (editing = true)}>
-                <Pencil class="size-4" />
-                Edit registration
-            </Button>
+        {#if !editing}
+            <div class="flex flex-wrap items-center gap-2">
+                <!-- No warning attached, deliberately. It used to need one: rotation killed the
+                     registrant's existing link the moment an organiser pressed this. The grace period
+                     means their current link keeps working for a week, so there is nothing to caution
+                     against — and the toast afterwards says exactly that. -->
+                <form method="POST" action="?/reissue_link" use:enhance>
+                    <Button type="submit" variant="outline" size="sm">
+                        <Mail class="size-4" />
+                        Email new link
+                    </Button>
+                </form>
+                {#if !isCancelled}
+                    <Button onclick={() => (editing = true)}>
+                        <Pencil class="size-4" />
+                        Edit registration
+                    </Button>
+                {/if}
+            </div>
         {/if}
     </div>
 
@@ -249,7 +271,7 @@ async function handleCopyEmail() {
                                         </Table.Cell>
                                         <Table.Cell class="text-right tabular-nums">
                                             ${formatPrice(member.priceCents)}
-                                            {#if origins[index] !== 'recorded_offline'}
+                                            {#if includesCardFee(origins[index])}
                                                 <span
                                                     class="text-muted-foreground block text-xs font-normal">
                                                     incl. card fee
@@ -275,25 +297,6 @@ async function handleCopyEmail() {
                         actually cost.
                     </p>
                 {/if}
-            </CardContent>
-        </Card>
-
-        <Card>
-            <CardHeader class="pb-3">
-                <CardTitle class="text-base">Management link</CardTitle>
-            </CardHeader>
-            <CardContent class="flex flex-col gap-3">
-                <p class="text-muted-foreground text-sm">
-                    The existing link cannot be shown — only a hash of it is stored, so nobody
-                    including an admin can recover it. Sending a new one issues a fresh link and
-                    keeps their current one working for a week.
-                </p>
-                <form method="POST" action="?/reissue_link" use:enhance>
-                    <Button type="submit" variant="outline" size="sm">
-                        <Mail class="size-4" />
-                        Email a new link to {data.registration.contactEmail}
-                    </Button>
-                </form>
             </CardContent>
         </Card>
 

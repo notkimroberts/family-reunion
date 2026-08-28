@@ -18,8 +18,9 @@ let {
 </script>
 
 <NativeSelect {id} {name} bind:value>
-    <!-- A shirt is optional, so the empty option stays selectable. -->
-    <option value="">{emptyLabel}</option>
+    <!-- Disabled, not selectable: a size is required, so the blank is a prompt rather than an answer.
+         Rows recorded before sizes were collected still render it, which is how they surface. -->
+    <option value="" disabled>{emptyLabel}</option>
     {#each SHIRT_SIZES as size (size)}
         <option value={size}>{size}</option>
     {/each}

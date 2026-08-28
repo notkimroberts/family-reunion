@@ -61,6 +61,7 @@ let canSaveMember = $derived(
     !!newFirstName.trim() &&
         !!newLastName.trim() &&
         !!newTierId &&
+        !!newShirtSize &&
         addressComplete &&
         !!newVegetarianMeal &&
         !!newAttendedReunion2025,
@@ -74,7 +75,7 @@ function handleSaveMember() {
         name: `${newFirstName.trim()} ${newLastName.trim()}`,
         tierId: newTierId,
         birthDate: newBirthDate,
-        shirtSize: newShirtSize || undefined,
+        shirtSize: newShirtSize,
         addressLine1: newSameAddress ? contactAddress.addressLine1 : newAddressLine1,
         addressLine2: newSameAddress ? contactAddress.addressLine2 : newAddressLine2,
         addressCity: newSameAddress ? contactAddress.addressCity : newAddressCity,
@@ -233,9 +234,7 @@ function handleRemoveMember(index: number) {
 
                     <div class="space-y-1.5">
                         <label for="new-shirt" class="text-sm font-medium">
-                            T-shirt
-                            <span class="text-muted-foreground font-normal text-xs"
-                                >(optional)</span>
+                            T-shirt <span class="text-destructive">*</span>
                         </label>
                         <ShirtSizeSelect id="new-shirt" bind:value={newShirtSize} />
                     </div>

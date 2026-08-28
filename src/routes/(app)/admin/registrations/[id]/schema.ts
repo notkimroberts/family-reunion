@@ -19,7 +19,9 @@ export const adminEditMemberSchema = z.object({
        deliberate change means a failed match leaves the tier untouched. */
     tierId: z.string().optional(),
     birthDate: z.string().optional(),
-    shirtSize: z.string().optional(),
+    /* Required here too. Members recorded before shirts were collected have none, so correcting any
+       other field on them now asks for a size — which is the point: that is how the gaps get filled. */
+    shirtSize: z.string().min(1, 'Please choose a T-shirt size'),
     vegetarianMeal: z.enum(['yes', 'no', '']),
     attendedReunion2025: z.enum(['yes', 'no', '']),
 })

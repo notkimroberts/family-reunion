@@ -45,6 +45,7 @@ let canSave = $derived(
         !!info.addressState.trim() &&
         !!info.addressZip.trim() &&
         zipValid &&
+        !!info.shirtSize &&
         !!info.vegetarianMeal &&
         !!info.attendedReunion2025 &&
         phoneValid,
@@ -199,9 +200,7 @@ let selectedTier = $derived(tiers.find((t) => t.id === info.tierId))
 
                     <div class="space-y-1.5">
                         <label for="selfShirtSize" class="text-sm font-medium">
-                            T-shirt
-                            <span class="text-muted-foreground font-normal text-xs"
-                                >(optional)</span>
+                            T-shirt <span class="text-destructive">*</span>
                         </label>
                         <ShirtSizeSelect
                             id="selfShirtSize"

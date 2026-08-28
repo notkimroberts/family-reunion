@@ -52,6 +52,7 @@ const COMPLETE_FORM = {
     self: {
         ...EMPTY_PERSON_DETAILS,
         tierId: 'tier-adult',
+        shirtSize: 'L',
         addressLine1: '123 Fake Street',
         addressCity: 'Oakland',
         addressState: 'CA',
@@ -119,6 +120,7 @@ describe('$form is the single source of truth', () => {
             'self.addressCity',
             'self.addressState',
             'self.addressZip',
+            'self.shirtSize',
             'self.vegetarianMeal',
             'self.attendedReunion2025',
         ]) {
