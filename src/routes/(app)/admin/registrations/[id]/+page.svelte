@@ -1,48 +1,26 @@
 <script lang="ts">
 import { Check, Copy, Mail, Pencil, TriangleAlert } from '@lucide/svelte'
+import { toast } from 'svelte-sonner'
 import { enhance } from '$app/forms'
 import { AdminDataView } from '$lib/components'
 import { Alert, AlertDescription, AlertTitle } from '$lib/components/ui/alert'
-import { Badge } from '$lib/components/ui/badge'
 import { Button } from '$lib/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card'
 import { Separator } from '$lib/components/ui/separator'
 import * as Table from '$lib/components/ui/table'
 import { formatPrice, getMemberPaymentOrigin, getPaymentState } from '$lib/utils'
 import { formatPartialBirthDate } from '$lib/utils/age'
+import RegistrationStatusBadge from '../RegistrationStatusBadge.svelte'
 import RegistrationEditForm from './RegistrationEditForm.svelte'
 import RegistrationHistory from './RegistrationHistory.svelte'
 
-/* How the registration's money actually stands. Deliberately not a restatement of `status`: a
-   pending registration that reached Stripe and stopped needs chasing quite differently from one
-   awaiting a cheque, and this page previously called both "Offline". */
-const paymentCopyValue = {
-    paid_online: { label: 'Paid online', variant: 'default' as const, note: undefined },
-    paid_offline: {
-        label: 'Paid offline',
-        variant: 'default' as const,
-        note: 'Recorded by an organiser — no card payment was taken.',
-    },
-    checkout_incomplete: {
-        label: 'Checkout not completed',
-        variant: 'destructive' as const,
-        note: 'They started paying online and did not finish, so they may well believe registration failed. Nothing is owed by post — chase the payment, do not wait for a cheque.',
-    },
-    awaiting_payment: {
-        label: 'Awaiting payment',
-        variant: 'outline' as const,
-        note: 'Entered from a paper form. Mark it paid once the money arrives.',
-    },
-    waived: {
-        label: 'Covered',
-        variant: 'secondary' as const,
-        note: 'Comped — there is nothing to pay.',
-    },
-    cancelled: {
-        label: 'Cancelled and refunded',
-        variant: 'destructive' as const,
-        note: 'The money has gone back. It cannot be added to or reinstated — ask them to register again.',
-    },
+/* The one thing the status badge cannot say. 'pending' covers both a paper form awaiting a cheque and
+   a public registration abandoned at Stripe Checkout, and those need opposite follow-ups — see
+   getPaymentState. Rendered as a single line of context under the heading, not as a second status. */
+const pendingReasonValue = {
+    checkout_incomplete:
+        'Started paying online and did not finish, so they may believe registration failed. Nothing is owed by post.',
+    awaiting_payment: 'Entered from a paper form. Mark it paid once the money arrives.',
 }
 
 const originCopyValue = {
@@ -50,17 +28,71 @@ const originCopyValue = {
     added_online: 'Added online',
     recorded_offline: 'Recorded offline',
     unpaid: 'Not paid',
+    comped: 'Comped',
 }
 
 let { data, form: actionData } = $props()
 
-let savedChanges = $derived(actionData?.changes ?? [])
+/* Action outcomes are transient, so they belong in a toast rather than shoved into the page flow where
+   they push the record down and stay until the next navigation.
+
+   Deduped on the identity of actionData: this effect also reads state that changes for other reasons,
+   and re-firing a "Changes saved" toast because something unrelated updated would be worse than not
+   toasting at all. A fresh action result is always a new object.
+
+   Errors are given no duration, so they sit until dismissed. An organiser who misses "saved, but they
+   have not been told" believes the registrant was emailed when they were not — that must not be
+   allowed to fade on its own. */
+let handledResult: unknown = undefined
+
+$effect(() => {
+    if (actionData === handledResult) {
+        return
+    }
+    handledResult = actionData
+
+    if (!actionData) {
+        return
+    }
+
+    if (actionData.saveError) {
+        toast.error(actionData.saveError, { duration: Number.POSITIVE_INFINITY })
+    }
+
+    if (actionData.notifyError) {
+        toast.error(actionData.notifyError, { duration: Number.POSITIVE_INFINITY })
+    }
+
+    if (actionData.reissueError) {
+        toast.error(actionData.reissueError, { duration: Number.POSITIVE_INFINITY })
+    }
+
+    if (actionData.saved) {
+        const changes = actionData.changes ?? []
+        if (changes.length === 0) {
+            toast.info('Nothing was different, so the registrant was not emailed.')
+        } else {
+            toast.success(changes.length === 1 ? 'Change saved' : 'Changes saved', {
+                description: actionData.notified
+                    ? `${changes.join('. ')}. ${data.registration.contactEmail} was emailed a summary and a link that works.`
+                    : changes.join('. '),
+            })
+        }
+    }
+
+    if (actionData.linkReissued) {
+        toast.success('New management link sent', {
+            description:
+                'Their previous link keeps working for a week, so nothing they already have is broken.',
+        })
+    }
+})
 let editing = $state(false)
 let copiedEmail = $state(false)
 
 let payment = $derived(getPaymentState(data.registration))
-let paymentCopy = $derived(paymentCopyValue[payment])
-let isCancelled = $derived(payment === 'cancelled')
+let pendingReason = $derived(pendingReasonValue[payment as keyof typeof pendingReasonValue])
+let isCancelled = $derived(data.registration.status === 'refunded')
 let isPaid = $derived(data.registration.status === 'paid')
 
 /* A party that came through Stripe carries grossed-up prices; one entered by hand carries net tier
@@ -92,12 +124,32 @@ async function handleCopyEmail() {
                 class="text-sm text-muted-foreground hover:text-foreground">← Registrations</a>
             <div class="flex flex-wrap items-center gap-3">
                 <h1>{data.registration.contactName}</h1>
-                <Badge variant={paymentCopy.variant}>{paymentCopy.label}</Badge>
+                <RegistrationStatusBadge status={data.registration.status} />
+            </div>
+            <!-- Contact details live here rather than in a card of their own: an email and a phone
+                 number are not worth a titled panel, and reading them next to the name is how an
+                 organiser actually uses them. -->
+            <div class="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
+                <span class="font-medium">{data.registration.contactEmail}</span>
+                <Button type="button" variant="ghost" size="sm" onclick={handleCopyEmail}>
+                    {#if copiedEmail}
+                        <Check class="size-3" /> Copied
+                    {:else}
+                        <Copy class="size-3" /> Copy
+                    {/if}
+                </Button>
+                {#if data.registration.contactPhone}
+                    <span class="text-muted-foreground">·</span>
+                    <span class="font-medium">{data.registration.contactPhone}</span>
+                {/if}
             </div>
             <p class="text-muted-foreground text-sm">
                 {data.event.title} · {data.members.length}
                 {data.members.length === 1 ? 'person' : 'people'} · ${formatPrice(data.totalCents)}
             </p>
+            {#if pendingReason}
+                <p class="text-muted-foreground text-xs">{pendingReason}</p>
+            {/if}
         </div>
         {#if !editing && !isCancelled}
             <Button onclick={() => (editing = true)}>
@@ -107,82 +159,16 @@ async function handleCopyEmail() {
         {/if}
     </div>
 
-    {#if actionData?.saved}
-        <Alert>
-            <Check class="size-4" />
-            <AlertTitle>
-                {savedChanges.length === 0 ? 'Nothing to change' : 'Changes saved'}
-            </AlertTitle>
-            <AlertDescription>
-                {#if savedChanges.length === 0}
-                    Nothing was different, so the registrant was not emailed.
-                {:else}
-                    <ul class="flex flex-col gap-0.5">
-                        {#each savedChanges as change (change)}
-                            <li>{change}</li>
-                        {/each}
-                    </ul>
-                    {#if actionData.notified}
-                        <p class="mt-2">
-                            {data.registration.contactEmail} was emailed a summary and a link that works.
-                        </p>
-                    {/if}
-                {/if}
-            </AlertDescription>
-        </Alert>
-    {/if}
-
-    {#if actionData?.notifyError}
+    <!-- Cancellation is the one status that changes what an organiser may DO here, so it keeps an
+         alert. The rest is said once, by the badge. -->
+    {#if isCancelled}
         <Alert variant="destructive">
             <TriangleAlert class="size-4" />
-            <AlertTitle>Saved, but they have not been told</AlertTitle>
-            <AlertDescription>{actionData.notifyError}</AlertDescription>
-        </Alert>
-    {/if}
-
-    {#if actionData?.saveError}
-        <Alert variant="destructive">
-            <TriangleAlert class="size-4" />
-            <AlertTitle>Could not save</AlertTitle>
-            <AlertDescription>{actionData.saveError}</AlertDescription>
-        </Alert>
-    {/if}
-
-    {#if actionData?.memberAdded}
-        <Alert>
-            <Check class="size-4" />
-            <AlertTitle>Member added</AlertTitle>
+            <AlertTitle>Cancelled and refunded</AlertTitle>
             <AlertDescription>
-                No payment was taken. Their place is recorded at the tier's face value.
+                The money has gone back. This cannot be added to or reinstated — ask them to
+                register again.
             </AlertDescription>
-        </Alert>
-    {/if}
-
-    {#if actionData?.linkReissued}
-        <Alert>
-            <Mail class="size-4" />
-            <AlertTitle>New management link sent</AlertTitle>
-            <AlertDescription>
-                Their previous link keeps working for a week, so nothing they already have is
-                broken.
-            </AlertDescription>
-        </Alert>
-    {/if}
-
-    {#if actionData?.reissueError}
-        <Alert variant="destructive">
-            <TriangleAlert class="size-4" />
-            <AlertTitle>Could not send the new link</AlertTitle>
-            <AlertDescription>{actionData.reissueError}</AlertDescription>
-        </Alert>
-    {/if}
-
-    {#if paymentCopy.note}
-        <Alert
-            variant={payment === 'checkout_incomplete' || isCancelled ? 'destructive' : 'default'}>
-            <TriangleAlert class="size-4" />
-            <AlertTitle>{paymentCopy.label}</AlertTitle>
-            <AlertDescription>{paymentCopy.note}</AlertDescription>
         </Alert>
     {/if}
 
@@ -195,31 +181,6 @@ async function handleCopyEmail() {
             onCancel={() => (editing = false)}
             onSaved={() => (editing = false)} />
     {:else}
-        <Card>
-            <CardHeader class="pb-3">
-                <CardTitle class="text-base">Contact</CardTitle>
-            </CardHeader>
-            <CardContent class="flex flex-col gap-2 text-sm">
-                <div class="flex flex-wrap items-center gap-2">
-                    <span class="text-muted-foreground">Email</span>
-                    <span class="font-medium">{data.registration.contactEmail}</span>
-                    <Button type="button" variant="ghost" size="sm" onclick={handleCopyEmail}>
-                        {#if copiedEmail}
-                            <Check class="size-3" /> Copied
-                        {:else}
-                            <Copy class="size-3" /> Copy
-                        {/if}
-                    </Button>
-                </div>
-                {#if data.registration.contactPhone}
-                    <div class="flex flex-wrap items-center gap-2">
-                        <span class="text-muted-foreground">Phone</span>
-                        <span class="font-medium">{data.registration.contactPhone}</span>
-                    </div>
-                {/if}
-            </CardContent>
-        </Card>
-
         <Card>
             <CardHeader class="pb-3">
                 <CardTitle class="text-base">Party</CardTitle>

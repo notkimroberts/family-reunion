@@ -13,6 +13,11 @@ import { getPaymentState } from './getPaymentState'
 const ONLINE = { stripeSessionId: 'cs_test_123' }
 const OFFLINE = { stripeSessionId: null }
 
+/* getMemberPaymentOrigin needs the status too — see the waived case below. */
+const ONLINE_PENDING = { ...ONLINE, status: 'pending' }
+const OFFLINE_PENDING = { ...OFFLINE, status: 'pending' }
+const ONLINE_PAID = { ...ONLINE, status: 'paid' }
+
 describe('getPaymentState', () => {
     it('distinguishes an abandoned checkout from money owed by post', () => {
         expect(getPaymentState({ status: 'pending', ...ONLINE })).toBe('checkout_incomplete')
@@ -44,20 +49,30 @@ describe('getMemberPaymentOrigin', () => {
     const NO_PAYMENT = { stripePaymentIntentId: null, stripeCheckoutSessionId: null }
 
     it('reports a member of an abandoned checkout as unpaid, not offline', () => {
-        expect(getMemberPaymentOrigin(NO_PAYMENT, ONLINE)).toBe('unpaid')
+        expect(getMemberPaymentOrigin(NO_PAYMENT, ONLINE_PENDING)).toBe('unpaid')
     })
 
     it('reports a hand-entered member as offline', () => {
-        expect(getMemberPaymentOrigin(NO_PAYMENT, OFFLINE)).toBe('recorded_offline')
+        expect(getMemberPaymentOrigin(NO_PAYMENT, OFFLINE_PENDING)).toBe('recorded_offline')
     })
 
     it('reports a settled member as paid online', () => {
         expect(
             getMemberPaymentOrigin(
                 { stripePaymentIntentId: 'pi_1', stripeCheckoutSessionId: null },
-                ONLINE,
+                ONLINE_PAID,
             ),
         ).toBe('paid_online')
+    })
+
+    /* A comped party has a price on every member and no payment columns anywhere, which by Stripe data
+       alone is identical to a cheque payer. It rendered "Recorded offline" next to a "Waived" badge —
+       two different claims about the same money on one screen. */
+    it('reports a waived party as comped, not as recorded offline', () => {
+        expect(getMemberPaymentOrigin(NO_PAYMENT, { ...OFFLINE, status: 'waived' })).toBe('comped')
+        expect(getMemberPaymentOrigin(NO_PAYMENT, { ...OFFLINE, status: 'waived' })).not.toBe(
+            'recorded_offline',
+        )
     })
 
     /* A member added through the add-member checkout has their own session. That is the most specific
@@ -66,7 +81,7 @@ describe('getMemberPaymentOrigin', () => {
         expect(
             getMemberPaymentOrigin(
                 { stripePaymentIntentId: 'pi_1', stripeCheckoutSessionId: 'cs_member_1' },
-                ONLINE,
+                ONLINE_PAID,
             ),
         ).toBe('added_online')
     })
@@ -74,6 +89,6 @@ describe('getMemberPaymentOrigin', () => {
     /* An offline addition to a party that DID pay online: the registration has a session, but this
        row has no payment columns of its own and was never charged. */
     it('does not claim an offline addition was paid because the party was', () => {
-        expect(getMemberPaymentOrigin(NO_PAYMENT, ONLINE)).not.toBe('paid_online')
+        expect(getMemberPaymentOrigin(NO_PAYMENT, ONLINE_PAID)).not.toBe('paid_online')
     })
 })

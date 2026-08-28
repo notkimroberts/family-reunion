@@ -1,26 +1,13 @@
 <script lang="ts">
 import { Plus } from '@lucide/svelte'
 import { AdminDataView } from '$lib/components'
-import { Badge } from '$lib/components/ui/badge'
 import { Button } from '$lib/components/ui/button'
 import { Card, CardContent } from '$lib/components/ui/card'
 import * as Table from '$lib/components/ui/table'
 import { formatPrice } from '$lib/utils'
-
-/* Statuses an organiser reads at a glance: paid is the norm, pending means money is still owed,
-   waived is comped, refunded is cancelled and kept visible rather than hidden. */
-const statusVariantsValue = {
-    paid: 'default',
-    waived: 'secondary',
-    pending: 'outline',
-    refunded: 'destructive',
-} as const
+import RegistrationStatusBadge from './RegistrationStatusBadge.svelte'
 
 let { data } = $props()
-
-function statusVariant(status: string) {
-    return statusVariantsValue[status as keyof typeof statusVariantsValue] ?? 'outline'
-}
 </script>
 
 <svelte:head>
@@ -67,9 +54,7 @@ function statusVariant(status: string) {
                                         {registration.contactEmail}
                                     </p>
                                 </div>
-                                <Badge variant={statusVariant(registration.status)}>
-                                    {registration.status}
-                                </Badge>
+                                <RegistrationStatusBadge status={registration.status} />
                             </div>
                             <p class="text-muted-foreground mt-2 text-xs">
                                 {registration.memberCount}
@@ -103,9 +88,7 @@ function statusVariant(status: string) {
                                     {registration.contactEmail}
                                 </Table.Cell>
                                 <Table.Cell>
-                                    <Badge variant={statusVariant(registration.status)}>
-                                        {registration.status}
-                                    </Badge>
+                                    <RegistrationStatusBadge status={registration.status} />
                                 </Table.Cell>
                                 <Table.Cell class="text-right tabular-nums">
                                     {registration.memberCount}

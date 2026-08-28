@@ -32,4 +32,4 @@ let isAdmin = $derived(page.url.pathname.startsWith('/admin'))
     <Footer />
 </div>
 
-<Toaster richColors />
+<Toaster richColors closeButton />
