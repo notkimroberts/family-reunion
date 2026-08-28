@@ -344,7 +344,12 @@ export const registrationAudit = pgTable(
         actorName: text('actor_name'),
         action: registrationAuditActionEnum('action').notNull(),
         detail: jsonb('detail'),
-        createdAt: timestamp('created_at').notNull().defaultNow(),
+        /* withTimezone, unlike the other tables here — this is the only column whose time of day is
+           ever shown to anyone. A plain `timestamp` is stored without an offset while holding a UTC
+           instant, so postgres.js parses it as server-local and the offset is silently lost: the
+           history rendered 4:06 AM for a change made at 9:06 PM Pacific. timestamptz makes the value
+           an instant, so it survives the trip regardless of where the server runs. */
+        createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     },
     (t) => [index('registration_audit_registration_id_idx').on(t.registrationId)],
 )

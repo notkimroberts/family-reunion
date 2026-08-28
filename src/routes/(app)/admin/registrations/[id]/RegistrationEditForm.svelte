@@ -46,6 +46,7 @@ let {
     tiers,
     isPaid,
     onCancel,
+    onSaved,
 }: {
     form: SuperValidated<Infer<typeof adminEditRegistrationSchema>>
     members: RegistrationMember[]
@@ -54,6 +55,7 @@ let {
        before the organiser tries. */
     isPaid: boolean
     onCancel: () => void
+    onSaved: () => void
 } = $props()
 
 /* $form is a superforms STORE, so binding to nested members[i].name is untrackable. The editing
@@ -63,6 +65,15 @@ const { form, errors, message, submitting, enhance } = superForm(initialForm, {
     validators: zodClient(adminEditRegistrationSchema),
     dataType: 'json',
     resetForm: false,
+    /* Leave edit mode only on a genuine success. A guard refusing (repricing a paid party, emptying
+       it) comes back as fail(409) and a validation error as fail(400) — both must keep the form open
+       with the staged changes intact, or the organiser is told it did not save while losing the work
+       they would need to retry. */
+    onResult: ({ result }) => {
+        if (result.type === 'success') {
+            onSaved()
+        }
+    },
     onSubmit: () => {
         $form.members = rows
             .filter((row) => !removed.has(row.memberId))

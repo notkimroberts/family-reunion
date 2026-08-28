@@ -192,7 +192,8 @@ async function handleCopyEmail() {
             members={data.members}
             tiers={data.tiers}
             {isPaid}
-            onCancel={() => (editing = false)} />
+            onCancel={() => (editing = false)}
+            onSaved={() => (editing = false)} />
     {:else}
         <Card>
             <CardHeader class="pb-3">

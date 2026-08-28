@@ -1,6 +1,7 @@
 <script lang="ts">
 import { History } from '@lucide/svelte'
 import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card'
+import { formatEventDateTime } from '$lib/utils'
 
 /* Phrased as what happened, not as the enum value. */
 const actionCopyValue = {
@@ -22,11 +23,6 @@ type Entry = {
 }
 
 let { history }: { history: Entry[] } = $props()
-
-const dateFormatter = new Intl.DateTimeFormat('en-US', {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-})
 
 function actionLabel(action: string): string {
     return actionCopyValue[action as keyof typeof actionCopyValue] ?? action
@@ -75,7 +71,7 @@ function detailLabel(detail: unknown): string {
                             {/if}
                         </span>
                         <span class="text-muted-foreground text-xs">
-                            {dateFormatter.format(new Date(entry.createdAt))} ·
+                            {formatEventDateTime(entry.createdAt)} ·
                             {entry.actorName ?? entry.joinedActorName ?? 'a removed account'}
                         </span>
                     </li>
