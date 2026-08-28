@@ -1,6 +1,9 @@
 <script lang="ts">
-import { ChevronDown, ClipboardPen, Menu } from '@lucide/svelte'
+import { ChevronDown, ClipboardPen, LogOut, Menu } from '@lucide/svelte'
 import { page } from '$app/state'
+import { authClient } from '$lib/auth-client'
+import { Avatar, AvatarFallback } from '$lib/components/ui/avatar'
+import { Button } from '$lib/components/ui/button'
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -14,7 +17,23 @@ import {
     REGISTER_NAV_LINK,
     SECONDARY_NAV_LINKS,
 } from '$lib/general/constants'
+import { getInitials } from '$lib/utils'
 import MobileDrawer from './MobileDrawer.svelte'
+import ThemeToggle from './ThemeToggle.svelte'
+
+/* The theme toggle is unconditional — a visitor who prefers dark had no way to ask for it on desktop,
+   since the only toggle lived in the mobile drawer. The account controls are conditional: rendering a
+   sign-out button to someone who is not signed in advertises a session they do not have.
+
+   Read from page.data rather than taken as a prop: the root layout returns `user` on every route, so
+   there is nothing for the (app) layout to thread through. */
+let user = $derived(page.data.user)
+
+function handleSignOut() {
+    authClient.signOut().then(() => {
+        window.location.href = '/'
+    })
+}
 
 function isActive(href: string): boolean {
     if (href === '/') {
@@ -92,10 +111,26 @@ let mobileMenuOpen = $state(false)
                 <ClipboardPen class="h-3.5 w-3.5" />
                 {REGISTER_NAV_LINK.label}
             </a>
+
+            <ThemeToggle size="sm" />
+
+            {#if user}
+                <Button variant="ghost" size="sm" onclick={handleSignOut}>
+                    <LogOut class="h-3.5 w-3.5" />
+                    Sign out
+                </Button>
+                <Avatar class="w-8 h-8">
+                    <AvatarFallback class="bg-primary text-primary-foreground text-xs font-bold">
+                        {getInitials(user.name)}
+                    </AvatarFallback>
+                </Avatar>
+            {/if}
         </nav>
     </div>
 
-    <!-- Mobile: logo left, hamburger right -->
+    <!-- Mobile: logo left, theme + hamburger right. The toggle sits in the bar rather than inside the
+         drawer, because "everyone can see it" and "it is two taps down behind a menu" are not the same
+         thing. Account controls stay in the drawer — there is no room for them here. -->
     <div class="flex md:hidden items-center h-16 px-4 justify-between">
         <a href="/" class="flex items-center gap-2.5 shrink-0">
             <img
@@ -104,12 +139,15 @@ let mobileMenuOpen = $state(false)
                 class="w-9 h-9 rounded-full object-cover" />
             <span class="text-sm font-semibold text-foreground/80">{APP_NAME}</span>
         </a>
-        <button
-            onclick={() => (mobileMenuOpen = true)}
-            aria-label="Open menu"
-            class="p-2 rounded-lg hover:bg-muted transition-colors">
-            <Menu class="h-5 w-5" />
-        </button>
+        <div class="flex items-center gap-1">
+            <ThemeToggle size="sm" />
+            <button
+                onclick={() => (mobileMenuOpen = true)}
+                aria-label="Open menu"
+                class="p-2 rounded-lg hover:bg-muted transition-colors">
+                <Menu class="h-5 w-5" />
+            </button>
+        </div>
     </div>
 </header>
 

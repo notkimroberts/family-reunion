@@ -218,7 +218,10 @@ Everything an organiser does concerns one reunion, and the reunion is named in t
 ### Mobile Navigation
 
 - Top navbar is **hidden on mobile** (`hidden md:flex`) — only shown on desktop
-- **Side drawer** (`MobileDrawer.svelte`) slides in from the left on mobile, triggered by a hamburger button in `AppHeader`. Contains: app logo/name, Family links, Reunion links, Register CTA, theme toggle (sign-in / sign-out are admin-only and live inside the admin shell)
+- **The theme toggle is unconditional and lives in `AppHeader` at both breakpoints** — in the desktop nav, and in the mobile bar beside the hamburger rather than inside the drawer. A control everyone should be able to reach must not be two taps down behind a menu.
+- **Account controls are conditional on `page.data.user`**, which the root layout returns on every route. Signed in, `AppHeader` shows sign-out and an avatar; signed out, neither renders — offering to sign someone out advertises a session they do not have. On mobile they live in the drawer, where there is room for the name.
+- `AdminHeader` carries its own copies of the same three controls, because admin pages deliberately do **not** render `AppHeader` (see the admin routing section). They are not duplicated on screen.
+- **Side drawer** (`MobileDrawer.svelte`) slides in from the left on mobile, triggered by a hamburger button in `AppHeader`. Contains: app logo/name, Family links, Reunion links, Register CTA, and the account block when signed in
 - Main content has no bottom-bar clearance (bottom tab bar was removed)
 
 ### Versioning
