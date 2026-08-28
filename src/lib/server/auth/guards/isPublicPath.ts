@@ -7,7 +7,7 @@
    SCOPE, so this is not mistaken for a complete lock:
    - The (app) layout load calls this, so it gates page VIEWS. A SvelteKit layout load runs
      AFTER a form action, so it cannot protect actions. Those carry their own guards:
-     requireAdmin in family-tree, requireAuth in gallery, requireAdmin across /admin.
+     requireAdmin in family-tree, requireAdmin in the gallery upload, requireAdmin across /admin.
    - Routes outside the (app) group are not covered here at all, and must stay reachable:
      /api/webhooks/stripe (Stripe sends no session — blocking it breaks every payment),
      /api/webhooks/resend (Resend sends no session; blocking it hides every bounce),

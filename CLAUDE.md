@@ -92,13 +92,24 @@ Server logic lives under `src/lib/server/`, one domain per folder. Each exported
 - Magic link has been removed — admins sign in at `/login` with credentials only
 - **Public sign-up is disabled** (`disableSignUp: true`). This is load-bearing, not tidiness: Better Auth exposes `POST /api/auth/sign-up/email` whenever email+password is enabled, and its handler is mounted _ahead of SvelteKit routing_ — so there is no route file to guard and `(app)/+layout.server.ts` never sees the request. With sign-up open, anyone could mint a `role='user'` account and read the whole family tree and gallery. Pinned by `src/lib/server/auth/auth.test.ts`. Admins come from `bun run admin:create`.
 - `hooks.server.ts` populates `event.locals.user` per request. In dev mode, falls back to a hardcoded admin user when no session exists
-- Guards: `requireAuth()`, `requireAdmin()` and `isPublicPath()` in `$lib/server/auth/guards`. `(app)/+layout.server.ts` requires `role === 'admin'` for any non-public path — **test for the role, never merely for a session**, since any account satisfies presence. `/admin/*`, the `restoreSnapshot` family-tree action and the gallery `upload` action all carry their own `requireAdmin`. Registration itself is fully public.
+- Guards: `requireAuth()`, `requireAdmin()`, `requireOwner()` and `isPublicPath()` in `$lib/server/auth/guards`. `(app)/+layout.server.ts` requires `role === 'admin'` for any non-public path — **test for the role, never merely for a session**, since any account satisfies presence. `/admin/*`, the `restoreSnapshot` family-tree action and the gallery `upload` action all carry their own `requireAdmin`. Registration itself is fully public.
+
+#### `requireOwner` and the owner-only Setup area
+
+`/admin/setup`, `/admin/photos`, `/admin/storefront`, `/admin/users` and `/admin/event/[eventId]/settings` are restricted to a single account, matched by **email** against `OWNER_EMAIL`. See [ADR 0003](docs/adr/0003-event-scoped-admin-and-owner-only-setup.md).
+
+- **Never express the owner as a `role`.** Two independent hard-coded `role === 'admin'` comparisons gate the app (`requireAdmin` and `(app)/+layout.server.ts`), so an owner with any other role value loses `/admin`, `/family-tree`, `/gallery`, `/shop` and `/program`. `admin({ adminRoles: [...] })` does not help — it throws at plugin construction, and auth is lazily initialised, so that surfaces on every request including public pages.
+- Role would not be a boundary anyway: Better Auth mounts `POST /api/auth/admin/set-role` ahead of SvelteKit routing, its only check is that the caller is an admin, and there is no self-target guard. Any admin can already grant themselves any role.
+- **`requireOwner` fails open when `OWNER_EMAIL` is unset**, and reports that to Sentry once per process. Deliberate: the degraded state is the old behaviour (admins only, never the public), whereas failing closed would let one forgotten Railway variable lock the owner out of pricing. Do not "harden" this into a fail-closed check without also making the variable impossible to forget.
+- It must be called in the **load, in every action, and in every remote function** of a Setup page. A layout `load` runs after a form action, and remote functions are served from `/_app/remote/<id>` with route handling skipped entirely — no layout or page guard sees them, so the in-function guard is the whole protection.
 - Better Auth manages its own tables (`user`, `session`, `account`)
 - **Lazy-init typing**: `betterAuth({...})` returns a concrete parameterized type that TypeScript can't directly assign to `ReturnType<typeof betterAuth>`. To avoid `any`, extract the call into a `createAuthInstance()` function and type the singleton as `ReturnType<typeof createAuthInstance> | undefined`
 
 #### Bootstrapping admins
 
-`bun run admin:create <email> <password> [name]` creates a Better Auth user and sets `role='admin'` on the user row. Reads `DATABASE_URL` from the environment. Run once on a fresh DB; subsequent admins can be added via the admin panel.
+`bun run admin:create <email> <password> [name]` creates a Better Auth user and sets `role='admin'` on the user row. Reads `DATABASE_URL` from the environment.
+
+It is the **only** way to create an admin — `/admin/users` is read-only and has no form actions, so run this for every account, not just the first. Set `OWNER_EMAIL` to the address you pass here, or Setup stays open to every admin.
 
 ### Registration Flow
 
@@ -112,8 +123,27 @@ The token is the only credential — no per-request auth check. Email enumeratio
 
 Route groups:
 
-- `(auth)` — `/login` only, no nav, full-screen card layout. Admin sign-in only.
+- `(auth)` — `/login` only, no nav, full-screen card layout. Admin sign-in only. `goto('/admin')` on success is the **only** entry point into the admin area anywhere in the app.
 - `(app)` — public paths are **only** `/` and `/register` (which covers `/register/manage` and `/register/recover`). Everything else in the group — `/family-tree`, `/gallery`, `/shop`, `/program`, `/changelog`, `/admin/*` — redirects to `/login`. The allowlist is `isPublicPath()` in `$lib/server/auth/guards`; widen it there to reopen a page (the gallery, most likely, after the reunion). Contact is a section on `/` (`#contact`), not its own route.
+
+#### Admin routes are event-scoped
+
+Everything an organiser does concerns one reunion, and the reunion is named in the path — see [ADR 0003](docs/adr/0003-event-scoped-admin-and-owner-only-setup.md).
+
+| Path                                                    | What it is                                                                                   |
+| ------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| `/admin`                                                | A **redirect**, not a page: the open event, else the most recent, else `/admin/setup/events` |
+| `/admin/event/[eventId]/registrations`                  | The organiser's main screen — status panel beside the list                                   |
+| `/admin/event/[eventId]/registrations/new`              | Paper entry. Tiers come from `params.eventId`, never `getOpenEvent()`                        |
+| `/admin/event/[eventId]/registrations/[registrationId]` | One registration. 404s if it does not belong to `eventId`                                    |
+| `/admin/event/[eventId]/attendees`                      | Family-tree linking, scoped to this event                                                    |
+| `/admin/event/[eventId]/settings`                       | Owner-only: event details, tiers, lock date, program                                         |
+| `/admin/setup`, `/admin/setup/events`                   | Owner-only: the Setup landing and the list of reunion years                                  |
+
+- **There is no `?eventId` filter and no "All years".** It was a filter dressed as navigation: `?eventId` absent meant "the open event" to the registrations list and "all years" to the shell, so moving between admin tabs silently changed scope. Only one event can be `open` at a time (`one_open_event` partial unique index), so the default was never ambiguous. Do not reintroduce a cross-page event filter — put the id in the path.
+- `admin/+layout.server.ts` returns `events` (four columns only), `currentEventId` for the pages that have no id in their URL, and `isOwner` so `AdminHeader` can hide the Setup entry. Hiding is not the protection; the server guards every Setup route.
+- The event status banner is rendered once by `admin/event/[eventId]/+layout.svelte` for every child view. `open` renders **nothing** — `draft`, `closed` and `archived` each get a banner because all three mean nobody can register.
+- Admin pages render **without** the public `AppHeader`/`Footer` — `(app)/+layout.svelte` gates them on `isAdmin`. The 12-column grid wrappers stay: every admin section is `col-span-12` or `xl:col-span-8` and they are also the only source of vertical spacing between sections.
 
 > **The route lock covers page views only.** A SvelteKit layout `load` runs _after_ a form action, so `(app)/+layout.server.ts` cannot protect actions — those carry their own `requireAuth`/`requireAdmin` guards. Routes outside the `(app)` group are not covered at all, and must stay reachable: `/api/webhooks/stripe` (Stripe sends no session — blocking it breaks every payment), `/api/webhooks/resend` (same, and blocking it hides every bounce), `/api/registration/status`, `/api/auth/*`, and `/api/health`.
 >
@@ -214,7 +244,7 @@ Route groups:
 - Predeploy command (Railway setting): `bun run db:migrate` (`scripts/migrate.ts`) — runs migrations before the server starts. It wraps `drizzle-orm`'s migrator directly instead of shelling out to `drizzle-kit migrate`, because drizzle-kit's spinner UI writes progress via carriage-return redraws that collapse to nothing useful over a non-TTY log pipe (Railway's), hiding the real error behind a bare "exited with code 1". The script also retries the initial connection for ~30s. **Keep that retry even though the database no longer sleeps.** It was originally attributed to a scaled-to-zero Postgres, but that explanation is incomplete: it fired again on the deploy of `c605f59` while metrics showed the database had held ~50MB continuously for the previous hour and had never stopped. The predeploy container is fresh on every deploy, so it can race Railway's private networking becoming usable for that container — independent of whether the database is asleep. The exact layer (DNS resolution vs TCP reachability) is not pinned. Do not remove the retry on the reasoning that sleep is off; it also covers this.
 - Start: `node build/index.js`
 - DB migrations are idempotent — Drizzle tracks applied migrations and skips them on subsequent deploys
-- Required Railway environment variables: `SENTRY_AUTH_TOKEN`, `SENTRY_ENVIRONMENT=production`
+- Required Railway environment variables: `SENTRY_AUTH_TOKEN`, `SENTRY_ENVIRONMENT=production`, and `OWNER_EMAIL` (the address allowed into `/admin/setup`; unset means every admin can reach it, and Sentry gets told once)
 - **Watch paths**: `family-reunion-app`'s Railway build config sets `watchPatterns` to `["src/**", "static/**", "drizzle/**", "scripts/**", "package.json", "bun.lock", "svelte.config.js", "vite.config.ts", "tsconfig.json", "drizzle.config.ts"]`, so pushes to `main` that only touch docs/tooling (`CLAUDE.md`, `.claude/**`, `.agents/**`, `skills-lock.json`, etc.) don't trigger a deploy. `scripts/**` is in the list because the predeploy command lives there — without it, a fix to `scripts/migrate.ts` would not deploy. If you add a new source directory, config file, or build input outside these paths, update the pattern list (`railway environment edit --environment production --service-config family-reunion-app build.watchPatterns '[...]'`) or it'll silently stop deploying real changes.
 - **Health check**: Railway's `healthcheckPath` is `/api/health`. It is a **liveness** check and deliberately does not touch the database. A DB probe there would be redundant with the predeploy migration (which already retries the connection for ~30s and fails the deploy loudly), and refusing to promote a deployment because the database is down gains nothing — the deployment it keeps serving has the same database. Use `/api/health?probe=db` to check the database explicitly; it retries, so a brief blip reports `ok` rather than `unreachable`.
 - **The database does not sleep.** `family-reunion-db` had "Sleep when inactive" enabled, which made the first query after any idle period fail: `postgres.js` rejects the in-flight query on a connection error (`connection.js` `queryError`) and only reconnects for a _later_ query, so a real visitor got an error page and a refresh fixed it. It idles at ~50MB, so keeping it warm is cheap. Do not re-enable sleep on a service that serves public page loads.

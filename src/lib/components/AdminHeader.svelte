@@ -42,12 +42,14 @@ let {
 let activeEventId = $derived(page.params.eventId ?? currentEventId)
 let activeEvent = $derived(events.find((e) => e.id === activeEventId))
 
-/* Setup owns more than /admin/setup: photos, storefront and admin accounts live at their own paths and
-   are all owner-only, so the pill has to light for them too. */
+/* Setup owns more than /admin/setup: photos, storefront and admin accounts live at their own paths, and
+   the event's own settings page lives UNDER the event path while still being owner-only Setup content.
+   All of them light the Setup pill, and none of them show the Organizer tabs — otherwise the settings
+   page would render Registrations/Attendees tabs with the Setup pill dark, which reads as Organizer. */
 let inSetup = $derived(
     ['/admin/setup', '/admin/photos', '/admin/storefront', '/admin/users'].some((prefix) =>
         page.url.pathname.startsWith(prefix),
-    ),
+    ) || page.url.pathname.endsWith('/settings'),
 )
 
 /* Which Organizer tab, by the segment after the event id. A prefix match is right here: both

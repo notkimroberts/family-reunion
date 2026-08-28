@@ -1,63 +1,283 @@
 <script lang="ts">
+import { ArrowLeft, CalendarCog, Lock, Plus, Tags, Trash2 } from '@lucide/svelte'
 import { enhance } from '$app/forms'
+import { Alert, AlertDescription } from '$lib/components/ui/alert'
+import { Badge } from '$lib/components/ui/badge'
 import { Button } from '$lib/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '$lib/components/ui/card'
+import * as Field from '$lib/components/ui/field'
 import { Input } from '$lib/components/ui/input'
 import { Separator } from '$lib/components/ui/separator'
 import { Textarea } from '$lib/components/ui/textarea'
 import { formatPrice } from '$lib/utils'
 
-let { data } = $props()
+/* Setup's event editor: set once a year, then left alone. Quiet on purpose.
+
+   The Event details card is ONE form, however many subheadings it carries. ?/update_event writes nine
+   columns in a single db.update and nulls every field the POST omits, so promoting any subheading to its
+   own card with its own Save would erase every section that Save did not carry. Group with subheadings;
+   never with a second form. ?/update_lock_date has the same shape.
+
+   `form` is the only channel for the four fail()s these actions raise. The page rendered no form prop at
+   all, so a rejected price or lock date arrived and vanished — Save looked like it did nothing. */
+
+let { data, form } = $props()
+
+const SUBHEAD_CLASS = 'text-muted-foreground text-xs font-semibold uppercase tracking-wide'
+
+/* Native select, not a bits-ui one: this drives shirt sizing through a plain POST, and bits-ui's Select
+   binds a string | string[] union that breaks SSR here. Sized to match Input beside it. */
+const SHIRT_SELECT_CLASS =
+    'h-9 w-full rounded-md border border-input bg-transparent px-2.5 text-base shadow-xs md:text-sm'
 </script>
 
 <svelte:head>
     <title>Edit {data.event.title} — Admin</title>
 </svelte:head>
 
-<section class="col-span-12">
-    <div class="flex items-center gap-2 text-sm text-muted-foreground mb-1">
-        <a href="/admin/setup" class="hover:text-foreground transition-colors">Setup</a>
-        <span>/</span>
-        <span class="text-foreground font-medium">{data.event.title}</span>
-    </div>
-    <div class="flex items-center justify-between gap-4 flex-wrap">
-        <p class="text-muted-foreground text-sm">
-            Year: {data.event.year} | Status: {data.event.status}
-        </p>
+<section class="col-span-12 flex flex-col gap-3 xl:col-span-8">
+    <nav aria-label="Breadcrumb" class="text-muted-foreground flex items-center gap-2 text-sm">
+        <a href="/admin/setup" class="transition-colors hover:text-foreground">Setup</a>
+        <span aria-hidden="true">/</span>
+        <span class="text-foreground">{data.event.title}</span>
+    </nav>
+
+    <div class="flex flex-wrap items-end justify-between gap-x-4 gap-y-3">
+        <div class="flex flex-col gap-1">
+            <h1>{data.event.title}</h1>
+            <div class="flex flex-wrap items-center gap-2">
+                <p class="text-muted-foreground text-sm">Reunion year {data.event.year}</p>
+                <Badge variant="outline">{data.event.status}</Badge>
+            </div>
+        </div>
         {#if data.event.status === 'open'}
-            <Button href="/admin/event/{data.event.id}/registrations/new" size="sm">
-                + Add Paper Registration
+            <Button
+                href="/admin/event/{data.event.id}/registrations/new"
+                variant="outline"
+                size="sm">
+                <Plus class="size-4" />
+                Add paper registration
             </Button>
         {/if}
     </div>
 </section>
 
-<section class="col-span-12">
+{#if form?.error}
+    <section class="col-span-12 xl:col-span-8">
+        <Alert variant="destructive">
+            <AlertDescription>{form.error}</AlertDescription>
+        </Alert>
+    </section>
+{/if}
+
+<section class="col-span-12 xl:col-span-8">
     <Card>
         <CardHeader>
-            <CardTitle>Tiers</CardTitle>
+            <CardTitle class="flex items-center gap-2">
+                <CalendarCog class="text-muted-foreground size-4" />
+                Event details
+            </CardTitle>
+            <CardDescription>
+                The dates, the venue, and everything the program page shows. One Save writes all of
+                it, and a field left blank is cleared.
+            </CardDescription>
         </CardHeader>
-        <CardContent class="space-y-4">
+        <CardContent>
+            <form method="POST" action="?/update_event" use:enhance class="flex flex-col gap-6">
+                <div class="flex flex-col gap-3">
+                    <p class={SUBHEAD_CLASS}>When</p>
+                    <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                        <Field.Field class="gap-2">
+                            <Field.Label for="startDate">Start</Field.Label>
+                            <Input
+                                id="startDate"
+                                name="startDate"
+                                type="datetime-local"
+                                value={data.event.startDate
+                                    ? new Date(data.event.startDate).toISOString().slice(0, 16)
+                                    : ''} />
+                        </Field.Field>
+                        <Field.Field class="gap-2">
+                            <Field.Label for="endDate">End</Field.Label>
+                            <Input
+                                id="endDate"
+                                name="endDate"
+                                type="datetime-local"
+                                value={data.event.endDate
+                                    ? new Date(data.event.endDate).toISOString().slice(0, 16)
+                                    : ''} />
+                        </Field.Field>
+                    </div>
+                </div>
+
+                <Separator />
+
+                <div class="flex flex-col gap-3">
+                    <p class={SUBHEAD_CLASS}>Venue</p>
+                    <div class="flex flex-col gap-4">
+                        <Field.Field class="gap-2">
+                            <Field.Label for="venueName">Name</Field.Label>
+                            <Input
+                                id="venueName"
+                                name="venueName"
+                                type="text"
+                                value={data.event.venue?.name ?? ''} />
+                            <Field.Description>
+                                The name holds the block together — clear it and the address and
+                                description go with it.
+                            </Field.Description>
+                        </Field.Field>
+                        <Field.Field class="gap-2">
+                            <Field.Label for="venueAddress">Address</Field.Label>
+                            <Input
+                                id="venueAddress"
+                                name="venueAddress"
+                                type="text"
+                                value={data.event.venue?.address ?? ''} />
+                        </Field.Field>
+                        <Field.Field class="gap-2">
+                            <Field.Label for="venueDescription">Description</Field.Label>
+                            <Textarea
+                                id="venueDescription"
+                                name="venueDescription"
+                                value={data.event.venue?.description ?? ''} />
+                        </Field.Field>
+                    </div>
+                </div>
+
+                <Separator />
+
+                <div class="flex flex-col gap-3">
+                    <p class={SUBHEAD_CLASS}>Food & drink</p>
+                    <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                        <Field.Field class="gap-2">
+                            <Field.Label for="menu">Menu</Field.Label>
+                            <Textarea
+                                id="menu"
+                                name="menu"
+                                class="min-h-24"
+                                value={data.event.menu?.join('\n') ?? ''} />
+                            <Field.Description>One item per line.</Field.Description>
+                        </Field.Field>
+                        <Field.Field class="gap-2">
+                            <Field.Label for="drinks">Drinks</Field.Label>
+                            <Textarea
+                                id="drinks"
+                                name="drinks"
+                                class="min-h-24"
+                                value={data.event.drinks?.join('\n') ?? ''} />
+                            <Field.Description>One item per line.</Field.Description>
+                        </Field.Field>
+                    </div>
+                </div>
+
+                <Separator />
+
+                <div class="flex flex-col gap-3">
+                    <p class={SUBHEAD_CLASS}>Program</p>
+                    <p class="text-muted-foreground text-sm">
+                        These three are raw JSON. Anything that does not parse is stored as empty,
+                        so check the program page after saving.
+                    </p>
+                    <div class="flex flex-col gap-4">
+                        <Field.Field class="gap-2">
+                            <Field.Label for="schedule">Schedule</Field.Label>
+                            <Textarea
+                                id="schedule"
+                                name="schedule"
+                                class="min-h-24"
+                                value={data.event.schedule
+                                    ? JSON.stringify(data.event.schedule, null, 2)
+                                    : ''} />
+                            <Field.Description>
+                                <code class="break-all"
+                                    >[{`{"day":"Sat","time":"9am","activity":"Breakfast"}`}]</code>
+                            </Field.Description>
+                        </Field.Field>
+                        <Field.Field class="gap-2">
+                            <Field.Label for="recommendedSites">Recommended sites</Field.Label>
+                            <Textarea
+                                id="recommendedSites"
+                                name="recommendedSites"
+                                class="min-h-24"
+                                value={data.event.recommendedSites
+                                    ? JSON.stringify(data.event.recommendedSites, null, 2)
+                                    : ''} />
+                            <Field.Description>
+                                <code class="break-all"
+                                    >[{`{"name":"Park","description":"Nice!"}`}]</code>
+                            </Field.Description>
+                        </Field.Field>
+                        <Field.Field class="gap-2">
+                            <Field.Label for="recommendedActivities">
+                                Recommended activities
+                            </Field.Label>
+                            <Textarea
+                                id="recommendedActivities"
+                                name="recommendedActivities"
+                                class="min-h-24"
+                                value={data.event.recommendedActivities
+                                    ? JSON.stringify(data.event.recommendedActivities, null, 2)
+                                    : ''} />
+                            <Field.Description>
+                                <code class="break-all"
+                                    >[{`{"name":"Hiking","description":"Trail nearby"}`}]</code>
+                            </Field.Description>
+                        </Field.Field>
+                    </div>
+                </div>
+
+                <div class="flex flex-wrap items-center gap-3">
+                    <Button type="submit" variant="secondary">Save event details</Button>
+                    <p class="text-muted-foreground text-xs">Writes every field in this card.</p>
+                </div>
+            </form>
+        </CardContent>
+    </Card>
+</section>
+
+<!-- The Setup landing links to #tiers, and this anchor is NEW — before the restructure that link went
+     nowhere. It is load-bearing now, so do not rename it. -->
+<section id="tiers" class="col-span-12 scroll-mt-6 xl:col-span-8">
+    <Card>
+        <CardHeader>
+            <CardTitle class="flex items-center gap-2">
+                <Tags class="text-muted-foreground size-4" />
+                Tiers & prices
+            </CardTitle>
+            <CardDescription>
+                What each kind of attendee pays, in dollars. Party members keep the label and price
+                they were charged, so renaming or repricing a tier never changes a registration that
+                already exists.
+            </CardDescription>
+        </CardHeader>
+        <CardContent class="flex flex-col gap-4">
+            {#if data.tiers.length === 0}
+                <p class="text-muted-foreground text-sm">
+                    No tiers yet — the register form has nothing to offer until there is one.
+                </p>
+            {/if}
+
             {#each data.tiers as tier (tier.id)}
+                <!-- Two sibling forms share one five-track grid: display:contents on the update form
+                     lifts its own children into that grid, so Save lands in track four and Delete in
+                     track five. Drop it and the whole row collapses into a single cell. -->
                 <div
-                    class="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_auto_auto_auto_auto] sm:items-end">
+                    class="grid grid-cols-1 gap-3 rounded-lg border p-3 sm:grid-cols-[1fr_auto_auto_auto_auto] sm:items-end">
                     <form method="POST" action="?/update_tier" use:enhance class="contents">
                         <input type="hidden" name="tierId" value={tier.id} />
-                        <div class="space-y-1">
-                            <label
-                                for="tier-label-{tier.id}"
-                                class="text-xs font-medium text-muted-foreground">Label</label>
+                        <Field.Field class="gap-2">
+                            <Field.Label for="tier-label-{tier.id}">Label</Field.Label>
                             <Input
                                 id="tier-label-{tier.id}"
                                 name="label"
                                 type="text"
                                 value={tier.label}
                                 required />
-                        </div>
-                        <div class="space-y-1">
-                            <label
-                                for="tier-price-{tier.id}"
-                                class="text-xs font-medium text-muted-foreground">Price ($)</label>
+                        </Field.Field>
+                        <Field.Field class="gap-2">
+                            <!-- Dollars, not cents — the action multiplies by 100 on the way in. -->
+                            <Field.Label for="tier-price-{tier.id}">Price ($)</Field.Label>
                             <Input
                                 id="tier-price-{tier.id}"
                                 name="priceCents"
@@ -65,89 +285,100 @@ let { data } = $props()
                                 step="0.01"
                                 value={formatPrice(tier.priceCents)}
                                 required />
-                        </div>
-                        <div class="space-y-1">
-                            <label
-                                for="tier-shirt-{tier.id}"
-                                class="text-xs font-medium text-muted-foreground"
-                                >Shirt sizing</label>
+                        </Field.Field>
+                        <Field.Field class="gap-2">
+                            <Field.Label for="tier-shirt-{tier.id}">Shirt sizing</Field.Label>
                             <select
                                 id="tier-shirt-{tier.id}"
                                 name="shirtSizeCategory"
                                 value={tier.shirtSizeCategory}
-                                class="h-9 rounded-md border border-input bg-transparent px-3 text-sm">
+                                class={SHIRT_SELECT_CLASS}>
                                 <option value="adult">Adult</option>
                                 <option value="child">Child</option>
                             </select>
-                        </div>
-                        <Button type="submit" size="sm" variant="outline">Save</Button>
+                        </Field.Field>
+                        <Button
+                            type="submit"
+                            size="sm"
+                            variant="secondary"
+                            class="w-full sm:w-auto">
+                            Save
+                        </Button>
                     </form>
                     <form method="POST" action="?/delete_tier" use:enhance>
                         <input type="hidden" name="tierId" value={tier.id} />
-                        <Button type="submit" size="sm" variant="ghost" class="text-destructive"
-                            >Delete</Button>
+                        <!-- Left narrow on purpose: stacked at 375px this sits directly under Save,
+                             and there is no confirmation behind it. -->
+                        <Button type="submit" size="sm" variant="ghost" class="text-destructive">
+                            <Trash2 class="size-4" />
+                            Delete
+                        </Button>
                     </form>
                 </div>
             {/each}
 
             <Separator />
 
-            <form
-                method="POST"
-                action="?/add_tier"
-                use:enhance
-                class="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_auto_auto_auto] sm:items-end">
-                <div class="space-y-1">
-                    <label for="new-tier-label" class="text-xs font-medium text-muted-foreground"
-                        >Label</label>
-                    <Input id="new-tier-label" name="label" type="text" required />
-                </div>
-                <div class="space-y-1">
-                    <label for="new-tier-price" class="text-xs font-medium text-muted-foreground"
-                        >Price ($)</label>
-                    <Input
-                        id="new-tier-price"
-                        name="priceCents"
-                        type="number"
-                        step="0.01"
-                        required />
-                </div>
-                <div class="space-y-1">
-                    <label for="new-tier-shirt" class="text-xs font-medium text-muted-foreground"
-                        >Shirt sizing</label>
-                    <select
-                        id="new-tier-shirt"
-                        name="shirtSizeCategory"
-                        class="h-9 rounded-md border border-input bg-transparent px-3 text-sm">
-                        <option value="adult">Adult</option>
-                        <option value="child">Child</option>
-                    </select>
-                </div>
-                <Button type="submit" size="sm">Add Tier</Button>
-            </form>
+            <div class="flex flex-col gap-3">
+                <p class={SUBHEAD_CLASS}>Add a tier</p>
+                <form
+                    method="POST"
+                    action="?/add_tier"
+                    use:enhance
+                    class="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_auto_auto_auto] sm:items-end">
+                    <Field.Field class="gap-2">
+                        <Field.Label for="new-tier-label">Label</Field.Label>
+                        <Input id="new-tier-label" name="label" type="text" required />
+                    </Field.Field>
+                    <Field.Field class="gap-2">
+                        <Field.Label for="new-tier-price">Price ($)</Field.Label>
+                        <Input
+                            id="new-tier-price"
+                            name="priceCents"
+                            type="number"
+                            step="0.01"
+                            required />
+                    </Field.Field>
+                    <Field.Field class="gap-2">
+                        <Field.Label for="new-tier-shirt">Shirt sizing</Field.Label>
+                        <select
+                            id="new-tier-shirt"
+                            name="shirtSizeCategory"
+                            class={SHIRT_SELECT_CLASS}>
+                            <option value="adult">Adult</option>
+                            <option value="child">Child</option>
+                        </select>
+                    </Field.Field>
+                    <Button type="submit" size="sm" variant="secondary" class="w-full sm:w-auto">
+                        <Plus class="size-4" />
+                        Add tier
+                    </Button>
+                </form>
+            </div>
         </CardContent>
     </Card>
 </section>
 
-<section class="col-span-12">
+<section class="col-span-12 xl:col-span-8">
     <Card>
         <CardHeader>
-            <CardTitle>Registration Lock Date</CardTitle>
+            <CardTitle class="flex items-center gap-2">
+                <Lock class="text-muted-foreground size-4" />
+                Registration lock date
+            </CardTitle>
+            <CardDescription>
+                Once this date passes, registrants can no longer edit details, add or remove
+                members, or cancel — the registration is fully frozen. Leave it blank for no lock.
+            </CardDescription>
         </CardHeader>
         <CardContent>
-            <p class="text-sm text-muted-foreground mb-3">
-                Once this date passes, registrants can no longer edit details, add or remove
-                members, or cancel — the registration is fully frozen. Leave blank for no lock.
-            </p>
             <form
                 method="POST"
                 action="?/update_lock_date"
                 use:enhance
                 class="grid grid-cols-1 gap-3 sm:grid-cols-[auto_auto] sm:items-end">
-                <div class="space-y-1">
-                    <label
-                        for="registrationLockDate"
-                        class="text-xs font-medium text-muted-foreground">Lock date</label>
+                <Field.Field class="gap-2">
+                    <Field.Label for="registrationLockDate">Lock date</Field.Label>
                     <Input
                         id="registrationLockDate"
                         name="registrationLockDate"
@@ -155,146 +386,18 @@ let { data } = $props()
                         value={data.event.registrationLockDate
                             ? new Date(data.event.registrationLockDate).toISOString().slice(0, 16)
                             : ''} />
-                </div>
-                <Button type="submit" size="sm">Save Lock Date</Button>
+                </Field.Field>
+                <Button type="submit" size="sm" variant="secondary" class="w-full sm:w-auto">
+                    Save lock date
+                </Button>
             </form>
         </CardContent>
     </Card>
 </section>
 
 <section class="col-span-12">
-    <Card>
-        <CardHeader>
-            <CardTitle>Program Details</CardTitle>
-        </CardHeader>
-        <CardContent>
-            <form method="POST" action="?/update_event" use:enhance class="space-y-4">
-                <Separator />
-                <p class="text-sm font-bold text-muted-foreground">Event Dates</p>
-
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div class="space-y-2">
-                        <label for="startDate" class="text-sm font-medium">Start Date</label>
-                        <Input
-                            id="startDate"
-                            name="startDate"
-                            type="datetime-local"
-                            value={data.event.startDate
-                                ? new Date(data.event.startDate).toISOString().slice(0, 16)
-                                : ''} />
-                    </div>
-                    <div class="space-y-2">
-                        <label for="endDate" class="text-sm font-medium">End Date</label>
-                        <Input
-                            id="endDate"
-                            name="endDate"
-                            type="datetime-local"
-                            value={data.event.endDate
-                                ? new Date(data.event.endDate).toISOString().slice(0, 16)
-                                : ''} />
-                    </div>
-                </div>
-
-                <Separator />
-                <p class="text-sm font-bold text-muted-foreground">Venue</p>
-
-                <div class="space-y-2">
-                    <label for="venueName" class="text-sm font-medium">Venue Name</label>
-                    <Input
-                        id="venueName"
-                        name="venueName"
-                        type="text"
-                        value={data.event.venue?.name ?? ''} />
-                </div>
-                <div class="space-y-2">
-                    <label for="venueAddress" class="text-sm font-medium">Venue Address</label>
-                    <Input
-                        id="venueAddress"
-                        name="venueAddress"
-                        type="text"
-                        value={data.event.venue?.address ?? ''} />
-                </div>
-                <div class="space-y-2">
-                    <label for="venueDescription" class="text-sm font-medium"
-                        >Venue Description</label>
-                    <Textarea
-                        id="venueDescription"
-                        name="venueDescription"
-                        value={data.event.venue?.description ?? ''} />
-                </div>
-
-                <Separator />
-                <p class="text-sm font-bold text-muted-foreground">Menu & Drinks</p>
-
-                <div class="space-y-2">
-                    <label for="menu" class="text-sm font-medium">Menu (one item per line)</label>
-                    <Textarea
-                        id="menu"
-                        name="menu"
-                        class="h-24"
-                        value={data.event.menu?.join('\n') ?? ''} />
-                </div>
-                <div class="space-y-2">
-                    <label for="drinks" class="text-sm font-medium"
-                        >Drinks (one item per line)</label>
-                    <Textarea
-                        id="drinks"
-                        name="drinks"
-                        class="h-24"
-                        value={data.event.drinks?.join('\n') ?? ''} />
-                </div>
-
-                <Separator />
-                <p class="text-sm font-bold text-muted-foreground">Schedule & Recommendations</p>
-
-                <div class="space-y-2">
-                    <label for="schedule" class="text-sm font-medium">Schedule (JSON array)</label>
-                    <p class="text-xs text-muted-foreground">
-                        [{`{"day":"Sat","time":"9am","activity":"Breakfast"}`}]
-                    </p>
-                    <Textarea
-                        id="schedule"
-                        name="schedule"
-                        class="h-24"
-                        value={data.event.schedule
-                            ? JSON.stringify(data.event.schedule, null, 2)
-                            : ''} />
-                </div>
-                <div class="space-y-2">
-                    <label for="recommendedSites" class="text-sm font-medium"
-                        >Recommended Sites (JSON array)</label>
-                    <p class="text-xs text-muted-foreground">
-                        [{`{"name":"Park","description":"Nice!"}`}]
-                    </p>
-                    <Textarea
-                        id="recommendedSites"
-                        name="recommendedSites"
-                        class="h-24"
-                        value={data.event.recommendedSites
-                            ? JSON.stringify(data.event.recommendedSites, null, 2)
-                            : ''} />
-                </div>
-                <div class="space-y-2">
-                    <label for="recommendedActivities" class="text-sm font-medium"
-                        >Recommended Activities (JSON array)</label>
-                    <p class="text-xs text-muted-foreground">
-                        [{`{"name":"Hiking","description":"Trail nearby"}`}]
-                    </p>
-                    <Textarea
-                        id="recommendedActivities"
-                        name="recommendedActivities"
-                        class="h-24"
-                        value={data.event.recommendedActivities
-                            ? JSON.stringify(data.event.recommendedActivities, null, 2)
-                            : ''} />
-                </div>
-
-                <Button type="submit">Save Program</Button>
-            </form>
-        </CardContent>
-    </Card>
-</section>
-
-<section class="col-span-12">
-    <Button href="/admin/setup" variant="ghost">&larr; Back to Setup</Button>
+    <Button href="/admin/setup" variant="ghost" size="sm">
+        <ArrowLeft class="size-4" />
+        Back to Setup
+    </Button>
 </section>

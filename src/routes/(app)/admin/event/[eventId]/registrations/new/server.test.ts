@@ -59,13 +59,16 @@ const validFormData = {
 
 function makeEvent() {
     return {
-        request: new Request('http://localhost/admin/registrations', { method: 'POST' }),
-        url: new URL('http://localhost/admin/registrations'),
+        request: new Request('http://localhost/admin/event/evt-1/registrations/new', {
+            method: 'POST',
+        }),
+        url: new URL('http://localhost/admin/event/evt-1/registrations/new'),
+        params: { eventId: 'evt-1' },
         locals: { user: { id: 'admin-1', role: 'admin' } },
     } as unknown as Parameters<typeof actions.default>[0]
 }
 
-describe('POST /admin/registrations', () => {
+describe('POST /admin/event/[eventId]/registrations/new', () => {
     beforeEach(() => {
         vi.clearAllMocks()
         mockSuperValidate.mockResolvedValue({ valid: true, data: { ...validFormData } })
