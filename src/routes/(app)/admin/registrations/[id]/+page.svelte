@@ -180,9 +180,13 @@ async function handleCopyEmail() {
                             </form>
                         {/snippet}
                     </TooltipTrigger>
+                    <!-- Written for an organiser, not an engineer. "Only a hash is stored" says
+                         nothing to the person deciding whether to press this; what they need to know
+                         is that it is safe and what the registrant ends up with. -->
                     <TooltipContent class="max-w-xs">
-                        Only a hash of their link is stored, so it cannot be shown or resent. This
-                        sends a fresh one and keeps their current link working for a week.
+                        Emails them a new link for managing their own registration. We can't look up
+                        the link they already have, so this makes a fresh one — their old link still
+                        works for another week.
                     </TooltipContent>
                 </Tooltip>
                 {#if !isCancelled}
