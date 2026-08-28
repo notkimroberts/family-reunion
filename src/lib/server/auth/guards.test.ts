@@ -74,8 +74,6 @@ describe('isPublicPath', () => {
        prefix list already fails them closed — these pin that, so a later "reopen the gallery" edit to
        PUBLIC_PATH_PREFIXES cannot quietly widen to an admin path. */
     it.each([
-        '/family-tree',
-        '/family-tree/abc-123',
         '/gallery',
         '/shop',
         '/program',
@@ -83,7 +81,6 @@ describe('isPublicPath', () => {
         '/admin',
         '/admin/event/abc-123/registrations',
         '/admin/event/abc-123/registrations/def-456',
-        '/admin/event/abc-123/attendees',
         '/admin/event/abc-123/settings',
         '/admin/setup',
         '/admin/setup/events',

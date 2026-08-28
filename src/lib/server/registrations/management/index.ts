@@ -1,7 +1,6 @@
 export { removeMember } from './removeMember'
 export { cancelRegistration } from './cancelRegistration'
 export { updateMemberDetails } from './updateMemberDetails'
-export { linkPartyMember } from './linkPartyMember'
 export { addAdminMember } from './addAdminMember'
 export { setRegistrationStatus, type AdminSettableStatus } from './setRegistrationStatus'
 export { reissueManagementLink } from './reissueManagementLink'

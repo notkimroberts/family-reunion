@@ -6,9 +6,7 @@ import {
     Images,
     LogOut,
     Mail,
-    Network,
     ShoppingBag,
-    Users,
 } from '@lucide/svelte'
 import type { Component } from 'svelte'
 import { page } from '$app/state'
@@ -42,8 +40,6 @@ function handleSignOut() {
 
 const iconMap: Record<string, Component> = {
     images: Images,
-    network: Network,
-    users: Users,
     'calendar-clock': CalendarClock,
     'shopping-bag': ShoppingBag,
 }

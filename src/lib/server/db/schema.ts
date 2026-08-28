@@ -207,7 +207,11 @@ export const partyMembers = pgTable(
         registrationId: uuid('registration_id')
             .notNull()
             .references(() => registrations.id, { onDelete: 'cascade' }),
-        /* Optional link to the canonical family-tree node for this person. Admin-set, nullable, set null on family_member delete. */
+        /* DORMANT. The genealogy feature was removed from scope before launch (ADR 0004) and nothing
+           reads this column any more. The column, family_members and relationships are all KEPT rather
+           than dropped, so that whatever real family data exists survives the removal and the feature can
+           come back without a data migration. Do not drop these without deciding that the genealogy in
+           them is expendable. */
         familyMemberId: uuid('family_member_id').references(() => familyMembers.id, {
             onDelete: 'set null',
         }),

@@ -1,18 +1,19 @@
 import { requireAdmin } from '$lib/server/auth/guards'
-import { getRegistrationsForEvent } from '$lib/server/registrations'
+import { getEventPeople, getRegistrationsForEvent } from '$lib/server/registrations'
 import type { PageServerLoad } from './$types'
 
+/* Two lenses on one event, chosen by ?view=. Bookings is the default because chasing money is the
+   recurring job; people is what you print, cater and check names against on the day. */
 export const load: PageServerLoad = async (event) => {
     requireAdmin(event)
 
-    /* The event is in the path now, so there is nothing to resolve and no `hasEvent` case to handle —
-       the parent layout has already 404'd an id that does not exist.
+    /* Both are loaded on every visit, not one per lens. The status panel's head count needs the
+       bookings, and toggling the lens has to be instant — a round trip to swap a table you are already
+       looking at reads as a page you broke. Two indexed queries on a few hundred rows. */
+    const [registrations, people] = await Promise.all([
+        getRegistrationsForEvent(event.params.eventId),
+        getEventPeople(event.params.eventId),
+    ])
 
-       What this replaces: the old version read ?eventId and fell through open → most recent, while the
-       shell treated the same absent param as "all years". Two files disagreeing about what no filter
-       meant is why clicking Registrations and then Attendees silently widened from one event to every
-       year, with the pills still highlighting "All years". */
-    const registrations = await getRegistrationsForEvent(event.params.eventId)
-
-    return { registrations }
+    return { registrations, people }
 }

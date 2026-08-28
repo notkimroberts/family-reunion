@@ -7,7 +7,7 @@ import { cn } from '$lib/utils'
 
 let { children } = $props()
 
-/* Admin is table-heavy — registrations, attendees, users and events all overflow a reading measure,
+/* Admin is table-heavy — registrations, people, users and events all overflow a reading measure,
    and the sidebar takes 13rem of it before content starts. The public pages keep max-w-6xl because
    body copy at 110rem is uncomfortable to read.
 

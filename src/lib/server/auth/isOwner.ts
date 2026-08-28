@@ -3,7 +3,7 @@
    Deliberately NOT keyed on `role`. Two independent hard-coded comparisons gate the whole app —
    `requireAdmin` and the (app) group layout both test `role === 'admin'` — so giving the owner any
    other role value, including better-auth's own comma format 'admin,owner', would lock them out of
-   /admin, /family-tree, /gallery and the rest. Role is also self-service: better-auth's admin plugin
+   /admin, /gallery and the rest. Role is also self-service: better-auth's admin plugin
    mounts POST /api/auth/admin/set-role ahead of SvelteKit routing, its only check is that the caller
    is an admin, and there is no self-target guard — so any admin can already grant themselves any role.
 
