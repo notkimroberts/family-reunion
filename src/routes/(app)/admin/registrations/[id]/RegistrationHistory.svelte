@@ -1,7 +1,8 @@
 <script lang="ts">
 import { History } from '@lucide/svelte'
+import { SvelteMap } from 'svelte/reactivity'
 import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card'
-import { formatEventDateTime } from '$lib/utils'
+import { formatViewerDateTime } from '$lib/utils'
 
 /* Phrased as what happened, not as the enum value. */
 const actionCopyValue = {
@@ -23,6 +24,30 @@ type Entry = {
 }
 
 let { history }: { history: Entry[] } = $props()
+
+/* Formatted after mount, keyed by row id.
+
+   $effect never runs during SSR, which is the point: with no timeZone option Intl resolves to the
+   environment's zone, and Node on Railway is UTC. Formatting inline would put UTC in the server HTML,
+   and Svelte does not recompute template text on hydration — the wrong time would just sit there. This
+   way the server emits the ISO value and the browser replaces it with the reader's own clock.
+
+   NOT a $derived, though it looks like one: $derived is evaluated during SSR too, so it would bake the
+   server's zone into the markup and reintroduce the bug. The effect is doing timing work, not deriving
+   a value. */
+let formattedTimes = new SvelteMap<string, string>()
+
+$effect(() => {
+    for (const entry of history) {
+        formattedTimes.set(entry.id, formatViewerDateTime(entry.createdAt))
+    }
+})
+
+/* What the server renders, and what a reader gets if the effect has not run yet. Machine-readable and
+   never wrong, unlike a guess at their timezone. */
+function isoValue(value: Date | string): string {
+    return new Date(value).toISOString()
+}
 
 function actionLabel(action: string): string {
     return actionCopyValue[action as keyof typeof actionCopyValue] ?? action
@@ -71,8 +96,10 @@ function detailLabel(detail: unknown): string {
                             {/if}
                         </span>
                         <span class="text-muted-foreground text-xs">
-                            {formatEventDateTime(entry.createdAt)} ·
-                            {entry.actorName ?? entry.joinedActorName ?? 'a removed account'}
+                            <time datetime={isoValue(entry.createdAt)}>
+                                {formattedTimes.get(entry.id) ?? isoValue(entry.createdAt)}
+                            </time>
+                            · {entry.actorName ?? entry.joinedActorName ?? 'a removed account'}
                         </span>
                     </li>
                 {/each}

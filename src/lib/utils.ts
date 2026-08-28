@@ -18,4 +18,4 @@ export {
     type WithoutChildrenOrChild,
     type WithElementRef,
 } from './utils/cn'
-export { formatEventDateTime } from './utils/formatEventDateTime'
+export { formatViewerDateTime } from './utils/formatViewerDateTime'
