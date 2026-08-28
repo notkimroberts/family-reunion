@@ -14,6 +14,7 @@ import FormErrorSummary from '../../../register/FormErrorSummary.svelte'
 import PartyMembersBuilder from '../../../register/PartyMembersBuilder.svelte'
 import type { FormMember, TierOption } from '../../../register/types'
 import PartyMemberFields from './PartyMemberFields.svelte'
+import { hasRegistrationEdits } from './hasRegistrationEdits'
 import type { MemberRow } from './memberRow'
 import { adminEditRegistrationSchema } from './schema'
 
@@ -104,6 +105,10 @@ function toRow(member: RegistrationMember): MemberRow {
 let rows = $state<MemberRow[]>(members.map(toRow))
 let removed = new SvelteSet<string>()
 
+/* What the form held on open, for the dirty check behind Save. Rebuilt from the props rather than
+   captured from `rows`, so it cannot be reached by the bindings that edit them. */
+const initialRows = members.map(toRow)
+
 /* The contact attends their own reunion, so one of these rows IS the person named and emailed in the
    Contact card. Their fields render inside that card rather than as another person below it — showing
    both put two Name fields on screen for one human.
@@ -131,6 +136,19 @@ let contactAddress = $derived({
 })
 
 let remainingCount = $derived(rows.filter((row) => !removed.has(row.memberId)).length)
+
+/* Save is offered only when there is something to save — see hasRegistrationEdits for why each of the
+   four pieces of state is compared the way it is. */
+let hasChanges = $derived(
+    hasRegistrationEdits({
+        form: $form,
+        initialForm: initialForm.data,
+        rows,
+        initialRows,
+        removedCount: removed.size,
+        newMemberCount: newMembers.length,
+    }),
+)
 
 function handleRemove(memberId: string) {
     removed.add(memberId)
@@ -276,7 +294,7 @@ function handleRestore(memberId: string) {
     </Card>
 
     <div class="flex flex-wrap items-center gap-3">
-        <Button type="submit" disabled={$submitting}>
+        <Button type="submit" disabled={$submitting || !hasChanges}>
             {#if $submitting}
                 <LoaderCircle class="size-4 animate-spin" /> Saving…
             {:else}
@@ -286,9 +304,15 @@ function handleRestore(memberId: string) {
         <Button type="button" variant="ghost" onclick={onCancel} disabled={$submitting}>
             Cancel
         </Button>
+        <!-- Says why the button is grey. A disabled control with no explanation reads as a broken
+             page rather than as nothing to do. -->
         <p class="text-muted-foreground text-xs">
-            Saving emails the registrant what changed, with a link that works. Their existing link
-            keeps working for a week.
+            {#if hasChanges}
+                Saving emails the registrant what changed, with a link that works. Their existing
+                link keeps working for a week.
+            {:else}
+                Nothing has changed yet, so there is nothing to save.
+            {/if}
         </p>
     </div>
 </form>

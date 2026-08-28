@@ -10,6 +10,7 @@ import {
     DialogTitle,
 } from '$lib/components/ui/dialog'
 import { formatBirthDate } from '$lib/utils/age'
+import { parseYesNo } from '$lib/utils/parseYesNo'
 import ShirtSizeSelect from './ShirtSizeSelect.svelte'
 import YesNoSelect from './YesNoSelect.svelte'
 import type { EditableMember } from './types'
@@ -28,6 +29,18 @@ let birthDate = $state(formatBirthDate(member.birthYear, member.birthMonth, memb
 let shirtSize = $state(member.shirtSize ?? '')
 let vegetarianMeal = $state<'yes' | 'no' | ''>(
     member.vegetarianMeal === null ? '' : member.vegetarianMeal ? 'yes' : 'no',
+)
+
+/* Save is offered only when a field differs from what was loaded. Compared against `member` rather
+   than a snapshot taken at mount, so there is nothing to keep in step with the seeding above.
+
+   The meal answer compares as a boolean through parseYesNo — the same conversion the action applies
+   to the posted value — so the check is in the units the database stores rather than in the strings
+   the select happens to use. */
+let hasChanges = $derived(
+    birthDate !== formatBirthDate(member.birthYear, member.birthMonth, member.birthDay) ||
+        shirtSize !== (member.shirtSize ?? '') ||
+        parseYesNo(vegetarianMeal) !== (member.vegetarianMeal ?? undefined),
 )
 </script>
 
@@ -81,7 +94,7 @@ let vegetarianMeal = $state<'yes' | 'no' | ''>(
                 <Button type="button" variant="outline" onclick={() => (open = false)}>
                     Cancel
                 </Button>
-                <Button type="submit">Save changes</Button>
+                <Button type="submit" disabled={!hasChanges}>Save changes</Button>
             </DialogFooter>
         </form>
     </DialogContent>
