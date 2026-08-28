@@ -120,7 +120,20 @@ let total = $derived(subtotal + processingFee)
                 <p class="text-xs text-muted-foreground text-center">{submitFootnote}</p>
             {/if}
         {:else}
-            <p class="text-sm text-muted-foreground text-center py-6">{placeholderText}</p>
+            <!-- The prices the tier dropdown no longer carries. Without this the first sight of a
+                 figure is after the whole form is filled and saved, which is a poor moment to learn
+                 what the reunion costs. Presented as a rate card, not as options to choose between:
+                 which tier applies follows from age. -->
+            <div class="flex flex-col gap-2">
+                {#each tiers as tier (tier.id)}
+                    <div class="flex items-center justify-between text-sm">
+                        <span class="text-muted-foreground">{tier.label}</span>
+                        <span class="tabular-nums">${formatPrice(tier.priceCents)}</span>
+                    </div>
+                {/each}
+            </div>
+            <Separator />
+            <p class="text-sm text-muted-foreground text-center">{placeholderText}</p>
         {/if}
     </CardContent>
 </Card>

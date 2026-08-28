@@ -114,15 +114,6 @@ let canSubmit = $derived(
                         <TierSelect id="add-tier" bind:tierId {tiers} />
                     </div>
                     <div class="space-y-2">
-                        <label for="add-birthDate" class="text-sm font-medium">
-                            Birthday <span class="text-muted-foreground">(optional)</span>
-                        </label>
-                        <DatePicker
-                            id="add-birthDate"
-                            bind:value={birthDate}
-                            placeholder="Select birthday" />
-                    </div>
-                    <div class="space-y-2">
                         <label for="add-shirt" class="text-sm font-medium">
                             T-Shirt Size <span class="text-destructive">*</span>
                         </label>
@@ -131,6 +122,15 @@ let canSubmit = $derived(
                             name="shirtSize"
                             bind:value={shirtSize}
                             emptyLabel="No shirt" />
+                    </div>
+                    <div class="space-y-2">
+                        <label for="add-birthDate" class="text-sm font-medium">
+                            Birthday <span class="text-muted-foreground">(optional)</span>
+                        </label>
+                        <DatePicker
+                            id="add-birthDate"
+                            bind:value={birthDate}
+                            placeholder="Select birthday" />
                     </div>
                 </div>
 

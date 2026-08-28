@@ -26,6 +26,7 @@ export async function getRegistrationMembers(
             priceCents: partyMembers.priceCents,
             stripePaymentIntentId: partyMembers.stripePaymentIntentId,
             stripeCheckoutSessionId: partyMembers.stripeCheckoutSessionId,
+            isContact: partyMembers.isContact,
         })
         .from(partyMembers)
         .where(eq(partyMembers.registrationId, registrationId))

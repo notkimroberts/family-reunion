@@ -1,7 +1,7 @@
 import { error } from '@sveltejs/kit'
-import { eq } from 'drizzle-orm'
+import { and, eq } from 'drizzle-orm'
 import { db } from '$lib/server/db'
-import { registrations } from '$lib/server/db/schema'
+import { partyMembers, registrations } from '$lib/server/db/schema'
 import { dbg } from '$lib/server/debug'
 
 /* Corrects a registration's contact details.
@@ -60,6 +60,22 @@ export async function updateRegistrationContact(params: {
         .update(registrations)
         .set({ contactName, contactEmail, contactPhone, updatedAt: new Date() })
         .where(eq(registrations.id, params.registrationId))
+
+    /* The contact is also an attendee, and their name is stored on that row too — it has to be, since
+       every attendee needs a name. This is the ONE place that writes it, which is what stops the two
+       from disagreeing. The admin form shows the contact's attendee name as read-only for the same
+       reason. No-ops when the name did not change or the contact has no attendee row. */
+    if (contactName !== existing.contactName) {
+        await db
+            .update(partyMembers)
+            .set({ name: contactName })
+            .where(
+                and(
+                    eq(partyMembers.registrationId, params.registrationId),
+                    eq(partyMembers.isContact, true),
+                ),
+            )
+    }
 
     dbg.register(
         'admin updated contact for registration %s (email changed: %s)',

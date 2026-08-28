@@ -61,6 +61,7 @@ function memberRow(overrides: Record<string, unknown> = {}) {
     return {
         id: 'member-1',
         name: 'Marcus Patterson',
+        isContact: false,
         tierLabel: 'Adult',
         priceCents: ADULT_NET,
         registrationId: 'reg-1',
@@ -223,6 +224,19 @@ describe('removeAdminMember', () => {
     it('404s on an unknown member', async () => {
         selectQueue.push([])
         await expect(removeAdminMember({ memberId: 'nope' })).rejects.toThrow()
+        expect(mockDelete).not.toHaveBeenCalled()
+    })
+
+    /* The contact's attendee row carries the identity the booking is addressed to, and its name is
+       written from registrations.contactName. Deleting it leaves a registration whose contact is not in
+       the party — a state nothing else can produce and nothing handles. The party-size row is queued so
+       removing the guard would let the flow reach the delete rather than crash on the count. */
+    it('REFUSES to remove the contact’s own place', async () => {
+        selectQueue.push([memberRow({ isContact: true })])
+        selectQueue.push([{ total: 3 }])
+
+        await expect(removeAdminMember({ memberId: 'member-1' })).rejects.toThrow()
+
         expect(mockDelete).not.toHaveBeenCalled()
     })
 })

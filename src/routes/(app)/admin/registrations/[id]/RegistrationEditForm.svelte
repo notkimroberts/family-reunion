@@ -29,6 +29,9 @@ const SETTABLE_STATUSES = [
 type MemberRow = {
     memberId: string
     name: string
+    /* The contact's own attendee row. Their name is written from the Contact field above, so it is
+       read-only here — two editable copies of one person's name is what drifted before. */
+    isContact: boolean
     tierId: string
     /* The tier this row rendered with, so a save can tell a deliberate change from an untouched
        select. party_members has no tier_id, so tierId is matched by label and may be ''. */
@@ -79,7 +82,7 @@ const { form, errors, message, submitting, enhance } = superForm(initialForm, {
             .filter((row) => !removed.has(row.memberId))
             .map((row) => ({
                 memberId: row.memberId,
-                name: row.name,
+                name: row.isContact ? $form.contactName : row.name,
                 /* Omitted unless deliberately changed — see the schema note on tierId. */
                 tierId: row.tierId && row.tierId !== row.initialTierId ? row.tierId : undefined,
                 birthDate: row.birthDate ?? '',
@@ -101,6 +104,7 @@ function toRow(member: RegistrationMember): MemberRow {
     return {
         memberId: member.id,
         name: member.name,
+        isContact: member.isContact,
         tierId,
         initialTierId: tierId,
         birthDate:
@@ -188,7 +192,7 @@ function handleRestore(memberId: string) {
                 <div class="rounded-lg border p-4" class:opacity-50={isRemoved}>
                     <div class="mb-3 flex items-center justify-between gap-2">
                         <span class="text-muted-foreground text-xs font-semibold uppercase">
-                            Person {index + 1}
+                            {row.isContact ? 'Contact' : `Person ${index + 1}`}
                         </span>
                         {#if isRemoved}
                             <Button
@@ -204,7 +208,7 @@ function handleRestore(memberId: string) {
                                 variant="ghost"
                                 size="sm"
                                 class="text-muted-foreground hover:text-destructive"
-                                disabled={isPaid || remainingCount <= 1}
+                                disabled={isPaid || row.isContact || remainingCount <= 1}
                                 onclick={() => handleRemove(row.memberId)}>
                                 <UserMinus class="size-3.5" /> Remove
                             </Button>
@@ -245,15 +249,6 @@ function handleRestore(memberId: string) {
 
                     <div class="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2">
                         <div class="flex flex-col gap-1.5">
-                            <label for="dob-{row.memberId}" class="text-sm font-medium">
-                                Birthday
-                            </label>
-                            <DatePicker
-                                id="dob-{row.memberId}"
-                                bind:value={row.birthDate}
-                                placeholder="Not recorded" />
-                        </div>
-                        <div class="flex flex-col gap-1.5">
                             <label for="shirt-{row.memberId}" class="text-sm font-medium">
                                 T-shirt <span class="text-destructive">*</span>
                             </label>
@@ -261,6 +256,15 @@ function handleRestore(memberId: string) {
                                 id="shirt-{row.memberId}"
                                 bind:value={row.shirtSize}
                                 emptyLabel="Not recorded" />
+                        </div>
+                        <div class="flex flex-col gap-1.5">
+                            <label for="dob-{row.memberId}" class="text-sm font-medium">
+                                Birthday
+                            </label>
+                            <DatePicker
+                                id="dob-{row.memberId}"
+                                bind:value={row.birthDate}
+                                placeholder="Not recorded" />
                         </div>
                     </div>
 
