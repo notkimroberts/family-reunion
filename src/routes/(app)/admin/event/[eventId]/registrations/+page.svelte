@@ -1,5 +1,5 @@
 <script lang="ts">
-import { Plus, Search, Users } from '@lucide/svelte'
+import { Plus, Search, Settings, Users } from '@lucide/svelte'
 import { goto } from '$app/navigation'
 import { page } from '$app/state'
 import { AdminDataView } from '$lib/components'
@@ -18,7 +18,11 @@ import { getRegistrationTotals } from './registrationTotals'
 
    The lens is in the URL so it survives a reload and a trip into a registration and back. It is local to
    this route and means nothing anywhere else — unlike the ?eventId filter it replaces, which meant
-   different things on different pages. */
+   different things on different pages.
+
+   The year picker and the way into Setup live in the status card rather than in a header of their own.
+   Which reunion these numbers describe is a property of the numbers; and the app's own nav already
+   carries the theme toggle, sign out and the avatar, so an admin header duplicated all three. */
 
 const FILTERS = ['All', 'Paid', 'Pending', 'Waived', 'Refunded'] as const
 
@@ -47,6 +51,12 @@ function setView(next: 'bookings' | 'people') {
         url.searchParams.delete('view')
     }
     goto(url, { replaceState: true, keepFocus: true, noScroll: true })
+}
+
+/* Switching year lands on that year's list, dropping the lens and any search: those describe the list you
+   were reading, not the year you asked for. */
+function handleSelectEvent(nextId: string) {
+    goto(`/admin/event/${nextId}/registrations`)
 }
 
 function matchesSearch(haystack: string[]): boolean {
@@ -80,6 +90,28 @@ let visiblePeople = $derived(
 <section class="col-span-12 grid grid-cols-1 gap-6 lg:grid-cols-[20rem_1fr]">
     <!-- Stays on screen while you work the list, rather than being a dashboard you navigate away from. -->
     <aside class="flex flex-col gap-4 self-start rounded-lg border bg-card p-4 lg:sticky lg:top-6">
+        <div class="flex flex-col gap-1.5">
+            <h1 class="text-base font-semibold">{data.event.title}</h1>
+            {#if data.events.length > 1}
+                <!-- The year as one quiet control, beside the numbers it changes. It replaces a row of
+                     pills that offered "All years" as a peer of a specific year and appeared on five
+                     routes but not two others. -->
+                <select
+                    aria-label="Reunion year"
+                    class="h-8 w-full rounded-md border border-input bg-transparent px-2 text-xs"
+                    value={data.event.id}
+                    onchange={(changed) => handleSelectEvent(changed.currentTarget.value)}>
+                    {#each data.events as option (option.id)}
+                        <option value={option.id}>{option.year}</option>
+                    {/each}
+                </select>
+            {:else}
+                <p class="text-muted-foreground text-xs">Reunion year {data.event.year}</p>
+            {/if}
+        </div>
+
+        <Separator />
+
         <div class="flex flex-col gap-3">
             <div class="flex items-baseline justify-between gap-3">
                 <span class="text-muted-foreground text-sm">People coming</span>
@@ -118,25 +150,28 @@ let visiblePeople = $derived(
 
         <Separator />
 
-        <Button href="/admin/event/{data.event.id}/registrations/new" size="sm">
-            <Plus class="size-4" />
-            Add paper registration
-        </Button>
+        <div class="flex flex-col gap-2">
+            <Button href="/admin/event/{data.event.id}/registrations/new" size="sm">
+                <Plus class="size-4" />
+                Add paper registration
+            </Button>
+            <!-- Hidden for anyone who is not the owner. Hiding is not the protection — every Setup load,
+                 action and remote function guards itself; this only stops advertising a door that will
+                 not open. -->
+            {#if data.isOwner}
+                <Button href="/admin/setup" variant="ghost" size="sm">
+                    <Settings class="size-4" />
+                    Setup
+                </Button>
+            {/if}
+        </div>
     </aside>
 
     <div class="flex min-w-0 flex-col gap-3">
         <div class="flex flex-wrap items-center gap-2">
-            <div class="relative min-w-48 flex-1">
-                <Search
-                    class="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2" />
-                <Input
-                    bind:value={search}
-                    placeholder={showPeople ? 'Search a person or party' : 'Search name or email'}
-                    class="pl-8" />
-            </div>
-
-            <!-- The lens toggle. Two labelled halves rather than a switch: "Show people" as a switch
-                 leaves you guessing what the off state shows. -->
+            <!-- Leftmost, ahead of the search box and the chips, because the lens decides what those two
+                 even mean. Two labelled halves rather than a switch: "Show people" as a switch leaves you
+                 guessing what the off state shows. -->
             <div class="flex gap-1 rounded-full bg-muted p-1">
                 <button
                     type="button"
@@ -163,6 +198,15 @@ let visiblePeople = $derived(
                     <Users class="size-3.5" />
                     People
                 </button>
+            </div>
+
+            <div class="relative min-w-48 flex-1">
+                <Search
+                    class="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2" />
+                <Input
+                    bind:value={search}
+                    placeholder={showPeople ? 'Search a person or party' : 'Search name or email'}
+                    class="pl-8" />
             </div>
 
             {#if !showPeople}

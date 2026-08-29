@@ -26,8 +26,8 @@ let { form } = $props()
 
 const eventsQuery = getAdminEvents()
 
-/* Matches the year switcher in AdminHeader — the same kind of quiet control. text-sm below md keeps
-   it legible at the 44px tap height app.css enforces there. */
+/* Matches the year picker in the registrations status card — the same kind of quiet control. text-sm
+   below md keeps it legible at the 44px tap height app.css enforces there. */
 const STATUS_SELECT_CLASS =
     'h-8 rounded-md border border-input bg-transparent px-2 text-sm md:text-xs'
 

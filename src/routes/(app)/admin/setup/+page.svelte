@@ -68,6 +68,13 @@ let links = $derived([
 
 <section class="col-span-12 flex flex-col gap-4 xl:col-span-8">
     <div class="flex flex-col gap-1">
+        <!-- The way back. With no admin header, this and the breadcrumbs on each Setup page are the only
+             route from here to the registrations list. -->
+        {#if data.currentEventId}
+            <a
+                href="/admin/event/{data.currentEventId}/registrations"
+                class="text-muted-foreground hover:text-foreground text-sm">← Registrations</a>
+        {/if}
         <h1>Setup</h1>
         <p class="text-muted-foreground text-sm">
             Set once a year, then left alone. Nothing here needs looking at while registrations are

@@ -1,5 +1,4 @@
 export { default as AdminDataView } from './AdminDataView.svelte'
-export { default as AdminHeader } from './AdminHeader.svelte'
 export { default as AppHeader } from './AppHeader.svelte'
 export { default as DatePicker } from './DatePicker.svelte'
 export { default as Divider } from './Divider.svelte'

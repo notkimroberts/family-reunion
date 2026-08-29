@@ -3,11 +3,11 @@ import { ChevronDown, ClipboardPen, LogOut, Menu } from '@lucide/svelte'
 import { page } from '$app/state'
 import { authClient } from '$lib/auth-client'
 import { Avatar, AvatarFallback } from '$lib/components/ui/avatar'
-import { Button } from '$lib/components/ui/button'
 import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuItem,
+    DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from '$lib/components/ui/dropdown-menu'
 import {
@@ -115,15 +115,33 @@ let mobileMenuOpen = $state(false)
             <ThemeToggle size="sm" />
 
             {#if user}
-                <Button variant="ghost" size="sm" onclick={handleSignOut}>
-                    <LogOut class="h-3.5 w-3.5" />
-                    Sign out
-                </Button>
-                <Avatar class="w-8 h-8">
-                    <AvatarFallback class="bg-primary text-primary-foreground text-xs font-bold">
-                        {getInitials(user.name)}
-                    </AvatarFallback>
-                </Avatar>
+                <!-- Sign out sits behind the avatar rather than beside it. It is a rare, destructive-ish
+                     action next to a Register call-to-action, and a permanent button for it earns its
+                     width about once a session. The menu also has room to say WHICH account you are
+                     signed in as, which a bare avatar cannot. -->
+                <DropdownMenu>
+                    <DropdownMenuTrigger
+                        class="rounded-full ring-offset-background transition-shadow hover:ring-2 hover:ring-primary/40 hover:ring-offset-2 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none"
+                        aria-label="Account menu">
+                        <Avatar class="w-8 h-8">
+                            <AvatarFallback
+                                class="bg-primary text-primary-foreground text-xs font-bold">
+                                {getInitials(user.name)}
+                            </AvatarFallback>
+                        </Avatar>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" class="w-56">
+                        <div class="flex flex-col gap-0.5 px-2 py-1.5">
+                            <span class="text-sm font-medium">{user.name}</span>
+                            <span class="text-muted-foreground truncate text-xs">{user.email}</span>
+                        </div>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onSelect={handleSignOut}>
+                            <LogOut class="h-4 w-4" />
+                            Sign out
+                        </DropdownMenuItem>
+                    </DropdownMenuContent>
+                </DropdownMenu>
             {/if}
         </nav>
     </div>

@@ -1,20 +1,12 @@
 <script lang="ts">
-import { AdminHeader } from '$lib/components'
-
-let { data, children } = $props()
+let { children } = $props()
 </script>
 
-<!-- The sidebar, the year-pill row and the 'admin' Svelte context all lived here. All three are gone:
-     seven destinations became two tabs plus Setup, and the year moved into the URL, so there is nothing
-     left to hold in context.
+<!-- No admin header. The app's own nav already carries the theme toggle, sign out and the avatar, and a
+     second copy of those on every admin page was the duplication this replaced. What is genuinely
+     admin-specific — which reunion you are looking at, and the way into Setup — belongs beside the
+     numbers it applies to, so it lives in the status card on the registrations page.
 
-     The 12-column grid wrappers stay. Every Setup page section is col-span-12 or xl:col-span-8 and
-     resolves against them, and they are also the only source of vertical spacing between those
-     sections. -->
-<AdminHeader
-    events={data.events}
-    currentEventId={data.currentEventId}
-    userName={data.user.name}
-    isOwner={data.isOwner} />
-
+     This layout exists only to hold the 12-column grid the admin sections resolve against; the sidebar,
+     the year-pill row and the 'admin' Svelte context that used to live here are all gone. -->
 {@render children()}
