@@ -132,7 +132,7 @@ Everything an organiser does concerns one reunion, and the reunion is named in t
 
 | Path                                                    | What it is                                                                                           |
 | ------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
-| `/admin`                                                | A **redirect**, not a page: the open event, else the most recent, else `/admin/setup/events`         |
+| `/admin`                                                | The landing page: one card per reunion, newest first, linking into that year                         |
 | `/admin/event/[eventId]/registrations`                  | The organiser's ONLY screen. Status panel beside the list, plus a Bookings / People lens in `?view=` |
 | `/admin/event/[eventId]/registrations/new`              | Paper entry. Tiers come from `params.eventId`, never `getOpenEvent()`                                |
 | `/admin/event/[eventId]/registrations/[registrationId]` | One registration. 404s if it does not belong to `eventId`                                            |

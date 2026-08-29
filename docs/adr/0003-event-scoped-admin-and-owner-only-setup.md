@@ -1,7 +1,9 @@
 # ADR 0003 — The admin is event-scoped, and Setup is owner-only by identity
 
-**Status:** Accepted  
-**Date:** 2026-08-28
+**Status:** Accepted, with one part superseded  
+**Date:** 2026-08-28  
+**Amended:** 2026-08-29 — `/admin` is a landing page listing the reunions, **not** a redirect. See
+"Consequences".
 
 ## Context
 
@@ -27,9 +29,10 @@ commit that removed them.
 ## Decision
 
 **One event at a time, named in the URL.** `/admin/event/[eventId]/registrations`, `/…/attendees`,
-`/…/settings`. `/admin` is a redirect: the open event, else the most recent, else `/admin/setup/events`
-so a fresh production database cannot dead-end. `?eventId`, the "All years" pill, `SELECTOR_PATHS`,
-`navHref()` and the `admin` Svelte context are all deleted.
+`/…/settings`. `/admin` lists the reunions and links into one of them, and says so plainly when there are
+none, so a fresh production database cannot dead-end. (It was briefly a redirect — see "Consequences".)
+`?eventId`, the "All years" pill, `SELECTOR_PATHS`, `navHref()` and the `admin` Svelte context are all
+deleted.
 
 **Two modes, not two roles.** Organizer holds Registrations and Attendees. Setup holds event details,
 tiers and prices, reunion years, photos, storefront and admin accounts. Everyone who can sign in is
@@ -72,6 +75,14 @@ of `requireAdmin`. It **fails open** when the variable is unset, and reports tha
 - **`/admin` is no longer a page.** The old dashboard's year-on-year comparison is gone with it; the
   numbers an organiser reads now sit beside the registration list, per event. A cross-year view, if
   wanted, needs a new home.
+
+  > **Superseded, 2026-08-29.** `/admin` is a page again — a landing page listing the reunions, one card
+  > per year with its head count and money. The redirect was wrong twice over: it made the other years
+  > invisible, which is exactly the cross-year view this consequence said needed a new home, and it made
+  > the sign-in destination depend on which event happened to be open, a state that changes twice a year.
+  > The rest of this ADR stands: every working view is still event-scoped, and `/admin` navigates to one
+  > rather than showing a dashboard of its own.
+
 - **`/admin/event/[eventId]/attendees` changed behaviour, not just location.** It previously shipped
   every paid attendee of every reunion and filtered in the browser. The cross-year reading that appeared
   to justify that was never implemented — year was the first sort key, so the same cousin's rows sat as

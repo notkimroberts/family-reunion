@@ -1,43 +1,19 @@
-import { redirect } from '@sveltejs/kit'
-import { desc, eq } from 'drizzle-orm'
 import { requireAdmin } from '$lib/server/auth/guards'
-import { db } from '$lib/server/db'
-import { reunionEvents } from '$lib/server/db/schema'
+import { getEventSummaries } from '$lib/server/registrations'
 import type { PageServerLoad } from './$types'
 
-/* /admin is no longer a page. Every admin view is about one reunion, so landing here means "take me to
-   the one I am working on" — the open event, else the most recent.
+/* /admin is the way in — /login sends you here, and it is the only entry point into the admin area
+   anywhere in the app. It lists the reunions.
 
-   The old dashboard led with Total Users, a number with no bearing on a reunion, and its three cards
-   plus event table were a stop on the way to the registrations list. The numbers that mattered now sit
-   beside that list.
+   It was briefly a redirect straight to the open event's registrations, which was wrong twice over: it
+   made the other years invisible, so there was no way to see that 2025 collected more than 2027 is
+   collecting, and it made the sign-in destination depend on which event happens to be open — a state that
+   changes twice a year. Landing on the list is one extra click and no guessing.
 
-   With no events at all, Setup is the only place that can create one, so a fresh production database
-   does not dead-end here. /login redirects to /admin, and it is the only entry point into the admin
-   area anywhere in the app. */
+   With no events at all the page says so and points at Setup, which is the only place a year can be
+   created, so a fresh production database does not dead-end. */
 export const load: PageServerLoad = async (event) => {
     requireAdmin(event)
 
-    const [openEvent] = await db
-        .select({ id: reunionEvents.id })
-        .from(reunionEvents)
-        .where(eq(reunionEvents.status, 'open'))
-        .orderBy(desc(reunionEvents.year))
-        .limit(1)
-
-    if (openEvent) {
-        throw redirect(302, `/admin/event/${openEvent.id}/registrations`)
-    }
-
-    const [mostRecent] = await db
-        .select({ id: reunionEvents.id })
-        .from(reunionEvents)
-        .orderBy(desc(reunionEvents.year))
-        .limit(1)
-
-    if (mostRecent) {
-        throw redirect(302, `/admin/event/${mostRecent.id}/registrations`)
-    }
-
-    throw redirect(302, '/admin/setup/events')
+    return { events: await getEventSummaries() }
 }
