@@ -7,11 +7,12 @@ import { Button } from '$lib/components/ui/button'
 import { Input } from '$lib/components/ui/input'
 import { Separator } from '$lib/components/ui/separator'
 import * as Table from '$lib/components/ui/table'
-import { cn, formatPrice, getPaymentState } from '$lib/utils'
+import { cn, formatPrice, getPaymentState, type RegistrationStatus } from '$lib/utils'
 import { formatPartialBirthDate } from '$lib/utils/age'
 import PaymentChannel from './PaymentChannel.svelte'
 import RegistrationStatusBadge from './RegistrationStatusBadge.svelte'
 import { getPeopleSummary } from './peopleSummary'
+import { REGISTRATION_STATUS_STYLES } from './registrationStatusStyles'
 import { getRegistrationTotals } from './registrationTotals'
 
 /* One event, two lenses. Bookings is one row per party — who owes what, who to chase. People is one row
@@ -26,7 +27,22 @@ import { getRegistrationTotals } from './registrationTotals'
    Which reunion these numbers describe is a property of the numbers; and the app's own nav already
    carries the theme toggle, sign out and the avatar, so an admin header duplicated all three. */
 
-const FILTERS = ['All', 'Paid', 'Pending', 'Waived', 'Refunded'] as const
+/* The filter buttons wear the same badge each status wears in the rows, from the same palette — click the
+   green one to see the green ones. `undefined` is the unfiltered chip, because "All" is not a status.
+
+   Colour on every button rather than only the selected one: the row doubles as the legend, so an organiser
+   can learn what amber means without hunting for a pending row. The selection is marked by a ring instead,
+   which is the only thing that still reads when four buttons are already four different colours.
+
+   Spelled out rather than derived from the style map's keys, because the order is a decision — money in,
+   money owed, comped, cancelled — and Object.keys would also widen the union back to string. */
+const STATUS_FILTERS: (RegistrationStatus | undefined)[] = [
+    undefined,
+    'paid',
+    'pending',
+    'waived',
+    'refunded',
+]
 
 /* Both pending states are 'pending' in the database and need opposite follow-ups. Telling them apart from
    a list row only became possible once RegistrationSummary.status stopped being a plain `string`. */
@@ -49,7 +65,9 @@ let summary = $derived(getPeopleSummary(data.people))
 let showPeople = $derived(page.url.searchParams.get('view') === 'people')
 
 let search = $state('')
-let filter = $state<(typeof FILTERS)[number]>('All')
+/* undefined is unfiltered. Holding the database's own value rather than a display label also retires the
+   `filter.toLowerCase()` the comparison used to need. */
+let statusFilter = $state<RegistrationStatus | undefined>(undefined)
 
 function setView(next: 'bookings' | 'people') {
     const url = new URL(page.url)
@@ -79,7 +97,7 @@ function chaseReason(registration: (typeof data.registrations)[number]): string 
 
 let visibleBookings = $derived(
     data.registrations
-        .filter((r) => filter === 'All' || r.status === filter.toLowerCase())
+        .filter((r) => statusFilter === undefined || r.status === statusFilter)
         .filter((r) => matchesSearch([r.contactName, r.contactEmail])),
 )
 
@@ -230,18 +248,30 @@ let visiblePeople = $derived(
             </div>
 
             {#if !showPeople}
-                <div class="flex flex-wrap gap-1">
-                    {#each FILTERS as option (option)}
+                <div class="flex flex-wrap gap-1.5">
+                    {#each STATUS_FILTERS as status (status ?? 'all')}
+                        {@const style = status ? REGISTRATION_STATUS_STYLES[status] : undefined}
+                        {@const Icon = style?.icon}
+                        {@const selected = statusFilter === status}
                         <button
                             type="button"
-                            onclick={() => (filter = option)}
+                            onclick={() => (statusFilter = status)}
+                            aria-pressed={selected}
                             class={cn(
-                                'rounded-full px-3 py-1.5 text-xs font-medium transition-colors',
-                                filter === option
-                                    ? 'bg-primary text-primary-foreground'
-                                    : 'bg-muted text-muted-foreground hover:bg-muted/80',
+                                'inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-xs font-medium transition-all',
+                                /* Same border/background/text triple the row badge wears, so the chip and
+                                   the rows it selects are visibly the same thing. */
+                                style?.class ?? 'text-muted-foreground border-transparent bg-muted',
+                                /* Selection is a ring, not a colour change — four buttons are already
+                                   four colours, so there is no colour left to mean "chosen". */
+                                selected
+                                    ? 'ring-2 ring-ring ring-offset-1 ring-offset-background'
+                                    : 'opacity-70 hover:opacity-100',
                             )}>
-                            {option}
+                            {#if Icon}
+                                <Icon class="size-3" />
+                            {/if}
+                            {style?.label ?? 'All'}
                         </button>
                     {/each}
                 </div>
