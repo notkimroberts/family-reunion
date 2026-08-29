@@ -1,27 +1,28 @@
 import type { RegistrationSummary } from '$lib/server/registrations'
-import { getPaymentState } from '$lib/utils'
 
 /* What a year adds up to, for the panel beside the registrations list.
 
    A pure function rather than a set of $derived expressions in the page, so the arithmetic that an
    organiser will read off a screen and repeat on a phone call is testable.
 
-   'Coming' counts party MEMBERS of paid and waived registrations — a party of six is one row and six
-   chairs, and the number that matters for catering is the six. A pending registration is nobody yet, and
-   a refunded one is nobody any more.
+   Two matched groups, paid-or-covered and not-paid, because a count whose qualifier is invisible gets
+   read as a bug: "Parties 4" beside a list of eleven bookings — whose Party column sums to every
+   registered person — looks like broken maths until something on screen says the four are the settled
+   ones.
 
-   pendingPeopleCount and pendingPartyCount exist so the panel can SAY that. Beside a list of eleven
-   bookings, "Parties 4" reads as a miscount unless something on screen explains that four is the paid
-   ones — and the Party column in that same list sums to every registered person, paid or not. Counts
-   whose qualifier is invisible get read as bugs. */
+   People counts party MEMBERS, not rows. A party of six is one booking and six chairs, and six is the
+   number catering needs.
+
+   Refunded belongs to neither group. Those people are not coming and nobody is waiting on their money. */
 export type RegistrationTotals = {
+    /* Paid AND waived: both have a place. */
     attendingCount: number
     partyCount: number
+    /* Paid only — a waived place brings in no money, so folding it in would overstate the bank. */
+    paidCents: number
     pendingPeopleCount: number
     pendingPartyCount: number
-    paidCents: number
     outstandingCents: number
-    chaseCount: number
 }
 
 export function getRegistrationTotals(registrations: RegistrationSummary[]): RegistrationTotals {
@@ -31,16 +32,15 @@ export function getRegistrationTotals(registrations: RegistrationSummary[]): Reg
     return {
         attendingCount: attending.reduce((sum, r) => sum + r.memberCount, 0),
         partyCount: attending.length,
-        pendingPeopleCount: pending.reduce((sum, r) => sum + r.memberCount, 0),
-        pendingPartyCount: pending.length,
-        /* Only 'paid' — a waived place brings in no money, so folding it in here would overstate what
-           has actually been collected. */
         paidCents: registrations
             .filter((r) => r.status === 'paid')
             .reduce((sum, r) => sum + r.totalCents, 0),
+        pendingPeopleCount: pending.reduce((sum, r) => sum + r.memberCount, 0),
+        /* Also the number of registrations to chase. There used to be a separate chaseCount that
+           filtered pending rows through getPaymentState for 'cancelled' — but that state only ever comes
+           from status 'refunded', which is not pending, so the filter could never remove anything and
+           the two numbers were provably identical. One number, one name. */
+        pendingPartyCount: pending.length,
         outstandingCents: pending.reduce((sum, r) => sum + r.totalCents, 0),
-        /* Every pending registration needs a follow-up; getPaymentState only decides WHICH one, and the
-           list rows say so individually. */
-        chaseCount: pending.filter((r) => getPaymentState(r) !== 'cancelled').length,
     }
 }

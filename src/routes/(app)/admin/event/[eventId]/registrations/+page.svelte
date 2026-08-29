@@ -36,6 +36,9 @@ const chaseReasonValue = {
 
 const YES_NO = (value: boolean | null) => (value === null ? '—' : value ? 'Yes' : 'No')
 
+/* Matches the subheadings on the event settings page, so the two admin surfaces read as one design. */
+const SUBHEAD_CLASS = 'text-muted-foreground text-xs font-semibold tracking-wide uppercase'
+
 let { data } = $props()
 
 let totals = $derived(getRegistrationTotals(data.registrations))
@@ -113,31 +116,40 @@ let visiblePeople = $derived(
 
         <Separator />
 
+        <!-- Two matched groups. The sub-heading carries the qualifier, so the row labels do not have to
+             repeat it and the two sets scan as a pair — which is the point: the numbers only make sense
+             against each other. Before this the qualifier was invisible and "Parties 4" beside eleven
+             bookings read as broken maths. -->
         <div class="flex flex-col gap-3">
+            <p class={SUBHEAD_CLASS}>Paid or covered</p>
             <div class="flex items-baseline justify-between gap-3">
-                <span class="text-muted-foreground text-sm">People coming</span>
+                <span class="text-muted-foreground text-sm">People</span>
                 <span class="text-2xl font-bold tabular-nums">{totals.attendingCount}</span>
             </div>
             <div class="flex items-baseline justify-between gap-3">
-                <span class="text-muted-foreground text-sm">Parties coming</span>
+                <span class="text-muted-foreground text-sm">Parties</span>
                 <span class="text-lg font-semibold tabular-nums">{totals.partyCount}</span>
             </div>
-            <!-- Says the qualifier out loud. Both counts above are paid-and-waived only, and beside a
-                 list of eleven bookings whose Party column sums to every registered person, an
-                 unexplained 4 reads as a miscount rather than as a filter. -->
-            {#if totals.pendingPeopleCount > 0}
-                <p class="text-muted-foreground text-xs">
-                    Paid and covered only. {totals.pendingPeopleCount} more
-                    {totals.pendingPeopleCount === 1 ? 'person' : 'people'} across
-                    {totals.pendingPartyCount}
-                    {totals.pendingPartyCount === 1 ? 'party' : 'parties'} have registered without paying.
-                </p>
-            {/if}
-            <Separator />
             <div class="flex items-baseline justify-between gap-3">
                 <span class="text-muted-foreground text-sm">Collected</span>
                 <span class="text-lg font-semibold tabular-nums">
                     ${formatPrice(totals.paidCents)}
+                </span>
+            </div>
+        </div>
+
+        <Separator />
+
+        <div class="flex flex-col gap-3">
+            <p class={SUBHEAD_CLASS}>Not paid</p>
+            <div class="flex items-baseline justify-between gap-3">
+                <span class="text-muted-foreground text-sm">People</span>
+                <span class="text-2xl font-bold tabular-nums">{totals.pendingPeopleCount}</span>
+            </div>
+            <div class="flex items-baseline justify-between gap-3">
+                <span class="text-muted-foreground text-sm">Parties</span>
+                <span class="text-lg font-semibold tabular-nums">
+                    {totals.pendingPartyCount}
                 </span>
             </div>
             <div class="flex items-baseline justify-between gap-3">
@@ -150,16 +162,10 @@ let visiblePeople = $derived(
                     ${formatPrice(totals.outstandingCents)}
                 </span>
             </div>
+            {#if totals.pendingPartyCount > 0}
+                <p class="text-muted-foreground text-xs">Each one is marked in the list.</p>
+            {/if}
         </div>
-
-        {#if totals.chaseCount > 0}
-            <Separator />
-            <p class="text-muted-foreground text-xs">
-                {totals.chaseCount}
-                {totals.chaseCount === 1 ? 'registration needs' : 'registrations need'} chasing — marked
-                in the list.
-            </p>
-        {/if}
 
         <Separator />
 

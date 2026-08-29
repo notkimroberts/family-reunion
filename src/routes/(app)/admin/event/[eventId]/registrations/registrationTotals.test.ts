@@ -26,20 +26,19 @@ describe('getRegistrationTotals', () => {
             pendingPartyCount: 0,
             paidCents: 0,
             outstandingCents: 0,
-            chaseCount: 0,
         })
     })
 
-    /* The panel's two counts are paid-and-waived only, so it has to be able to say what it is leaving
-       out — beside a booking list whose Party column sums to every registered person, an unexplained
-       count reads as a miscount. This is the arithmetic behind that sentence. */
-    it('counts the people and parties it is NOT including', () => {
+    /* The panel shows two matched groups, paid-or-covered and not-paid, because a count whose qualifier
+       is invisible reads as a miscount: "Parties 4" beside a booking list whose Party column sums to
+       every registered person looks like broken maths. This is the arithmetic behind both groups. */
+    it('splits people and parties into paid-or-covered and not-paid', () => {
         const totals = getRegistrationTotals([
             reg({ id: 'a', status: 'paid', memberCount: 2 }),
             reg({ id: 'b', status: 'waived', memberCount: 1 }),
             reg({ id: 'c', status: 'pending', memberCount: 4 }),
             reg({ id: 'd', status: 'pending', memberCount: 3 }),
-            /* Refunded is neither coming nor pending — it is not waiting on anything. */
+            /* Refunded belongs to NEITHER group — not coming, and nobody is waiting on the money. */
             reg({ id: 'e', status: 'refunded', memberCount: 9 }),
         ])
 
@@ -94,19 +93,24 @@ describe('getRegistrationTotals', () => {
         expect(totals.paidCents).toBe(32000)
     })
 
-    /* Both kinds of pending need chasing — one family thinks their payment failed, the other owes money
-       by post — so both are counted, and the list rows say which is which. */
-    it('counts both an abandoned checkout and an unpaid paper entry as needing chasing', () => {
+    /* Both kinds of pending are Not paid — one family thinks their payment failed, the other owes money
+       by post — so both are counted here, and the list rows say which is which. */
+    it('counts an abandoned checkout and an unpaid paper entry alike as not paid', () => {
         const totals = getRegistrationTotals([
             reg({ id: 'a', status: 'pending', stripeSessionId: 'cs_test_abandoned' }),
             reg({ id: 'b', status: 'pending', stripeSessionId: null }),
             reg({ id: 'c', status: 'paid' }),
         ])
 
-        expect(totals.chaseCount).toBe(2)
+        expect(totals.pendingPartyCount).toBe(2)
     })
 
-    it('does not ask you to chase a refunded registration', () => {
-        expect(getRegistrationTotals([reg({ status: 'refunded' })]).chaseCount).toBe(0)
+    /* The money already went back, so it is not outstanding and the party is not one to chase. */
+    it('leaves a refunded registration out of the not-paid group entirely', () => {
+        const totals = getRegistrationTotals([reg({ status: 'refunded', totalCents: 99900 })])
+
+        expect(totals.pendingPartyCount).toBe(0)
+        expect(totals.pendingPeopleCount).toBe(0)
+        expect(totals.outstandingCents).toBe(0)
     })
 })
