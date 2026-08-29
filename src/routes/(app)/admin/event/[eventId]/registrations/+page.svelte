@@ -9,6 +9,7 @@ import { Separator } from '$lib/components/ui/separator'
 import * as Table from '$lib/components/ui/table'
 import { cn, formatPrice, getPaymentState } from '$lib/utils'
 import { formatPartialBirthDate } from '$lib/utils/age'
+import PaymentChannel from './PaymentChannel.svelte'
 import RegistrationStatusBadge from './RegistrationStatusBadge.svelte'
 import { getRegistrationTotals } from './registrationTotals'
 
@@ -118,9 +119,21 @@ let visiblePeople = $derived(
                 <span class="text-2xl font-bold tabular-nums">{totals.attendingCount}</span>
             </div>
             <div class="flex items-baseline justify-between gap-3">
-                <span class="text-muted-foreground text-sm">Parties</span>
+                <span class="text-muted-foreground text-sm">Parties coming</span>
                 <span class="text-lg font-semibold tabular-nums">{totals.partyCount}</span>
             </div>
+            <!-- Says the qualifier out loud. Both counts above are paid-and-waived only, and beside a
+                 list of eleven bookings whose Party column sums to every registered person, an
+                 unexplained 4 reads as a miscount rather than as a filter. -->
+            {#if totals.pendingPeopleCount > 0}
+                <p class="text-muted-foreground text-xs">
+                    Paid and covered only. {totals.pendingPeopleCount} more
+                    {totals.pendingPeopleCount === 1 ? 'person' : 'people'} across
+                    {totals.pendingPartyCount}
+                    {totals.pendingPartyCount === 1 ? 'party' : 'parties'} have registered without paying.
+                </p>
+            {/if}
+            <Separator />
             <div class="flex items-baseline justify-between gap-3">
                 <span class="text-muted-foreground text-sm">Collected</span>
                 <span class="text-lg font-semibold tabular-nums">
@@ -351,11 +364,17 @@ let visiblePeople = $derived(
                                     </div>
                                     <RegistrationStatusBadge status={registration.status} />
                                 </div>
-                                <p class="text-muted-foreground mt-2 text-xs">
-                                    {registration.memberCount}
-                                    {registration.memberCount === 1 ? 'person' : 'people'} · ${formatPrice(
-                                        registration.totalCents,
-                                    )}
+                                <p
+                                    class="text-muted-foreground mt-2 flex items-center gap-2 text-xs">
+                                    <span>
+                                        {registration.memberCount}
+                                        {registration.memberCount === 1 ? 'person' : 'people'} · ${formatPrice(
+                                            registration.totalCents,
+                                        )}
+                                    </span>
+                                    <span aria-hidden="true">·</span>
+                                    <PaymentChannel
+                                        stripeSessionId={registration.stripeSessionId} />
                                 </p>
                                 {#if reason}
                                     <p class="mt-1.5 text-xs text-amber-700 dark:text-amber-400">
@@ -373,6 +392,7 @@ let visiblePeople = $derived(
                             <Table.Row>
                                 <Table.Head>Contact</Table.Head>
                                 <Table.Head>Status</Table.Head>
+                                <Table.Head>Came in via</Table.Head>
                                 <Table.Head class="text-right">Party</Table.Head>
                                 <Table.Head class="text-right">Total</Table.Head>
                                 <Table.Head></Table.Head>
@@ -397,6 +417,10 @@ let visiblePeople = $derived(
                                     </Table.Cell>
                                     <Table.Cell>
                                         <RegistrationStatusBadge status={registration.status} />
+                                    </Table.Cell>
+                                    <Table.Cell>
+                                        <PaymentChannel
+                                            stripeSessionId={registration.stripeSessionId} />
                                     </Table.Cell>
                                     <Table.Cell class="text-right tabular-nums">
                                         {registration.memberCount}

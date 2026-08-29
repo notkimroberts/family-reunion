@@ -22,10 +22,31 @@ describe('getRegistrationTotals', () => {
         expect(getRegistrationTotals([])).toEqual({
             attendingCount: 0,
             partyCount: 0,
+            pendingPeopleCount: 0,
+            pendingPartyCount: 0,
             paidCents: 0,
             outstandingCents: 0,
             chaseCount: 0,
         })
+    })
+
+    /* The panel's two counts are paid-and-waived only, so it has to be able to say what it is leaving
+       out — beside a booking list whose Party column sums to every registered person, an unexplained
+       count reads as a miscount. This is the arithmetic behind that sentence. */
+    it('counts the people and parties it is NOT including', () => {
+        const totals = getRegistrationTotals([
+            reg({ id: 'a', status: 'paid', memberCount: 2 }),
+            reg({ id: 'b', status: 'waived', memberCount: 1 }),
+            reg({ id: 'c', status: 'pending', memberCount: 4 }),
+            reg({ id: 'd', status: 'pending', memberCount: 3 }),
+            /* Refunded is neither coming nor pending — it is not waiting on anything. */
+            reg({ id: 'e', status: 'refunded', memberCount: 9 }),
+        ])
+
+        expect(totals.attendingCount).toBe(3)
+        expect(totals.partyCount).toBe(2)
+        expect(totals.pendingPeopleCount).toBe(7)
+        expect(totals.pendingPartyCount).toBe(2)
     })
 
     /* People, not rows: this is the number that decides how many chairs and meals are needed. */
