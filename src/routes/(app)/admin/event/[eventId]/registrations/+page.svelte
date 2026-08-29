@@ -7,9 +7,11 @@ import { Button } from '$lib/components/ui/button'
 import { Input } from '$lib/components/ui/input'
 import { Separator } from '$lib/components/ui/separator'
 import * as Table from '$lib/components/ui/table'
+import type { EventPerson } from '$lib/server/registrations'
 import { cn, formatPrice, getPaymentState, type RegistrationStatus } from '$lib/utils'
-import { formatPartialBirthDate } from '$lib/utils/age'
+import { formatBirthDate } from '$lib/utils/age'
 import PaymentChannel from './PaymentChannel.svelte'
+import PersonFieldForm from './PersonFieldForm.svelte'
 import RegistrationStatusBadge from './RegistrationStatusBadge.svelte'
 import { getPeopleSummary } from './peopleSummary'
 import { REGISTRATION_STATUS_STYLES } from './registrationStatusStyles'
@@ -51,10 +53,41 @@ const chaseReasonValue = {
     awaiting_payment: 'Entered from a paper form; the money has not arrived',
 }
 
-const YES_NO = (value: boolean | null) => (value === null ? '—' : value ? 'Yes' : 'No')
+/* The form value for a nullable yes/no: '' when unanswered, which the select renders as a disabled dash
+   and the action reads as "leave this field alone". */
+const YES_NO_VALUE = (value: boolean | null) => (value === null ? '' : value ? 'yes' : 'no')
 
 /* Matches the subheadings on the event settings page, so the two admin surfaces read as one design. */
 const SUBHEAD_CLASS = 'text-muted-foreground text-xs font-semibold tracking-wide uppercase'
+
+/* The three details an organiser fills in from a phone call or a paper form, editable in place on the
+   People lens. Declared once and rendered by both the table and the mobile cards, so the two cannot end
+   up offering different fields.
+
+   Shirt size is deliberately NOT here even though the sidebar counts it: every ShirtSizeSelect in the app
+   renders the adult SHIRT_SIZES list regardless of tier, so a Child row would offer adult sizes. Worth
+   fixing before making it editable from a page whose whole job is the shirt order. */
+const PERSON_FIELDS = [
+    {
+        field: 'birthDate',
+        label: 'Born',
+        kind: 'date',
+        value: (person: EventPerson) =>
+            formatBirthDate(person.birthYear, person.birthMonth, person.birthDay) ?? '',
+    },
+    {
+        field: 'vegetarianMeal',
+        label: 'Vegetarian',
+        kind: 'yesno',
+        value: (person: EventPerson) => YES_NO_VALUE(person.vegetarianMeal),
+    },
+    {
+        field: 'attendedReunion2025',
+        label: 'Came in 2025',
+        kind: 'yesno',
+        value: (person: EventPerson) => YES_NO_VALUE(person.attendedReunion2025),
+    },
+] as const
 
 let { data } = $props()
 
@@ -188,6 +221,74 @@ let visiblePeople = $derived(
 
         <Separator />
 
+        <!-- The order sheet, in the card rather than over the table: it is a summary of the year like the
+             two groups above it, and it belongs where they are.
+
+             Placed AFTER Not paid so the two money groups stay adjacent — they only mean anything read
+             against each other — which means this needs its own note saying whose shirts these are. -->
+        <div class="flex flex-col gap-3">
+            <p class={SUBHEAD_CLASS}>To order</p>
+            <p class="text-muted-foreground text-xs">
+                For the {totals.attendingCount} paid or covered.
+            </p>
+
+            {#if summary.shirtsByTier.length > 0}
+                <div class="flex flex-col gap-1.5">
+                    <p class="text-muted-foreground text-sm">T-shirts</p>
+                    {#each summary.shirtsByTier as tier (tier.tierLabel)}
+                        <div class="flex flex-wrap items-baseline gap-x-2 gap-y-1 pl-2">
+                            <span class="w-12 shrink-0 text-sm">{tier.tierLabel}</span>
+                            {#if tier.sizes.length === 0}
+                                <span class="text-muted-foreground text-sm">none yet</span>
+                            {:else}
+                                {#each tier.sizes as { size, count } (size)}
+                                    <span class="text-sm tabular-nums">
+                                        {size}
+                                        <span class="font-semibold">{count}</span>
+                                    </span>
+                                {/each}
+                            {/if}
+                        </div>
+                    {/each}
+                    {#if summary.shirtsMissing > 0}
+                        <!-- A person to go back to, not a size to guess. -->
+                        <p class="pl-2 text-xs text-amber-700 dark:text-amber-400">
+                            {summary.shirtsMissing} with no size recorded
+                        </p>
+                    {/if}
+                </div>
+
+                <div class="flex flex-col gap-1.5">
+                    <p class="text-muted-foreground text-sm">Meals</p>
+                    <div class="flex items-baseline justify-between gap-3 pl-2">
+                        <span class="text-sm">Vegetarian</span>
+                        <span class="text-sm font-semibold tabular-nums">{summary.vegetarian}</span>
+                    </div>
+                    <div class="flex items-baseline justify-between gap-3 pl-2">
+                        <span class="text-sm">Standard</span>
+                        <span class="text-sm font-semibold tabular-nums">{summary.standard}</span>
+                    </div>
+                    {#if summary.mealUnanswered > 0}
+                        <!-- Kept out of Standard on purpose: three vegetarians and two unknowns is a
+                             different order from three vegetarians. -->
+                        <div class="flex items-baseline justify-between gap-3 pl-2">
+                            <span class="text-sm text-amber-700 dark:text-amber-400">
+                                Not answered
+                            </span>
+                            <span
+                                class="text-sm font-semibold tabular-nums text-amber-700 dark:text-amber-400">
+                                {summary.mealUnanswered}
+                            </span>
+                        </div>
+                    {/if}
+                </div>
+            {:else}
+                <p class="text-muted-foreground text-sm">Nothing to order yet.</p>
+            {/if}
+        </div>
+
+        <Separator />
+
         <div class="flex flex-col gap-2">
             <Button href="/admin/event/{data.event.id}/registrations/new" size="sm">
                 <Plus class="size-4" />
@@ -284,73 +385,6 @@ let visiblePeople = $derived(
                 {data.people.length === 1 ? 'person' : 'people'}. Unpaid parties are in Bookings.
             </p>
 
-            {#if data.people.length > 0}
-                <!-- What to order, off the list it is derived from. Deliberately NOT in the status card:
-                     that card is a glance at the year, this is a purchase order, and it belongs next to
-                     the rows a caterer or a printer would check it against.
-
-                     Counts only these people — paid or covered — because ordering shirts for a party that
-                     may never pay buys garments for nobody. -->
-                <div class="grid grid-cols-1 gap-4 rounded-lg border bg-card p-4 sm:grid-cols-2">
-                    <div class="flex flex-col gap-2">
-                        <p class={SUBHEAD_CLASS}>T-shirts</p>
-                        {#each summary.shirtsByTier as tier (tier.tierLabel)}
-                            <div class="flex flex-wrap items-baseline gap-x-2 gap-y-1">
-                                <span class="w-14 shrink-0 text-sm font-medium">
-                                    {tier.tierLabel}
-                                </span>
-                                {#if tier.sizes.length === 0}
-                                    <span class="text-muted-foreground text-sm">none recorded</span>
-                                {:else}
-                                    {#each tier.sizes as { size, count } (size)}
-                                        <span class="text-sm tabular-nums">
-                                            {size}
-                                            <span class="font-semibold">{count}</span>
-                                        </span>
-                                    {/each}
-                                {/if}
-                            </div>
-                        {/each}
-                        {#if summary.shirtsMissing > 0}
-                            <!-- A person to go back to, not a size to guess. -->
-                            <p class="text-xs text-amber-700 dark:text-amber-400">
-                                {summary.shirtsMissing}
-                                {summary.shirtsMissing === 1 ? 'person has' : 'people have'} no size recorded.
-                            </p>
-                        {/if}
-                    </div>
-
-                    <div class="flex flex-col gap-2">
-                        <p class={SUBHEAD_CLASS}>Meals</p>
-                        <div class="flex items-baseline justify-between gap-3">
-                            <span class="text-muted-foreground text-sm">Vegetarian</span>
-                            <span class="text-sm font-semibold tabular-nums">
-                                {summary.vegetarian}
-                            </span>
-                        </div>
-                        <div class="flex items-baseline justify-between gap-3">
-                            <span class="text-muted-foreground text-sm">Standard</span>
-                            <span class="text-sm font-semibold tabular-nums">
-                                {summary.standard}
-                            </span>
-                        </div>
-                        {#if summary.mealUnanswered > 0}
-                            <!-- Kept out of Standard on purpose: three vegetarians and two unknowns is a
-                                 different order from three vegetarians. -->
-                            <div class="flex items-baseline justify-between gap-3">
-                                <span class="text-sm text-amber-700 dark:text-amber-400">
-                                    Not answered
-                                </span>
-                                <span
-                                    class="text-sm font-semibold tabular-nums text-amber-700 dark:text-amber-400">
-                                    {summary.mealUnanswered}
-                                </span>
-                            </div>
-                        {/if}
-                    </div>
-                </div>
-            {/if}
-
             {#if data.people.length === 0}
                 <p class="text-muted-foreground text-sm">Nobody has a place for this year yet.</p>
             {:else if visiblePeople.length === 0}
@@ -360,29 +394,43 @@ let visiblePeople = $derived(
                     {#snippet mobileCards()}
                         <div class="flex flex-col gap-3">
                             {#each visiblePeople as person (person.id)}
-                                {@const born = formatPartialBirthDate(
-                                    person.birthYear,
-                                    person.birthMonth,
-                                    person.birthDay,
-                                )}
-                                <a
-                                    href="/admin/event/{data.event
-                                        .id}/registrations/{person.registrationId}"
-                                    class="rounded-lg border bg-card p-4 hover:bg-muted">
+                                <div class="flex flex-col gap-3 rounded-lg border bg-card p-4">
                                     <div class="flex items-start justify-between gap-2">
-                                        <p class="truncate font-medium">{person.name}</p>
+                                        <div class="min-w-0">
+                                            <p class="truncate font-medium">{person.name}</p>
+                                            <p class="text-muted-foreground mt-0.5 text-xs">
+                                                {person.tierLabel}{#if person.shirtSize}
+                                                    · shirt {person.shirtSize}{/if}
+                                            </p>
+                                        </div>
                                         <RegistrationStatusBadge status={person.status} />
                                     </div>
-                                    <p class="text-muted-foreground mt-0.5 text-xs">
-                                        {person.tierLabel}{#if person.shirtSize}
-                                            · shirt {person.shirtSize}{/if}{#if born}
-                                            · b. {born}{/if}
-                                    </p>
-                                    <p class="text-muted-foreground mt-1 text-xs">
-                                        Vegetarian {YES_NO(person.vegetarianMeal)} · registered by
-                                        {person.contactName}
-                                    </p>
-                                </a>
+
+                                    <!-- The same three editable fields as the table, stacked. The card is
+                                         no longer a link: it holds controls now, and a tap that both
+                                         opens a select and navigates is neither. -->
+                                    <div class="grid grid-cols-[7rem_1fr] items-center gap-2">
+                                        {#each PERSON_FIELDS as field (field.field)}
+                                            <span class="text-muted-foreground text-sm">
+                                                {field.label}
+                                            </span>
+                                            <PersonFieldForm
+                                                memberId={person.id}
+                                                personName={person.name}
+                                                field={field.field}
+                                                label={field.label}
+                                                kind={field.kind}
+                                                value={field.value(person)} />
+                                        {/each}
+                                    </div>
+
+                                    <a
+                                        href="/admin/event/{data.event
+                                            .id}/registrations/{person.registrationId}"
+                                        class="text-muted-foreground text-xs hover:text-foreground">
+                                        Registered by {person.contactName} →
+                                    </a>
+                                </div>
                             {/each}
                         </div>
                     {/snippet}
@@ -410,19 +458,20 @@ let visiblePeople = $derived(
                                         <Table.Cell class="text-muted-foreground">
                                             {person.shirtSize ?? '—'}
                                         </Table.Cell>
-                                        <Table.Cell class="text-muted-foreground">
-                                            {formatPartialBirthDate(
-                                                person.birthYear,
-                                                person.birthMonth,
-                                                person.birthDay,
-                                            ) || '—'}
-                                        </Table.Cell>
-                                        <Table.Cell class="text-muted-foreground">
-                                            {YES_NO(person.vegetarianMeal)}
-                                        </Table.Cell>
-                                        <Table.Cell class="text-muted-foreground">
-                                            {YES_NO(person.attendedReunion2025)}
-                                        </Table.Cell>
+                                        <!-- Editable in place. Each cell owns its own form — see
+                                             PersonFieldForm for why one per cell rather than one per
+                                             row. -->
+                                        {#each PERSON_FIELDS as field (field.field)}
+                                            <Table.Cell class="w-36">
+                                                <PersonFieldForm
+                                                    memberId={person.id}
+                                                    personName={person.name}
+                                                    field={field.field}
+                                                    label={field.label}
+                                                    kind={field.kind}
+                                                    value={field.value(person)} />
+                                            </Table.Cell>
+                                        {/each}
                                         <Table.Cell>
                                             <a
                                                 href="/admin/event/{data.event
