@@ -37,7 +37,7 @@ export const load: PageServerLoad = async (event) => {
 }
 
 export const actions: Actions = {
-    /* Corrects the three details an organiser fills in from a phone call or a stack of paper forms:
+    /* Corrects the details an organiser fills in from a phone call or a stack of paper forms: shirt size,
        birthday, dietary answer, and whether they came last time. Edited straight from the People lens,
        because that is where the gaps are visible and where the shirt and meal counts they feed are read.
 
@@ -79,10 +79,13 @@ export const actions: Actions = {
 
            parseYesNo maps '' to undefined, and updateAdminMemberDetails reads undefined as "leave this
            field alone", so a still-blank answer writes nothing rather than a guess. birthDate is
-           different: an empty string IS a clear, which the updater turns into three nulls. */
+           different: an empty string IS a clear, which the updater turns into three nulls — as is
+           shirtSize, which the updater turns into null. Neither select offers the blank as a choice, so
+           a clear can only arrive from a deliberate posted value. */
         const updated = await updateAdminMemberDetails({
             memberId,
             birthDate: data.has('birthDate') ? String(data.get('birthDate')) : undefined,
+            shirtSize: data.has('shirtSize') ? String(data.get('shirtSize')) : undefined,
             vegetarianMeal: data.has('vegetarianMeal')
                 ? parseYesNo(String(data.get('vegetarianMeal')))
                 : undefined,

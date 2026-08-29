@@ -1,5 +1,6 @@
 <script lang="ts">
 import { enhance } from '$app/forms'
+import { shirtSizeOptions } from './shirtSizeOptions'
 
 /* One field of one attendee, in its own form.
 
@@ -23,13 +24,18 @@ let {
 }: {
     memberId: string
     personName: string
-    field: 'birthDate' | 'vegetarianMeal' | 'attendedReunion2025'
+    field: 'birthDate' | 'shirtSize' | 'vegetarianMeal' | 'attendedReunion2025'
     label: string
     value: string
-    kind: 'date' | 'yesno'
+    kind: 'date' | 'shirt' | 'yesno'
 } = $props()
 
 let saving = $state(false)
+
+/* A size recorded before this list settled — or an adult size on a child, which every form in the app
+   currently allows — must still appear, or the select would show the wrong row as selected and the
+   organiser would have no way to see what is actually stored. See shirtSizeOptions. */
+let sizeOptions = $derived(shirtSizeOptions(value))
 
 function handleChange(changed: Event) {
     ;(changed.currentTarget as HTMLInputElement | HTMLSelectElement).form?.requestSubmit()
@@ -61,6 +67,22 @@ const CONTROL_CLASS =
             {value}
             onchange={handleChange}
             class={CONTROL_CLASS} />
+    {:else if kind === 'shirt'}
+        <select
+            name={field}
+            aria-label="{label} for {personName}"
+            disabled={saving}
+            {value}
+            onchange={handleChange}
+            class={CONTROL_CLASS}>
+            <!-- Disabled, like the yes/no blank: a size is something to fill in, and offering the blank
+                 as a choice would make "clear this shirt size" a one-key mistake next to the size above
+                 it. The shirt order is read straight off these values. -->
+            <option value="" disabled>—</option>
+            {#each sizeOptions as size (size)}
+                <option value={size}>{size}</option>
+            {/each}
+        </select>
     {:else}
         <select
             name={field}

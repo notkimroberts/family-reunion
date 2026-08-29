@@ -56,14 +56,24 @@ const YES_NO_VALUE = (value: boolean | null) => (value === null ? '' : value ? '
 /* Matches the subheadings on the event settings page, so the two admin surfaces read as one design. */
 const SUBHEAD_CLASS = 'text-muted-foreground text-xs font-semibold tracking-wide uppercase'
 
-/* The three details an organiser fills in from a phone call or a paper form, editable in place on the
-   People lens. Declared once and rendered by both the table and the mobile cards, so the two cannot end
-   up offering different fields.
+/* The details an organiser fills in from a phone call or a paper form, editable in place on the
+   People lens. Declared once and rendered by both the table and the mobile cards — and the table's
+   own headers come off this list too, so the columns cannot end up in a different order from the
+   cells beneath them.
 
-   Shirt size is deliberately NOT here even though the sidebar counts it: every ShirtSizeSelect in the app
-   renders the adult SHIRT_SIZES list regardless of tier, so a Child row would offer adult sizes. Worth
-   fixing before making it editable from a page whose whole job is the shirt order. */
+   Shirt size is here despite a real caveat: every shirt list in the app renders the adult SHIRT_SIZES
+   values regardless of the tier's shirtSizeCategory, so a Child row offers adult sizes. That is
+   deliberately left alone here rather than invented around — this control offers exactly what the
+   public form offered the registrant, so the two agree, and a youth vocabulary would be a change to
+   what is collected rather than a fix to what is displayed. PersonFieldForm does keep any existing
+   value that is not on the list, so nothing already recorded is hidden. */
 const PERSON_FIELDS = [
+    {
+        field: 'shirtSize',
+        label: 'Shirt',
+        kind: 'shirt',
+        value: (person: EventPerson) => person.shirtSize ?? '',
+    },
     {
         field: 'birthDate',
         label: 'Born',
@@ -409,9 +419,11 @@ $effect(() => {
                                     <div class="flex items-start justify-between gap-2">
                                         <div class="min-w-0">
                                             <p class="truncate font-medium">{person.name}</p>
+                                            <!-- Tier only. The shirt size used to sit here as text and
+                                                 is now one of the editable rows below, so repeating it
+                                                 would give the same value two places to disagree. -->
                                             <p class="text-muted-foreground mt-0.5 text-xs">
-                                                {person.tierLabel}{#if person.shirtSize}
-                                                    · shirt {person.shirtSize}{/if}
+                                                {person.tierLabel}
                                             </p>
                                         </div>
                                         <RegistrationStatusBadge status={person.status} />
@@ -452,10 +464,11 @@ $effect(() => {
                                 <Table.Row>
                                     <Table.Head>Person</Table.Head>
                                     <Table.Head>Tier</Table.Head>
-                                    <Table.Head>Shirt</Table.Head>
-                                    <Table.Head>Born</Table.Head>
-                                    <Table.Head>Vegetarian</Table.Head>
-                                    <Table.Head>Came in 2025</Table.Head>
+                                    <!-- Off PERSON_FIELDS, so a column cannot end up labelling the
+                                         wrong control. -->
+                                    {#each PERSON_FIELDS as field (field.field)}
+                                        <Table.Head>{field.label}</Table.Head>
+                                    {/each}
                                     <Table.Head>Registered by</Table.Head>
                                 </Table.Row>
                             </Table.Header>
@@ -465,9 +478,6 @@ $effect(() => {
                                         <Table.Cell class="font-medium">{person.name}</Table.Cell>
                                         <Table.Cell class="text-muted-foreground">
                                             {person.tierLabel}
-                                        </Table.Cell>
-                                        <Table.Cell class="text-muted-foreground">
-                                            {person.shirtSize ?? '—'}
                                         </Table.Cell>
                                         <!-- Editable in place. Each cell owns its own form — see
                                              PersonFieldForm for why one per cell rather than one per
