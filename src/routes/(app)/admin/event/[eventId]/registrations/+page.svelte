@@ -11,6 +11,7 @@ import { cn, formatPrice, getPaymentState } from '$lib/utils'
 import { formatPartialBirthDate } from '$lib/utils/age'
 import PaymentChannel from './PaymentChannel.svelte'
 import RegistrationStatusBadge from './RegistrationStatusBadge.svelte'
+import { getPeopleSummary } from './peopleSummary'
 import { getRegistrationTotals } from './registrationTotals'
 
 /* One event, two lenses. Bookings is one row per party — who owes what, who to chase. People is one row
@@ -42,6 +43,9 @@ const SUBHEAD_CLASS = 'text-muted-foreground text-xs font-semibold tracking-wide
 let { data } = $props()
 
 let totals = $derived(getRegistrationTotals(data.registrations))
+/* The order sheet — shirt sizes per tier and the meal split. Derived from the same people the People
+   lens lists, and only shown there. */
+let summary = $derived(getPeopleSummary(data.people))
 let showPeople = $derived(page.url.searchParams.get('view') === 'people')
 
 let search = $state('')
@@ -162,9 +166,6 @@ let visiblePeople = $derived(
                     ${formatPrice(totals.outstandingCents)}
                 </span>
             </div>
-            {#if totals.pendingPartyCount > 0}
-                <p class="text-muted-foreground text-xs">Each one is marked in the list.</p>
-            {/if}
         </div>
 
         <Separator />
@@ -252,6 +253,73 @@ let visiblePeople = $derived(
                 Everyone with a place — paid or covered. {data.people.length}
                 {data.people.length === 1 ? 'person' : 'people'}. Unpaid parties are in Bookings.
             </p>
+
+            {#if data.people.length > 0}
+                <!-- What to order, off the list it is derived from. Deliberately NOT in the status card:
+                     that card is a glance at the year, this is a purchase order, and it belongs next to
+                     the rows a caterer or a printer would check it against.
+
+                     Counts only these people — paid or covered — because ordering shirts for a party that
+                     may never pay buys garments for nobody. -->
+                <div class="grid grid-cols-1 gap-4 rounded-lg border bg-card p-4 sm:grid-cols-2">
+                    <div class="flex flex-col gap-2">
+                        <p class={SUBHEAD_CLASS}>T-shirts</p>
+                        {#each summary.shirtsByTier as tier (tier.tierLabel)}
+                            <div class="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+                                <span class="w-14 shrink-0 text-sm font-medium">
+                                    {tier.tierLabel}
+                                </span>
+                                {#if tier.sizes.length === 0}
+                                    <span class="text-muted-foreground text-sm">none recorded</span>
+                                {:else}
+                                    {#each tier.sizes as { size, count } (size)}
+                                        <span class="text-sm tabular-nums">
+                                            {size}
+                                            <span class="font-semibold">{count}</span>
+                                        </span>
+                                    {/each}
+                                {/if}
+                            </div>
+                        {/each}
+                        {#if summary.shirtsMissing > 0}
+                            <!-- A person to go back to, not a size to guess. -->
+                            <p class="text-xs text-amber-700 dark:text-amber-400">
+                                {summary.shirtsMissing}
+                                {summary.shirtsMissing === 1 ? 'person has' : 'people have'} no size recorded.
+                            </p>
+                        {/if}
+                    </div>
+
+                    <div class="flex flex-col gap-2">
+                        <p class={SUBHEAD_CLASS}>Meals</p>
+                        <div class="flex items-baseline justify-between gap-3">
+                            <span class="text-muted-foreground text-sm">Vegetarian</span>
+                            <span class="text-sm font-semibold tabular-nums">
+                                {summary.vegetarian}
+                            </span>
+                        </div>
+                        <div class="flex items-baseline justify-between gap-3">
+                            <span class="text-muted-foreground text-sm">Standard</span>
+                            <span class="text-sm font-semibold tabular-nums">
+                                {summary.standard}
+                            </span>
+                        </div>
+                        {#if summary.mealUnanswered > 0}
+                            <!-- Kept out of Standard on purpose: three vegetarians and two unknowns is a
+                                 different order from three vegetarians. -->
+                            <div class="flex items-baseline justify-between gap-3">
+                                <span class="text-sm text-amber-700 dark:text-amber-400">
+                                    Not answered
+                                </span>
+                                <span
+                                    class="text-sm font-semibold tabular-nums text-amber-700 dark:text-amber-400">
+                                    {summary.mealUnanswered}
+                                </span>
+                            </div>
+                        {/if}
+                    </div>
+                </div>
+            {/if}
 
             {#if data.people.length === 0}
                 <p class="text-muted-foreground text-sm">Nobody has a place for this year yet.</p>
