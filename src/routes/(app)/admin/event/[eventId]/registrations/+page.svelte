@@ -9,13 +9,7 @@ import { Input } from '$lib/components/ui/input'
 import { Separator } from '$lib/components/ui/separator'
 import * as Table from '$lib/components/ui/table'
 import type { EventPerson } from '$lib/server/registrations'
-import {
-    cn,
-    formatPrice,
-    formatViewerDateTime,
-    getPaymentState,
-    type RegistrationStatus,
-} from '$lib/utils'
+import { cn, formatPrice, formatViewerDateTime, type RegistrationStatus } from '$lib/utils'
 import { formatBirthDate } from '$lib/utils/age'
 import PaymentChannel from './PaymentChannel.svelte'
 import PaymentNote from './PaymentNote.svelte'
@@ -24,6 +18,7 @@ import RegistrationStatusBadge from './RegistrationStatusBadge.svelte'
 import { getPeopleSummary } from './peopleSummary'
 import { REGISTRATION_STATUS_STYLES } from './registrationStatusStyles'
 import { getRegistrationTotals } from './registrationTotals'
+import { rowAccent } from './rowAccent'
 
 /* One event, two lenses. Bookings is one row per party — who owes what, who to chase. People is one row
    per attendee, which is what catering, shirt counts and the name badges come off: a party of six is one
@@ -124,21 +119,8 @@ function matchesSearch(haystack: string[]): boolean {
     return term === '' || haystack.some((value) => value.toLowerCase().includes(term))
 }
 
-/* The coloured edge on a booking row: amber when it needs chasing, green when the money is in.
-
-   Both pending states get amber and both paid states get green, because the edge answers "does this row
-   want anything from me" at a glance and the note beside the name says which kind. Waived and refunded get
-   no edge — nothing is owed and nothing arrived, so a colour would only compete with the badge. */
-function rowAccent(registration: (typeof data.registrations)[number]): string {
-    const state = getPaymentState(registration)
-    if (state === 'checkout_incomplete' || state === 'awaiting_payment') {
-        return 'border-l-4 border-l-amber-500 pl-3'
-    }
-    if (state === 'paid_online' || state === 'paid_offline') {
-        return 'border-l-4 border-l-green-500 pl-3'
-    }
-    return ''
-}
+/* The coloured left edge on a booking row lives in rowAccent.ts — extracted so every payment state
+   can be proven to have decided whether it gets one. Refunded silently had none. */
 
 let visibleBookings = $derived(
     data.registrations

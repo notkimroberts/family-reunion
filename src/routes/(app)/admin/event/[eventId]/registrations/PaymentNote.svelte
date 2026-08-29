@@ -7,7 +7,9 @@ import { getPaymentState, stripePaymentUrl } from '$lib/utils'
 
    Amber for the two pending states, which need opposite follow-ups — one family thinks their payment
    failed, the other owes money by post. Green for money in, with the day it arrived and, when the
-   registration came through Checkout, a link to the payment in the Stripe dashboard.
+   registration came through Checkout, a link to the payment in the Stripe dashboard. Red for a
+   cancellation, which is the row most easily misread as live. Waived says nothing here — the badge
+   already carries it and there is no money to describe.
 
    `paidLabel` arrives as a PROP rather than being formatted here. formatViewerDateTime resolves the
    reader's own timezone and must not run during SSR — on Railway that is Node in UTC, and Svelte does not
@@ -37,11 +39,29 @@ let {
 let paymentState = $derived(getPaymentState(registration))
 let chase = $derived(CHASE_COPY[paymentState as keyof typeof CHASE_COPY])
 let isPaid = $derived(paymentState === 'paid_online' || paymentState === 'paid_offline')
+let isCancelled = $derived(paymentState === 'cancelled')
 let paymentUrl = $derived(stripePaymentUrl(registration.stripePaymentIntentId, stripeTestMode))
 </script>
 
 {#if chase}
     <p class="text-xs text-amber-700 dark:text-amber-400">{chase}</p>
+{:else if isCancelled}
+    <!-- No date: there is no refundedAt column, and updatedAt is bumped by any later edit, so it
+         would drift away from the day the money went back. The Stripe link is the reliable record —
+         the refund is listed on the payment it came from. -->
+    <p class="flex flex-wrap items-center gap-x-1.5 text-xs text-red-700 dark:text-red-400">
+        <span>Cancelled — refunded</span>
+        {#if paymentUrl}
+            <a
+                href={paymentUrl}
+                target="_blank"
+                rel="noreferrer noopener"
+                class="inline-flex items-center gap-1 underline underline-offset-2 hover:no-underline">
+                View in Stripe
+                <ExternalLink class="size-3" />
+            </a>
+        {/if}
+    </p>
 {:else if isPaid}
     <p class="flex flex-wrap items-center gap-x-1.5 text-xs text-green-700 dark:text-green-400">
         {#if registration.paidAt}
