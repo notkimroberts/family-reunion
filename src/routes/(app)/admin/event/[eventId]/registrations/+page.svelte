@@ -1,5 +1,6 @@
 <script lang="ts">
 import { Plus, Search, Settings, Users } from '@lucide/svelte'
+import { SvelteMap } from 'svelte/reactivity'
 import { goto } from '$app/navigation'
 import { page } from '$app/state'
 import { AdminDataView } from '$lib/components'
@@ -8,9 +9,16 @@ import { Input } from '$lib/components/ui/input'
 import { Separator } from '$lib/components/ui/separator'
 import * as Table from '$lib/components/ui/table'
 import type { EventPerson } from '$lib/server/registrations'
-import { cn, formatPrice, getPaymentState, type RegistrationStatus } from '$lib/utils'
+import {
+    cn,
+    formatPrice,
+    formatViewerDateTime,
+    getPaymentState,
+    type RegistrationStatus,
+} from '$lib/utils'
 import { formatBirthDate } from '$lib/utils/age'
 import PaymentChannel from './PaymentChannel.svelte'
+import PaymentNote from './PaymentNote.svelte'
 import PersonFieldForm from './PersonFieldForm.svelte'
 import RegistrationStatusBadge from './RegistrationStatusBadge.svelte'
 import { getPeopleSummary } from './peopleSummary'
@@ -45,13 +53,6 @@ const STATUS_FILTERS: (RegistrationStatus | undefined)[] = [
     'waived',
     'refunded',
 ]
-
-/* Both pending states are 'pending' in the database and need opposite follow-ups. Telling them apart from
-   a list row only became possible once RegistrationSummary.status stopped being a plain `string`. */
-const chaseReasonValue = {
-    checkout_incomplete: 'Started paying online and stopped — they may think it failed',
-    awaiting_payment: 'Entered from a paper form; the money has not arrived',
-}
 
 /* The form value for a nullable yes/no: '' when unanswered, which the select renders as a disabled dash
    and the action reads as "leave this field alone". */
@@ -123,9 +124,20 @@ function matchesSearch(haystack: string[]): boolean {
     return term === '' || haystack.some((value) => value.toLowerCase().includes(term))
 }
 
-function chaseReason(registration: (typeof data.registrations)[number]): string | undefined {
+/* The coloured edge on a booking row: amber when it needs chasing, green when the money is in.
+
+   Both pending states get amber and both paid states get green, because the edge answers "does this row
+   want anything from me" at a glance and the note beside the name says which kind. Waived and refunded get
+   no edge — nothing is owed and nothing arrived, so a colour would only compete with the badge. */
+function rowAccent(registration: (typeof data.registrations)[number]): string {
     const state = getPaymentState(registration)
-    return chaseReasonValue[state as keyof typeof chaseReasonValue]
+    if (state === 'checkout_incomplete' || state === 'awaiting_payment') {
+        return 'border-l-4 border-l-amber-500 pl-3'
+    }
+    if (state === 'paid_online' || state === 'paid_offline') {
+        return 'border-l-4 border-l-green-500 pl-3'
+    }
+    return ''
 }
 
 let visibleBookings = $derived(
@@ -140,6 +152,23 @@ let visibleBookings = $derived(
 let visiblePeople = $derived(
     data.people.filter((person) => matchesSearch([person.name, person.contactName])),
 )
+
+/* Payment dates in the READER's timezone, filled in after mount.
+
+   NOT a $derived, though it looks like one: $derived is evaluated during SSR too, and with no timeZone
+   option Intl resolves to the server's zone — UTC on Railway. Svelte does not recompute template text on
+   hydration, so a server-rendered time simply stays wrong. A payment at 23:30 Pacific is the next DAY in
+   UTC, so this is a wrong-date bug, not a wrong-clock one. Same shape and same reason as
+   RegistrationHistory. */
+let paidLabels = new SvelteMap<string, string>()
+
+$effect(() => {
+    for (const registration of data.registrations) {
+        if (registration.paidAt) {
+            paidLabels.set(registration.id, formatViewerDateTime(registration.paidAt))
+        }
+    }
+})
 </script>
 
 <svelte:head>
@@ -499,12 +528,11 @@ let visiblePeople = $derived(
                 {#snippet mobileCards()}
                     <div class="flex flex-col gap-3">
                         {#each visibleBookings as registration (registration.id)}
-                            {@const reason = chaseReason(registration)}
                             <a
                                 href="/admin/event/{data.event.id}/registrations/{registration.id}"
                                 class={cn(
                                     'rounded-lg border bg-card p-4 hover:bg-muted',
-                                    reason && 'border-l-4 border-l-amber-500',
+                                    rowAccent(registration),
                                 )}>
                                 <div class="flex items-start justify-between gap-2">
                                     <div class="min-w-0">
@@ -529,11 +557,12 @@ let visiblePeople = $derived(
                                     <PaymentChannel
                                         stripeSessionId={registration.stripeSessionId} />
                                 </p>
-                                {#if reason}
-                                    <p class="mt-1.5 text-xs text-amber-700 dark:text-amber-400">
-                                        {reason}
-                                    </p>
-                                {/if}
+                                <div class="mt-1.5">
+                                    <PaymentNote
+                                        {registration}
+                                        stripeTestMode={data.stripeTestMode}
+                                        paidLabel={paidLabels.get(registration.id)} />
+                                </div>
                             </a>
                         {/each}
                     </div>
@@ -553,20 +582,18 @@ let visiblePeople = $derived(
                         </Table.Header>
                         <Table.Body>
                             {#each visibleBookings as registration (registration.id)}
-                                {@const reason = chaseReason(registration)}
                                 <Table.Row>
-                                    <Table.Cell
-                                        class={cn(reason && 'border-l-4 border-l-amber-500 pl-3')}>
+                                    <Table.Cell class={rowAccent(registration)}>
                                         <p class="font-medium">{registration.contactName}</p>
                                         <p class="text-muted-foreground text-xs">
                                             {registration.contactEmail}
                                         </p>
-                                        {#if reason}
-                                            <p
-                                                class="mt-0.5 text-xs text-amber-700 dark:text-amber-400">
-                                                {reason}
-                                            </p>
-                                        {/if}
+                                        <div class="mt-0.5">
+                                            <PaymentNote
+                                                {registration}
+                                                stripeTestMode={data.stripeTestMode}
+                                                paidLabel={paidLabels.get(registration.id)} />
+                                        </div>
                                     </Table.Cell>
                                     <Table.Cell>
                                         <RegistrationStatusBadge status={registration.status} />

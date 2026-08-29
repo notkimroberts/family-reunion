@@ -10,6 +10,8 @@ function reg(overrides: Partial<RegistrationSummary>): RegistrationSummary {
         contactPhone: null,
         status: 'paid',
         stripeSessionId: 'cs_test_1',
+        stripePaymentIntentId: 'pi_test_1',
+        paidAt: new Date('2026-08-10T00:00:00Z'),
         memberCount: 1,
         totalCents: 16000,
         createdAt: new Date('2026-08-01T00:00:00Z'),

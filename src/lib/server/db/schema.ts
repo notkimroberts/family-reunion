@@ -190,7 +190,25 @@ export const registrations = pgTable(
             .notNull()
             .references(() => reunionEvents.id),
         stripeSessionId: text('stripe_session_id').unique(),
+        /* The Stripe PaymentIntent for the original checkout, at registration level.
+
+           party_members carries its own copy, but that one is per-member and documented as unreliable —
+           null for a cheque payer AND for an abandoned checkout, with removeMember falling back to
+           retrieving it from the session. This is the id the admin list links to the Stripe dashboard
+           with, so it needs to be the registration's own. */
+        stripePaymentIntentId: text('stripe_payment_intent_id'),
         status: registrationStatusEnum('status').notNull().default('pending'),
+        /* When the money actually arrived, as distinct from updatedAt.
+
+           updatedAt cannot answer this: any later edit — a corrected email, a shirt size — bumps it, so
+           it drifts away from the payment date the moment anyone touches the row. Stripe fulfilment also
+           writes no audit row, so before this column there was no record of when an online payment
+           landed.
+
+           NULL for every registration paid before this column existed, and for anything not paid. The
+           admin list shows the date when it has one and says nothing when it does not, rather than
+           printing updatedAt and calling it a payment date. */
+        paidAt: timestamp('paid_at'),
         createdAt: timestamp('created_at').notNull().defaultNow(),
         updatedAt: timestamp('updated_at').notNull().defaultNow(),
     },

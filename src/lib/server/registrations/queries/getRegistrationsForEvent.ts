@@ -13,6 +13,11 @@ export type RegistrationSummary = {
        cheque that has not arrived. That distinction is the whole reason getPaymentState exists. */
     status: (typeof registrationStatusEnum.enumValues)[number]
     stripeSessionId: string | null
+    /* For the dashboard deep link on a paid row. Null for anything not paid online. */
+    stripePaymentIntentId: string | null
+    /* When the money arrived, or null when that was never recorded — see the column comment. Not
+       updatedAt, which any later edit bumps. */
+    paidAt: Date | null
     memberCount: number
     totalCents: number
     createdAt: Date
@@ -43,6 +48,8 @@ export async function getRegistrationsForEvent(eventId: string): Promise<Registr
             contactPhone: registrations.contactPhone,
             status: registrations.status,
             stripeSessionId: registrations.stripeSessionId,
+            stripePaymentIntentId: registrations.stripePaymentIntentId,
+            paidAt: registrations.paidAt,
             createdAt: registrations.createdAt,
             memberCount: count(partyMembers.id),
             totalCents: sum(partyMembers.priceCents),

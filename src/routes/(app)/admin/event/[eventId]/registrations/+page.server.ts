@@ -1,5 +1,6 @@
 import { error, fail } from '@sveltejs/kit'
 import { eq } from 'drizzle-orm'
+import { env } from '$env/dynamic/private'
 import { requireAdmin } from '$lib/server/auth/guards'
 import { db } from '$lib/server/db'
 import { partyMembers, registrations } from '$lib/server/db/schema'
@@ -25,7 +26,14 @@ export const load: PageServerLoad = async (event) => {
         getEventPeople(event.params.eventId),
     ])
 
-    return { registrations, people }
+    return {
+        registrations,
+        people,
+        /* Which Stripe dashboard a payment link should point at. Test and live PaymentIntent ids look
+           alike, so the id cannot say — but the secret key can, and this is the only place that sees it.
+           A test id under the live path shows "no such payment", which reads as a lost payment. */
+        stripeTestMode: env.STRIPE_SECRET_KEY?.startsWith('sk_test_') ?? true,
+    }
 }
 
 export const actions: Actions = {

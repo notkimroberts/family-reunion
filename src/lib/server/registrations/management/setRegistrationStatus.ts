@@ -53,7 +53,15 @@ export async function setRegistrationStatus(params: {
 
     await db
         .update(registrations)
-        .set({ status: params.status, updatedAt: new Date() })
+        .set({
+            status: params.status,
+            /* Recorded when the organiser says the money arrived, and CLEARED when they take it back.
+               A registration moved from paid to pending is owed again, and a stale paid date beside a
+               Pending badge is worse than no date — it reads as a payment that has gone missing. Waived
+               gets none: nothing was paid, so there is no payment date to show. */
+            paidAt: params.status === 'paid' ? new Date() : null,
+            updatedAt: new Date(),
+        })
         .where(eq(registrations.id, params.registrationId))
 
     dbg.register(

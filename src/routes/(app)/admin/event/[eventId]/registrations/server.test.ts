@@ -21,6 +21,8 @@ const { mockRequireAdmin, mockUpdateMember, mockAudit, mockNotify } = vi.hoisted
 }))
 
 vi.mock('$lib/server/db', () => ({ db: mockDb }))
+/* The load reads STRIPE_SECRET_KEY to decide which Stripe dashboard a payment link points at. */
+vi.mock('$env/dynamic/private', () => ({ env: { STRIPE_SECRET_KEY: 'sk_test_x' } }))
 vi.mock('$lib/server/db/schema', () => ({ partyMembers: {}, registrations: {} }))
 vi.mock('drizzle-orm', () => ({ eq: vi.fn() }))
 vi.mock('$lib/server/auth/guards', () => ({ requireAdmin: mockRequireAdmin }))

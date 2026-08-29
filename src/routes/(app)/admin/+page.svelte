@@ -1,5 +1,5 @@
 <script lang="ts">
-import { ArrowRight, CalendarDays, Plus, Settings } from '@lucide/svelte'
+import { ArrowRight, CalendarDays, Plus } from '@lucide/svelte'
 import { Button } from '$lib/components/ui/button'
 import { APP_NAME } from '$lib/general/constants'
 import type { EventSummary } from '$lib/server/registrations'
@@ -150,13 +150,4 @@ function dates(event: EventSummary): string | undefined {
             {/each}
         </div>
     </section>
-
-    {#if data.isOwner}
-        <section class="col-span-12">
-            <Button href="/admin/setup" variant="ghost" size="sm">
-                <Settings class="size-4" />
-                Setup
-            </Button>
-        </section>
-    {/if}
 {/if}
