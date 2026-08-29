@@ -528,17 +528,26 @@ $effect(() => {
                 {#snippet mobileCards()}
                     <div class="flex flex-col gap-3">
                         {#each visibleBookings as registration (registration.id)}
-                            <a
-                                href="/admin/event/{data.event.id}/registrations/{registration.id}"
+                            <!-- Not a link, though it was one. PaymentNote now renders a "View in
+                                 Stripe" anchor, and an <a> inside an <a> is invalid HTML: the browser
+                                 hoists the inner one out during parsing, the hydrated tree no longer
+                                 matches the server's, and Svelte throws — which took down the whole
+                                 page, desktop included, because BOTH branches of AdminDataView are in
+                                 the DOM at every width and only one of them is display:none. The name
+                                 carries the link instead, the same shape the People card uses. -->
+                            <div
                                 class={cn(
-                                    'rounded-lg border bg-card p-4 hover:bg-muted',
+                                    'rounded-lg border bg-card p-4',
                                     rowAccent(registration),
                                 )}>
                                 <div class="flex items-start justify-between gap-2">
                                     <div class="min-w-0">
-                                        <p class="truncate font-medium">
+                                        <a
+                                            href="/admin/event/{data.event
+                                                .id}/registrations/{registration.id}"
+                                            class="block truncate font-medium hover:underline">
                                             {registration.contactName}
-                                        </p>
+                                        </a>
                                         <p class="text-muted-foreground mt-0.5 truncate text-xs">
                                             {registration.contactEmail}
                                         </p>
@@ -563,7 +572,17 @@ $effect(() => {
                                         stripeTestMode={data.stripeTestMode}
                                         paidLabel={paidLabels.get(registration.id)} />
                                 </div>
-                            </a>
+                                <div class="mt-3">
+                                    <Button
+                                        href="/admin/event/{data.event
+                                            .id}/registrations/{registration.id}"
+                                        variant="outline"
+                                        size="sm"
+                                        class="w-full">
+                                        Manage
+                                    </Button>
+                                </div>
+                            </div>
                         {/each}
                     </div>
                 {/snippet}

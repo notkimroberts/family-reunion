@@ -53,7 +53,17 @@ let hasChanges = $derived(
             method="POST"
             action="?/update_member"
             use:enhance={() => {
-                return ({ result }) => {
+                /* update() is what re-runs the page load, and returning a callback at all REPLACES
+                   SvelteKit's default handler — so without this line the save reached the database
+                   and the party table went on showing the old birthday, shirt size and meal answer
+                   until the registrant refreshed by hand. They had no reason to: the dialog closed
+                   as though it had worked.
+
+                   reset: false because every field is bound to local $state, and form.reset() would
+                   put the DOM inputs back to their HTML defaults while the state kept the new
+                   values. */
+                return async ({ result, update }) => {
+                    await update({ reset: false })
                     if (result.type === 'success') {
                         open = false
                     }

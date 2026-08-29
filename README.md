@@ -82,10 +82,14 @@ The app will be available at `http://localhost:5173`.
 Stripe delivers webhook events to a public URL, so local dev requires the Stripe CLI to forward them to your running server. In a second terminal:
 
 ```bash
-stripe listen --forward-to localhost:5173/api/webhooks/stripe
+bun run stripe:dev
 ```
 
-The CLI will print a webhook signing secret (`whsec_...`). Set that value as `STRIPE_WEBHOOK_SECRET` in your `.env` — it's different from your production secret. Leave `stripe listen` running alongside `bun run dev` whenever testing the registration or checkout flow.
+This finds your dev server rather than assuming port 5173 — Vite increments to 5174 and up when the port is taken, and a forward to the wrong port fails **silently**: the app never sees `checkout.session.completed`, so no confirmation email is sent and the registration sits at `pending` while the payer believes they have paid. The script probes `/api/health` and prints the URL it is forwarding to; if it finds nothing it refuses to start instead of forwarding into the void.
+
+Set `PORT=5180 bun run stripe:dev` for a tunnel or container the probe cannot reach — that port is used without probing. Anything after `--` is passed to the Stripe CLI, e.g. `bun run stripe:dev -- --events checkout.session.completed`.
+
+The CLI will print a webhook signing secret (`whsec_...`). Set that value as `STRIPE_WEBHOOK_SECRET` in your `.env` — it's different from your production secret. Leave it running alongside `bun run dev` whenever testing the registration or checkout flow.
 
 ## Database Commands
 

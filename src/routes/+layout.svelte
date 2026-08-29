@@ -28,6 +28,27 @@ function handleRenderError(error: unknown) {
         extra: { url: typeof location !== 'undefined' ? location.href : undefined },
     })
 }
+
+/* The dev-only readout under the message.
+
+   `String(error)` was printing "[object Object]", which is worse than printing nothing: it says an
+   error exists and refuses to say which. Svelte throws non-Error values for exactly the failures
+   most likely to reach this boundary — a hydration mismatch arrives as a plain object — so the
+   default path hit the unhelpful branch.
+
+   Message and stack for a real Error, JSON for anything shaped, and String() only as the last
+   resort. Wrapped because a value with a circular reference makes JSON.stringify throw, and an
+   error page that throws while describing an error leaves a blank screen. */
+function formatError(error: unknown): string {
+    if (error instanceof Error) {
+        return error.stack ?? `${error.name}: ${error.message}`
+    }
+    try {
+        return JSON.stringify(error, undefined, 2) ?? String(error)
+    } catch {
+        return String(error)
+    }
+}
 </script>
 
 <svelte:boundary onerror={handleRenderError}>
@@ -52,7 +73,8 @@ function handleRenderError(error: unknown) {
                 <a class="underline" href="mailto:{CONTACT_EMAIL}">{CONTACT_EMAIL}</a>
             </p>
             {#if import.meta.env.DEV}
-                <pre class="text-destructive max-w-full overflow-auto text-left text-xs">{String(
+                <pre
+                    class="text-destructive max-w-full overflow-auto text-left text-xs whitespace-pre-wrap">{formatError(
                         error,
                     )}</pre>
             {/if}
