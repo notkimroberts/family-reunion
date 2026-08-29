@@ -114,7 +114,7 @@ const FAMILY_STATS = [
 
 <svelte:head>
     <title>{APP_NAME} — Home</title>
-    <meta name="description" content="Family reunion — registration, events, and family tree" />
+    <meta name="description" content="Family reunion — registration, events, and the program" />
 </svelte:head>
 
 <!-- Hero -->
@@ -202,12 +202,6 @@ const FAMILY_STATS = [
                     {:else if eventState === 'past'}
                         <div>
                             <p class="mb-4 text-2xl font-bold">Thanks for an amazing reunion!</p>
-                            <!-- /gallery is admin-only for launch, so offering this button to
-                                 everyone would send family members to an admin login form.
-                                 Widen isPublicPath to reopen the gallery, and this returns. -->
-                            {#if data.user?.role === 'admin'}
-                                <Button href="/gallery" size="lg">View Photos</Button>
-                            {/if}
                         </div>
                     {:else}
                         <p class="text-muted-foreground">Stay tuned for the next reunion!</p>

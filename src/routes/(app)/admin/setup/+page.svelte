@@ -1,13 +1,5 @@
 <script lang="ts">
-import {
-    CalendarCog,
-    CalendarDays,
-    ChevronRight,
-    Images,
-    ShoppingBag,
-    Tags,
-    Users,
-} from '@lucide/svelte'
+import { CalendarCog, CalendarDays, ChevronRight, ShoppingBag, Tags, Users } from '@lucide/svelte'
 
 /* Set once a year, then left alone. Deliberately quieter than the Organizer side — no numbers, no
    urgency, no colour. Being here should feel like opening a drawer. */
@@ -38,14 +30,6 @@ let links = $derived([
         note: 'Add a year, or open and close registration',
         Icon: CalendarDays,
         href: '/admin/setup/events',
-    },
-    {
-        /* Not "Upload" — the upload action lives on the gallery page, not here. Three separate places in
-           the codebase claimed otherwise; admin/photos has exactly one action, delete_photo. */
-        label: 'Photos',
-        note: 'Remove photos from the gallery',
-        Icon: Images,
-        href: '/admin/photos',
     },
     {
         label: 'Storefront',

@@ -71,10 +71,9 @@ describe('isPublicPath', () => {
     )
 
     /* Locked for launch: admin-only. The /admin/event/… and /admin/setup shapes are new, and the
-       prefix list already fails them closed — these pin that, so a later "reopen the gallery" edit to
-       PUBLIC_PATH_PREFIXES cannot quietly widen to an admin path. */
+       prefix list already fails them closed — these pin that, so a later "reopen a page after the
+       reunion" edit to PUBLIC_PATH_PREFIXES cannot quietly widen to an admin path. */
     it.each([
-        '/gallery',
         '/shop',
         '/program',
         '/changelog',

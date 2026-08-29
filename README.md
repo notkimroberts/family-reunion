@@ -4,7 +4,7 @@
 [![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/project/879a5c19-03d9-426a-aee3-207aec98321a/service/f968a4a8-5fc2-473c-b4a7-fa737dbe9e17)
 [![Sentry](https://img.shields.io/badge/sentry-monitored-362d59)](https://22aae0d29adf.sentry.io/projects/family-reunion/?project=4511474410061824)
 
-A web application for managing family reunions — registration, payments, family tree, photo gallery, and more.
+A web application for managing family reunions — registration, payments, and the organiser's dashboard for both.
 
 ## Tech Stack
 
@@ -12,7 +12,6 @@ A web application for managing family reunions — registration, payments, famil
 - **Database**: PostgreSQL + Drizzle ORM
 - **Auth**: Better Auth (email + password, admin only — public sign-up disabled)
 - **Payments**: Stripe Checkout
-- **Storage**: Cloudflare R2
 - **Email**: Resend
 - **Error monitoring**: Sentry
 - **Styling**: Tailwind CSS v4 + shadcn-svelte
@@ -23,7 +22,6 @@ A web application for managing family reunions — registration, payments, famil
 - [Bun](https://bun.sh) (v1.3+)
 - PostgreSQL (local instance)
 - Stripe account
-- Cloudflare R2 bucket
 - Resend account
 - OAuth credentials for Google, Apple, and/or Facebook
 
@@ -41,7 +39,7 @@ bun install
 cp .env.example .env
 ```
 
-Fill in all values in `.env`. The file is grouped into sections: database, Better Auth, OAuth providers (Google, Apple, Facebook), Stripe, Cloudflare R2, Resend, and Sentry.
+Fill in all values in `.env`. The file is grouped into sections: database, Better Auth, Stripe, Resend, and Sentry.
 
 ### 3. Initialize the database
 
@@ -117,7 +115,6 @@ src/
 │   │   ├── email/         # Resend email utilities
 │   │   ├── payments/      # Stripe helpers
 │   │   ├── registrations/ # Registration logic
-│   │   ├── storage/       # Cloudflare R2 utilities
 │   │   └── users/         # User profile logic
 │   ├── stores/            # Svelte stores (theme)
 │   ├── types/             # Type declarations
@@ -127,9 +124,6 @@ src/
     ├── (app)/             # Authenticated routes
     │   ├── admin/         # Admin dashboard
     │   ├── changelog/     # App changelog
-    │   ├── family-tree/   # Family tree visualization
-    │   ├── gallery/       # Photo gallery + upload
-    │   ├── profile/       # User profile + relationship management
     │   ├── program/       # Reunion program page
     │   ├── register/      # Registration + Stripe checkout
     │   └── shop/          # External shop link page

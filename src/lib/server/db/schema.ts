@@ -21,35 +21,6 @@ export const registrationStatusEnum = pgEnum('registration_status', [
     'refunded',
     'waived',
 ])
-export const relationshipTypeEnum = pgEnum('relationship_type', [
-    'parent',
-    'child',
-    'spouse',
-    'sibling',
-    'grandparent',
-    'grandchild',
-    'great_grandparent',
-    'great_grandchild',
-    'great_great_grandparent',
-    'great_great_grandchild',
-    'great_great_great_grandparent',
-    'great_great_great_grandchild',
-    'great_great_great_great_grandparent',
-    'great_great_great_great_grandchild',
-    'great_great_great_great_great_grandparent',
-    'great_great_great_great_great_grandchild',
-    'aunt_uncle',
-    'niece_nephew',
-    'cousin',
-    'half_sibling',
-    'step_parent',
-    'step_child',
-    'step_sibling',
-    'in_law',
-    'great_aunt_uncle',
-    'great_niece_nephew',
-    'second_cousin',
-])
 
 /* Better Auth tables */
 export const user = pgTable('user', {
@@ -225,14 +196,6 @@ export const partyMembers = pgTable(
         registrationId: uuid('registration_id')
             .notNull()
             .references(() => registrations.id, { onDelete: 'cascade' }),
-        /* DORMANT. The genealogy feature was removed from scope before launch (ADR 0004) and nothing
-           reads this column any more. The column, family_members and relationships are all KEPT rather
-           than dropped, so that whatever real family data exists survives the removal and the feature can
-           come back without a data migration. Do not drop these without deciding that the genealogy in
-           them is expendable. */
-        familyMemberId: uuid('family_member_id').references(() => familyMembers.id, {
-            onDelete: 'set null',
-        }),
         name: text('name').notNull(),
         birthYear: integer('birth_year'),
         birthMonth: integer('birth_month'),
@@ -281,70 +244,12 @@ export const partyMembers = pgTable(
         uniqueIndex('party_members_one_contact_per_registration')
             .on(t.registrationId)
             .where(sql`${t.isContact}`),
-        index('party_members_family_member_id_idx').on(t.familyMemberId),
         uniqueIndex('party_members_stripe_checkout_session_id_key').on(t.stripeCheckoutSessionId),
         check(
             'party_members_birth_date_prefix',
             sql`(${t.birthDay} IS NULL OR ${t.birthMonth} IS NOT NULL) AND (${t.birthMonth} IS NULL OR ${t.birthYear} IS NOT NULL)`,
         ),
     ],
-)
-
-export const familyMembers = pgTable(
-    'family_members',
-    {
-        id: uuid('id').primaryKey().defaultRandom(),
-        name: text('name').notNull(),
-        birthYear: integer('birth_year'),
-        birthMonth: integer('birth_month'),
-        birthDay: integer('birth_day'),
-        createdAt: timestamp('created_at').notNull().defaultNow(),
-        updatedAt: timestamp('updated_at').notNull().defaultNow(),
-    },
-    (t) => [
-        check(
-            'family_members_birth_date_prefix',
-            sql`(${t.birthDay} IS NULL OR ${t.birthMonth} IS NOT NULL) AND (${t.birthMonth} IS NULL OR ${t.birthYear} IS NOT NULL)`,
-        ),
-    ],
-)
-
-export const relationships = pgTable(
-    'relationships',
-    {
-        id: uuid('id').primaryKey().defaultRandom(),
-        fromMemberId: uuid('from_member_id')
-            .notNull()
-            .references(() => familyMembers.id, { onDelete: 'cascade' }),
-        toMemberId: uuid('to_member_id')
-            .notNull()
-            .references(() => familyMembers.id, { onDelete: 'cascade' }),
-        type: relationshipTypeEnum('type').notNull(),
-        createdAt: timestamp('created_at').notNull().defaultNow(),
-    },
-    (t) => [
-        uniqueIndex('rel_unique').on(t.fromMemberId, t.toMemberId, t.type),
-        index('relationships_to_idx').on(t.toMemberId),
-        check('rel_no_self', sql`${t.fromMemberId} <> ${t.toMemberId}`),
-    ],
-)
-
-export const photos = pgTable(
-    'photos',
-    {
-        id: uuid('id').primaryKey().defaultRandom(),
-        eventId: uuid('event_id')
-            .notNull()
-            .references(() => reunionEvents.id),
-        uploadedByUserId: text('uploaded_by_user_id').references(() => user.id, {
-            onDelete: 'set null',
-        }),
-        r2Key: text('r2_key').notNull(),
-        url: text('url').notNull(),
-        caption: text('caption'),
-        createdAt: timestamp('created_at').notNull().defaultNow(),
-    },
-    (t) => [index('photos_event_id_idx').on(t.eventId)],
 )
 
 export const registrationAuditActionEnum = pgEnum('registration_audit_action', [

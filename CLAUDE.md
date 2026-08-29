@@ -75,7 +75,7 @@ SvelteKit full-stack app (Svelte 5 with runes). Node adapter for Railway deploym
 
 - **PostgreSQL** via `postgres` driver + **Drizzle ORM** (schema at `src/lib/server/db/schema.ts`)
 - DB connection uses lazy init with SvelteKit's `$env/dynamic/private` — standalone scripts (like seed.ts) must create their own `postgres()` client directly
-- All person records store birth date as split nullable integers (`birthYear`, `birthMonth`, `birthDay`); a CHECK constraint enforces prefix-consistency (day ⇒ month, month ⇒ year). `family_members` allows partial dates (year-only is fine for ancestors). **Birth date is optional for registration party members too** — `personDetailsSchema.birthDate` is `.optional()`, so plenty of rows have none and the admin party table shows "—". Nothing load-bearing needs it: shirt sizing comes from the tier's `shirtSizeCategory`, and the confirmation email prints an age only when one exists. Do not "fix" this by making it required without deciding that catering actually needs ages — that adds a required field to a live public form.
+- Party members store birth date as split nullable integers (`birthYear`, `birthMonth`, `birthDay`); a CHECK constraint enforces prefix-consistency (day ⇒ month, month ⇒ year). **Birth date is optional** — `personDetailsSchema.birthDate` is `.optional()`, so plenty of rows have none and the admin party table shows "—". Nothing load-bearing needs it: shirt sizing comes from the tier's `shirtSizeCategory`, and the confirmation email prints an age only when one exists. Do not "fix" this by making it required without deciding that catering actually needs ages — that adds a required field to a live public form.
 
 ### Server modules
 
@@ -89,22 +89,21 @@ Server logic lives under `src/lib/server/`, one domain per folder. Each exported
 | — queries     | `registrations/queries/`    | All registration reads                                                                            |
 | Payments      | `$lib/server/payments`      | Stripe checkout creation, refunds, session retrieval; metadata encode/decode in `stripeMetadata/` |
 | Email         | `$lib/server/email`         | Template rendering in `templates/`; Resend delivery in `send/`                                    |
-| Storage       | `$lib/server/storage`       | Cloudflare R2 uploads/deletes; local-dev writes to `static/uploads/`                              |
 | Auth          | `$lib/server/auth`          | Better Auth setup; guards in `guards/`                                                            |
 
 ### Auth
 
 - **Better Auth** with admin plugin and email + password sign-in
 - Magic link has been removed — admins sign in at `/login` with credentials only
-- **Public sign-up is disabled** (`disableSignUp: true`). This is load-bearing, not tidiness: Better Auth exposes `POST /api/auth/sign-up/email` whenever email+password is enabled, and its handler is mounted _ahead of SvelteKit routing_ — so there is no route file to guard and `(app)/+layout.server.ts` never sees the request. With sign-up open, anyone could mint a `role='user'` account and read the whole family tree and gallery. Pinned by `src/lib/server/auth/auth.test.ts`. Admins come from `bun run admin:create`.
+- **Public sign-up is disabled** (`disableSignUp: true`). This is load-bearing, not tidiness: Better Auth exposes `POST /api/auth/sign-up/email` whenever email+password is enabled, and its handler is mounted _ahead of SvelteKit routing_ — so there is no route file to guard and `(app)/+layout.server.ts` never sees the request. With sign-up open, anyone could mint a `role='user'` account and read every page behind the login. Pinned by `src/lib/server/auth/auth.test.ts`. Admins come from `bun run admin:create`.
 - `hooks.server.ts` populates `event.locals.user` per request. In dev mode, falls back to a hardcoded admin user when no session exists
-- Guards: `requireAuth()`, `requireAdmin()`, `requireOwner()` and `isPublicPath()` in `$lib/server/auth/guards`. `(app)/+layout.server.ts` requires `role === 'admin'` for any non-public path — **test for the role, never merely for a session**, since any account satisfies presence. `/admin/*` and the gallery `upload` action carry their own `requireAdmin`. Registration itself is fully public.
+- Guards: `requireAuth()`, `requireAdmin()`, `requireOwner()` and `isPublicPath()` in `$lib/server/auth/guards`. `(app)/+layout.server.ts` requires `role === 'admin'` for any non-public path — **test for the role, never merely for a session**, since any account satisfies presence. `/admin/*` carries its own `requireAdmin`. Registration itself is fully public.
 
 #### `requireOwner` and the owner-only Setup area
 
-`/admin/setup`, `/admin/photos`, `/admin/storefront`, `/admin/users` and `/admin/event/[eventId]/settings` are restricted to a single account, matched by **email** against `OWNER_EMAIL`. See [ADR 0003](docs/adr/0003-event-scoped-admin-and-owner-only-setup.md).
+`/admin/setup`, `/admin/storefront`, `/admin/users` and `/admin/event/[eventId]/settings` are restricted to a single account, matched by **email** against `OWNER_EMAIL`. See [ADR 0003](docs/adr/0003-event-scoped-admin-and-owner-only-setup.md).
 
-- **Never express the owner as a `role`.** Two independent hard-coded `role === 'admin'` comparisons gate the app (`requireAdmin` and `(app)/+layout.server.ts`), so an owner with any other role value loses `/admin`, `/gallery`, `/shop` and `/program`. `admin({ adminRoles: [...] })` does not help — it throws at plugin construction, and auth is lazily initialised, so that surfaces on every request including public pages.
+- **Never express the owner as a `role`.** Two independent hard-coded `role === 'admin'` comparisons gate the app (`requireAdmin` and `(app)/+layout.server.ts`), so an owner with any other role value loses `/admin`, `/shop` and `/program`. `admin({ adminRoles: [...] })` does not help — it throws at plugin construction, and auth is lazily initialised, so that surfaces on every request including public pages.
 - Role would not be a boundary anyway: Better Auth mounts `POST /api/auth/admin/set-role` ahead of SvelteKit routing, its only check is that the caller is an admin, and there is no self-target guard. Any admin can already grant themselves any role.
 - **`requireOwner` fails open when `OWNER_EMAIL` is unset**, and reports that to Sentry once per process. Deliberate: the degraded state is the old behaviour (admins only, never the public), whereas failing closed would let one forgotten Railway variable lock the owner out of pricing. Do not "harden" this into a fail-closed check without also making the variable impossible to forget.
 - It must be called in the **load, in every action, and in every remote function** of a Setup page. A layout `load` runs after a form action, and remote functions are served from `/_app/remote/<id>` with route handling skipped entirely — no layout or page guard sees them, so the in-function guard is the whole protection.
@@ -130,7 +129,7 @@ The token is the only credential — no per-request auth check. Email enumeratio
 Route groups:
 
 - `(auth)` — `/login` only, no nav, full-screen card layout. Admin sign-in only. `goto('/admin')` on success is the **only** entry point into the admin area anywhere in the app.
-- `(app)` — public paths are **only** `/` and `/register` (which covers `/register/manage` and `/register/recover`). Everything else in the group — `/gallery`, `/shop`, `/program`, `/changelog`, `/admin/*` — redirects to `/login`. The allowlist is `isPublicPath()` in `$lib/server/auth/guards`; widen it there to reopen a page (the gallery, most likely, after the reunion). Contact is a section on `/` (`#contact`), not its own route.
+- `(app)` — public paths are **only** `/` and `/register` (which covers `/register/manage` and `/register/recover`). Everything else in the group — `/shop`, `/program`, `/changelog`, `/admin/*` — redirects to `/login`. The allowlist is `isPublicPath()` in `$lib/server/auth/guards`; widen it there to reopen a page after the reunion. Contact is a section on `/` (`#contact`), not its own route.
 
 #### Admin routes are event-scoped
 
@@ -201,13 +200,14 @@ Everything an organiser does concerns one reunion, and the reunion is named in t
 - **Bounces are reported, not retried.** `/api/webhooks/resend` verifies the svix signature and routes `email.bounced` / `email.complained` / `email.failed` to Sentry via `reportError`, naming the affected registration ids. It exists because the confirmation is a _single un-retried attempt_ — the conditional `pending → paid` transition means a Stripe redelivery will not send it again — so without this a typo'd address fails silently and the registrant simply never gets their management link. Needs `RESEND_WEBHOOK_SECRET`; without it the endpoint returns 500 and reports the misconfiguration rather than dropping events quietly.
 - **`webhooks.verify()` does not match Resend's published snippet.** In the installed SDK it is synchronous and _throws_ (no `{ data, error }`), the option is `webhookSecret` not `secret`, and `headers` wants the svix header _values_ as `{ id, timestamp, signature }` — not a Web API `Headers` object. Following the published example type-errors, and would have silently rejected every webhook.
 
-### Genealogy is out of scope
+### Genealogy and the photo gallery are gone, tables included
 
-The family tree was removed before launch — see [ADR 0004](docs/adr/0004-genealogy-out-of-scope-for-launch.md). `/family-tree`, the attendee-to-tree linking screen, `family-chart`, `d3-selection`/`d3-zoom`, `MemberSelect` and `BirthDateInput` are all gone.
+The app is a registration app. Genealogy went out of scope before launch ([ADR 0004](docs/adr/0004-genealogy-out-of-scope-for-launch.md)) and the photo gallery followed it ([ADR 0005](docs/adr/0005-drop-genealogy-and-gallery-tables.md)).
 
-- **The tables are deliberately still there.** `family_members`, `relationships` and `party_members.family_member_id` remain in the schema, unread and unwritten. Dropping them would take any real genealogy already entered with it, and the point is that the feature can come back without a data migration. Do not "tidy them up".
-- `db:seed` still generates a fictional family tree into those tables. Left alone on purpose: nothing reads it, and rewriting the seed risks `db:reseed`, which is the only local reset path.
-- If it comes back, it comes back with its own ADR. Do not reintroduce a `/family-tree` route by reflex because you found a dangling reference.
+- **The tables are dropped**, in `drizzle/0011_parched_lady_mastermind.sql`: `family_members`, `relationships`, `photos` and `party_members.family_member_id`. An earlier pass kept them deliberately, on the reasoning that real genealogy might already be entered and the feature could return without a data migration. That was overturned once the family-tree UI had been gone long enough that nothing could have written to them through the app. **This is not reversible** — bringing either feature back means a fresh schema and whatever data was in there is gone.
+- **Cloudflare R2 went with the gallery.** `$lib/server/storage`, `@aws-sdk/client-s3`, `@aws-sdk/s3-request-presigner` and the five `R2_*` variables are all removed. Nothing in the app uploads a file any more. Anything still in the bucket is orphaned — `photos.r2_key` was the only pointer to it — so empty the bucket by hand if it matters, and delete the Railway variables.
+- `db:seed` no longer generates a family tree or photo rows. It still seeds events, tiers, registrations and party members, which is what `db:reseed` is for.
+- If either comes back, it comes back with its own ADR. Do not reintroduce `/family-tree` or `/gallery` by reflex because you found a dangling reference.
 
 ### Icons
 
@@ -299,7 +299,7 @@ Only do this when production has no real data worth keeping (e.g. pre-launch, or
 
 5. **Smoke-test**: visit the production URL, confirm the homepage loads and `/admin` login works with the new credentials.
 
-**Do not run `bun run db:seed` against production as a shortcut for real content.** It generates a fictional 100-person family tree via faker, fake historical events, and fake registrations with fake Stripe session IDs — meant for local dev only. Add real family members and the real event through `/admin` instead.
+**Do not run `bun run db:seed` against production as a shortcut for real content.** It generates fake historical events and fake registrations with fake Stripe session IDs — meant for local dev only. Add the real event through `/admin` instead.
 
 ## Mobile-first guidelines
 
@@ -310,7 +310,6 @@ The app is fully responsive with a `md:` (768px) breakpoint separating mobile an
 - **Data tables need a mobile card view**: show `md:hidden` stacked cards + `hidden md:block` table. Each card should display the key info (name/title + 1-2 secondary details) without horizontal scrolling
 - **Tap targets**: `app.css` enforces 44px min-height on interactive elements below `md:`. Don't override this on mobile
 - **Safe area insets**: handled globally in `app.css` on `html`
-- **Family tree**: shows a list view on mobile (`md:hidden`), chart on desktop (`hidden md:block`)
 - **Test mobile layouts**: when adding new pages or changing layouts, verify at 375px width (iPhone SE) in dev tools
 
 # Code style

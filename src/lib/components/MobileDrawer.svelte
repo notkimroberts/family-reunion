@@ -1,13 +1,5 @@
 <script lang="ts">
-import {
-    CalendarClock,
-    ClipboardPen,
-    Home,
-    Images,
-    LogOut,
-    Mail,
-    ShoppingBag,
-} from '@lucide/svelte'
+import { CalendarClock, ClipboardPen, Home, LogOut, Mail, ShoppingBag } from '@lucide/svelte'
 import type { Component } from 'svelte'
 import { page } from '$app/state'
 import { authClient } from '$lib/auth-client'
@@ -16,7 +8,6 @@ import { Sheet, SheetContent } from '$lib/components/ui/sheet'
 import {
     APP_NAME,
     CONTACT_NAV_LINK,
-    PRIMARY_NAV_LINKS,
     REGISTER_NAV_LINK,
     SECONDARY_NAV_LINKS,
 } from '$lib/general/constants'
@@ -39,7 +30,6 @@ function handleSignOut() {
 }
 
 const iconMap: Record<string, Component> = {
-    images: Images,
     'calendar-clock': CalendarClock,
     'shopping-bag': ShoppingBag,
 }
@@ -74,19 +64,6 @@ const linkClass = (active: boolean) =>
                 <Mail class="h-4 w-4" />
                 {CONTACT_NAV_LINK.label}
             </a>
-            {#if PRIMARY_NAV_LINKS.length}
-                <p
-                    class="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest px-3 pt-4 pb-1">
-                    Family
-                </p>
-            {/if}
-            {#each PRIMARY_NAV_LINKS as link}
-                {@const Icon = iconMap[link.icon]}
-                <a href={link.href} onclick={onClose} class={linkClass(isActive(link.href))}>
-                    <Icon class="h-4 w-4" />
-                    {link.label}
-                </a>
-            {/each}
 
             {#if SECONDARY_NAV_LINKS.length}
                 <p
