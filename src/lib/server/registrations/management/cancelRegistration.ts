@@ -1,17 +1,60 @@
 import { error } from '@sveltejs/kit'
 import { eq } from 'drizzle-orm'
 import { db } from '$lib/server/db'
-import { partyMembers, registrations } from '$lib/server/db/schema'
+import { partyMembers, registrations, reunionEvents } from '$lib/server/db/schema'
 import { dbg } from '$lib/server/debug'
+import { sendCancellationEmail, type RefundRoute } from '$lib/server/email'
 import { refundPaymentIntent, retrieveSessionPaymentIntent } from '$lib/server/payments'
+import { reportError } from '$lib/server/reportError'
 import { assertRegistrationEditable } from '../assertRegistrationEditable'
 import { getRegistrationLockDate } from '../getRegistrationLockDate'
 import { getRegistrationByToken } from '../queries/getRegistrationByToken'
 
-/* Refunds all distinct Stripe payment intents for the registration, then marks it 'refunded'. Falls back to session-level intent when members lack per-member intent IDs. Token-gated (compared by hash): 404 on mismatch. */
+/* Where the money goes back, read off the registration rather than guessed.
+
+   'paid' with a Stripe session means Checkout took a card payment, so the refund is automatic.
+   'paid' with no session is a cheque or cash handed to an organiser: nothing to refund through
+   Stripe, and the email must say so instead of promising a refund that will never arrive. */
+function getRefundRoute(registration: {
+    status: string
+    stripeSessionId: string | null
+}): RefundRoute {
+    if (registration.status === 'waived') {
+        return 'waived'
+    }
+    if (registration.status !== 'paid') {
+        return 'nothing_paid'
+    }
+    return registration.stripeSessionId ? 'stripe' : 'by_hand'
+}
+
+/* Refunds every distinct Stripe payment intent for the registration, marks it 'refunded', then emails
+   the registrant a record of it. Token-gated (compared by hash): 404 on mismatch.
+
+   A FAILED REFUND ABORTS THE CANCELLATION. This used to swallow refund errors and mark the
+   registration 'refunded' regardless, which meant the admin list, the registrant's own page and the
+   confirmation copy all reported that the money had gone back when it had not — the worst available
+   outcome, because nothing anywhere disagreed. removeMember already had the right contract: leave the
+   state alone, raise a 502, let them retry. Retrying is safe because every refund carries a stable
+   per-intent idempotency key, so Stripe returns the original refund rather than issuing a second.
+
+   A partial failure across several intents does leave money returned on a registration that is still
+   marked paid. That is unavoidable once one refund of several fails, and it is why the error is loud:
+   the retry finishes the remainder, and Sentry names the intents that did not go through.
+
+   The email is the one step allowed to fail quietly. By the time it is sent the refund has settled and
+   the status is written; throwing here would report a failed cancellation that in fact succeeded, and
+   a retry would then find the registration already refunded. So it is reported and the function
+   returns — the inverse of /register/recover, which must not commit until its mail is away. */
 export async function cancelRegistration(
     registrationId: string,
     managementToken: string,
+    /* Absolute link back to the registration form, built from the request origin by the caller — the
+       same way fulfillCheckout builds manageUrl. Deliberately not derived from APP_DOMAIN here: that
+       constant is still a placeholder, and a cancellation email pointing at the wrong host is a dead
+       end for someone who has changed their mind. Required, so no call site can forget it and leave
+       the email with a broken button. */
+    registerUrl: string,
 ): Promise<void> {
     const registration = await getRegistrationByToken(managementToken)
     if (!registration || registration.id !== registrationId) {
@@ -21,14 +64,18 @@ export async function cancelRegistration(
     assertRegistrationEditable(await getRegistrationLockDate(registration.eventId))
 
     const members = await db
-        .select({ stripePaymentIntentId: partyMembers.stripePaymentIntentId })
+        .select({
+            name: partyMembers.name,
+            priceCents: partyMembers.priceCents,
+            stripePaymentIntentId: partyMembers.stripePaymentIntentId,
+        })
         .from(partyMembers)
         .where(eq(partyMembers.registrationId, registrationId))
 
     const uniqueIntents = new Set<string>()
-    for (const m of members) {
-        if (m.stripePaymentIntentId) {
-            uniqueIntents.add(m.stripePaymentIntentId)
+    for (const member of members) {
+        if (member.stripePaymentIntentId) {
+            uniqueIntents.add(member.stripePaymentIntentId)
         }
     }
 
@@ -39,28 +86,65 @@ export async function cancelRegistration(
                 uniqueIntents.add(intentId)
             }
         } catch (err) {
-            dbg.register(
-                'could not retrieve payment intent for cancel of registration %s: %o',
+            reportError('could not retrieve payment intent to cancel registration', err, {
                 registrationId,
-                err,
-            )
+                stripeSessionId: registration.stripeSessionId,
+            })
         }
     }
 
-    await Promise.all(
-        Array.from(uniqueIntents).map((intentId) => {
-            dbg.register('full refund issued for payment_intent=%s', intentId)
-            /* Per-intent idempotency key keyed on the cancellation: a Stripe redelivery or
-               a user-double-click won't issue a second refund. */
-            return refundPaymentIntent(
+    const refundRoute = getRefundRoute(registration)
+
+    /* Money definitely arrived through Stripe and we cannot find it. Cancelling now would mark the
+       registration refunded with no refund issued anywhere — silent, and unrecoverable without
+       reading the Stripe dashboard by hand. An unpaid registration reaching this point is normal:
+       an abandoned checkout has a session and no payment, and there is nothing to send back. */
+    if (refundRoute === 'stripe' && uniqueIntents.size === 0) {
+        reportError(
+            'paid registration has no payment intent to refund',
+            new Error('no payment intent found for paid registration'),
+            { registrationId, stripeSessionId: registration.stripeSessionId },
+        )
+        throw error(
+            502,
+            'We could not find the payment for this registration, so it has not been cancelled. Please contact us and we will sort it out.',
+        )
+    }
+
+    const intents = Array.from(uniqueIntents)
+    const results = await Promise.allSettled(
+        intents.map((intentId) =>
+            /* Per-intent idempotency key keyed on the cancellation: a Stripe redelivery or a
+               double-click will not issue a second refund. */
+            refundPaymentIntent(
                 intentId,
                 undefined,
                 `cancel-registration-${registrationId}-${intentId}`,
-            ).catch((err) => {
-                dbg.register('refund failed for payment_intent=%s: %o', intentId, err)
-            })
-        }),
+            ),
+        ),
     )
+
+    const failed = results
+        .map((result, index) => ({ result, intentId: intents[index] }))
+        .filter((entry) => entry.result.status === 'rejected')
+
+    if (failed.length > 0) {
+        for (const entry of failed) {
+            reportError(
+                'refund failed while cancelling registration',
+                entry.result.status === 'rejected' ? entry.result.reason : undefined,
+                { registrationId, paymentIntentId: entry.intentId },
+            )
+        }
+        throw error(
+            502,
+            'The refund did not go through, so nothing has been cancelled. Please try again.',
+        )
+    }
+
+    for (const intentId of intents) {
+        dbg.register('full refund issued for payment_intent=%s', intentId)
+    }
 
     await db
         .update(registrations)
@@ -68,4 +152,30 @@ export async function cancelRegistration(
         .where(eq(registrations.id, registrationId))
 
     dbg.register('registration %s cancelled and refunded', registrationId)
+
+    const [reunionEvent] = await db
+        .select({ title: reunionEvents.title })
+        .from(reunionEvents)
+        .where(eq(reunionEvents.id, registration.eventId))
+        .limit(1)
+
+    try {
+        await sendCancellationEmail(
+            registration.contactEmail,
+            {
+                name: registration.contactName,
+                eventTitle: reunionEvent?.title ?? 'the reunion',
+                partyNames: members.map((member) => member.name),
+                totalCents: members.reduce((sum, member) => sum + member.priceCents, 0),
+                refundRoute,
+                registerUrl,
+            },
+            `cancel/${registrationId}`,
+        )
+    } catch (err) {
+        reportError('cancellation email failed to send', err, {
+            registrationId,
+            to: registration.contactEmail,
+        })
+    }
 }

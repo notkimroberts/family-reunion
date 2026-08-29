@@ -162,7 +162,11 @@ export const actions: Actions = {
             return fail(400, { form })
         }
 
-        await cancelRegistration(form.data.registrationId, form.data.token)
+        await cancelRegistration(
+            form.data.registrationId,
+            form.data.token,
+            `${event.url.origin}/register`,
+        )
         throw redirect(303, `/register/manage`)
     },
 }

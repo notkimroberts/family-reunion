@@ -36,3 +36,29 @@ export type RegistrationConfirmationData = {
        no indication of what moved. */
     changeSummary?: string[]
 }
+
+/* Where the money goes when a registration is cancelled.
+
+   This exists because "cancelled" alone cannot be written about honestly. A card payment goes back
+   through Stripe automatically; a cheque or cash handed to an organiser does not, and telling that
+   family "a refund has been issued" would be a straightforward lie followed by a phone call. A
+   pending registration never paid, and a waived place never had anything to return.
+
+   Derived from the registration itself rather than passed in by a caller's guess — see
+   cancelRegistration. */
+export type RefundRoute = 'stripe' | 'by_hand' | 'nothing_paid' | 'waived'
+
+export type CancellationEmailData = {
+    name: string
+    eventTitle: string
+    /* Who was on the registration, so the email is a record of what was cancelled and not just a
+       notice that something was. Names only: the money is one number below. */
+    partyNames: string[]
+    /* Sum of the party's snapshotted prices — what the registration was worth. Rendered only when
+       money is actually going back, since "$0.00 refunded" reads as a failed refund. */
+    totalCents: number
+    refundRoute: RefundRoute
+    /* Where to start again. A cancellation is often a change of plan rather than a decision never to
+       come, and the management link is dead by this point. */
+    registerUrl: string
+}
