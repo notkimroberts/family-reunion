@@ -18,7 +18,13 @@ bun run db:push          # Push schema directly to DB (dev shortcut)
 bun run db:seed          # Seed database if empty (skips if data already exists)
 bun run db:reseed        # Always truncate all app tables and re-seed
 bun run db:studio        # Drizzle Studio GUI
+
+bun run stripe:dev       # Forward Stripe webhooks to the running dev server
 ```
+
+`stripe:dev` **finds the port** rather than assuming 5173 — Vite increments when that is taken, and a forward to the wrong port fails silently: the app never sees `checkout.session.completed`, so no confirmation email is sent and the registration sits at `pending` while the payer believes they have paid.
+
+It probes `/api/health` and requires `status: 'ok'`, not merely a reply. That matters more than it sounds: on a machine behind an HTTP proxy, **every** port answers — a bare reachability check matches the first one and forwards into nothing. Set `PORT=5180 bun run stripe:dev` for a tunnel or container the probe cannot see; that path is trusted without probing. Anything after `--` is passed to the Stripe CLI.
 
 ### Migration rules
 
