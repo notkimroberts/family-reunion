@@ -5,7 +5,7 @@ import { superForm } from 'sveltekit-superforms'
 import { zod4Client as zodClient } from 'sveltekit-superforms/adapters'
 import { APP_NAME, CONTACT_EMAIL, CONTACT_PHONE } from '$lib/general/constants'
 import { quotePartyTotal } from '$lib/general/pricing'
-import { formatDateRange, formatPrice, getTierPriceCents, isValidPhone } from '$lib/utils'
+import { formatDateRange, formatPrice, getTierPriceCents, isValidPhone, toE164 } from '$lib/utils'
 import { EMPTY_PERSON_DETAILS } from './EMPTY_PERSON_DETAILS'
 import FormErrorSummary from './FormErrorSummary.svelte'
 import OrderSummaryCard from './OrderSummaryCard.svelte'
@@ -164,7 +164,8 @@ let isLocked = $derived(
                 <p class="text-muted-foreground text-sm mt-3">
                     Need to register late? Contact
                     <a class="underline" href="mailto:{CONTACT_EMAIL}">{CONTACT_EMAIL}</a>
-                    or call <a class="underline" href="sms:{CONTACT_PHONE}">{CONTACT_PHONE}</a>.
+                    or call
+                    <a class="underline" href="sms:{toE164(CONTACT_PHONE)}">{CONTACT_PHONE}</a>.
                 </p>
             </div>
         </section>
