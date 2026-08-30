@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { partyMembers, registrations } from '$lib/server/db/schema'
 import { reunionEvents } from '$lib/server/db/schema'
 import { resetTestDb } from '$lib/server/db/testing/resetTestDb'
+import { seedEvent } from '$lib/server/testing/seedEvent'
 import { seedTier } from '$lib/server/testing/seedTier'
 
 /* The public registration write path, which had no test.
@@ -24,14 +25,6 @@ let db: Awaited<ReturnType<typeof resetTestDb>>
 let eventId: string
 let adultTierId: string
 let childTierId: string
-
-async function seedEvent(registrationLockDate: Date | null = null) {
-    const [event] = await db
-        .insert(reunionEvents)
-        .values({ year: 2027, title: 'Reunion 2027', status: 'open', registrationLockDate })
-        .returning({ id: reunionEvents.id })
-    return event.id
-}
 
 async function membersOf(registrationId: string) {
     return db
@@ -74,7 +67,7 @@ describe('createPendingRegistration', () => {
             sessionId: 'cs_test_new',
         })
         db = await resetTestDb()
-        eventId = await seedEvent()
+        eventId = await seedEvent(db, { title: 'Reunion 2027' })
         adultTierId = await seedTier(db, eventId, { label: 'Adult', priceCents: 16000 })
         childTierId = await seedTier(db, eventId, { label: 'Child', priceCents: 9000 })
     })

@@ -3,6 +3,7 @@ import { eq } from 'drizzle-orm'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { partyMembers, registrations, reunionEvents } from '$lib/server/db/schema'
 import { resetTestDb } from '$lib/server/db/testing/resetTestDb'
+import { seedEvent } from '$lib/server/testing/seedEvent'
 import { seedTier } from '$lib/server/testing/seedTier'
 
 /* The public registration POST, which had no test at all — while its admin twin, paper entry, had
@@ -73,11 +74,7 @@ describe('POST /register?/register', () => {
             sessionId: 'cs_test_new',
         })
         db = await resetTestDb()
-        const [event] = await db
-            .insert(reunionEvents)
-            .values({ year: 2027, title: 'Reunion 2027', status: 'open' })
-            .returning({ id: reunionEvents.id })
-        eventId = event.id
+        eventId = await seedEvent(db, { title: 'Reunion 2027' })
         adultTierId = await seedTier(db, eventId, { label: 'Adult', priceCents: 16000 })
         childTierId = await seedTier(db, eventId, { label: 'Child', priceCents: 9000 })
     })
