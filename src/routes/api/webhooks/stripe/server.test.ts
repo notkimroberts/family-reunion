@@ -87,7 +87,9 @@ const mockRegistration = {
     contactEmail: 'alice@example.com',
     status: 'paid',
 }
-const mockReunionEvent = { id: 'event-456', title: 'Family Reunion 2026' }
+/* metadata is NOT NULL DEFAULT '{}' on reunion_events, so a real row always has one — an event with
+   no venue yet has {}, never undefined. */
+const mockReunionEvent = { id: 'event-456', title: 'Family Reunion 2026', metadata: {} }
 const mockMember = {
     id: 'member-1',
     name: 'Alice',

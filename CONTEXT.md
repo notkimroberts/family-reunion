@@ -33,6 +33,10 @@ The full graph of **family members** and **relationships**. Rendered as an inter
 A single annual gathering. Has a status lifecycle: `draft` → `open` → `closed` → `archived`. Exactly one event is `open` at a time during the registration window.
 _Avoid_: event (too generic in a SvelteKit codebase — `event` means `RequestEvent`)
 
+**Event metadata**:
+Everything a **reunion event** _displays_ — venue, menu, drinks, sites, activities, schedule — in one `metadata` jsonb column rather than one column each ([ADR 0007](docs/adr/0007-event-content-in-one-metadata-column.md)). The dividing line is whether the database is ever asked a question about it: the remaining columns (`status`, `year`, the dates, `registration_lock_date`) are all filtered, ordered or indexed on; metadata is only ever fetched whole and rendered. Shape and validation live in `$lib/general/reunionMetadata`; the owner edits it as raw JSON on the settings page. Not to be confused with the homepage's `REUNION_LOCATIONS` constants, which are deliberately not per-year.
+_Avoid_: event details, config, settings
+
 **Pricing tier**:
 A named price bracket in cents, scoped to a **reunion event** (`tiers`). A tier is chosen per **party member** at registration time, but the tier is _not_ the record of what was charged: `party_members` snapshots `tierLabel` and `priceCents` onto the row, so renaming or repricing a tier never rewrites history or a refund amount.
 
@@ -45,10 +49,10 @@ The credential that owns a **registration** — 32 random bytes, base64url. The 
 _Avoid_: password, API key
 
 **Contact**:
-The name, email and optional phone stored directly on a **registration** (`contactName`, `contactEmail`, `contactPhone`). This is the whole identity of whoever registered — there is no **user** behind it. Confirmation and recovery email go here.
+The name, email and optional phone stored directly on a **registration** (`contactName`, `contactEmail`, `contactPhone`). This is the whole identity of whoever registered — there is no **user** behind it. Confirmation and recovery email go here. These stay on the registration rather than moving onto `party_members`: the email is the booking's credential-recovery key and has to outlive any single attendee row, which a registrant can delete. See [ADR 0008](docs/adr/0008-contact-stays-on-the-registration.md).
 
 **Registrant**:
-The person the **contact** describes. They are always the first `party_members` row for a registration, inserted from the form's `self*` fields. Nothing in the schema marks that row as the registrant: it is first by insertion order and matches `contactName`.
+The person the **contact** describes. They are the `party_members` row flagged `isContact` — inserted from the form's `self*` fields, or first in the list on admin paper entry. Their `name` is a second copy of `contactName` by design, with `updateRegistrationContact` as the single writer of both; a partial unique index enforces at most one flagged row per registration.
 _Avoid_: party member, attendee, user
 
 **Guest member**:

@@ -14,17 +14,33 @@ import { cn, formatPrice } from '$lib/utils'
 
 /* Setup's event editor: set once a year, then left alone. Quiet on purpose.
 
-   The Event details card is ONE form, however many subheadings it carries. ?/update_event writes nine
-   columns in a single db.update and nulls every field the POST omits, so promoting any subheading to its
-   own card with its own Save would erase every section that Save did not carry. Group with subheadings;
-   never with a second form. ?/update_lock_date has the same shape.
+   The Event details card is ONE form, however many subheadings it carries. ?/update_event writes the
+   dates and the whole metadata object in a single db.update and clears anything the POST omits, so
+   promoting a subheading to its own card with its own Save would erase whatever that Save did not
+   carry. Group with subheadings; never with a second form. ?/update_lock_date has the same shape.
 
-   `form` is the only channel for the four fail()s these actions raise. The page rendered no form prop at
+   `form` is the only channel for the fail()s these actions raise. The page rendered no form prop at
    all, so a rejected price or lock date arrived and vanished — Save looked like it did nothing. */
 
 let { data, form } = $props()
 
 const SUBHEAD_CLASS = 'text-muted-foreground text-xs font-semibold uppercase tracking-wide'
+
+/* Every key the program page reads, shown once, so the owner has something to copy rather than a
+   shape they have to reconstruct from what happens to be saved. Kept in step with
+   $lib/general/reunionMetadata — the parser is strict(), so a key that is not here is refused. */
+const METADATA_EXAMPLE = `{
+  "venue": {
+    "name": "Oakstop",
+    "address": "1721 Broadway, Oakland, CA 94612",
+    "description": "Event space in Uptown Oakland."
+  },
+  "menu": ["BBQ ribs", "Mac and cheese"],
+  "drinks": ["Sweet tea", "Lemonade"],
+  "sites": [{ "name": "Lake Merritt", "description": "A short walk away." }],
+  "activities": [{ "name": "Family photo", "description": "Saturday, 2pm." }],
+  "schedule": [{ "day": "Saturday", "time": "9:00 AM", "activity": "Breakfast" }]
+}`
 
 /* Labels, icons and colours come from EVENT_STATUS_STYLES, shared with the /admin year cards so the
    same status cannot look like two different things on two screens. EVENT_STATUS_ORDER is the life of a
@@ -177,8 +193,8 @@ const SHIRT_SELECT_CLASS =
                 Event details
             </CardTitle>
             <CardDescription>
-                The dates, the venue, and everything the program page shows. One Save writes all of
-                it, and a field left blank is cleared.
+                The dates, and everything the program page shows. One Save writes all of it, and a
+                field left blank is cleared.
             </CardDescription>
         </CardHeader>
         <CardContent>
@@ -212,118 +228,29 @@ const SHIRT_SELECT_CLASS =
                 <Separator />
 
                 <div class="flex flex-col gap-3">
-                    <p class={SUBHEAD_CLASS}>Venue</p>
-                    <div class="flex flex-col gap-4">
-                        <Field.Field class="gap-2">
-                            <Field.Label for="venueName">Name</Field.Label>
-                            <Input
-                                id="venueName"
-                                name="venueName"
-                                type="text"
-                                value={data.event.venue?.name ?? ''} />
-                            <Field.Description>
-                                The name holds the block together — clear it and the address and
-                                description go with it.
-                            </Field.Description>
-                        </Field.Field>
-                        <Field.Field class="gap-2">
-                            <Field.Label for="venueAddress">Address</Field.Label>
-                            <Input
-                                id="venueAddress"
-                                name="venueAddress"
-                                type="text"
-                                value={data.event.venue?.address ?? ''} />
-                        </Field.Field>
-                        <Field.Field class="gap-2">
-                            <Field.Label for="venueDescription">Description</Field.Label>
-                            <Textarea
-                                id="venueDescription"
-                                name="venueDescription"
-                                value={data.event.venue?.description ?? ''} />
-                        </Field.Field>
-                    </div>
-                </div>
-
-                <Separator />
-
-                <div class="flex flex-col gap-3">
-                    <p class={SUBHEAD_CLASS}>Food & drink</p>
-                    <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-                        <Field.Field class="gap-2">
-                            <Field.Label for="menu">Menu</Field.Label>
-                            <Textarea
-                                id="menu"
-                                name="menu"
-                                class="min-h-24"
-                                value={data.event.menu?.join('\n') ?? ''} />
-                            <Field.Description>One item per line.</Field.Description>
-                        </Field.Field>
-                        <Field.Field class="gap-2">
-                            <Field.Label for="drinks">Drinks</Field.Label>
-                            <Textarea
-                                id="drinks"
-                                name="drinks"
-                                class="min-h-24"
-                                value={data.event.drinks?.join('\n') ?? ''} />
-                            <Field.Description>One item per line.</Field.Description>
-                        </Field.Field>
-                    </div>
-                </div>
-
-                <Separator />
-
-                <div class="flex flex-col gap-3">
-                    <p class={SUBHEAD_CLASS}>Program</p>
+                    <p class={SUBHEAD_CLASS}>Program content</p>
                     <p class="text-muted-foreground text-sm">
-                        These three are raw JSON. Anything that does not parse is stored as empty,
-                        so check the program page after saving.
+                        Venue, food and the schedule, as one JSON object. Anything that does not
+                        parse — or uses a key that is not in the example — is rejected with a
+                        message and <strong>nothing on this card is saved</strong>, so a bad paste
+                        can never blank the program page. Every key is optional.
                     </p>
-                    <div class="flex flex-col gap-4">
-                        <Field.Field class="gap-2">
-                            <Field.Label for="schedule">Schedule</Field.Label>
-                            <Textarea
-                                id="schedule"
-                                name="schedule"
-                                class="min-h-24"
-                                value={data.event.schedule
-                                    ? JSON.stringify(data.event.schedule, null, 2)
-                                    : ''} />
-                            <Field.Description>
-                                <code class="break-all"
-                                    >[{`{"day":"Sat","time":"9am","activity":"Breakfast"}`}]</code>
-                            </Field.Description>
-                        </Field.Field>
-                        <Field.Field class="gap-2">
-                            <Field.Label for="recommendedSites">Recommended sites</Field.Label>
-                            <Textarea
-                                id="recommendedSites"
-                                name="recommendedSites"
-                                class="min-h-24"
-                                value={data.event.recommendedSites
-                                    ? JSON.stringify(data.event.recommendedSites, null, 2)
-                                    : ''} />
-                            <Field.Description>
-                                <code class="break-all"
-                                    >[{`{"name":"Park","description":"Nice!"}`}]</code>
-                            </Field.Description>
-                        </Field.Field>
-                        <Field.Field class="gap-2">
-                            <Field.Label for="recommendedActivities">
-                                Recommended activities
-                            </Field.Label>
-                            <Textarea
-                                id="recommendedActivities"
-                                name="recommendedActivities"
-                                class="min-h-24"
-                                value={data.event.recommendedActivities
-                                    ? JSON.stringify(data.event.recommendedActivities, null, 2)
-                                    : ''} />
-                            <Field.Description>
-                                <code class="break-all"
-                                    >[{`{"name":"Hiking","description":"Trail nearby"}`}]</code>
-                            </Field.Description>
-                        </Field.Field>
-                    </div>
+                    <Field.Field class="gap-2">
+                        <Field.Label for="metadata">Event details JSON</Field.Label>
+                        <!-- form?.metadata is the text that was just rejected. Falling back to it
+                             first means a failed Save returns the owner's own paste to them, with
+                             the error above it, rather than silently reverting to what is stored. -->
+                        <Textarea
+                            id="metadata"
+                            name="metadata"
+                            class="min-h-96 font-mono text-xs"
+                            value={form?.metadata ??
+                                JSON.stringify(data.event.metadata, null, 2)} />
+                        <Field.Description>
+                            <pre
+                                class="bg-muted mt-1 overflow-x-auto rounded-md p-3 text-xs">{METADATA_EXAMPLE}</pre>
+                        </Field.Description>
+                    </Field.Field>
                 </div>
 
                 <div class="flex flex-wrap items-center gap-3">

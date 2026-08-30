@@ -44,7 +44,7 @@ export async function getConfirmationEmailData(params: {
                 title: reunionEvents.title,
                 startDate: reunionEvents.startDate,
                 endDate: reunionEvents.endDate,
-                venue: reunionEvents.venue,
+                metadata: reunionEvents.metadata,
             })
             .from(reunionEvents)
             .where(eq(reunionEvents.id, registration.eventId))
@@ -77,8 +77,8 @@ export async function getConfirmationEmailData(params: {
             name: registration.contactName,
             eventTitle: reunionEvent.title,
             eventDateRange,
-            venueName: reunionEvent.venue?.name,
-            venueAddress: reunionEvent.venue?.address,
+            venueName: reunionEvent.metadata.venue?.name,
+            venueAddress: reunionEvent.metadata.venue?.address,
             status: registration.status satisfies ConfirmationStatus,
             partyMembers: members.map((member) => {
                 const extras: string[] = []

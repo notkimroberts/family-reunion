@@ -25,25 +25,28 @@ let dateRange = $derived.by(() => {
     return `${start} – ${end}`
 })
 
+/* Everything below the dates comes out of one jsonb column — see $lib/general/reunionMetadata. Each
+   key is optional, so each section keeps its own presence check. */
+let metadata = $derived(data.event?.metadata)
+
 let venueCity = $derived.by(() => {
-    if (!data.event?.venue?.address) {
+    if (!metadata?.venue?.address) {
         return ''
     }
-    const parts = data.event.venue.address.split(',')
+    const parts = metadata.venue.address.split(',')
     return parts.slice(-2).join(',').trim()
 })
 
 let mapsUrl = $derived(
-    data.event?.venue?.address
-        ? `https://maps.google.com/?q=${encodeURIComponent(data.event.venue.address)}`
+    metadata?.venue?.address
+        ? `https://maps.google.com/?q=${encodeURIComponent(metadata.venue.address)}`
         : '',
 )
 
-let hasFood = $derived((data.event?.menu?.length ?? 0) > 0 || (data.event?.drinks?.length ?? 0) > 0)
+let hasFood = $derived((metadata?.menu?.length ?? 0) > 0 || (metadata?.drinks?.length ?? 0) > 0)
 
 let hasThingsToDo = $derived(
-    (data.event?.recommendedSites?.length ?? 0) > 0 ||
-        (data.event?.recommendedActivities?.length ?? 0) > 0,
+    (metadata?.sites?.length ?? 0) > 0 || (metadata?.activities?.length ?? 0) > 0,
 )
 </script>
 
@@ -73,11 +76,11 @@ let hasThingsToDo = $derived(
                         <span class="text-lg font-medium">{dateRange}</span>
                     </div>
                 {/if}
-                {#if data.event.venue}
+                {#if metadata?.venue}
                     <div class="flex items-center gap-2">
                         <MapPin class="size-4 shrink-0 opacity-70" />
                         <span class="opacity-90"
-                            >{data.event.venue.name}{venueCity ? ` · ${venueCity}` : ''}</span>
+                            >{metadata.venue.name}{venueCity ? ` · ${venueCity}` : ''}</span>
                     </div>
                 {/if}
             </div>
@@ -101,20 +104,20 @@ let hasThingsToDo = $derived(
     </section>
 
     <!-- Schedule -->
-    {#if data.event.schedule && data.event.schedule.length > 0}
+    {#if metadata?.schedule && metadata.schedule.length > 0}
         <section class="col-span-12">
             <ScheduleCard
-                schedule={data.event.schedule}
-                venueName={data.event.venue?.name}
+                schedule={metadata.schedule}
+                venueName={metadata.venue?.name}
                 startDate={data.event.startDate?.toISOString() ?? undefined} />
         </section>
     {/if}
 
     <!-- Venue + Food & Drinks -->
-    {#if data.event.venue || hasFood}
+    {#if metadata?.venue || hasFood}
         <section class="col-span-12">
             <div class="grid grid-cols-1 gap-6 xl:grid-cols-2">
-                {#if data.event.venue}
+                {#if metadata?.venue}
                     <Card class="h-full">
                         <CardHeader>
                             <CardTitle class="flex items-center gap-2">
@@ -124,13 +127,15 @@ let hasThingsToDo = $derived(
                         </CardHeader>
                         <CardContent class="space-y-3">
                             <div>
-                                <p class="text-xl font-semibold">{data.event.venue.name}</p>
-                                <p class="text-muted-foreground mt-0.5 text-sm">
-                                    {data.event.venue.address}
-                                </p>
+                                <p class="text-xl font-semibold">{metadata.venue.name}</p>
+                                {#if metadata.venue.address}
+                                    <p class="text-muted-foreground mt-0.5 text-sm">
+                                        {metadata.venue.address}
+                                    </p>
+                                {/if}
                             </div>
-                            {#if data.event.venue.description}
-                                <p class="text-sm">{data.event.venue.description}</p>
+                            {#if metadata.venue.description}
+                                <p class="text-sm">{metadata.venue.description}</p>
                             {/if}
                             {#if mapsUrl}
                                 <a
@@ -155,28 +160,28 @@ let hasThingsToDo = $derived(
                             </CardTitle>
                         </CardHeader>
                         <CardContent class="space-y-5">
-                            {#if data.event.menu?.length}
+                            {#if metadata?.menu?.length}
                                 <div>
                                     <p
                                         class="text-muted-foreground mb-2 text-xs font-semibold uppercase tracking-widest">
                                         Menu
                                     </p>
                                     <div class="flex flex-wrap gap-2">
-                                        {#each data.event.menu as item}
+                                        {#each metadata.menu as item}
                                             <span class="bg-muted rounded-full px-3 py-1 text-sm"
                                                 >{item}</span>
                                         {/each}
                                     </div>
                                 </div>
                             {/if}
-                            {#if data.event.drinks?.length}
+                            {#if metadata?.drinks?.length}
                                 <div>
                                     <p
                                         class="text-muted-foreground mb-2 text-xs font-semibold uppercase tracking-widest">
                                         Drinks
                                     </p>
                                     <div class="flex flex-wrap gap-2">
-                                        {#each data.event.drinks as item}
+                                        {#each metadata.drinks as item}
                                             <span class="bg-muted rounded-full px-3 py-1 text-sm"
                                                 >{item}</span>
                                         {/each}
@@ -207,7 +212,7 @@ let hasThingsToDo = $derived(
                 </CardHeader>
                 <CardContent>
                     <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
-                        {#each data.event.recommendedSites ?? [] as site}
+                        {#each metadata?.sites ?? [] as site}
                             <div class="rounded-lg border p-4">
                                 <p class="font-medium">{site.name}</p>
                                 {#if site.description}
@@ -217,7 +222,7 @@ let hasThingsToDo = $derived(
                                 {/if}
                             </div>
                         {/each}
-                        {#each data.event.recommendedActivities ?? [] as activity}
+                        {#each metadata?.activities ?? [] as activity}
                             <div class="rounded-lg border p-4">
                                 <p class="font-medium">{activity.name}</p>
                                 {#if activity.description}
