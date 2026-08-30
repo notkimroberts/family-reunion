@@ -2,11 +2,11 @@ import { SHIRT_SIZES } from '$lib/general/constants'
 
 /* The options a shirt-size select must offer for a value already on the row.
 
-   SHIRT_SIZES is the adult list, and it is the only list in the app: nothing reads a tier's
-   shirtSizeCategory when rendering sizes, so a Child attendee was offered adult sizes on the public
-   form and whatever they picked is what is stored. Rendering only the canonical list would therefore
-   drop any value that came from an older list — the select would show the first option as selected and
-   the organiser would be looking at a size the database does not hold, with no way to tell.
+   SHIRT_SIZES is the only list in the app — every attendee is offered the same sizes, and the tier
+   label is what says whether a row means an adult shirt or a child's. Rendering only the canonical list
+   would drop any value that came from an older one — the select would show the first option as
+   selected and the organiser would be looking at a size the database does not hold, with no way to
+   tell.
 
    So an unrecognised value is appended and kept selectable. It sorts last, which is also where
    peopleSummary puts it in the order sheet, so the two agree. */

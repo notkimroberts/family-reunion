@@ -2,7 +2,7 @@ import { error, fail } from '@sveltejs/kit'
 import { eq } from 'drizzle-orm'
 import { requireOwner } from '$lib/server/auth/guards'
 import { db } from '$lib/server/db'
-import { eventStatusEnum, reunionEvents, shirtSizeCategoryEnum } from '$lib/server/db/schema'
+import { eventStatusEnum, reunionEvents } from '$lib/server/db/schema'
 import { dbg } from '$lib/server/debug'
 import { createTier, deleteTier, getTiersForEvent, updateTier } from '$lib/server/tiers'
 import type { PageServerLoad, Actions } from './$types'
@@ -13,23 +13,19 @@ function parseFiniteFloat(raw: string): number | null {
     return Number.isFinite(n) ? n : null
 }
 
-function isShirtSizeCategory(
-    value: string,
-): value is (typeof shirtSizeCategoryEnum.enumValues)[number] {
-    return (shirtSizeCategoryEnum.enumValues as readonly string[]).includes(value)
-}
+/* Parses and validates the add_tier/update_tier form fields shared by both actions.
 
-/* Parses and validates the add_tier/update_tier form fields shared by both actions. */
+   A tier is a label and a price. It used to carry an adult/child shirt-size flag as well, which no
+   size list ever read — the label is what tells an organiser which shirts a tier means, and the order
+   sheet groups by it. */
 function parseTierForm(data: FormData):
     | {
           label: string
           priceCents: number
-          shirtSizeCategory: (typeof shirtSizeCategoryEnum.enumValues)[number]
       }
     | { error: string } {
     const label = (data.get('label') as string)?.trim()
     const priceRaw = data.get('priceCents') as string
-    const shirtSizeCategory = (data.get('shirtSizeCategory') as string)?.trim()
 
     const priceFloat = parseFiniteFloat(priceRaw)
     if (!label) {
@@ -38,15 +34,12 @@ function parseTierForm(data: FormData):
     if (priceFloat === null || priceFloat < 0) {
         return { error: 'Price must be a non-negative number' }
     }
-    if (!isShirtSizeCategory(shirtSizeCategory)) {
-        return { error: 'Invalid shirt size category' }
-    }
 
-    return { label, priceCents: Math.round(priceFloat * 100), shirtSizeCategory }
+    return { label, priceCents: Math.round(priceFloat * 100) }
 }
 
 /* Narrows a posted string to the enum, so the update cannot be handed a status Postgres will reject
-   with a 500. Mirrors isShirtSizeCategory above rather than casting. */
+   with a 500. */
 function isEventStatus(value: string): value is (typeof eventStatusEnum.enumValues)[number] {
     return (eventStatusEnum.enumValues as readonly string[]).includes(value)
 }

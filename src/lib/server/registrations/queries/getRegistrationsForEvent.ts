@@ -15,6 +15,10 @@ export type RegistrationSummary = {
     stripeSessionId: string | null
     /* For the dashboard deep link on a paid row. Null for anything not paid online. */
     stripePaymentIntentId: string | null
+    /* What Stripe actually took, accumulated across every charge on this registration. Null for a
+       row that predates the column or whose balance transaction could not be read — the money panel
+       falls back to the 2.9% + 30¢ estimate for those and says so. */
+    stripeFeeCents: number | null
     /* When the money arrived, or null when that was never recorded — see the column comment. Not
        updatedAt, which any later edit bumps. */
     paidAt: Date | null
@@ -49,6 +53,7 @@ export async function getRegistrationsForEvent(eventId: string): Promise<Registr
             status: registrations.status,
             stripeSessionId: registrations.stripeSessionId,
             stripePaymentIntentId: registrations.stripePaymentIntentId,
+            stripeFeeCents: registrations.stripeFeeCents,
             paidAt: registrations.paidAt,
             createdAt: registrations.createdAt,
             memberCount: count(partyMembers.id),

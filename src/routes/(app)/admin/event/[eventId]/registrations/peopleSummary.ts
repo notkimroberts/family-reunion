@@ -6,11 +6,11 @@ import type { EventPerson } from '$lib/server/registrations'
    Both are derived from the People lens, which is paid-and-waived only, because these numbers become a
    purchase order. Counting a pending party's shirts would buy garments for people who may never come.
 
-   Grouped by `tierLabel`, the snapshot party_members carries for exactly this kind of reading. Not by
-   tiers.shirtSizeCategory: party_members has no tier id, so reaching the category means matching the tier
-   by label, which breaks the moment a tier is renamed — and the categories would not tell you anything
-   extra anyway, because every ShirtSizeSelect in the app renders the same SHIRT_SIZES list regardless.
-   Using the label also means a third tier appears here on its own, with no code change.
+   Grouped by `tierLabel`, the snapshot party_members carries for exactly this kind of reading. This
+   grouping IS the adult-versus-youth split an organiser needs — "Adult: S 1 M 3 · Child: S 1 M 1" — and
+   it is why the tiers table no longer carries a shirt-size category: the label already says it, and a
+   third tier appears here on its own with no code change. Reaching a per-tier column would have meant
+   matching by label anyway, since party_members has no tier id.
 
    "Not answered" is counted separately from "no" throughout. For a caterer, three vegetarians and two
    unknowns is a different order from three vegetarians; collapsing the unknowns into "no" would quietly

@@ -62,12 +62,11 @@ const SUBHEAD_CLASS = 'text-muted-foreground text-xs font-semibold tracking-wide
    own headers come off this list too, so the columns cannot end up in a different order from the
    cells beneath them.
 
-   Shirt size is here despite a real caveat: every shirt list in the app renders the adult SHIRT_SIZES
-   values regardless of the tier's shirtSizeCategory, so a Child row offers adult sizes. That is
-   deliberately left alone here rather than invented around — this control offers exactly what the
-   public form offered the registrant, so the two agree, and a youth vocabulary would be a change to
-   what is collected rather than a fix to what is displayed. PersonFieldForm does keep any existing
-   value that is not on the list, so nothing already recorded is hidden. */
+   Shirt size offers one list, SHIRT_SIZES, to everyone. The tiers table used to carry an adult/child
+   flag alongside it, which no size list ever read; it is gone rather than wired up, because the tier
+   LABEL already tells an organiser which shirts a row means and the order sheet groups by it — "Adult:
+   S 1 M 3 · Child: S 1 M 1" is a youth count without a youth vocabulary. PersonFieldForm keeps any
+   existing value that is not on the list, so nothing already recorded is hidden. */
 const PERSON_FIELDS = [
     {
         field: 'shirtSize',
@@ -223,8 +222,11 @@ $effect(() => {
 
             <!-- What the registrants paid is not what the reunion gets to spend. Card money arrives
                  short by Stripe's cut; cash and cheques arrive whole. Only the last line is the
-                 spendable number, so it is the one carrying the weight. -->
-            {#if totals.cardPaidCents > 0}
+                 spendable number, so it is the one carrying the weight.
+
+                 Shown when there is card money OR a cancelled card booking: a year whose only card
+                 registration was refunded has no card income and still lost the fee on it. -->
+            {#if totals.cardPaidCents > 0 || totals.lostToRefundsCents > 0}
                 <div class="flex flex-col gap-1.5 pl-2">
                     <div class="flex items-baseline justify-between gap-3">
                         <span class="text-muted-foreground text-xs">By card</span>
@@ -243,9 +245,21 @@ $effect(() => {
                     <div class="flex items-baseline justify-between gap-3">
                         <span class="text-xs text-amber-700 dark:text-amber-400">Stripe fees</span>
                         <span class="text-xs tabular-nums text-amber-700 dark:text-amber-400">
-                            −${formatPrice(totals.estimatedFeeCents)}
+                            −${formatPrice(totals.feeCents)}
                         </span>
                     </div>
+                    <!-- Only when it has happened. A zero line here would invite the question every
+                         time, and the answer is usually "nobody cancelled". -->
+                    {#if totals.lostToRefundsCents > 0}
+                        <div class="flex items-baseline justify-between gap-3">
+                            <span class="text-xs text-amber-700 dark:text-amber-400">
+                                Lost to refunds
+                            </span>
+                            <span class="text-xs tabular-nums text-amber-700 dark:text-amber-400">
+                                −${formatPrice(totals.lostToRefundsCents)}
+                            </span>
+                        </div>
+                    {/if}
                 </div>
 
                 <div class="flex items-baseline justify-between gap-3">
@@ -254,12 +268,21 @@ $effect(() => {
                         ${formatPrice(totals.bankedCents)}
                     </span>
                 </div>
-                <!-- Says "estimated" because it is. The real fee is on Stripe's balance transaction,
-                     which this app does not store; an international card costs more than 2.9%, so the
-                     figure above is a ceiling and this one a floor. -->
+                <!-- The wording tracks what the numbers actually are. Once every card payment has its
+                     fee recorded from Stripe's balance transaction, this stops saying "estimated" —
+                     claiming precision the figures do not have is the failure mode worth avoiding, and
+                     so is disclaiming precision they do have. -->
                 <p class="text-muted-foreground text-xs">
-                    Fees estimated at 2.9% + 30¢ per card payment. Cash and cheques arrive in full,
-                    once deposited.
+                    {#if totals.feesAreExact}
+                        Fees as charged by Stripe.
+                    {:else}
+                        Fees estimated at 2.9% + 30¢ per card payment.
+                    {/if}
+                    Cash and cheques arrive in full, once deposited.
+                    {#if totals.lostToRefundsCents > 0}
+                        Stripe keeps its fee when a booking is cancelled, so that money does not
+                        come back.
+                    {/if}
                 </p>
             {/if}
         </div>

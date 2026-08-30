@@ -105,8 +105,8 @@ describe('/admin create_event', () => {
         await actions.create_event(requestWith({ title: 'Reunion', year: '2028' }))
 
         expect(insertedValues[1]).toEqual([
-            { eventId: 'evt-new', label: 'Adult', priceCents: 0, shirtSizeCategory: 'adult' },
-            { eventId: 'evt-new', label: 'Child', priceCents: 0, shirtSizeCategory: 'child' },
+            { eventId: 'evt-new', label: 'Adult', priceCents: 0 },
+            { eventId: 'evt-new', label: 'Child', priceCents: 0 },
         ])
     })
 

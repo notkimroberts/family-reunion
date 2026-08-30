@@ -12,6 +12,9 @@ function reg(overrides: Partial<RegistrationSummary>): RegistrationSummary {
         status: 'paid',
         stripeSessionId: 'cs_test_1',
         stripePaymentIntentId: 'pi_test_1',
+        /* Null by default: most tests are about the estimate fallback, and a fixture that silently
+           supplied a real fee would make those vacuous. */
+        stripeFeeCents: null,
         paidAt: new Date('2026-08-10T00:00:00Z'),
         memberCount: 1,
         totalCents: 16000,
@@ -30,8 +33,11 @@ describe('getRegistrationTotals', () => {
             paidCents: 0,
             cardPaidCents: 0,
             offlinePaidCents: 0,
-            estimatedFeeCents: 0,
+            feeCents: 0,
+            lostToRefundsCents: 0,
             bankedCents: 0,
+            /* Vacuously true, and right: with nothing to estimate there is nothing inexact. */
+            feesAreExact: true,
             outstandingCents: 0,
         })
     })
@@ -145,7 +151,7 @@ describe('getRegistrationTotals', () => {
                 reg({ id: 'a', stripeSessionId: null, totalCents: 58000 }),
             ])
 
-            expect(totals.estimatedFeeCents).toBe(0)
+            expect(totals.feeCents).toBe(0)
             expect(totals.bankedCents).toBe(58000)
         })
 
@@ -170,11 +176,9 @@ describe('getRegistrationTotals', () => {
                 reg({ id: 'c', stripeSessionId: 'cs_3', totalCents: ADULT_GROSS }),
             ])
 
-            expect(totals.estimatedFeeCents).toBe(3 * stripeFeeOnChargeCents(ADULT_GROSS))
+            expect(totals.feeCents).toBe(3 * stripeFeeOnChargeCents(ADULT_GROSS))
             /* And strictly more than treating the three as one charge. */
-            expect(totals.estimatedFeeCents).toBeGreaterThan(
-                stripeFeeOnChargeCents(3 * ADULT_GROSS),
-            )
+            expect(totals.feeCents).toBeGreaterThan(stripeFeeOnChargeCents(3 * ADULT_GROSS))
         })
 
         it('always adds up: collected minus fees equals banked', () => {
@@ -185,21 +189,127 @@ describe('getRegistrationTotals', () => {
             ])
 
             expect(totals.cardPaidCents + totals.offlinePaidCents).toBe(totals.paidCents)
-            expect(totals.bankedCents).toBe(totals.paidCents - totals.estimatedFeeCents)
+            expect(totals.bankedCents).toBe(
+                totals.paidCents - totals.feeCents - totals.lostToRefundsCents,
+            )
         })
 
-        /* Only paid money is counted. A pending card registration has been charged nothing, so it must
-           contribute no fee — otherwise the bank figure is reduced by a fee nobody has paid. */
-        it('ignores pending, waived and refunded money', () => {
+        /* Only paid money is counted as money. A pending card registration has been charged nothing,
+           so it must contribute no fee — otherwise the bank figure is reduced by a fee nobody paid. */
+        it('ignores pending and waived money', () => {
             const totals = getRegistrationTotals([
                 reg({ id: 'a', status: 'pending', stripeSessionId: 'cs_1', totalCents: 99900 }),
                 reg({ id: 'b', status: 'waived', stripeSessionId: null, totalCents: 48000 }),
-                reg({ id: 'c', status: 'refunded', stripeSessionId: 'cs_2', totalCents: 77700 }),
             ])
 
             expect(totals.cardPaidCents).toBe(0)
             expect(totals.offlinePaidCents).toBe(0)
-            expect(totals.estimatedFeeCents).toBe(0)
+            expect(totals.feeCents).toBe(0)
+            expect(totals.lostToRefundsCents).toBe(0)
+            expect(totals.bankedCents).toBe(0)
+        })
+
+        /* THE fee Stripe really charged, once the webhook has recorded it. An international card costs
+           more than 2.9%, so the estimate is a floor and the stored value must win. */
+        it('prefers the recorded fee over the estimate', () => {
+            const totals = getRegistrationTotals([
+                reg({ stripeSessionId: 'cs_1', totalCents: ADULT_GROSS, stripeFeeCents: 812 }),
+            ])
+
+            expect(totals.feeCents).toBe(812)
+            expect(totals.bankedCents).toBe(ADULT_GROSS - 812)
+            expect(totals.feesAreExact).toBe(true)
+        })
+
+        it('falls back to the estimate when no fee was recorded', () => {
+            const totals = getRegistrationTotals([
+                reg({ stripeSessionId: 'cs_1', totalCents: ADULT_GROSS, stripeFeeCents: null }),
+            ])
+
+            expect(totals.feeCents).toBe(stripeFeeOnChargeCents(ADULT_GROSS))
+            expect(totals.feesAreExact).toBe(false)
+        })
+
+        /* One unrecorded row makes the whole figure approximate, and the panel says so. */
+        it('is not exact when any contributing row is estimated', () => {
+            const totals = getRegistrationTotals([
+                reg({
+                    id: 'a',
+                    stripeSessionId: 'cs_1',
+                    totalCents: ADULT_GROSS,
+                    stripeFeeCents: 509,
+                }),
+                reg({
+                    id: 'b',
+                    stripeSessionId: 'cs_2',
+                    totalCents: ADULT_GROSS,
+                    stripeFeeCents: null,
+                }),
+            ])
+
+            expect(totals.feeCents).toBe(509 + stripeFeeOnChargeCents(ADULT_GROSS))
+            expect(totals.feesAreExact).toBe(false)
+        })
+
+        /* Zero is a real fee, not a missing one. A truthiness check here would re-estimate a charge
+           Stripe genuinely took nothing on. */
+        it('treats a recorded fee of zero as recorded', () => {
+            const totals = getRegistrationTotals([
+                reg({ stripeSessionId: 'cs_1', totalCents: ADULT_GROSS, stripeFeeCents: 0 }),
+            ])
+
+            expect(totals.feeCents).toBe(0)
+            expect(totals.bankedCents).toBe(ADULT_GROSS)
+            expect(totals.feesAreExact).toBe(true)
+        })
+
+        /* Stripe keeps its fee when a charge is refunded — the refund's own balance transaction has
+           fee 0 — so a cancelled booking costs the reunion the fee with nobody attending. It was
+           invisible: refunded rows are excluded from every other figure here. */
+        it('counts the fee on a cancelled card booking as lost', () => {
+            const totals = getRegistrationTotals([
+                reg({
+                    id: 'a',
+                    status: 'refunded',
+                    stripeSessionId: 'cs_1',
+                    totalCents: ADULT_GROSS,
+                    stripeFeeCents: 509,
+                }),
+            ])
+
+            expect(totals.lostToRefundsCents).toBe(509)
+            /* No money held, and the fee is a debt against it. */
+            expect(totals.paidCents).toBe(0)
+            expect(totals.bankedCents).toBe(-509)
+        })
+
+        it('subtracts the loss from what reaches the bank', () => {
+            const totals = getRegistrationTotals([
+                reg({
+                    id: 'a',
+                    stripeSessionId: 'cs_1',
+                    totalCents: ADULT_GROSS,
+                    stripeFeeCents: 509,
+                }),
+                reg({
+                    id: 'b',
+                    status: 'refunded',
+                    stripeSessionId: 'cs_2',
+                    totalCents: ADULT_GROSS,
+                    stripeFeeCents: 509,
+                }),
+            ])
+
+            expect(totals.bankedCents).toBe(ADULT_GROSS - 509 - 509)
+        })
+
+        /* A cancelled cheque registration cost nothing: Stripe never touched it. */
+        it('loses nothing on a cancelled offline booking', () => {
+            const totals = getRegistrationTotals([
+                reg({ status: 'refunded', stripeSessionId: null, totalCents: 16000 }),
+            ])
+
+            expect(totals.lostToRefundsCents).toBe(0)
             expect(totals.bankedCents).toBe(0)
         })
 
@@ -217,7 +327,7 @@ describe('getRegistrationTotals', () => {
 
             expect(totals.cardPaidCents).toBe(ADULT_GROSS)
             expect(totals.offlinePaidCents).toBe(0)
-            expect(totals.estimatedFeeCents).toBeGreaterThan(0)
+            expect(totals.feeCents).toBeGreaterThan(0)
         })
     })
 })

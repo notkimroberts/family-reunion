@@ -75,8 +75,8 @@ beforeEach(() => {
     vi.clearAllMocks()
     selectQueue.length = 0
     mockResolveTierPricing.mockResolvedValue({
-        'tier-adult': { label: 'Adult', priceCents: ADULT_NET, shirtSizeCategory: 'adult' },
-        'tier-child': { label: 'Child', priceCents: CHILD_NET, shirtSizeCategory: 'child' },
+        'tier-adult': { label: 'Adult', priceCents: ADULT_NET },
+        'tier-child': { label: 'Child', priceCents: CHILD_NET },
     })
 })
 

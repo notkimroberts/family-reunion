@@ -28,12 +28,24 @@ export type RegistrationTotals = {
        single "Collected minus 2.9%" line would have done to a year of paper registrations. */
     cardPaidCents: number
     offlinePaidCents: number
-    /* Stripe's cut, ESTIMATED at 2.9% + 30¢ per charge — see stripeFeeOnChargeCents for why it can
-       only ever be an estimate, and why it is a floor rather than a guess in either direction. */
-    estimatedFeeCents: number
-    /* Collected minus the estimated fees: the money that ends up in the reunion's hands. Cheques still
-       have to be deposited; nothing here knows whether that has happened. */
+    /* Stripe's cut on the money still held. Real where the webhook recorded it, falling back to the
+       2.9% + 30¢ estimate for rows that predate the column or whose balance transaction could not be
+       read — see stripeFeeOnChargeCents. */
+    feeCents: number
+    /* The fees on CANCELLED card bookings, which is money gone.
+
+       Stripe does not return the processing fee when a charge is refunded: the refund is its own
+       balance transaction with fee 0, so a $165.09 booking refunded in full costs $5.09 that never
+       comes back. Refunded registrations are excluded from every other figure here — nobody is coming
+       and no money is owed — which left this loss invisible in a panel whose job is to say what the
+       reunion has. */
+    lostToRefundsCents: number
+    /* Collected, minus the fees on it, minus the fees lost to cancellations: what a bank statement
+       will show. Cheques still have to be deposited; nothing here knows whether that has happened. */
     bankedCents: number
+    /* False when any contributing figure came from the estimate, so the panel can stop claiming
+       precision it does not have. */
+    feesAreExact: boolean
     pendingPeopleCount: number
     pendingPartyCount: number
     outstandingCents: number
@@ -51,20 +63,34 @@ export function getRegistrationTotals(registrations: RegistrationSummary[]): Reg
     const cardPaid = paid.filter((r) => r.stripeSessionId !== null)
     const offlinePaid = paid.filter((r) => r.stripeSessionId === null)
 
+    /* Cancelled bookings that went through Stripe. Their fee is the loss; a cancelled cheque
+       registration costs nothing, because Stripe never touched it. */
+    const cardRefunded = registrations.filter(
+        (r) => r.status === 'refunded' && r.stripeSessionId !== null,
+    )
+
     const cardPaidCents = cardPaid.reduce((sum, r) => sum + r.totalCents, 0)
     const offlinePaidCents = offlinePaid.reduce((sum, r) => sum + r.totalCents, 0)
-    /* Per registration, not on the total: the 30¢ is charged once per payment, so one deduction from
-       the summed cents would undercount it by 30¢ for every registration after the first. */
-    const estimatedFeeCents = cardPaid.reduce(
-        (sum, r) => sum + stripeFeeOnChargeCents(r.totalCents),
-        0,
-    )
+
+    /* The recorded fee when there is one, the estimate when there is not. Per registration either
+       way, never on the summed total: the 30¢ is charged once per PAYMENT, so a single deduction from
+       the sum would undercount by 30¢ for every registration after the first.
+
+       `?? undefined` before the nullish check because the column is `number | null` and 0 is a real
+       fee — a truthiness test here would silently re-estimate a genuinely free charge. */
+    const feeOf = (registration: RegistrationSummary) =>
+        registration.stripeFeeCents ?? stripeFeeOnChargeCents(registration.totalCents)
+
+    const feeCents = cardPaid.reduce((sum, r) => sum + feeOf(r), 0)
+    const lostToRefundsCents = cardRefunded.reduce((sum, r) => sum + feeOf(r), 0)
 
     return {
         cardPaidCents,
         offlinePaidCents,
-        estimatedFeeCents,
-        bankedCents: cardPaidCents + offlinePaidCents - estimatedFeeCents,
+        feeCents,
+        lostToRefundsCents,
+        bankedCents: cardPaidCents + offlinePaidCents - feeCents - lostToRefundsCents,
+        feesAreExact: [...cardPaid, ...cardRefunded].every((r) => r.stripeFeeCents !== null),
         attendingCount: attending.reduce((sum, r) => sum + r.memberCount, 0),
         partyCount: attending.length,
         /* The same money as the two lines above, added up rather than re-filtered, so "Collected" and

@@ -1,8 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { POST } from './+server'
 
-const { mockConstructEvent } = vi.hoisted(() => ({
+const { mockConstructEvent, mockPaymentIntentRetrieve } = vi.hoisted(() => ({
     mockConstructEvent: vi.fn(),
+    mockPaymentIntentRetrieve: vi.fn(),
 }))
 
 const { mockTerminal, mockSet, mockReturning, mockValues, mockDb } = vi.hoisted(() => {
@@ -60,10 +61,18 @@ vi.mock('$env/dynamic/private', () => ({
     env: { STRIPE_SECRET_KEY: 'sk_test_mock', STRIPE_WEBHOOK_SECRET: 'whsec_test_mock' },
 }))
 
-/* Must use a regular function (not arrow) so new Stripe(...) works. */
+/* Must use a regular function (not arrow) so new Stripe(...) works.
+
+   paymentIntents is here so retrievePaymentFee runs for REAL against this mock rather than being
+   stubbed out — the expand chain it walks is part of what these tests cover. Note that omitting it
+   would not fail anything loudly: that function swallows every error by design, so the fee would
+   silently come back undefined and the assertions would be vacuous. */
 vi.mock('stripe', () => {
     function MockStripe() {
-        return { webhooks: { constructEvent: mockConstructEvent } }
+        return {
+            webhooks: { constructEvent: mockConstructEvent },
+            paymentIntents: { retrieve: mockPaymentIntentRetrieve },
+        }
     }
     MockStripe.createFetchHttpClient = () => ({})
     return { default: MockStripe }
@@ -167,6 +176,14 @@ describe('POST /api/webhooks/stripe', () => {
         mockTerminal.mockResolvedValue([])
         mockReturning.mockResolvedValue([])
         mockSet.mockReturnValue(mockDb)
+        /* 509 cents — what Stripe takes on the $165.09 an adult place is grossed up to. Needs a
+           default: without one the mock resolves undefined, retrievePaymentFee throws reading
+           .latest_charge off it, and its own catch turns that into "fee not known" — so every
+           assertion about a stored fee would fail for a reason that looks nothing like the cause. */
+        mockPaymentIntentRetrieve.mockReset()
+        mockPaymentIntentRetrieve.mockResolvedValue({
+            latest_charge: { balance_transaction: { fee: 509 } },
+        })
     })
 
     it('returns 400 when stripe-signature header is missing', async () => {
@@ -362,6 +379,159 @@ describe('POST /api/webhooks/stripe', () => {
        a read-then-insert with no constraint behind it: two concurrent redeliveries could both
        pass the SELECT and insert two rows for one charge, and the guard was skipped entirely
        when payment_intent was null. It is now a UNIQUE index on the checkout session id. */
+    /* The fee Stripe actually charged, stored so the admin panel can stop estimating at 2.9% + 30¢.
+
+       What makes this delicate is that both write paths are also the idempotency guards, so a fee
+       written in the wrong place is a fee counted twice on every Stripe redelivery. */
+    describe('recording the Stripe fee', () => {
+        /* The shared fixtures carry no payment_intent — several existing tests depend on that, and one
+           asserts add_member still inserts without one. A fee only exists where a charge does, so these
+           tests supply their own sessions that have one. */
+        const paidSession = { ...validSession, payment_intent: 'pi_1' }
+        const paidAddMemberSession = { ...addMemberSession, payment_intent: 'pi_2' }
+
+        /* A session WITH a payment intent takes one extra DB write the shared helper does not queue:
+           fulfillCheckout backfills the intent onto every party member. Queue it ahead of the three
+           reads getConfirmationEmailData makes, or the event lookup returns the backfill's result and
+           blows up on reunionEvent.metadata. */
+        function queuePaidHappyPath() {
+            mockReturning.mockResolvedValueOnce([{ id: mockRegistration.id }])
+            mockTerminal
+                .mockResolvedValueOnce([]) // party-member intent backfill
+                .mockResolvedValueOnce([mockRegistration])
+                .mockResolvedValueOnce([mockReunionEvent])
+                .mockResolvedValueOnce([mockMember])
+        }
+
+        it('stores the fee from the balance transaction when marking paid', async () => {
+            mockConstructEvent.mockReturnValue({
+                type: 'checkout.session.completed',
+                data: { object: paidSession },
+            })
+            queuePaidHappyPath()
+
+            await POST(makeRequest('{}', 'sig'))
+
+            expect(mockSet).toHaveBeenCalledWith(expect.objectContaining({ stripeFeeCents: 509 }))
+        })
+
+        it('asks Stripe about the payment intent from the session', async () => {
+            mockConstructEvent.mockReturnValue({
+                type: 'checkout.session.completed',
+                data: { object: paidSession },
+            })
+            queuePaidHappyPath()
+
+            await POST(makeRequest('{}', 'sig'))
+
+            expect(mockPaymentIntentRetrieve).toHaveBeenCalledWith(
+                'pi_1',
+                expect.objectContaining({ expand: ['latest_charge.balance_transaction'] }),
+            )
+        })
+
+        /* THE double-count guard, asserted at the only level a mock can reach.
+
+           What protects against a redelivery writing the fee twice is the WHERE clause —
+           `id = ? AND status = 'pending'` — which matches nothing the second time. That is a database
+           guarantee, and this mock cannot exercise it: drizzle calls .set() before .where(), so
+           mockSet records the fee on every call regardless of how many rows the statement would touch.
+           Asserting "set was not called with a fee" would therefore fail against correct code, which
+           is exactly what it did when written that way.
+
+           So assert the structural property instead: the fee travels in the SAME .set() as the status
+           transition, and therefore under the same WHERE. If someone later moves it to its own
+           db.update() — which would have no status condition — this fails. */
+        it('writes the fee in the same conditional statement as the status transition', async () => {
+            mockConstructEvent.mockReturnValue({
+                type: 'checkout.session.completed',
+                data: { object: paidSession },
+            })
+            queuePaidHappyPath()
+
+            await POST(makeRequest('{}', 'sig'))
+
+            const feeWrites = mockSet.mock.calls.filter(
+                ([written]) => written.stripeFeeCents !== undefined,
+            )
+            expect(feeWrites).toHaveLength(1)
+            expect(feeWrites[0][0]).toMatchObject({ status: 'paid' })
+        })
+
+        /* And the transition it rides on really is conditional — the redelivery case, which the suite
+           already covers for email, restated here for the fee. Nothing is committed because the WHERE
+           matches no row, evidenced by the code taking the already-fulfilled branch. */
+        it('commits nothing on a redelivery of an already-paid session', async () => {
+            mockConstructEvent.mockReturnValue({
+                type: 'checkout.session.completed',
+                data: { object: paidSession },
+            })
+            mockReturning.mockResolvedValueOnce([])
+            mockTerminal.mockResolvedValueOnce([{ status: 'paid' }])
+
+            await POST(makeRequest('{}', 'sig'))
+
+            expect(mockDbgStripe).toHaveBeenCalledWith(
+                expect.stringContaining('already fulfilled'),
+                'reg-123',
+                'paid',
+            )
+            /* The party-member intent backfill is the other write on this path, and it is downstream
+               of the same early return. */
+            expect(mockSet).toHaveBeenCalledTimes(1)
+        })
+
+        /* A fee that cannot be read must not blank a stored one, and must not stop the registration
+           being marked paid — the payment is captured either way. */
+        it('leaves the column alone when Stripe cannot tell us the fee', async () => {
+            mockConstructEvent.mockReturnValue({
+                type: 'checkout.session.completed',
+                data: { object: paidSession },
+            })
+            mockPaymentIntentRetrieve.mockRejectedValue(new Error('stripe is down'))
+            queuePaidHappyPath()
+
+            const res = await POST(makeRequest('{}', 'sig'))
+
+            expect(res.status).toBe(200)
+            expect(mockSet).toHaveBeenCalledWith(expect.objectContaining({ status: 'paid' }))
+            expect(mockSet.mock.calls[0][0]).not.toHaveProperty('stripeFeeCents')
+        })
+
+        /* An add_member is a SECOND charge with its own 2.9% + 30¢, so its fee adds to what the
+           initial checkout already cost. Assigning would silently discard the first. */
+        it('adds an add_member fee to the registration rather than replacing it', async () => {
+            mockConstructEvent.mockReturnValue({
+                type: 'checkout.session.completed',
+                data: { object: paidAddMemberSession },
+            })
+            mockTerminal.mockResolvedValueOnce([{ status: 'paid' }])
+            mockReturning.mockResolvedValueOnce([{ id: 'pm-new' }])
+
+            await POST(makeRequest('{}', 'sig'))
+
+            const written = mockSet.mock.calls.at(-1)?.[0]
+            expect(written).toHaveProperty('stripeFeeCents')
+            /* A SQL expression — coalesce(existing, 0) + 509 — not a bare number. */
+            expect(typeof written.stripeFeeCents).not.toBe('number')
+        })
+
+        /* The add_member insert is deduped by a unique index on the checkout session id. On a
+           conflict the parent is not touched, so the fee is not added twice either. */
+        it('adds no fee when an add_member redelivery conflicts', async () => {
+            mockConstructEvent.mockReturnValue({
+                type: 'checkout.session.completed',
+                data: { object: paidAddMemberSession },
+            })
+            mockTerminal.mockResolvedValueOnce([{ status: 'paid' }])
+            mockReturning.mockResolvedValueOnce([])
+
+            await POST(makeRequest('{}', 'sig'))
+
+            expect(mockSet).not.toHaveBeenCalled()
+        })
+    })
+
     describe('add_member', () => {
         function queueAddMemberHappyPath(parentStatus = 'paid') {
             mockTerminal.mockResolvedValueOnce([{ status: parentStatus }]) // parent lookup
