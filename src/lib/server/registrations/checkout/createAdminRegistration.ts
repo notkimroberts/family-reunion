@@ -3,6 +3,7 @@ import { partyMembers, registrations, registrationStatusEnum } from '$lib/server
 import { resolveTierPricing } from '$lib/server/tiers'
 import { generateManagementToken } from '../hashManagementToken'
 import type { MemberInput } from './MemberInput'
+import { assertContactTierIsAdult } from './_assertContactTierIsAdult'
 import { buildPartyMemberRow } from './buildPartyMemberRow'
 
 /* Inserts a registration directly at the given status (bypasses Stripe). Generates a managementToken so the contact can self-manage later; the DB stores only the SHA-256 hash, the plaintext is returned to the caller. */
@@ -18,6 +19,8 @@ export async function createAdminRegistration(params: {
         params.eventId,
         params.members.map((m) => m.tierId),
     )
+
+    assertContactTierIsAdult(params.members, pricingByTierId)
 
     const { plaintext: managementToken, hash: tokenHash } = generateManagementToken()
 

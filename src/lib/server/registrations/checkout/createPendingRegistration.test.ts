@@ -72,6 +72,37 @@ describe('createPendingRegistration', () => {
         childTierId = await seedTier(db, eventId, { label: 'Child', priceCents: 9000 })
     })
 
+    /* The person who books and pays for the party is an adult. The contact's tier dropdown hides the
+       child tiers, but a tier id arrives from the client, so this is where the rule holds — and it
+       has to hold BEFORE the Stripe session, or a refused registration still charges a card. */
+    it('refuses a contact booked on a child tier, without opening a checkout', async () => {
+        await expect(
+            register({
+                members: [
+                    { ...CONTACT, name: 'Timmy Patterson', tierId: childTierId },
+                    { ...CONTACT, tierId: adultTierId },
+                ],
+            }),
+        ).rejects.toMatchObject({ status: 400 })
+
+        expect(mockCreateCheckout).not.toHaveBeenCalled()
+        expect(await db.select().from(registrations)).toHaveLength(0)
+        expect(await db.select().from(partyMembers)).toHaveLength(0)
+    })
+
+    /* Only the CONTACT's own place is restricted. Bringing children is the point of the reunion. */
+    it('accepts a child anywhere but first', async () => {
+        const result = await register({
+            members: [
+                { ...CONTACT, tierId: adultTierId },
+                { ...CONTACT, name: 'Timmy Patterson', tierId: childTierId },
+            ],
+        })
+
+        const members = await membersOf(result.registrationId)
+        expect(members.map((row) => row.tierLabel).sort()).toEqual(['Adult', 'Child'])
+    })
+
     it('creates the registration as pending and stores only the token hash', async () => {
         const result = await register()
 

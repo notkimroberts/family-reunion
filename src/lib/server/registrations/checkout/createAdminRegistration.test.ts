@@ -56,6 +56,31 @@ describe('createAdminRegistration', () => {
         expect(members.map((row) => row.priceCents).sort((a, b) => a - b)).toEqual([9000, 16000])
     })
 
+    /* The person who books and pays for a party is an adult. The tier dropdown hides the child
+       tiers from the contact, but the dropdown is not the guard: the tier id is posted by the
+       client, so the rule is enforced where the row is written. */
+    it('refuses a contact booked on a child tier', async () => {
+        await expect(
+            create({
+                members: [
+                    { name: 'Junior Trantow', tierId: childTierId },
+                    { name: 'Wanda Trantow', tierId: adultTierId },
+                ],
+            }),
+        ).rejects.toMatchObject({ status: 400 })
+
+        expect(await db.select().from(registrations)).toHaveLength(0)
+        expect(await db.select().from(partyMembers)).toHaveLength(0)
+    })
+
+    /* Only the CONTACT's own place is restricted — the children in the party are the point. */
+    it('allows a child anywhere but first', async () => {
+        const result = await create()
+
+        const members = await membersOf(result.registrationId)
+        expect(members.map((row) => row.tierLabel).sort()).toEqual(['Adult', 'Child'])
+    })
+
     /* The caller puts the contact first, and only that row may be flagged. */
     it('flags the first member as the contact and no one else', async () => {
         const result = await create()
