@@ -1,5 +1,5 @@
 <script lang="ts">
-import { ChevronDown, ClipboardPen, LogOut, Menu } from '@lucide/svelte'
+import { ClipboardPen, LayoutDashboard, LogOut, Menu } from '@lucide/svelte'
 import { page } from '$app/state'
 import { authClient } from '$lib/auth-client'
 import { Avatar, AvatarFallback } from '$lib/components/ui/avatar'
@@ -10,7 +10,7 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from '$lib/components/ui/dropdown-menu'
-import { APP_NAME, CONTACT_NAV_LINK, REGISTER_NAV_LINK } from '$lib/general/constants'
+import { APP_NAME, REGISTER_NAV_LINK } from '$lib/general/constants'
 import { getInitials } from '$lib/utils'
 import MobileDrawer from './MobileDrawer.svelte'
 import ThemeToggle from './ThemeToggle.svelte'
@@ -27,13 +27,6 @@ function handleSignOut() {
     authClient.signOut().then(() => {
         window.location.href = '/'
     })
-}
-
-function isActive(href: string): boolean {
-    if (href === '/') {
-        return page.url.pathname === '/'
-    }
-    return page.url.pathname.startsWith(href)
 }
 
 let mobileMenuOpen = $state(false)
@@ -55,13 +48,8 @@ let mobileMenuOpen = $state(false)
 
         <nav class="flex items-center gap-0.5">
             <a
-                href={CONTACT_NAV_LINK.href}
-                class="flex items-center px-2.5 py-1.5 rounded-lg text-xs font-medium text-foreground transition-colors hover:bg-muted">
-                {CONTACT_NAV_LINK.label}
-            </a>
-            <a
                 href={REGISTER_NAV_LINK.href}
-                class="ml-1 flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/90">
+                class="flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/90">
                 <ClipboardPen class="h-3.5 w-3.5" />
                 {REGISTER_NAV_LINK.label}
             </a>
@@ -90,6 +78,19 @@ let mobileMenuOpen = $state(false)
                             <span class="text-muted-foreground truncate text-xs">{user.email}</span>
                         </div>
                         <DropdownMenuSeparator />
+                        <!-- The admin area has no entry point in the nav — /login redirects to it once,
+                             and after that an organiser had to type the URL. It belongs behind the
+                             avatar because it is per-account, not per-visitor. -->
+                        {#if user.role === 'admin'}
+                            <DropdownMenuItem>
+                                {#snippet child({ props })}
+                                    <a href="/admin" {...props}>
+                                        <LayoutDashboard class="h-4 w-4" />
+                                        Admin
+                                    </a>
+                                {/snippet}
+                            </DropdownMenuItem>
+                        {/if}
                         <DropdownMenuItem onSelect={handleSignOut}>
                             <LogOut class="h-4 w-4" />
                             Sign out
