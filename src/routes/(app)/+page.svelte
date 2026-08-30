@@ -266,7 +266,17 @@ const FAMILY_STATS = [
     </div>
 </section>
 
-<!-- Venue & Hotel -->
+<!-- Venue & Hotel.
+
+     No max-w on the card grids in this section or the two below it. Every section here is col-span-12,
+     so they were already the same width — but Venue, Stay Connected and Get in Touch each constrained
+     their cards further, to 64rem, 48rem and 42rem, against a page container of 72rem. Four different
+     card widths down one page, none of them deliberate.
+
+     The reading measure that motivated those is already handled: main is max-w-6xl for public pages,
+     and the one block of long body copy — Our Family Story — keeps its own max-w-3xl INSIDE a
+     full-width card, which is the right place for it. Cards holding a two-column grid of short items
+     do not need it. -->
 <section class="col-span-12 mt-8 md:mt-12">
     <div class="text-center max-w-xl mx-auto mb-8">
         <h2>Venue &amp; Where to Stay</h2>
@@ -274,7 +284,7 @@ const FAMILY_STATS = [
             Both are in Uptown Oakland, a short walk from each other.
         </p>
     </div>
-    <div class="grid grid-cols-1 gap-6 max-w-5xl mx-auto md:grid-cols-2">
+    <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
         <ReunionLocations />
     </div>
 </section>
@@ -287,7 +297,7 @@ const FAMILY_STATS = [
             Join the family online between now and the reunion.
         </p>
     </div>
-    <div class="grid grid-cols-1 gap-6 max-w-3xl mx-auto md:grid-cols-2">
+    <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
         <StayConnected />
     </div>
 </section>
@@ -300,7 +310,7 @@ const FAMILY_STATS = [
             Have a question about the reunion? Reach the organizers directly below.
         </p>
     </div>
-    <Card class="max-w-2xl mx-auto">
+    <Card>
         <CardContent class="pt-6">
             <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 {#if contactEmail}
