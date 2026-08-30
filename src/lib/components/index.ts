@@ -1,6 +1,7 @@
 export { default as AdminDataView } from './AdminDataView.svelte'
 export { default as AppHeader } from './AppHeader.svelte'
 export { default as DatePicker } from './DatePicker.svelte'
+export { default as DateTimeField } from './DateTimeField.svelte'
 export { default as Divider } from './Divider.svelte'
 export { default as EventStatusBanner } from './EventStatusBanner.svelte'
 export { default as FacebookIcon } from './FacebookIcon.svelte'

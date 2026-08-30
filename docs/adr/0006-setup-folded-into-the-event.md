@@ -34,6 +34,14 @@ only display the field as a read-only badge.
 the year in `draft` with Adult and Child tiers at $0 — unchanged behaviour — then navigates to that
 year's settings, because a draft with $0 tiers cannot take a registration and the list would not say so.
 
+> **Amended 2026-08-30 — the create form is its own route, `/admin/event/new`.** The panel that expanded
+> in place put a form between the heading and the cards every time it opened, and pushed the list you
+> were reading down the screen. Its result also came back as `{ createdEventId }` for an `$effect` to
+> `goto()`, because an action that redirected would have navigated away before a `fail()` could render
+> on the list — a redirect written in three places to work around the page it was on. On a page of its
+> own, `fail()` renders there and success is a plain `redirect(303, …)`. Everything else here stands:
+> still owner-only, still `draft` with $0 tiers, still lands on that year's settings.
+
 **A year's status moves to `/admin/event/[eventId]/settings`**, as one button per status with the current
 one disabled.
 
