@@ -5,6 +5,7 @@ import { partyMembers, registrations } from '$lib/server/db/schema'
 import { dbg } from '$lib/server/debug'
 import { resolveTierPricing } from '$lib/server/tiers'
 import { parseBirthDate } from '$lib/utils/age'
+import { assertRegistrationMutable, touchRegistration } from '../lifecycle'
 
 /* Corrects one party member's details on behalf of the registrant.
 
@@ -48,9 +49,10 @@ export async function updateAdminMemberDetails(params: {
         throw error(404, 'Party member not found')
     }
 
-    if (member.registrationStatus === 'refunded') {
-        throw error(409, 'This registration was cancelled and refunded.')
-    }
+    assertRegistrationMutable(
+        member.registrationStatus,
+        'This registration was cancelled and refunded.',
+    )
 
     const updates: Partial<typeof partyMembers.$inferInsert> = {}
 
@@ -99,10 +101,7 @@ export async function updateAdminMemberDetails(params: {
     }
 
     await db.update(partyMembers).set(updates).where(eq(partyMembers.id, params.memberId))
-    await db
-        .update(registrations)
-        .set({ updatedAt: new Date() })
-        .where(eq(registrations.id, member.registrationId))
+    await touchRegistration(member.registrationId)
 
     dbg.register('admin updated member %s (%s)', params.memberId, Object.keys(updates).join(', '))
 

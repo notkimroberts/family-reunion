@@ -3,6 +3,7 @@ import { and, eq } from 'drizzle-orm'
 import { db } from '$lib/server/db'
 import { partyMembers, registrations } from '$lib/server/db/schema'
 import { dbg } from '$lib/server/debug'
+import { assertRegistrationMutable } from '../lifecycle'
 
 /* Corrects a registration's contact details.
 
@@ -36,9 +37,7 @@ export async function updateRegistrationContact(params: {
         throw error(404, 'Registration not found')
     }
 
-    if (existing.status === 'refunded') {
-        throw error(409, 'This registration was cancelled and refunded.')
-    }
+    assertRegistrationMutable(existing.status, 'This registration was cancelled and refunded.')
 
     /* Normalised here rather than in the schema: the schemas are shared with client-side validation,
        where a transform would rewrite what someone is mid-way through typing. */

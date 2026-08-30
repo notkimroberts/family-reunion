@@ -1,52 +1,25 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { eq } from 'drizzle-orm'
+import { describe, it, expect, beforeEach } from 'vitest'
+import { partyMembers, registrations } from '$lib/server/db/schema'
+import { resetTestDb } from '$lib/server/db/testing/resetTestDb'
+import { seedRegistration } from '$lib/server/testing/seedRegistration'
+import { seedTier } from '$lib/server/testing/seedTier'
 
-const { mockTerminal, mockReturning, mockSet, mockValues, mockDb } = vi.hoisted(() => {
-    /* Terminal queue: each await on a builder pulls the next queued value. */
-    const mockTerminal = vi.fn().mockResolvedValue([])
-    const mockReturning = vi.fn().mockResolvedValue([{ id: 'member-new' }])
-    const mockSet = vi.fn()
-    const mockValues = vi.fn()
+/* The organiser adding one person to an existing registration, offline.
 
-    const chain: Record<string, ReturnType<typeof vi.fn>> = {
-        select: vi.fn(),
-        from: vi.fn(),
-        where: vi.fn(),
-        limit: vi.fn(),
-        update: vi.fn(),
-        set: mockSet,
-        insert: vi.fn(),
-        values: mockValues,
-        returning: mockReturning,
-    }
-    for (const key of ['select', 'from', 'where', 'limit', 'update', 'insert']) {
-        chain[key].mockReturnValue(chain)
-    }
-    mockSet.mockReturnValue(chain)
-    mockValues.mockReturnValue(chain)
-    ;(chain as unknown as { then: unknown }).then = (onFulfilled: unknown, onRejected: unknown) =>
-        (mockTerminal as unknown as () => Promise<unknown>)().then(
-            onFulfilled as (value: unknown) => unknown,
-            onRejected as (reason: unknown) => unknown,
-        )
-    return { mockTerminal, mockReturning, mockSet, mockValues, mockDb: chain }
-})
-
-const { mockResolveTierPricing } = vi.hoisted(() => ({ mockResolveTierPricing: vi.fn() }))
-
-vi.mock('$lib/server/db', () => ({ db: mockDb }))
-vi.mock('$lib/server/db/schema', () => ({ partyMembers: {}, registrations: {} }))
-vi.mock('$lib/server/debug', () => ({ dbg: { register: vi.fn() } }))
-vi.mock('$lib/server/tiers', () => ({ resolveTierPricing: mockResolveTierPricing }))
-vi.mock('drizzle-orm', () => ({ eq: vi.fn() }))
-vi.mock('$lib/utils/age', () => ({
-    parseBirthDate: () => ({ birthYear: 1990, birthMonth: 5, birthDay: 5 }),
-}))
+   Runs against a real Postgres, so "the row is null" is read back from the column. The version this
+   replaced asserted on the object handed to a fake query builder, which meant it could tell an
+   omitted key from an explicit null — a distinction the database does not make, and which broke the
+   test the moment the insert shape moved into buildPartyMemberRow without any behaviour changing. */
 
 const { addAdminMember } = await import('./addAdminMember')
 
+let db: Awaited<ReturnType<typeof resetTestDb>>
+let seeded: Awaited<ReturnType<typeof seedRegistration>>
+let tierId: string
+
 const MEMBER = {
     name: '  Marcus Patterson  ',
-    tierId: 'tier-adult',
     birthDate: '1990-05-05',
     shirtSize: 'L',
     addressLine1: '1 Main St',
@@ -57,75 +30,147 @@ const MEMBER = {
     attendedReunion2025: false,
 }
 
+async function addedRow(registrationId: string) {
+    const rows = await db
+        .select()
+        .from(partyMembers)
+        .where(eq(partyMembers.registrationId, registrationId))
+    return rows.find((row) => !row.isContact)
+}
+
 describe('addAdminMember', () => {
-    beforeEach(() => {
-        vi.clearAllMocks()
-        mockTerminal.mockReset()
-        mockTerminal.mockResolvedValue([])
-        mockReturning.mockResolvedValue([{ id: 'member-new' }])
-        mockSet.mockReturnValue(mockDb)
-        mockValues.mockReturnValue(mockDb)
+    beforeEach(async () => {
+        db = await resetTestDb()
+        seeded = await seedRegistration(db)
         /* Net tier price — deliberately NOT grossed up for Stripe. */
-        mockResolveTierPricing.mockResolvedValue({
-            'tier-adult': { label: 'Adult', priceCents: 16000 },
-        })
+        tierId = await seedTier(db, seeded.eventId, { label: 'Adult', priceCents: 16000 })
     })
 
     /* The whole point of this function: an offline addition must sit on the same price basis as
        the rest of an admin-entered party, not carry a Stripe gross-up. */
     it('snapshots the net tier price and leaves the payment intent null', async () => {
-        mockTerminal.mockResolvedValueOnce([{ status: 'paid', eventId: 'evt-1' }])
+        await addAdminMember({
+            registrationId: seeded.registrationId,
+            member: { ...MEMBER, tierId },
+        })
 
-        await addAdminMember({ registrationId: 'reg-1', member: MEMBER })
-
-        expect(mockValues).toHaveBeenCalledWith(
-            expect.objectContaining({
-                registrationId: 'reg-1',
-                name: 'Marcus Patterson',
-                tierLabel: 'Adult',
-                priceCents: 16000,
-            }),
-        )
+        const row = await addedRow(seeded.registrationId)
+        expect(row).toMatchObject({
+            name: 'Marcus Patterson',
+            tierLabel: 'Adult',
+            priceCents: 16000,
+        })
         /* Never set, which is also what marks the row as never charged online. */
-        const [inserted] = mockValues.mock.calls[0]
-        expect(inserted.stripePaymentIntentId).toBeUndefined()
+        expect(row?.stripePaymentIntentId).toBeNull()
     })
 
     it('trims the name', async () => {
-        mockTerminal.mockResolvedValueOnce([{ status: 'paid', eventId: 'evt-1' }])
-        await addAdminMember({ registrationId: 'reg-1', member: MEMBER })
-        expect(mockValues.mock.calls[0][0].name).toBe('Marcus Patterson')
+        await addAdminMember({
+            registrationId: seeded.registrationId,
+            member: { ...MEMBER, tierId },
+        })
+
+        expect((await addedRow(seeded.registrationId))?.name).toBe('Marcus Patterson')
     })
 
-    it.each(['paid', 'waived', 'pending'])('allows adding to a %s registration', async (status) => {
-        mockTerminal.mockResolvedValueOnce([{ status, eventId: 'evt-1' }])
-        await expect(
-            addAdminMember({ registrationId: 'reg-1', member: MEMBER }),
-        ).resolves.toMatchObject({ memberId: 'member-new' })
+    it('splits the birth date into its three parts', async () => {
+        await addAdminMember({
+            registrationId: seeded.registrationId,
+            member: { ...MEMBER, tierId },
+        })
+
+        expect(await addedRow(seeded.registrationId)).toMatchObject({
+            birthYear: 1990,
+            birthMonth: 5,
+            birthDay: 5,
+        })
     })
+
+    it.each(['paid', 'waived', 'pending'] as const)(
+        'allows adding to a %s registration',
+        async (status) => {
+            const target = await seedRegistration(db, { eventId: seeded.eventId, status })
+
+            await expect(
+                addAdminMember({
+                    registrationId: target.registrationId,
+                    member: { ...MEMBER, tierId },
+                }),
+            ).resolves.toMatchObject({ memberId: expect.any(String) })
+        },
+    )
 
     /* A refunded registration's money went back; adding to it would create an attendee nobody
        paid for and no total accounts for. */
     it('refuses a cancelled registration', async () => {
-        mockTerminal.mockResolvedValueOnce([{ status: 'refunded', eventId: 'evt-1' }])
-        await expect(addAdminMember({ registrationId: 'reg-1', member: MEMBER })).rejects.toThrow()
-        expect(mockValues).not.toHaveBeenCalled()
+        const cancelled = await seedRegistration(db, {
+            eventId: seeded.eventId,
+            status: 'refunded',
+        })
+
+        await expect(
+            addAdminMember({
+                registrationId: cancelled.registrationId,
+                member: { ...MEMBER, tierId },
+            }),
+        ).rejects.toThrow()
+
+        expect(await addedRow(cancelled.registrationId)).toBeUndefined()
     })
 
     it('404s on a missing registration without inserting', async () => {
-        mockTerminal.mockResolvedValueOnce([])
-        await expect(addAdminMember({ registrationId: 'nope', member: MEMBER })).rejects.toThrow()
-        expect(mockValues).not.toHaveBeenCalled()
+        await expect(
+            addAdminMember({
+                registrationId: '00000000-0000-0000-0000-000000000000',
+                member: { ...MEMBER, tierId },
+            }),
+        ).rejects.toThrow()
+
+        expect(await addedRow(seeded.registrationId)).toBeUndefined()
     })
 
     it('preserves the unanswered questions as null rather than false', async () => {
-        mockTerminal.mockResolvedValueOnce([{ status: 'paid', eventId: 'evt-1' }])
         await addAdminMember({
-            registrationId: 'reg-1',
-            member: { ...MEMBER, vegetarianMeal: undefined, attendedReunion2025: undefined },
+            registrationId: seeded.registrationId,
+            member: {
+                ...MEMBER,
+                tierId,
+                vegetarianMeal: undefined,
+                attendedReunion2025: undefined,
+            },
         })
-        const [inserted] = mockValues.mock.calls[0]
-        expect(inserted.vegetarianMeal).toBeNull()
-        expect(inserted.attendedReunion2025).toBeNull()
+
+        const row = await addedRow(seeded.registrationId)
+        expect(row?.vegetarianMeal).toBeNull()
+        expect(row?.attendedReunion2025).toBeNull()
+    })
+
+    /* false is a real answer to "vegetarian?", and the difference from "unanswered" is what the
+       caterer reads. A truthiness test would collapse the two. */
+    it('stores a false answer as false, not null', async () => {
+        await addAdminMember({
+            registrationId: seeded.registrationId,
+            member: { ...MEMBER, tierId, vegetarianMeal: false },
+        })
+
+        expect((await addedRow(seeded.registrationId))?.vegetarianMeal).toBe(false)
+    })
+
+    it('bumps the registration’s updatedAt', async () => {
+        const [before] = await db
+            .select({ updatedAt: registrations.updatedAt })
+            .from(registrations)
+            .where(eq(registrations.id, seeded.registrationId))
+
+        await addAdminMember({
+            registrationId: seeded.registrationId,
+            member: { ...MEMBER, tierId },
+        })
+
+        const [after] = await db
+            .select({ updatedAt: registrations.updatedAt })
+            .from(registrations)
+            .where(eq(registrations.id, seeded.registrationId))
+        expect(after.updatedAt.getTime()).toBeGreaterThanOrEqual(before.updatedAt.getTime())
     })
 })

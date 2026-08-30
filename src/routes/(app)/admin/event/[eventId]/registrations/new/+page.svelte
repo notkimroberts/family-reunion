@@ -5,6 +5,7 @@ import { superForm } from 'sveltekit-superforms'
 import { zod4Client as zodClient } from 'sveltekit-superforms/adapters'
 import { Button } from '$lib/components/ui/button'
 import { Card, CardContent } from '$lib/components/ui/card'
+import { quotePartyTotal } from '$lib/general/pricing'
 import { getTierPriceCents } from '$lib/utils'
 import { EMPTY_PERSON_DETAILS } from '../../../../../register/EMPTY_PERSON_DETAILS'
 import FormErrorSummary from '../../../../../register/FormErrorSummary.svelte'
@@ -87,9 +88,16 @@ let contactAddress = $derived({
     addressZip: self.addressZip,
 })
 
-let subtotal = $derived(
-    (self.tierId ? getTierPriceCents(self.tierId, tiers) : 0) +
-        members.reduce((sum, member) => sum + getTierPriceCents(member.tierId, tiers), 0),
+/* applyStripeFee: false — a paper entry took no card payment, so there is no processing fee to
+   quote. Same module as the public form, one flag apart. */
+let quote = $derived(
+    quotePartyTotal(
+        [
+            ...(self.tierId ? [getTierPriceCents(self.tierId, tiers)] : []),
+            ...members.map((member) => getTierPriceCents(member.tierId, tiers)),
+        ],
+        { applyStripeFee: false },
+    ),
 )
 
 /* Mirrors the public form's gate, so an admin cannot submit a paper entry the schema would reject
@@ -224,7 +232,7 @@ async function handleCopy(url: string) {
                         selfTierId={self.tierId}
                         {members}
                         {tiers}
-                        {subtotal}
+                        {quote}
                         {canSubmit}
                         submitLabel="Add Registration"
                         submitting={$submitting}

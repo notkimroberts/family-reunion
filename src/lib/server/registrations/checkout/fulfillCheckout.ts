@@ -6,10 +6,17 @@ import { dbg } from '$lib/server/debug'
 import { sendRegistrationConfirmation } from '$lib/server/email'
 import { decodeSessionMetadata, retrievePaymentFee } from '$lib/server/payments'
 import { reportError } from '$lib/server/reportError'
-import { parseBirthDate } from '$lib/utils/age'
 /* Relative import, not the $lib/server/registrations barrel: that barrel re-exports this
    folder, so going through it would be a circular import. */
 import { getConfirmationEmailData } from '../queries'
+import { buildPartyMemberRow } from './buildPartyMemberRow'
+
+/* Stripe metadata carries the two yes/no answers as strings: 'true', 'false', or '' for
+   unanswered. Undefined rather than null for the unanswered case, so buildPartyMemberRow's
+   `?? null` is the single place that decides how "no answer" is stored. */
+function decodeMetadataFlag(value: string | undefined): boolean | undefined {
+    return value === '' ? undefined : value === 'true'
+}
 
 /* Webhook handler: branches on metadata.type to either insert an add_member row or mark the registration 'paid'; confirmation email is sent outside the transaction so a send failure never rolls back payment. Stripe redelivers checkout.session.completed on transient failures, so both branches are idempotent at the database level — add_member relies on a UNIQUE index over the checkout session id, and the registration branch on a conditional pending → paid transition. Neither uses a read-then-insert, which a concurrent redelivery could pass. The confirmation email additionally carries a Resend idempotency key. */
 export async function fulfillCheckout(
@@ -61,38 +68,41 @@ export async function fulfillCheckout(
            Transition note: add_member rows created before this column existed have it NULL, so
            a redelivery of one of those is not deduped by this key. Stripe only redelivers within
            a few days and no live add_member charges predate this change. */
-        const parsed = memberBirthDate ? parseBirthDate(memberBirthDate) : null
         /* Read before the transaction: it is a network call to Stripe and must not hold a DB
            transaction open. Undefined when the fee could not be read, which leaves the column alone. */
         const feeCents = paymentIntentId ? await retrievePaymentFee(paymentIntentId) : undefined
         const inserted = await db.transaction(async (tx) => {
             const rows = await tx
                 .insert(partyMembers)
-                .values({
-                    registrationId,
-                    name: memberName,
-                    birthYear: parsed?.birthYear ?? null,
-                    birthMonth: parsed?.birthMonth ?? null,
-                    birthDay: parsed?.birthDay ?? null,
-                    shirtSize: memberShirtSize || null,
-                    addressLine1: metadata.memberAddressLine1 || null,
-                    addressLine2: metadata.memberAddressLine2 || null,
-                    addressCity: metadata.memberAddressCity || null,
-                    addressState: metadata.memberAddressState || null,
-                    addressZip: metadata.memberAddressZip || null,
-                    vegetarianMeal:
-                        metadata.memberVegetarianMeal === ''
-                            ? null
-                            : metadata.memberVegetarianMeal === 'true',
-                    attendedReunion2025:
-                        metadata.memberAttendedReunion2025 === ''
-                            ? null
-                            : metadata.memberAttendedReunion2025 === 'true',
-                    tierLabel: memberTierLabel,
-                    priceCents: memberPriceCents,
-                    stripePaymentIntentId: paymentIntentId,
-                    stripeCheckoutSessionId: session.id,
-                })
+                .values(
+                    buildPartyMemberRow({
+                        registrationId,
+                        member: {
+                            name: memberName,
+                            birthDate: memberBirthDate,
+                            shirtSize: memberShirtSize,
+                            addressLine1: metadata.memberAddressLine1,
+                            addressLine2: metadata.memberAddressLine2,
+                            addressCity: metadata.memberAddressCity,
+                            addressState: metadata.memberAddressState,
+                            addressZip: metadata.memberAddressZip,
+                            /* Stripe metadata is strings only, so the two yes/no answers arrive as
+                               'true' / 'false' / '' — the empty string meaning unanswered. Decoded
+                               here rather than in buildPartyMemberRow: this is the only path whose
+                               source is Stripe, and the other three already hold booleans. */
+                            vegetarianMeal: decodeMetadataFlag(metadata.memberVegetarianMeal),
+                            attendedReunion2025: decodeMetadataFlag(
+                                metadata.memberAttendedReunion2025,
+                            ),
+                        },
+                        tierLabel: memberTierLabel,
+                        /* Grossed up already: this price came off the Checkout session the
+                           registrant just paid. */
+                        priceCents: memberPriceCents,
+                        stripePaymentIntentId: paymentIntentId,
+                        stripeCheckoutSessionId: session.id,
+                    }),
+                )
                 .onConflictDoNothing({ target: partyMembers.stripeCheckoutSessionId })
                 .returning({ id: partyMembers.id })
 

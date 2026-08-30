@@ -4,13 +4,13 @@ import { partyMembers, registrations } from '$lib/server/db/schema'
 import { dbg } from '$lib/server/debug'
 import { createRegistrationCheckout } from '$lib/server/payments'
 import { resolveTierPricing } from '$lib/server/tiers'
-import { parseBirthDate } from '$lib/utils/age'
 import { grossUpForStripe } from '$lib/utils/stripeFee'
 import { assertRegistrationEditable } from '../assertRegistrationEditable'
 import { getRegistrationLockDate } from '../getRegistrationLockDate'
 import { generateManagementToken } from '../hashManagementToken'
 import type { MemberInput } from './MemberInput'
-import { calculateTotal } from './calculateTotal'
+import { buildCheckoutLineItems } from './buildCheckoutLineItems'
+import { buildPartyMemberRow } from './buildPartyMemberRow'
 
 /* Creates a 'pending' registration + party members, then opens a Stripe Checkout session.
    Each registration gets a permanent managementToken used as the ownership credential.
@@ -51,7 +51,7 @@ export async function createPendingRegistration(params: {
     const pricingByTierId = await resolveTierPricing(params.eventId, allTierIds)
     const selfPricing = pricingByTierId[params.selfTierId]
 
-    const { lineItems } = calculateTotal(
+    const lineItems = buildCheckoutLineItems(
         params.contactName,
         selfPricing,
         params.additionalMembers,
@@ -72,49 +72,36 @@ export async function createPendingRegistration(params: {
         })
         .returning()
 
-    const selfParsed = params.selfBirthDate ? parseBirthDate(params.selfBirthDate) : null
     await db.insert(partyMembers).values([
-        {
+        buildPartyMemberRow({
             registrationId: registration.id,
-            name: params.contactName,
-            /* This row is the contact attending their own reunion. Flagged so their name has one
-               editable field rather than two copies that drift — see party_members.isContact. */
-            isContact: true,
-            birthYear: selfParsed?.birthYear ?? null,
-            birthMonth: selfParsed?.birthMonth ?? null,
-            birthDay: selfParsed?.birthDay ?? null,
-            shirtSize: params.selfShirtSize || null,
-            addressLine1: params.selfAddressLine1 || null,
-            addressLine2: params.selfAddressLine2 || null,
-            addressCity: params.selfAddressCity || null,
-            addressState: params.selfAddressState || null,
-            addressZip: params.selfAddressZip || null,
-            vegetarianMeal: params.selfVegetarianMeal ?? null,
-            attendedReunion2025: params.selfAttendedReunion2025 ?? null,
+            member: {
+                name: params.contactName,
+                birthDate: params.selfBirthDate,
+                shirtSize: params.selfShirtSize,
+                addressLine1: params.selfAddressLine1,
+                addressLine2: params.selfAddressLine2,
+                addressCity: params.selfAddressCity,
+                addressState: params.selfAddressState,
+                addressZip: params.selfAddressZip,
+                vegetarianMeal: params.selfVegetarianMeal,
+                attendedReunion2025: params.selfAttendedReunion2025,
+            },
             tierLabel: selfPricing.label,
             /* Snapshot the gross — what the customer is being charged. Refund math reads this directly. */
             priceCents: grossUpForStripe(selfPricing.priceCents),
-        },
-        ...params.additionalMembers.map((m) => {
-            const parsed = m.birthDate ? parseBirthDate(m.birthDate) : null
-            const pricing = pricingByTierId[m.tierId]
-            return {
+            /* This row is the contact attending their own reunion. Flagged so their name has one
+               editable field rather than two copies that drift — see party_members.isContact. */
+            isContact: true,
+        }),
+        ...params.additionalMembers.map((member) => {
+            const pricing = pricingByTierId[member.tierId]
+            return buildPartyMemberRow({
                 registrationId: registration.id,
-                name: m.name,
-                birthYear: parsed?.birthYear ?? null,
-                birthMonth: parsed?.birthMonth ?? null,
-                birthDay: parsed?.birthDay ?? null,
-                shirtSize: m.shirtSize || null,
-                addressLine1: m.addressLine1 || null,
-                addressLine2: m.addressLine2 || null,
-                addressCity: m.addressCity || null,
-                addressState: m.addressState || null,
-                addressZip: m.addressZip || null,
-                vegetarianMeal: m.vegetarianMeal ?? null,
-                attendedReunion2025: m.attendedReunion2025 ?? null,
+                member,
                 tierLabel: pricing.label,
                 priceCents: grossUpForStripe(pricing.priceCents),
-            }
+            })
         }),
     ])
 

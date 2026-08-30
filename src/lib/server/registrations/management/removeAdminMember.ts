@@ -3,6 +3,7 @@ import { count, eq } from 'drizzle-orm'
 import { db } from '$lib/server/db'
 import { partyMembers, registrations } from '$lib/server/db/schema'
 import { dbg } from '$lib/server/debug'
+import { assertRegistrationMutable, touchRegistration } from '../lifecycle'
 
 /* Removes a party member who was never charged.
 
@@ -46,9 +47,10 @@ export async function removeAdminMember(params: {
         )
     }
 
-    if (member.registrationStatus === 'refunded') {
-        throw error(409, 'This registration was cancelled and refunded.')
-    }
+    assertRegistrationMutable(
+        member.registrationStatus,
+        'This registration was cancelled and refunded.',
+    )
 
     /* The contact's own attendee row carries the identity the registration is addressed to, and their
        name is written from registrations.contactName. Deleting it would leave a booking whose contact
@@ -74,10 +76,7 @@ export async function removeAdminMember(params: {
     }
 
     await db.delete(partyMembers).where(eq(partyMembers.id, params.memberId))
-    await db
-        .update(registrations)
-        .set({ updatedAt: new Date() })
-        .where(eq(registrations.id, member.registrationId))
+    await touchRegistration(member.registrationId)
 
     dbg.register(
         'admin removed member %s from registration %s',

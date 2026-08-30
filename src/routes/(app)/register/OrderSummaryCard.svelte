@@ -4,6 +4,7 @@ import { Button } from '$lib/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card'
 import { NativeSelect } from '$lib/components/ui/native-select'
 import { Separator } from '$lib/components/ui/separator'
+import type { PartyQuote } from '$lib/general/pricing'
 import { formatPrice, getTierPriceCents } from '$lib/utils'
 import type { FormMember, TierOption } from './types'
 
@@ -23,8 +24,7 @@ let {
     selfTierId,
     members,
     tiers,
-    subtotal,
-    processingFee = 0,
+    quote,
     canSubmit,
     submitLabel,
     submitting = false,
@@ -39,8 +39,7 @@ let {
     selfTierId: string | ''
     members: FormMember[]
     tiers: TierOption[]
-    subtotal: number
-    processingFee?: number
+    quote: PartyQuote
     canSubmit: boolean
     submitLabel: string
     submitting?: boolean
@@ -51,8 +50,6 @@ let {
     showStatus?: boolean
     submitFootnote?: string
 } = $props()
-
-let total = $derived(subtotal + processingFee)
 </script>
 
 <Card>
@@ -83,19 +80,19 @@ let total = $derived(subtotal + processingFee)
             <div class="space-y-1 text-sm">
                 <div class="flex items-center justify-between text-muted-foreground">
                     <span>Subtotal</span>
-                    <span class="tabular-nums">${formatPrice(subtotal)}</span>
+                    <span class="tabular-nums">${formatPrice(quote.subtotalCents)}</span>
                 </div>
-                {#if processingFee > 0}
+                {#if quote.feeCents > 0}
                     <div class="flex items-center justify-between text-muted-foreground">
                         <span>Processing fee</span>
-                        <span class="tabular-nums">${formatPrice(processingFee)}</span>
+                        <span class="tabular-nums">${formatPrice(quote.feeCents)}</span>
                     </div>
                 {/if}
             </div>
             <Separator />
             <div class="flex items-center justify-between font-semibold">
                 <span>Total</span>
-                <span>${formatPrice(total)}</span>
+                <span>${formatPrice(quote.totalCents)}</span>
             </div>
             {#if showStatus}
                 <Separator />

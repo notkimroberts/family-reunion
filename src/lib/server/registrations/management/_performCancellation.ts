@@ -1,11 +1,13 @@
 import { error } from '@sveltejs/kit'
 import { eq } from 'drizzle-orm'
+import { sumMemberPrices } from '$lib/general/pricing'
 import { db } from '$lib/server/db'
 import { partyMembers, registrations, reunionEvents } from '$lib/server/db/schema'
 import { dbg } from '$lib/server/debug'
 import { sendCancellationEmail, type RefundRoute } from '$lib/server/email'
 import { refundPaymentIntent, retrieveSessionPaymentIntent } from '$lib/server/payments'
 import { reportError } from '$lib/server/reportError'
+import { markRegistrationRefunded } from '../lifecycle'
 
 /* Where the money goes back, read off the registration rather than guessed.
 
@@ -145,10 +147,7 @@ export async function _performCancellation(
         dbg.register('full refund issued for payment_intent=%s', intentId)
     }
 
-    await db
-        .update(registrations)
-        .set({ status: 'refunded', updatedAt: new Date() })
-        .where(eq(registrations.id, registrationId))
+    await markRegistrationRefunded(registrationId)
 
     dbg.register('registration %s cancelled and refunded', registrationId)
 
@@ -165,7 +164,7 @@ export async function _performCancellation(
                 name: registration.contactName,
                 eventTitle: reunionEvent?.title ?? 'the reunion',
                 partyNames: members.map((member) => member.name),
-                totalCents: members.reduce((sum, member) => sum + member.priceCents, 0),
+                totalCents: sumMemberPrices(members),
                 refundRoute,
                 registerUrl,
             },

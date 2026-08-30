@@ -4,9 +4,9 @@ import { db } from '$lib/server/db'
 import { registrations } from '$lib/server/db/schema'
 import { dbg } from '$lib/server/debug'
 import { sendRegistrationConfirmation } from '$lib/server/email'
-import { generateManagementToken } from '../hashManagementToken'
+import { deliverManagementLink } from '../deliverManagementLink'
+import { touchRegistration } from '../lifecycle'
 import { getConfirmationEmailData } from '../queries/getConfirmationEmailData'
-import { rotateManagementToken } from '../rotateManagementToken'
 
 /* Derives the Resend idempotency key from what changed, rather than from the registration or the
    clock. sendRegistrationConfirmation is called elsewhere with `confirm/<registrationId>`; reusing a
@@ -22,14 +22,11 @@ function changeFingerprint(changeSummary: string[]): string {
    works.
 
    Rotates because it must: only sha256(token) is stored, so the link in the email has to be a fresh
-   one. Rotation demotes rather than discards, so the link they already had keeps working for the
-   grace period — see isManagementTokenValid. Without that this notification would break the very
-   access it is announcing.
+   one, and without the rotation this notification would break the very access it is announcing. The
+   send-before-rotate ordering lives in deliverManagementLink.
 
-   Send-before-persist, like every other rotation site: a failed send must leave the old token
-   working rather than strand them between a dead link and one they never got. This throws on send
-   failure, and the caller is expected to report it WITHOUT failing the save — the organiser's change
-   is already committed by then, so presenting it as failed would be a lie. */
+   Throws on send failure, and the caller is expected to report it WITHOUT failing the save — the
+   organiser's change is already committed by then, so presenting it as failed would be a lie. */
 export async function notifyRegistrationUpdated(params: {
     registrationId: string
     changeSummary: string[]
@@ -39,33 +36,37 @@ export async function notifyRegistrationUpdated(params: {
         return { sent: false }
     }
 
-    const { plaintext, hash } = generateManagementToken()
-
-    const payload = await getConfirmationEmailData({
+    const delivery = await deliverManagementLink({
         registrationId: params.registrationId,
-        manageUrl: params.manageUrl(plaintext),
+        deliver: async (token) => {
+            const payload = await getConfirmationEmailData({
+                registrationId: params.registrationId,
+                manageUrl: params.manageUrl(token),
+            })
+
+            /* undefined covers a missing registration/event and a refunded one, none of which has an
+               update worth announcing. Returning 'skipped' leaves the token unrotated, so nothing is
+               broken for a registrant who was never emailed. */
+            if (!payload) {
+                dbg.email('no update notification for registration %s', params.registrationId)
+                return 'skipped'
+            }
+
+            await sendRegistrationConfirmation(
+                payload.to,
+                { ...payload.data, isUpdate: true, changeSummary: params.changeSummary },
+                `update/${params.registrationId}/${changeFingerprint(params.changeSummary)}`,
+            )
+            return 'sent'
+        },
     })
 
-    /* undefined covers a missing registration/event and a refunded one, none of which has an update
-       worth announcing. Nothing was rotated, so nothing is broken. */
-    if (!payload) {
-        dbg.email('no update notification for registration %s', params.registrationId)
+    if (delivery === 'skipped') {
         return { sent: false }
     }
 
-    await sendRegistrationConfirmation(
-        payload.to,
-        { ...payload.data, isUpdate: true, changeSummary: params.changeSummary },
-        `update/${params.registrationId}/${changeFingerprint(params.changeSummary)}`,
-    )
-
-    await rotateManagementToken({ registrationId: params.registrationId, newHash: hash })
-
     /* Stamped after the send so the row's updatedAt reflects the notified state. */
-    await db
-        .update(registrations)
-        .set({ updatedAt: new Date() })
-        .where(eq(registrations.id, params.registrationId))
+    await touchRegistration(params.registrationId)
 
     dbg.email(
         'sent update notification for registration %s (%d change(s))',

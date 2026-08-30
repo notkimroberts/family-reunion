@@ -3,6 +3,7 @@ import { eq } from 'drizzle-orm'
 import { db } from '$lib/server/db'
 import { registrations, registrationStatusEnum } from '$lib/server/db/schema'
 import { dbg } from '$lib/server/debug'
+import { assertRegistrationMutable } from '../lifecycle'
 
 /* The statuses an organiser may set by hand — the enum minus 'refunded', which must go through
    cancelRegistration so the money actually goes back. Derived rather than spelled out, so adding a
@@ -40,12 +41,10 @@ export async function setRegistrationStatus(params: {
         throw error(404, 'Registration not found')
     }
 
-    if (registration.status === 'refunded') {
-        throw error(
-            409,
-            'This registration was cancelled and refunded. Ask them to register again rather than reviving it.',
-        )
-    }
+    assertRegistrationMutable(
+        registration.status,
+        'This registration was cancelled and refunded. Ask them to register again rather than reviving it.',
+    )
 
     if (registration.status === params.status) {
         return
