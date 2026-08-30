@@ -1,5 +1,7 @@
 <script lang="ts">
+import { Info } from '@lucide/svelte'
 import { Separator } from '$lib/components/ui/separator'
+import { Tooltip, TooltipContent, TooltipTrigger } from '$lib/components/ui/tooltip'
 import { cn, formatPrice } from '$lib/utils'
 import type { RegistrationTotals } from './registrationTotals'
 
@@ -99,6 +101,32 @@ let { totals }: { totals: RegistrationTotals } = $props()
                 Stripe keeps its fee when a booking is cancelled, so that money does not come back.
             {/if}
         </p>
+    {/if}
+
+    <!-- Comped places are the reason People can exceed what Collected accounts for. They are
+             deliberately in none of the money above — nobody paid and nobody is going to — but leaving
+             that difference unnamed made a year with comped families read as money gone missing.
+
+             The explanation is behind the label rather than printed under it: this panel is a column
+             of figures an organiser scans, and three lines of prose in the middle of it pushed
+             "Not paid" off the screen to explain a number that is usually 0. -->
+    {#if totals.waivedPartyCount > 0}
+        <div class="flex items-center justify-between gap-3">
+            <Tooltip>
+                <TooltipTrigger
+                    class="text-muted-foreground hover:text-foreground flex items-center gap-1.5 text-sm transition-colors">
+                    Comped
+                    <Info class="size-3.5" />
+                </TooltipTrigger>
+                <TooltipContent class="max-w-xs">
+                    {totals.waivedPartyCount}
+                    {totals.waivedPartyCount === 1 ? 'party is' : 'parties are'} attending free, worth
+                    ${formatPrice(totals.waivedCents)}. Counted in People, and in no figure above —
+                    comped places bring in nothing.
+                </TooltipContent>
+            </Tooltip>
+            <span class="text-lg font-semibold tabular-nums">{totals.waivedPeopleCount}</span>
+        </div>
     {/if}
 </div>
 

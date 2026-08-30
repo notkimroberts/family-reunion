@@ -1,5 +1,5 @@
 import type { RegistrationSummary } from '$lib/server/registrations'
-import { stripeFeeOnChargeCents } from '$lib/utils/stripeFee'
+import { getRegistrationMoney } from './registrationMoney'
 
 /* What a year adds up to, for the panel beside the registrations list.
 
@@ -21,6 +21,16 @@ export type RegistrationTotals = {
     partyCount: number
     /* Paid only — a waived place brings in no money, so folding it in would overstate the bank. */
     paidCents: number
+    /* The comped places, reported rather than merely excluded.
+
+       They ARE in attendingCount — those people are coming and need chairs and shirts — and they are
+       in none of the money figures, which is correct and was also unexplained: the difference between
+       People and Collected had no line naming it, so a year with comped families read as money gone
+       missing. waivedCents is what those places would have cost, not money owed; nobody is going to
+       pay it. */
+    waivedPeopleCount: number
+    waivedPartyCount: number
+    waivedCents: number
     /* What registrants paid, split by how it arrived, because only one side of it loses a fee.
 
        Card money is charged gross and arrives short. Cash and cheques arrive whole, so counting them
@@ -38,7 +48,11 @@ export type RegistrationTotals = {
        balance transaction with fee 0, so a $165.09 booking refunded in full costs $5.09 that never
        comes back. Refunded registrations are excluded from every other figure here — nobody is coming
        and no money is owed — which left this loss invisible in a panel whose job is to say what the
-       reunion has. */
+       reunion has.
+
+       Only bookings that were actually CHARGED count. A checkout the payer abandoned also carries a
+       Stripe session, and cancelling it refunds nothing; charging the reunion an imaginary fee for it
+       was the first version of this figure. getRegistrationMoney decides. */
     lostToRefundsCents: number
     /* Collected, minus the fees on it, minus the fees lost to cancellations: what a bank statement
        will show. Cheques still have to be deposited; nothing here knows whether that has happened. */
@@ -55,6 +69,7 @@ export function getRegistrationTotals(registrations: RegistrationSummary[]): Reg
     const attending = registrations.filter((r) => r.status === 'paid' || r.status === 'waived')
     const pending = registrations.filter((r) => r.status === 'pending')
     const paid = registrations.filter((r) => r.status === 'paid')
+    const waived = registrations.filter((r) => r.status === 'waived')
 
     /* The Stripe session is what says a card was involved — the same signal getPaymentState uses to tell
        paid_online from paid_offline. NOT stripePaymentIntentId: that is null on every registration paid
@@ -63,26 +78,24 @@ export function getRegistrationTotals(registrations: RegistrationSummary[]): Reg
     const cardPaid = paid.filter((r) => r.stripeSessionId !== null)
     const offlinePaid = paid.filter((r) => r.stripeSessionId === null)
 
-    /* Cancelled bookings that went through Stripe. Their fee is the loss; a cancelled cheque
-       registration costs nothing, because Stripe never touched it. */
-    const cardRefunded = registrations.filter(
-        (r) => r.status === 'refunded' && r.stripeSessionId !== null,
-    )
+    /* Cancelled bookings that really took money. NOT every refunded row with a Stripe session: a
+       session is opened at registration time, so an abandoned checkout has one and cancelling it
+       refunds nothing. Keying the loss on the session alone invented a fee for a payment that never
+       happened — see getRegistrationMoney, which owns that judgement now. */
+    const refundLosses = registrations
+        .filter((r) => r.status === 'refunded')
+        .map(getRegistrationMoney)
+        .filter((money) => money.wasCharged)
 
     const cardPaidCents = cardPaid.reduce((sum, r) => sum + r.totalCents, 0)
     const offlinePaidCents = offlinePaid.reduce((sum, r) => sum + r.totalCents, 0)
 
-    /* The recorded fee when there is one, the estimate when there is not. Per registration either
-       way, never on the summed total: the 30¢ is charged once per PAYMENT, so a single deduction from
-       the sum would undercount by 30¢ for every registration after the first.
+    /* Per registration, never on the summed total: the 30¢ is charged once per PAYMENT, so a single
+       deduction from the sum would undercount by 30¢ for every registration after the first. */
+    const paidMoney = cardPaid.map(getRegistrationMoney)
 
-       `?? undefined` before the nullish check because the column is `number | null` and 0 is a real
-       fee — a truthiness test here would silently re-estimate a genuinely free charge. */
-    const feeOf = (registration: RegistrationSummary) =>
-        registration.stripeFeeCents ?? stripeFeeOnChargeCents(registration.totalCents)
-
-    const feeCents = cardPaid.reduce((sum, r) => sum + feeOf(r), 0)
-    const lostToRefundsCents = cardRefunded.reduce((sum, r) => sum + feeOf(r), 0)
+    const feeCents = paidMoney.reduce((sum, money) => sum + money.feeCents, 0)
+    const lostToRefundsCents = refundLosses.reduce((sum, money) => sum + money.lostFeeCents, 0)
 
     return {
         cardPaidCents,
@@ -90,12 +103,15 @@ export function getRegistrationTotals(registrations: RegistrationSummary[]): Reg
         feeCents,
         lostToRefundsCents,
         bankedCents: cardPaidCents + offlinePaidCents - feeCents - lostToRefundsCents,
-        feesAreExact: [...cardPaid, ...cardRefunded].every((r) => r.stripeFeeCents !== null),
+        feesAreExact: [...paidMoney, ...refundLosses].every((money) => money.feeIsExact),
         attendingCount: attending.reduce((sum, r) => sum + r.memberCount, 0),
         partyCount: attending.length,
         /* The same money as the two lines above, added up rather than re-filtered, so "Collected" and
            its own breakdown cannot drift apart by a cent. */
         paidCents: cardPaidCents + offlinePaidCents,
+        waivedPeopleCount: waived.reduce((sum, r) => sum + r.memberCount, 0),
+        waivedPartyCount: waived.length,
+        waivedCents: waived.reduce((sum, r) => sum + r.totalCents, 0),
         pendingPeopleCount: pending.reduce((sum, r) => sum + r.memberCount, 0),
         /* Also the number of registrations to chase. There used to be a separate chaseCount that
            filtered pending rows through getPaymentState for 'cancelled' — but that state only ever comes

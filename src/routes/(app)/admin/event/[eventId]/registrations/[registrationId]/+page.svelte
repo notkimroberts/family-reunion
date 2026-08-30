@@ -13,9 +13,11 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '$lib/components/ui/tool
 import { formatPrice, getMemberPaymentOrigin, getPaymentState } from '$lib/utils'
 import { formatPartialBirthDate } from '$lib/utils/age'
 import RegistrationStatusBadge from '../RegistrationStatusBadge.svelte'
+import { getRegistrationMoney } from '../registrationMoney'
 import AdminCancelDialog from './AdminCancelDialog.svelte'
 import RegistrationEditForm from './RegistrationEditForm.svelte'
 import RegistrationHistory from './RegistrationHistory.svelte'
+import RegistrationMoneyCard from './RegistrationMoneyCard.svelte'
 
 /* The one thing the status badge cannot say. 'pending' covers both a paper form awaiting a cheque and
    a public registration abandoned at Stripe Checkout, and those need opposite follow-ups — see
@@ -109,6 +111,11 @@ let payment = $derived(getPaymentState(data.registration))
 let pendingReason = $derived(pendingReasonValue[payment as keyof typeof pendingReasonValue])
 let isCancelled = $derived(data.registration.status === 'refunded')
 let isPaid = $derived(data.registration.status === 'paid')
+
+/* The same function the money panel beside the list sums, so a booking's fee reads identically in
+   both places. totalCents is passed separately because the registration row does not carry it — it
+   is the sum of the snapshotted member prices. */
+let money = $derived(getRegistrationMoney({ ...data.registration, totalCents: data.totalCents }))
 
 /* A party that came through Stripe carries grossed-up prices; one entered by hand carries net tier
    prices. Both are honest records of what that person cost, but side by side in one total they look
@@ -221,14 +228,24 @@ async function handleCopyEmail() {
     </div>
 
     <!-- Cancellation is the one status that changes what an organiser may DO here, so it keeps an
-         alert. The rest is said once, by the badge. -->
+         alert. The rest is said once, by the badge.
+
+         What it says about the money depends on whether any arrived. A checkout the payer abandoned
+         is cancelled with no refund issued — _performCancellation returns without calling Stripe —
+         and telling an organiser "the money has gone back" there sends them looking for a refund
+         that does not exist, or worse, reassures a registrant who was never charged. -->
     {#if isCancelled}
         <Alert variant="destructive">
             <TriangleAlert class="size-4" />
-            <AlertTitle>Cancelled and refunded</AlertTitle>
+            <AlertTitle>{money.wasCharged ? 'Cancelled and refunded' : 'Cancelled'}</AlertTitle>
             <AlertDescription>
-                The money has gone back. This cannot be added to or reinstated — ask them to
-                register again.
+                {#if money.wasCharged}
+                    The money has gone back. This cannot be added to or reinstated — ask them to
+                    register again.
+                {:else}
+                    Nothing was ever charged, so there was nothing to refund. This cannot be added
+                    to or reinstated — ask them to register again.
+                {/if}
             </AlertDescription>
         </Alert>
     {/if}
@@ -325,10 +342,7 @@ async function handleCopyEmail() {
                 </AdminDataView>
 
                 <Separator class="my-4" />
-                <div class="flex items-center justify-between text-sm font-semibold">
-                    <span>Total</span>
-                    <span class="tabular-nums">${formatPrice(data.totalCents)}</span>
-                </div>
+                <RegistrationMoneyCard {money} status={data.registration.status} />
                 {#if hasMixedPriceBasis}
                     <p class="text-muted-foreground mt-2 text-xs">
                         This party mixes online prices, which include the card processing fee, with

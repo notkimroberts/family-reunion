@@ -31,6 +31,9 @@ describe('getRegistrationTotals', () => {
             pendingPeopleCount: 0,
             pendingPartyCount: 0,
             paidCents: 0,
+            waivedPeopleCount: 0,
+            waivedPartyCount: 0,
+            waivedCents: 0,
             cardPaidCents: 0,
             offlinePaidCents: 0,
             feeCents: 0,
@@ -82,6 +85,44 @@ describe('getRegistrationTotals', () => {
 
         expect(totals.attendingCount).toBe(5)
         expect(totals.paidCents).toBe(32000)
+    })
+
+    /* Excluding comped money from the bank is right, and leaving it unreported is not: the gap
+       between People and Collected then has no explanation on screen. These are the figures the panel
+       uses to name it. */
+    it('reports comped places separately from money', () => {
+        const totals = getRegistrationTotals([
+            /* Paid by cheque, so no Stripe fee muddies the comparison this test is making. */
+            reg({
+                id: 'a',
+                status: 'paid',
+                stripeSessionId: null,
+                memberCount: 2,
+                totalCents: 32000,
+            }),
+            reg({ id: 'b', status: 'waived', memberCount: 3, totalCents: 48000 }),
+            reg({ id: 'c', status: 'waived', memberCount: 1, totalCents: 16000 }),
+        ])
+
+        expect(totals.waivedPartyCount).toBe(2)
+        expect(totals.waivedPeopleCount).toBe(4)
+        expect(totals.waivedCents).toBe(64000)
+        /* What the comped places would have cost is NOT money the reunion has or is owed. */
+        expect(totals.paidCents).toBe(32000)
+        expect(totals.bankedCents).toBe(32000)
+        expect(totals.outstandingCents).toBe(0)
+    })
+
+    it.each([
+        ['pending', 'pending' as const],
+        ['paid', 'paid' as const],
+        ['refunded', 'refunded' as const],
+    ])('counts nothing comped for a %s registration', (_label, status) => {
+        const totals = getRegistrationTotals([reg({ status, memberCount: 4, totalCents: 64000 })])
+
+        expect(totals.waivedPartyCount).toBe(0)
+        expect(totals.waivedPeopleCount).toBe(0)
+        expect(totals.waivedCents).toBe(0)
     })
 
     it.each([
@@ -311,6 +352,45 @@ describe('getRegistrationTotals', () => {
 
             expect(totals.lostToRefundsCents).toBe(0)
             expect(totals.bankedCents).toBe(0)
+        })
+
+        /* THE case this figure got wrong. A payer who opens Checkout and never finishes still has a
+           Stripe session — it is created when the session opens, not when the card clears — so
+           cancelling that registration used to report an estimated fee as lost. Stripe was never
+           called; the refund returned nothing because there was nothing to return. */
+        it('loses nothing on a cancelled checkout that was never paid', () => {
+            const totals = getRegistrationTotals([
+                reg({
+                    status: 'refunded',
+                    stripeSessionId: 'cs_abandoned',
+                    stripePaymentIntentId: null,
+                    stripeFeeCents: null,
+                    paidAt: null,
+                    totalCents: 26839,
+                }),
+            ])
+
+            expect(totals.lostToRefundsCents).toBe(0)
+            expect(totals.bankedCents).toBe(0)
+        })
+
+        /* And it must not drag the whole panel into disclaiming precision, either: there is no fee
+           here to be imprecise about. */
+        it('stays exact when an unpaid cancellation is the only Stripe row', () => {
+            const totals = getRegistrationTotals([
+                reg({ id: 'a', stripeSessionId: 'cs_1', stripeFeeCents: 509 }),
+                reg({
+                    id: 'b',
+                    status: 'refunded',
+                    stripeSessionId: 'cs_abandoned',
+                    stripePaymentIntentId: null,
+                    stripeFeeCents: null,
+                    paidAt: null,
+                }),
+            ])
+
+            expect(totals.feesAreExact).toBe(true)
+            expect(totals.lostToRefundsCents).toBe(0)
         })
 
         /* stripeSessionId is the signal, NOT stripePaymentIntentId — that column is null on every
