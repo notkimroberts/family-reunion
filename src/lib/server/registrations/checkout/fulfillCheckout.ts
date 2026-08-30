@@ -126,7 +126,18 @@ export async function fulfillCheckout(
        be flipped by a stray webhook. */
     const updated = await db
         .update(registrations)
-        .set({ status: 'paid', updatedAt: new Date() })
+        .set({
+            status: 'paid',
+            /* When the money arrived. updatedAt cannot answer that later — any edit bumps it — and this
+               webhook writes no audit row, so without this column there is no record of the payment date
+               at all. */
+            paidAt: new Date(),
+            /* The registration's own copy of the intent, which is what the admin list deep-links to the
+               Stripe dashboard with. party_members gets its own copy below, but that one is per-member
+               and null for anyone who did not pay online. */
+            stripePaymentIntentId: paymentIntentId,
+            updatedAt: new Date(),
+        })
         .where(and(eq(registrations.id, registrationId), eq(registrations.status, 'pending')))
         .returning({ id: registrations.id })
 

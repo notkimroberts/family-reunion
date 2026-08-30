@@ -48,6 +48,36 @@ describe('setRegistrationStatus', () => {
         expect(mockSet).toHaveBeenCalledWith(expect.objectContaining({ status: 'paid' }))
     })
 
+    /* paidAt is the only record of WHEN the money arrived. updatedAt cannot answer it — any later edit
+       bumps it — so the admin list would otherwise have to print a date that drifts. */
+    it('stamps paidAt when the money is recorded as arrived', async () => {
+        mockTerminal.mockResolvedValueOnce([{ status: 'pending' }])
+
+        await setRegistrationStatus({ registrationId: 'reg-1', status: 'paid' })
+
+        const [written] = mockSet.mock.calls[0]
+        expect(written.paidAt).toBeInstanceOf(Date)
+    })
+
+    /* Taken back means owed again. A paid date left sitting beside a Pending badge reads as a payment
+       that has gone missing, which is worse than no date at all. */
+    it('clears paidAt when a paid registration is moved back to pending', async () => {
+        mockTerminal.mockResolvedValueOnce([{ status: 'paid' }])
+
+        await setRegistrationStatus({ registrationId: 'reg-1', status: 'pending' })
+
+        expect(mockSet).toHaveBeenCalledWith(expect.objectContaining({ paidAt: null }))
+    })
+
+    /* Waived is a place with no payment, so there is no payment date to show. */
+    it('leaves paidAt null when a place is waived', async () => {
+        mockTerminal.mockResolvedValueOnce([{ status: 'pending' }])
+
+        await setRegistrationStatus({ registrationId: 'reg-1', status: 'waived' })
+
+        expect(mockSet).toHaveBeenCalledWith(expect.objectContaining({ paidAt: null }))
+    })
+
     it.each([
         ['pending', 'waived'],
         ['paid', 'pending'],

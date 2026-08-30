@@ -6,10 +6,15 @@ export { isValidZip } from './utils/isValidZip'
 export { formatPhoneInput } from './utils/formatPhoneInput'
 export { formatDateRange } from './utils/formatDateRange'
 export { splitFullName } from './utils/splitFullName'
+export { stripePaymentUrl } from './utils/stripePaymentUrl'
 export { getTierPriceCents } from './utils/getTierPriceCents'
 export { getTierLabel } from './utils/getTierLabel'
 export { parseYesNo } from './utils/parseYesNo'
-export { getPaymentState, type PaymentState } from './utils/getPaymentState'
+export {
+    getPaymentState,
+    type PaymentState,
+    type RegistrationStatus,
+} from './utils/getPaymentState'
 export { getMemberPaymentOrigin, type MemberPaymentOrigin } from './utils/getMemberPaymentOrigin'
 export {
     cn,

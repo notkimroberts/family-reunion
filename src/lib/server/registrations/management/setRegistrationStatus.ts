@@ -1,11 +1,16 @@
 import { error } from '@sveltejs/kit'
 import { eq } from 'drizzle-orm'
 import { db } from '$lib/server/db'
-import { registrations } from '$lib/server/db/schema'
+import { registrations, registrationStatusEnum } from '$lib/server/db/schema'
 import { dbg } from '$lib/server/debug'
 
-/* The statuses an organiser may set by hand. */
-export type AdminSettableStatus = 'pending' | 'paid' | 'waived'
+/* The statuses an organiser may set by hand — the enum minus 'refunded', which must go through
+   cancelRegistration so the money actually goes back. Derived rather than spelled out, so adding a
+   status to the enum cannot leave this list silently stale. */
+export type AdminSettableStatus = Exclude<
+    (typeof registrationStatusEnum.enumValues)[number],
+    'refunded'
+>
 
 /* Records that a paper registration's money arrived, was waived, or is still outstanding.
 
@@ -48,7 +53,15 @@ export async function setRegistrationStatus(params: {
 
     await db
         .update(registrations)
-        .set({ status: params.status, updatedAt: new Date() })
+        .set({
+            status: params.status,
+            /* Recorded when the organiser says the money arrived, and CLEARED when they take it back.
+               A registration moved from paid to pending is owed again, and a stale paid date beside a
+               Pending badge is worse than no date — it reads as a payment that has gone missing. Waived
+               gets none: nothing was paid, so there is no payment date to show. */
+            paidAt: params.status === 'paid' ? new Date() : null,
+            updatedAt: new Date(),
+        })
         .where(eq(registrations.id, params.registrationId))
 
     dbg.register(

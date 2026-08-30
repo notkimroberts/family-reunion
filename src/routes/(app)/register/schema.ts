@@ -23,8 +23,10 @@ const yesNoRequired = (message: string) =>
     /* `value.length > 0` rather than `value !== ''` on purpose. TypeScript 5.5+ infers type
        predicates, so `value !== ''` would narrow zod's OUTPUT type to 'yes' | 'no' — and
        superforms types $form from the output, which would then be unable to hold the unanswered
-       '' the form starts with. Seeding 'no' instead is not an option: silently pre-answering a
-       dietary question is a data-integrity problem, not a typing convenience. */
+       '' that attendedReunion2025 still starts with.
+
+       The '' must stay in the enum even now that vegetarianMeal is seeded 'no'. Removing it would
+       narrow the output type and break $form's ability to represent a freshly rendered form. */
     z.enum(['yes', 'no', '']).refine((value) => value.length > 0, message)
 
 /* Everything collected about one person besides their name. A nested object rather than a set of

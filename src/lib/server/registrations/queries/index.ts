@@ -1,5 +1,7 @@
 export type { RegistrationMember } from './RegistrationMember'
 export { getConfirmationEmailData } from './getConfirmationEmailData'
+export { getEventPeople, type EventPerson } from './getEventPeople'
+export { getEventSummaries, type EventSummary } from './getEventSummaries'
 export { getOpenEvent } from './getOpenEvent'
 export { getRegistrationByToken } from './getRegistrationByToken'
 export { getRegistrationsByEmail } from './getRegistrationsByEmail'

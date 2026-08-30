@@ -1,14 +1,23 @@
 import { count, desc, eq, sum } from 'drizzle-orm'
 import { db } from '$lib/server/db'
-import { partyMembers, registrations } from '$lib/server/db/schema'
+import { partyMembers, registrations, registrationStatusEnum } from '$lib/server/db/schema'
 
 export type RegistrationSummary = {
     id: string
     contactName: string
     contactEmail: string
     contactPhone: string | null
-    status: string
+    /* The enum, not a plain string. Drizzle already returns the union here — the hand-written
+       annotation was pure widening, and it was load-bearing widening: it is why the admin LIST could
+       not pass a row to getPaymentState, and so could not tell an abandoned Stripe checkout from a
+       cheque that has not arrived. That distinction is the whole reason getPaymentState exists. */
+    status: (typeof registrationStatusEnum.enumValues)[number]
     stripeSessionId: string | null
+    /* For the dashboard deep link on a paid row. Null for anything not paid online. */
+    stripePaymentIntentId: string | null
+    /* When the money arrived, or null when that was never recorded — see the column comment. Not
+       updatedAt, which any later edit bumps. */
+    paidAt: Date | null
     memberCount: number
     totalCents: number
     createdAt: Date
@@ -39,6 +48,8 @@ export async function getRegistrationsForEvent(eventId: string): Promise<Registr
             contactPhone: registrations.contactPhone,
             status: registrations.status,
             stripeSessionId: registrations.stripeSessionId,
+            stripePaymentIntentId: registrations.stripePaymentIntentId,
+            paidAt: registrations.paidAt,
             createdAt: registrations.createdAt,
             memberCount: count(partyMembers.id),
             totalCents: sum(partyMembers.priceCents),

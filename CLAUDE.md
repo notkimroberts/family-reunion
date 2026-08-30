@@ -18,7 +18,13 @@ bun run db:push          # Push schema directly to DB (dev shortcut)
 bun run db:seed          # Seed database if empty (skips if data already exists)
 bun run db:reseed        # Always truncate all app tables and re-seed
 bun run db:studio        # Drizzle Studio GUI
+
+bun run stripe:dev       # Forward Stripe webhooks to the running dev server
 ```
+
+`stripe:dev` **finds the port** rather than assuming 5173 — Vite increments when that is taken, and a forward to the wrong port fails silently: the app never sees `checkout.session.completed`, so no confirmation email is sent and the registration sits at `pending` while the payer believes they have paid.
+
+It probes `/api/health` and requires `status: 'ok'`, not merely a reply. That matters more than it sounds: on a machine behind an HTTP proxy, **every** port answers — a bare reachability check matches the first one and forwards into nothing. Set `PORT=5180 bun run stripe:dev` for a tunnel or container the probe cannot see; that path is trusted without probing. Anything after `--` is passed to the Stripe CLI.
 
 ### Migration rules
 
@@ -69,7 +75,7 @@ SvelteKit full-stack app (Svelte 5 with runes). Node adapter for Railway deploym
 
 - **PostgreSQL** via `postgres` driver + **Drizzle ORM** (schema at `src/lib/server/db/schema.ts`)
 - DB connection uses lazy init with SvelteKit's `$env/dynamic/private` — standalone scripts (like seed.ts) must create their own `postgres()` client directly
-- All person records store birth date as split nullable integers (`birthYear`, `birthMonth`, `birthDay`); a CHECK constraint enforces prefix-consistency (day ⇒ month, month ⇒ year). `family_members` allows partial dates (year-only is fine for ancestors). **Birth date is optional for registration party members too** — `personDetailsSchema.birthDate` is `.optional()`, so plenty of rows have none and the admin party table shows "—". Nothing load-bearing needs it: shirt sizing comes from the tier's `shirtSizeCategory`, and the confirmation email prints an age only when one exists. Do not "fix" this by making it required without deciding that catering actually needs ages — that adds a required field to a live public form.
+- Party members store birth date as split nullable integers (`birthYear`, `birthMonth`, `birthDay`); a CHECK constraint enforces prefix-consistency (day ⇒ month, month ⇒ year). **Birth date is optional** — `personDetailsSchema.birthDate` is `.optional()`, so plenty of rows have none and the admin party table shows "—". Nothing load-bearing needs it: shirt sizing comes from the tier's `shirtSizeCategory`, and the confirmation email prints an age only when one exists. Do not "fix" this by making it required without deciding that catering actually needs ages — that adds a required field to a live public form.
 
 ### Server modules
 
@@ -79,26 +85,36 @@ Server logic lives under `src/lib/server/`, one domain per folder. Each exported
 | ------------- | --------------------------- | ------------------------------------------------------------------------------------------------- |
 | Registrations | `$lib/server/registrations` | Barrel delegating to `checkout/`, `management/`, `queries/`                                       |
 | — checkout    | `registrations/checkout/`   | Pending registration, add-member checkout, admin direct creation, Stripe fulfillment              |
-| — management  | `registrations/management/` | Post-payment mutations: remove member, cancel, update member details, link to family tree         |
+| — management  | `registrations/management/` | Post-payment mutations: remove member, cancel, update member details, set status                  |
 | — queries     | `registrations/queries/`    | All registration reads                                                                            |
 | Payments      | `$lib/server/payments`      | Stripe checkout creation, refunds, session retrieval; metadata encode/decode in `stripeMetadata/` |
 | Email         | `$lib/server/email`         | Template rendering in `templates/`; Resend delivery in `send/`                                    |
-| Storage       | `$lib/server/storage`       | Cloudflare R2 uploads/deletes; local-dev writes to `static/uploads/`                              |
 | Auth          | `$lib/server/auth`          | Better Auth setup; guards in `guards/`                                                            |
 
 ### Auth
 
 - **Better Auth** with admin plugin and email + password sign-in
 - Magic link has been removed — admins sign in at `/login` with credentials only
-- **Public sign-up is disabled** (`disableSignUp: true`). This is load-bearing, not tidiness: Better Auth exposes `POST /api/auth/sign-up/email` whenever email+password is enabled, and its handler is mounted _ahead of SvelteKit routing_ — so there is no route file to guard and `(app)/+layout.server.ts` never sees the request. With sign-up open, anyone could mint a `role='user'` account and read the whole family tree and gallery. Pinned by `src/lib/server/auth/auth.test.ts`. Admins come from `bun run admin:create`.
+- **Public sign-up is disabled** (`disableSignUp: true`). This is load-bearing, not tidiness: Better Auth exposes `POST /api/auth/sign-up/email` whenever email+password is enabled, and its handler is mounted _ahead of SvelteKit routing_ — so there is no route file to guard and `(app)/+layout.server.ts` never sees the request. With sign-up open, anyone could mint a `role='user'` account and read every page behind the login. Pinned by `src/lib/server/auth/auth.test.ts`. Admins come from `bun run admin:create`.
 - `hooks.server.ts` populates `event.locals.user` per request. In dev mode, falls back to a hardcoded admin user when no session exists
-- Guards: `requireAuth()`, `requireAdmin()` and `isPublicPath()` in `$lib/server/auth/guards`. `(app)/+layout.server.ts` requires `role === 'admin'` for any non-public path — **test for the role, never merely for a session**, since any account satisfies presence. `/admin/*`, the `restoreSnapshot` family-tree action and the gallery `upload` action all carry their own `requireAdmin`. Registration itself is fully public.
+- Guards: `requireAuth()`, `requireAdmin()`, `requireOwner()` and `isPublicPath()` in `$lib/server/auth/guards`. `(app)/+layout.server.ts` requires `role === 'admin'` for any non-public path — **test for the role, never merely for a session**, since any account satisfies presence. `/admin/*` carries its own `requireAdmin`. Registration itself is fully public.
+
+#### `requireOwner` and the owner-only Setup area
+
+`/admin/event/[eventId]/settings` and the `create_event` action on `/admin` are restricted to a single account, matched by **email** against `OWNER_EMAIL`. See [ADR 0003](docs/adr/0003-event-scoped-admin-and-owner-only-setup.md) and [ADR 0006](docs/adr/0006-setup-folded-into-the-event.md).
+
+- **Never express the owner as a `role`.** Two independent hard-coded `role === 'admin'` comparisons gate the app (`requireAdmin` and `(app)/+layout.server.ts`), so an owner with any other role value loses `/admin` and `/program`. `admin({ adminRoles: [...] })` does not help — it throws at plugin construction, and auth is lazily initialised, so that surfaces on every request including public pages.
+- Role would not be a boundary anyway: Better Auth mounts `POST /api/auth/admin/set-role` ahead of SvelteKit routing, its only check is that the caller is an admin, and there is no self-target guard. Any admin can already grant themselves any role.
+- **`requireOwner` fails open when `OWNER_EMAIL` is unset**, and reports that to Sentry once per process. Deliberate: the degraded state is the old behaviour (admins only, never the public), whereas failing closed would let one forgotten Railway variable lock the owner out of pricing. Do not "harden" this into a fail-closed check without also making the variable impossible to forget.
+- It must be called in the **load, in every action, and in every remote function** of a Setup page. A layout `load` runs after a form action, and remote functions are served from `/_app/remote/<id>` with route handling skipped entirely — no layout or page guard sees them, so the in-function guard is the whole protection.
 - Better Auth manages its own tables (`user`, `session`, `account`)
 - **Lazy-init typing**: `betterAuth({...})` returns a concrete parameterized type that TypeScript can't directly assign to `ReturnType<typeof betterAuth>`. To avoid `any`, extract the call into a `createAuthInstance()` function and type the singleton as `ReturnType<typeof createAuthInstance> | undefined`
 
 #### Bootstrapping admins
 
-`bun run admin:create <email> <password> [name]` creates a Better Auth user and sets `role='admin'` on the user row. Reads `DATABASE_URL` from the environment. Run once on a fresh DB; subsequent admins can be added via the admin panel.
+`bun run admin:create <email> <password> [name]` creates a Better Auth user and sets `role='admin'` on the user row. Reads `DATABASE_URL` from the environment.
+
+It is the **only** way to create an admin: there is no account-management screen at all, so run this for every account, not just the first. Set `OWNER_EMAIL` to the address you pass here, or event settings stay open to every admin.
 
 ### Registration Flow
 
@@ -112,8 +128,30 @@ The token is the only credential — no per-request auth check. Email enumeratio
 
 Route groups:
 
-- `(auth)` — `/login` only, no nav, full-screen card layout. Admin sign-in only.
-- `(app)` — public paths are **only** `/` and `/register` (which covers `/register/manage` and `/register/recover`). Everything else in the group — `/family-tree`, `/gallery`, `/shop`, `/program`, `/changelog`, `/admin/*` — redirects to `/login`. The allowlist is `isPublicPath()` in `$lib/server/auth/guards`; widen it there to reopen a page (the gallery, most likely, after the reunion). Contact is a section on `/` (`#contact`), not its own route.
+- `(auth)` — `/login` only, no nav, full-screen card layout. Admin sign-in only. `goto('/admin')` on success is the **only** entry point into the admin area anywhere in the app.
+- `(app)` — public paths are **only** `/` and `/register` (which covers `/register/manage` and `/register/recover`). Everything else in the group — `/program`, `/changelog`, `/admin/*` — redirects to `/login`. The allowlist is `isPublicPath()` in `$lib/server/auth/guards`; widen it there to reopen a page after the reunion. Contact is a section on `/` (`#contact`), not its own route.
+
+#### Admin routes are event-scoped
+
+Everything an organiser does concerns one reunion, and the reunion is named in the path — see [ADR 0003](docs/adr/0003-event-scoped-admin-and-owner-only-setup.md).
+
+| Path                                                    | What it is                                                                                           |
+| ------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| `/admin`                                                | The landing page: one card per reunion, newest first, plus **Add new event** (owner-only)            |
+| `/admin/event/[eventId]/registrations`                  | The organiser's ONLY screen. Status panel beside the list, plus a Bookings / People lens in `?view=` |
+| `/admin/event/[eventId]/registrations/new`              | Paper entry. Tiers come from `params.eventId`, never `getOpenEvent()`                                |
+| `/admin/event/[eventId]/registrations/[registrationId]` | One registration. 404s if it does not belong to `eventId`                                            |
+| `/admin/event/[eventId]/settings`                       | Owner-only: event details, **status**, tiers, lock date, program                                     |
+
+- **There is no Setup area.** `/admin/setup`, `/admin/setup/events`, `/admin/users`, `/admin/storefront` and `/admin/photos` are all gone — see [ADR 0006](docs/adr/0006-setup-folded-into-the-event.md). What survived went where it belonged: creating a year is a form on `/admin`, beside the year cards; a year's status is on that year's settings page, beside its dates and tiers. Nothing replaced account management, because `admin:create` was always the only way to make an admin and the screen was read-only. Do not reintroduce a Setup landing page — it existed to hold five links, four of which no longer have destinations.
+- **There is no `?eventId` filter and no "All years".** It was a filter dressed as navigation: `?eventId` absent meant "the open event" to the registrations list and "all years" to the shell, so moving between admin tabs silently changed scope. Only one event can be `open` at a time (`one_open_event` partial unique index), so the default was never ambiguous. Do not reintroduce a cross-page event filter — put the id in the path.
+- `admin/+layout.server.ts` returns `events` (four columns only), `currentEventId` for the pages that have no id in their URL, and `isOwner` so the registrations page can hide the settings entry. `/admin` computes `isOwner` again in its own load, because it needs it for the create form and a page load cannot read a sibling's. Hiding is not the protection; the server guards the settings route and the create action.
+- **There is no admin header.** Admin renders inside the ordinary app shell — the same `AppHeader` as every other page, which already carries the theme toggle and the account menu. An `AdminHeader` existed briefly and duplicated all three of those on every admin screen. What is genuinely admin-specific lives on the page: the reunion title, the year picker and the Event settings link are in the status card on the registrations list, beside the numbers they apply to.
+- The 12-column grid wrappers in `(app)/+layout.svelte` and `admin/+layout.svelte` stay: every admin section is `col-span-12` or `xl:col-span-8` and they are also the only source of vertical spacing between sections. `admin/+layout.svelte` now does nothing else.
+- **Getting back from settings**: the settings page has a breadcrumb (Reunions / year / Settings) and a "← Back to registrations" button. With no admin header, those are the only route back — do not remove them.
+- **Registrations and People are two lenses on one page** (`?view=`), not two routes — see [ADR 0004](docs/adr/0004-genealogy-out-of-scope-for-launch.md). Bookings is one row per party; People is one row per attendee, `paid` and `waived` only, which is what catering and shirt counts come off. The status filter chips appear on Bookings only: People is already filtered by the query, so a chip there could only remove rows without explaining why.
+
+- The event status banner is rendered once by `admin/event/[eventId]/+layout.svelte` for every child view. `open` renders **nothing** — `draft`, `closed` and `archived` each get a banner because all three mean nobody can register.
 
 > **The route lock covers page views only.** A SvelteKit layout `load` runs _after_ a form action, so `(app)/+layout.server.ts` cannot protect actions — those carry their own `requireAuth`/`requireAdmin` guards. Routes outside the `(app)` group are not covered at all, and must stay reachable: `/api/webhooks/stripe` (Stripe sends no session — blocking it breaks every payment), `/api/webhooks/resend` (same, and blocking it hides every bounce), `/api/registration/status`, `/api/auth/*`, and `/api/health`.
 >
@@ -162,16 +200,21 @@ Route groups:
 - **Bounces are reported, not retried.** `/api/webhooks/resend` verifies the svix signature and routes `email.bounced` / `email.complained` / `email.failed` to Sentry via `reportError`, naming the affected registration ids. It exists because the confirmation is a _single un-retried attempt_ — the conditional `pending → paid` transition means a Stripe redelivery will not send it again — so without this a typo'd address fails silently and the registrant simply never gets their management link. Needs `RESEND_WEBHOOK_SECRET`; without it the endpoint returns 500 and reports the misconfiguration rather than dropping events quietly.
 - **`webhooks.verify()` does not match Resend's published snippet.** In the installed SDK it is synchronous and _throws_ (no `{ data, error }`), the option is `webhookSecret` not `secret`, and `headers` wants the svix header _values_ as `{ id, timestamp, signature }` — not a Web API `Headers` object. Following the published example type-errors, and would have silently rejected every webhook.
 
-### Family Tree
+### Genealogy, the photo gallery and the shop are gone, tables and columns included
 
-- Uses `family-chart` library (d3-based). The container element needs class `f3` for the library's CSS to apply
-- API: `createChart(element, nodes)` → `.setCardHtml()` → `.updateTree({ initial: true })`
-- Card content is fully customizable via `.setCardInnerHtmlCreator((d) => html)` — data lives at `d.data.data` (double-nested)
+The app is a registration app. Genealogy went out of scope before launch ([ADR 0004](docs/adr/0004-genealogy-out-of-scope-for-launch.md)); the photo gallery and the storefront followed it ([ADR 0005](docs/adr/0005-drop-genealogy-and-gallery-tables.md)).
+
+- **The tables are dropped**, in `drizzle/0011_parched_lady_mastermind.sql`: `family_members`, `relationships`, `photos` and `party_members.family_member_id`. An earlier pass kept them deliberately, on the reasoning that real genealogy might already be entered and the feature could return without a data migration. That was overturned once the family-tree UI had been gone long enough that nothing could have written to them through the app. **This is not reversible** — bringing either feature back means a fresh schema and whatever data was in there is gone.
+- **Cloudflare R2 went with the gallery.** `$lib/server/storage`, `@aws-sdk/client-s3`, `@aws-sdk/s3-request-presigner` and the five `R2_*` variables are all removed. Nothing in the app uploads a file any more. Anything still in the bucket is orphaned — `photos.r2_key` was the only pointer to it — so empty the bucket by hand if it matters, and delete the Railway variables.
+- `db:seed` no longer generates a family tree or photo rows. It still seeds events, tiers, registrations and party members, which is what `db:reseed` is for.
+- **The shop went too**, in `drizzle/0012_smart_hairball.sql`: `/shop`, `/admin/storefront`, the `StorefrontProduct` type and `reunion_events.external_shop_url` / `shop_products` / `shop_active`. It was a link to an external store plus a JSONB list of shirts — nothing was ever sold through this app, so no order or payment depended on it. Shirt sizes are still collected at registration and counted in the admin order sheet; that is the part that mattered.
+- **`PRIMARY_NAV_LINKS` and `SECONDARY_NAV_LINKS` are both gone**, and with them the "Family" and "Reunion" dropdowns in `AppHeader` and their sections in `MobileDrawer`. Between them they held only the gallery and the shop, so both arrays were already empty behind an `{#if …length}`. The nav is now logo · Contact · Register · theme · account. `MobileDrawer`'s `iconMap` went with them — nothing renders a link from a list any more.
+- If any of them comes back, it comes back with its own ADR. Do not reintroduce `/family-tree`, `/gallery` or `/shop` by reflex because you found a dangling reference.
 
 ### Icons
 
 - **@lucide/svelte** for all icons — import as named components: `import { Home, Users } from '@lucide/svelte'`
-- Browse available icons at lucide.dev; use PascalCase component names (e.g. `CalendarClock`, `ShoppingBag`)
+- Browse available icons at lucide.dev; use PascalCase component names (e.g. `CalendarClock`, `ExternalLink`)
 - Do **not** use unplugin-icons or `virtual:icons/*` imports — those have been removed
 
 ### Styling
@@ -188,7 +231,10 @@ Route groups:
 ### Mobile Navigation
 
 - Top navbar is **hidden on mobile** (`hidden md:flex`) — only shown on desktop
-- **Side drawer** (`MobileDrawer.svelte`) slides in from the left on mobile, triggered by a hamburger button in `AppHeader`. Contains: app logo/name, Family links, Reunion links, Register CTA, theme toggle (sign-in / sign-out are admin-only and live inside the admin shell)
+- **The theme toggle is unconditional and lives in `AppHeader` at both breakpoints** — in the desktop nav, and in the mobile bar beside the hamburger rather than inside the drawer. A control everyone should be able to reach must not be two taps down behind a menu.
+- **Account controls are conditional on `page.data.user`**, which the root layout returns on every route. Signed in, `AppHeader` shows an avatar; **sign out lives in a dropdown behind it**, alongside the name and email — a rare action does not earn permanent width next to a Register call-to-action, and the menu has room to say which account you are in. Signed out, neither renders: offering to sign someone out advertises a session they do not have. On mobile the account block is in the drawer, inline, where a dropdown inside a slide-over would be fussy.
+- `AppHeader` is the **only** header. Admin uses it too — see the admin routing section for why there is no separate admin header.
+- **Side drawer** (`MobileDrawer.svelte`) slides in from the left on mobile, triggered by a hamburger button in `AppHeader`. Contains: app logo/name, Family links, Reunion links, Register CTA, and the account block when signed in
 - Main content has no bottom-bar clearance (bottom tab bar was removed)
 
 ### Versioning
@@ -214,7 +260,7 @@ Route groups:
 - Predeploy command (Railway setting): `bun run db:migrate` (`scripts/migrate.ts`) — runs migrations before the server starts. It wraps `drizzle-orm`'s migrator directly instead of shelling out to `drizzle-kit migrate`, because drizzle-kit's spinner UI writes progress via carriage-return redraws that collapse to nothing useful over a non-TTY log pipe (Railway's), hiding the real error behind a bare "exited with code 1". The script also retries the initial connection for ~30s. **Keep that retry even though the database no longer sleeps.** It was originally attributed to a scaled-to-zero Postgres, but that explanation is incomplete: it fired again on the deploy of `c605f59` while metrics showed the database had held ~50MB continuously for the previous hour and had never stopped. The predeploy container is fresh on every deploy, so it can race Railway's private networking becoming usable for that container — independent of whether the database is asleep. The exact layer (DNS resolution vs TCP reachability) is not pinned. Do not remove the retry on the reasoning that sleep is off; it also covers this.
 - Start: `node build/index.js`
 - DB migrations are idempotent — Drizzle tracks applied migrations and skips them on subsequent deploys
-- Required Railway environment variables: `SENTRY_AUTH_TOKEN`, `SENTRY_ENVIRONMENT=production`
+- Required Railway environment variables: `SENTRY_AUTH_TOKEN`, `SENTRY_ENVIRONMENT=production`, and `OWNER_EMAIL` (the address allowed into event settings and event creation; unset means every admin can reach them, and Sentry gets told once)
 - **Watch paths**: `family-reunion-app`'s Railway build config sets `watchPatterns` to `["src/**", "static/**", "drizzle/**", "scripts/**", "package.json", "bun.lock", "svelte.config.js", "vite.config.ts", "tsconfig.json", "drizzle.config.ts"]`, so pushes to `main` that only touch docs/tooling (`CLAUDE.md`, `.claude/**`, `.agents/**`, `skills-lock.json`, etc.) don't trigger a deploy. `scripts/**` is in the list because the predeploy command lives there — without it, a fix to `scripts/migrate.ts` would not deploy. If you add a new source directory, config file, or build input outside these paths, update the pattern list (`railway environment edit --environment production --service-config family-reunion-app build.watchPatterns '[...]'`) or it'll silently stop deploying real changes.
 - **Health check**: Railway's `healthcheckPath` is `/api/health`. It is a **liveness** check and deliberately does not touch the database. A DB probe there would be redundant with the predeploy migration (which already retries the connection for ~30s and fails the deploy loudly), and refusing to promote a deployment because the database is down gains nothing — the deployment it keeps serving has the same database. Use `/api/health?probe=db` to check the database explicitly; it retries, so a brief blip reports `ok` rather than `unreachable`.
 - **The database does not sleep.** `family-reunion-db` had "Sleep when inactive" enabled, which made the first query after any idle period fail: `postgres.js` rejects the in-flight query on a connection error (`connection.js` `queryError`) and only reconnects for a _later_ query, so a real visitor got an error page and a refresh fixed it. It idles at ~50MB, so keeping it warm is cheap. Do not re-enable sleep on a service that serves public page loads.
@@ -255,7 +301,7 @@ Only do this when production has no real data worth keeping (e.g. pre-launch, or
 
 5. **Smoke-test**: visit the production URL, confirm the homepage loads and `/admin` login works with the new credentials.
 
-**Do not run `bun run db:seed` against production as a shortcut for real content.** It generates a fictional 100-person family tree via faker, fake historical events, and fake registrations with fake Stripe session IDs — meant for local dev only. Add real family members and the real event through `/admin` instead.
+**Do not run `bun run db:seed` against production as a shortcut for real content.** It generates fake historical events and fake registrations with fake Stripe session IDs — meant for local dev only. Add the real event through `/admin` instead.
 
 ## Mobile-first guidelines
 
@@ -266,7 +312,6 @@ The app is fully responsive with a `md:` (768px) breakpoint separating mobile an
 - **Data tables need a mobile card view**: show `md:hidden` stacked cards + `hidden md:block` table. Each card should display the key info (name/title + 1-2 secondary details) without horizontal scrolling
 - **Tap targets**: `app.css` enforces 44px min-height on interactive elements below `md:`. Don't override this on mobile
 - **Safe area insets**: handled globally in `app.css` on `html`
-- **Family tree**: shows a list view on mobile (`md:hidden`), chart on desktop (`hidden md:block`)
 - **Test mobile layouts**: when adding new pages or changing layouts, verify at 375px width (iPhone SE) in dev tools
 
 # Code style
@@ -295,7 +340,7 @@ The app is fully responsive with a `md:` (768px) breakpoint separating mobile an
 
 - **Utilities** (`$lib/utils`): `formatPrice`, `getAge`, `parseBirthDate`, `formatBirthDate`, `getInitials`, `cn` — import from barrel `$lib/utils`
 - **Constants** (`$lib/general/constants`): `APP_NAME`, `THEMES`, `EVENT_STATUSES`, `navigation` — import from barrel `$lib/general/constants`
-- **Components** (`$lib/components`): `AppHeader`, `MobileDrawer`, `DatePicker`, `Footer`, `Divider`, `PageTitle`, `ThemeToggle` — import from barrel `$lib/components`
+- **Components** (`$lib/components`): `AppHeader`, `MobileDrawer`, `AdminDataView`, `EventStatusBanner`, `DatePicker`, `Footer`, `Divider`, `ThemeToggle` — import from barrel `$lib/components`
 - **shadcn-svelte UI components** (`$lib/components/ui/`): `Button`, `Badge`, `Card`, `Input`, `Textarea`, `Select`, `Table`, `Alert`, `Avatar`, `Separator`, `Dialog`, `DropdownMenu`, `Sheet`, `Tooltip`, `Breadcrumb`, `Pagination`, `Calendar`, `Sonner`, `Field` — import directly from the component path
 - Use `@lucide/svelte` for all icons (not inline SVGs or unplugin-icons): `import { Home } from '@lucide/svelte'`
 - Price formatting always uses `formatPrice(cents)` from `$lib/utils`, never inline `(x / 100).toFixed(2)`

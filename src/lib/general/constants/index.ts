@@ -1,8 +1,6 @@
 export { APP_DOMAIN } from './APP_DOMAIN'
 export { APP_NAME } from './APP_NAME'
 export { EVENT_STATUSES, type EventStatus } from './eventStatuses'
-export { PRIMARY_NAV_LINKS } from './PRIMARY_NAV_LINKS'
-export { SECONDARY_NAV_LINKS } from './SECONDARY_NAV_LINKS'
 export { PROGRAM_NAV_LINK } from './PROGRAM_NAV_LINK'
 export { CONTACT_NAV_LINK } from './CONTACT_NAV_LINK'
 export { REGISTER_NAV_LINK } from './REGISTER_NAV_LINK'

@@ -13,7 +13,7 @@ import {
     TableRow,
 } from '$lib/components/ui/table'
 import { formatPrice } from '$lib/utils'
-import { getAge } from '$lib/utils/age'
+import { formatPartialBirthDate } from '$lib/utils/age'
 import AddMemberForm from './AddMemberForm.svelte'
 import CancelRegistrationDialog from './CancelRegistrationDialog.svelte'
 import EditMemberDialog from './EditMemberDialog.svelte'
@@ -36,6 +36,10 @@ let {
 
 let members = $derived(initialMembers)
 let totalCents = $derived(members.reduce((sum, m) => sum + m.priceCents, 0))
+/* Removing the only member is not a removal — removeMember refunds them, finds nothing left and marks
+   the whole registration 'refunded' (removeMember.ts:80). That is cancelling, so it is offered as
+   Cancel Registration, which says what it does and asks twice. */
+let canRemoveMembers = $derived(members.length > 1)
 /* addMember rejects any status other than paid/waived (addMember.ts:34), so offering the
    button on a payment-outstanding registration would hand the registrant a 409. They can
    still edit details and cancel — only paying to add someone is unavailable until the
@@ -47,12 +51,21 @@ let isLocked = $derived(
 let showAddForm = $state(false)
 let editingMember = $state<PartyMember | null>(null)
 let editDialogOpen = $state(false)
+/* Bumped on every Edit click, and the dialog is keyed on it, so each click gets a FRESH dialog.
+
+   EditMemberDialog seeds its fields into $state once at mount. Keyed on the member id — as it was —
+   a second Edit on the same person did not remount it, so the fields still held whatever was typed
+   the previous time, including edits abandoned with Cancel. Reopening a row then offered values that
+   were never saved, with Save enabled, one click after the same page had failed to show a save that
+   HAD happened. */
+let editSession = $state(0)
 let removingMember = $state<PartyMember | null>(null)
 let removeDialogOpen = $state(false)
 let cancelDialogOpen = $state(false)
 
 function handleEditClick(member: PartyMember) {
     editingMember = member
+    editSession += 1
     editDialogOpen = true
 }
 
@@ -103,16 +116,16 @@ function handleRemoveClick(member: PartyMember) {
                                 <p class="font-medium">{member.name}</p>
                                 <p class="text-muted-foreground text-sm mt-0.5">
                                     {member.tierLabel}
-                                    {#if member.birthYear}
-                                        · Age {getAge(
-                                            member.birthYear,
-                                            member.birthMonth,
-                                            member.birthDay,
-                                        )}
-                                    {/if}
                                     {#if member.shirtSize}
                                         · {member.shirtSize}
                                     {/if}
+                                </p>
+                                <p class="text-muted-foreground text-sm mt-0.5">
+                                    Born {formatPartialBirthDate(
+                                        member.birthYear,
+                                        member.birthMonth,
+                                        member.birthDay,
+                                    ) ?? '—'}
                                 </p>
                                 <p class="text-sm tabular-nums mt-0.5">
                                     ${formatPrice(member.priceCents)}
@@ -124,11 +137,13 @@ function handleRemoveClick(member: PartyMember) {
                                     variant="outline"
                                     disabled={isLocked}
                                     onclick={() => handleEditClick(member)}>Edit</Button>
-                                <Button
-                                    size="sm"
-                                    variant="destructive"
-                                    disabled={isLocked}
-                                    onclick={() => handleRemoveClick(member)}>Remove</Button>
+                                {#if canRemoveMembers}
+                                    <Button
+                                        size="sm"
+                                        variant="destructive"
+                                        disabled={isLocked}
+                                        onclick={() => handleRemoveClick(member)}>Remove</Button>
+                                {/if}
                             </div>
                         </div>
                     </div>
@@ -141,7 +156,7 @@ function handleRemoveClick(member: PartyMember) {
                     <TableHeader>
                         <TableRow>
                             <TableHead>Name</TableHead>
-                            <TableHead>Age</TableHead>
+                            <TableHead>Birthday</TableHead>
                             <TableHead>Tier</TableHead>
                             <TableHead>T-Shirt</TableHead>
                             <TableHead>Price</TableHead>
@@ -153,13 +168,11 @@ function handleRemoveClick(member: PartyMember) {
                             <TableRow>
                                 <TableCell class="font-medium">{member.name}</TableCell>
                                 <TableCell>
-                                    {member.birthYear
-                                        ? getAge(
-                                              member.birthYear,
-                                              member.birthMonth,
-                                              member.birthDay,
-                                          )
-                                        : '—'}
+                                    {formatPartialBirthDate(
+                                        member.birthYear,
+                                        member.birthMonth,
+                                        member.birthDay,
+                                    ) ?? '—'}
                                 </TableCell>
                                 <TableCell>{member.tierLabel}</TableCell>
                                 <TableCell>{member.shirtSize || '—'}</TableCell>
@@ -172,12 +185,14 @@ function handleRemoveClick(member: PartyMember) {
                                             variant="outline"
                                             disabled={isLocked}
                                             onclick={() => handleEditClick(member)}>Edit</Button>
-                                        <Button
-                                            size="sm"
-                                            variant="destructive"
-                                            disabled={isLocked}
-                                            onclick={() => handleRemoveClick(member)}
-                                            >Remove</Button>
+                                        {#if canRemoveMembers}
+                                            <Button
+                                                size="sm"
+                                                variant="destructive"
+                                                disabled={isLocked}
+                                                onclick={() => handleRemoveClick(member)}
+                                                >Remove</Button>
+                                        {/if}
                                     </div>
                                 </TableCell>
                             </TableRow>
@@ -232,7 +247,7 @@ function handleRemoveClick(member: PartyMember) {
 {/if}
 
 {#if editingMember}
-    {#key editingMember.id}
+    {#key editSession}
         <EditMemberDialog {token} member={editingMember} bind:open={editDialogOpen} />
     {/key}
 {/if}

@@ -22,8 +22,8 @@ function createAuthInstance() {
                email+password is enabled, and better-auth's own handler is mounted ahead of
                SvelteKit routing — so there is no route file to guard and the (app) layout
                never sees the request. Without this, anyone could create a role='user'
-               account and, since the layout guard only tested for *a* session, read the
-               whole family tree and gallery. Admins are created with
+               account and, since the layout guard only tested for *a* session, read every
+               page behind the login. Admins are created with
                `bun run admin:create`. */
             disableSignUp: true,
         },

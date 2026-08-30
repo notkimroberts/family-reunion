@@ -5,6 +5,7 @@ import { Button } from '$lib/components/ui/button'
 import { CONTACT_EMAIL } from '$lib/general/constants'
 import { theme } from '$lib/stores/theme.svelte'
 import '../app.css'
+import { formatError } from './formatError'
 
 let { children } = $props()
 
@@ -52,7 +53,12 @@ function handleRenderError(error: unknown) {
                 <a class="underline" href="mailto:{CONTACT_EMAIL}">{CONTACT_EMAIL}</a>
             </p>
             {#if import.meta.env.DEV}
-                <pre class="text-destructive max-w-full overflow-auto text-left text-xs">{String(
+                <!-- Bounded and scrollable. A Svelte render error carries a hundred-odd frames through
+                     the runtime, and unbounded they pushed Try again and the contact address off the
+                     top of the screen — the two things the page exists to offer. max-h keeps the
+                     controls reachable; the message is first, so it is what you land on. -->
+                <pre
+                    class="text-destructive bg-muted max-h-64 w-full max-w-3xl overflow-auto rounded-lg border p-4 text-left font-mono text-xs whitespace-pre-wrap">{formatError(
                         error,
                     )}</pre>
             {/if}

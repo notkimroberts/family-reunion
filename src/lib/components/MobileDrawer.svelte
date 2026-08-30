@@ -1,26 +1,11 @@
 <script lang="ts">
-import {
-    CalendarClock,
-    ClipboardPen,
-    Home,
-    Images,
-    Mail,
-    Network,
-    ShoppingBag,
-    Users,
-} from '@lucide/svelte'
-import type { Component } from 'svelte'
+import { ClipboardPen, Home, LogOut, Mail } from '@lucide/svelte'
 import { page } from '$app/state'
+import { authClient } from '$lib/auth-client'
+import { Avatar, AvatarFallback } from '$lib/components/ui/avatar'
 import { Sheet, SheetContent } from '$lib/components/ui/sheet'
-import {
-    APP_NAME,
-    CONTACT_NAV_LINK,
-    LIGHT_THEME,
-    PRIMARY_NAV_LINKS,
-    REGISTER_NAV_LINK,
-    SECONDARY_NAV_LINKS,
-} from '$lib/general/constants'
-import { theme } from '$lib/stores/theme.svelte'
+import { APP_NAME, CONTACT_NAV_LINK, REGISTER_NAV_LINK } from '$lib/general/constants'
+import { getInitials } from '$lib/utils'
 
 type Props = {
     open: boolean
@@ -29,12 +14,13 @@ type Props = {
 
 let { open, onClose }: Props = $props()
 
-const iconMap: Record<string, Component> = {
-    images: Images,
-    network: Network,
-    users: Users,
-    'calendar-clock': CalendarClock,
-    'shopping-bag': ShoppingBag,
+/* From page.data, like AppHeader — the root layout returns `user` on every route. */
+let user = $derived(page.data.user)
+
+function handleSignOut() {
+    authClient.signOut().then(() => {
+        window.location.href = '/'
+    })
 }
 
 function isActive(href: string): boolean {
@@ -67,33 +53,6 @@ const linkClass = (active: boolean) =>
                 <Mail class="h-4 w-4" />
                 {CONTACT_NAV_LINK.label}
             </a>
-            {#if PRIMARY_NAV_LINKS.length}
-                <p
-                    class="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest px-3 pt-4 pb-1">
-                    Family
-                </p>
-            {/if}
-            {#each PRIMARY_NAV_LINKS as link}
-                {@const Icon = iconMap[link.icon]}
-                <a href={link.href} onclick={onClose} class={linkClass(isActive(link.href))}>
-                    <Icon class="h-4 w-4" />
-                    {link.label}
-                </a>
-            {/each}
-
-            {#if SECONDARY_NAV_LINKS.length}
-                <p
-                    class="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest px-3 pt-4 pb-1">
-                    Reunion
-                </p>
-            {/if}
-            {#each SECONDARY_NAV_LINKS as link}
-                {@const Icon = iconMap[link.icon]}
-                <a href={link.href} onclick={onClose} class={linkClass(isActive(link.href))}>
-                    <Icon class="h-4 w-4" />
-                    {link.label}
-                </a>
-            {/each}
 
             <div class="pt-3">
                 <a
@@ -106,12 +65,23 @@ const linkClass = (active: boolean) =>
             </div>
         </nav>
 
-        <div class="border-t p-3">
-            <button
-                onclick={() => theme.toggle()}
-                class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-foreground hover:bg-muted transition-colors w-full text-left cursor-pointer">
-                {theme.current === LIGHT_THEME ? 'Switch to Dark' : 'Switch to Light'}
-            </button>
-        </div>
+        <!-- The theme toggle moved to the header bar, where it is visible without opening this. What is
+             left here is the account block, and only when there is an account. -->
+        {#if user}
+            <div class="border-t p-3 flex items-center gap-3">
+                <Avatar class="w-8 h-8 shrink-0">
+                    <AvatarFallback class="bg-primary text-primary-foreground text-xs font-bold">
+                        {getInitials(user.name)}
+                    </AvatarFallback>
+                </Avatar>
+                <span class="text-sm font-medium truncate flex-1">{user.name}</span>
+                <button
+                    onclick={handleSignOut}
+                    class="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-destructive transition-colors">
+                    <LogOut class="h-4 w-4" />
+                    Sign out
+                </button>
+            </div>
+        {/if}
     </SheetContent>
 </Sheet>

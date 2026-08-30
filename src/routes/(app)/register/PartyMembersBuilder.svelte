@@ -15,6 +15,7 @@ import {
 } from '$lib/utils'
 import AdditionalQuestionsFields from './AdditionalQuestionsFields.svelte'
 import AddressFields from './AddressFields.svelte'
+import { EMPTY_PERSON_DETAILS } from './EMPTY_PERSON_DETAILS'
 import ShirtSizeSelect from './ShirtSizeSelect.svelte'
 import TierSelect from './TierSelect.svelte'
 import type { ContactAddress, FormMember, TierOption } from './types'
@@ -46,8 +47,12 @@ let newAddressLine2 = $state('')
 let newAddressCity = $state('')
 let newAddressState = $state('')
 let newAddressZip = $state('')
-let newVegetarianMeal = $state<'yes' | 'no' | ''>('')
-let newAttendedReunion2025 = $state<'yes' | 'no' | ''>('')
+/* Seeded from EMPTY_PERSON_DETAILS rather than a literal, so the party-member form and the contact
+   form cannot end up pre-answering differently. The contact's vegetarian question defaults to 'no';
+   this had its own hard-coded '' and would have gone on demanding an answer per added person, which is
+   the friction the default exists to remove. */
+let newVegetarianMeal = $state<'yes' | 'no' | ''>(EMPTY_PERSON_DETAILS.vegetarianMeal)
+let newAttendedReunion2025 = $state<'yes' | 'no' | ''>(EMPTY_PERSON_DETAILS.attendedReunion2025)
 
 let addressComplete = $derived(
     newSameAddress ||
@@ -57,13 +62,15 @@ let addressComplete = $derived(
             !!newAddressZip.trim() &&
             isValidZip(newAddressZip)),
 )
+/* No check on newVegetarianMeal: it arrives answered, and requiring it here would block Save on a
+   field the registrant has no reason to touch. newAttendedReunion2025 IS still required — it has no
+   defensible default, so it stays a question. */
 let canSaveMember = $derived(
     !!newFirstName.trim() &&
         !!newLastName.trim() &&
         !!newTierId &&
         !!newShirtSize &&
         addressComplete &&
-        !!newVegetarianMeal &&
         !!newAttendedReunion2025,
 )
 
@@ -127,8 +134,8 @@ function resetAddForm() {
     newAddressCity = ''
     newAddressState = ''
     newAddressZip = ''
-    newVegetarianMeal = ''
-    newAttendedReunion2025 = ''
+    newVegetarianMeal = EMPTY_PERSON_DETAILS.vegetarianMeal
+    newAttendedReunion2025 = EMPTY_PERSON_DETAILS.attendedReunion2025
     formTarget = undefined
 }
 

@@ -4,19 +4,17 @@
 [![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/project/879a5c19-03d9-426a-aee3-207aec98321a/service/f968a4a8-5fc2-473c-b4a7-fa737dbe9e17)
 [![Sentry](https://img.shields.io/badge/sentry-monitored-362d59)](https://22aae0d29adf.sentry.io/projects/family-reunion/?project=4511474410061824)
 
-A web application for managing family reunions — registration, payments, family tree, photo gallery, and more.
+A web application for managing family reunions — registration, payments, and the organiser's dashboard for both.
 
 ## Tech Stack
 
 - **Framework**: SvelteKit (full-stack, Svelte 5 with runes)
 - **Database**: PostgreSQL + Drizzle ORM
-- **Auth**: Better Auth (Google, Apple, Facebook SSO + magic link)
+- **Auth**: Better Auth (email + password, admin only — public sign-up disabled)
 - **Payments**: Stripe Checkout
-- **Storage**: Cloudflare R2
 - **Email**: Resend
 - **Error monitoring**: Sentry
 - **Styling**: Tailwind CSS v4 + shadcn-svelte
-- **Family tree**: family-chart
 - **Hosting**: Railway
 
 ## Prerequisites
@@ -24,7 +22,6 @@ A web application for managing family reunions — registration, payments, famil
 - [Bun](https://bun.sh) (v1.3+)
 - PostgreSQL (local instance)
 - Stripe account
-- Cloudflare R2 bucket
 - Resend account
 - OAuth credentials for Google, Apple, and/or Facebook
 
@@ -42,7 +39,7 @@ bun install
 cp .env.example .env
 ```
 
-Fill in all values in `.env`. The file is grouped into sections: database, Better Auth, OAuth providers (Google, Apple, Facebook), Stripe, Cloudflare R2, Resend, and Sentry.
+Fill in all values in `.env`. The file is grouped into sections: database, Better Auth, Stripe, Resend, and Sentry.
 
 ### 3. Initialize the database
 
@@ -83,10 +80,14 @@ The app will be available at `http://localhost:5173`.
 Stripe delivers webhook events to a public URL, so local dev requires the Stripe CLI to forward them to your running server. In a second terminal:
 
 ```bash
-stripe listen --forward-to localhost:5173/api/webhooks/stripe
+bun run stripe:dev
 ```
 
-The CLI will print a webhook signing secret (`whsec_...`). Set that value as `STRIPE_WEBHOOK_SECRET` in your `.env` — it's different from your production secret. Leave `stripe listen` running alongside `bun run dev` whenever testing the registration or checkout flow.
+This finds your dev server rather than assuming port 5173 — Vite increments to 5174 and up when the port is taken, and a forward to the wrong port fails **silently**: the app never sees `checkout.session.completed`, so no confirmation email is sent and the registration sits at `pending` while the payer believes they have paid. The script probes `/api/health` and prints the URL it is forwarding to; if it finds nothing it refuses to start instead of forwarding into the void.
+
+Set `PORT=5180 bun run stripe:dev` for a tunnel or container the probe cannot reach — that port is used without probing. Anything after `--` is passed to the Stripe CLI, e.g. `bun run stripe:dev -- --events checkout.session.completed`.
+
+The CLI will print a webhook signing secret (`whsec_...`). Set that value as `STRIPE_WEBHOOK_SECRET` in your `.env` — it's different from your production secret. Leave it running alongside `bun run dev` whenever testing the registration or checkout flow.
 
 ## Database Commands
 
@@ -114,7 +115,6 @@ src/
 │   │   ├── email/         # Resend email utilities
 │   │   ├── payments/      # Stripe helpers
 │   │   ├── registrations/ # Registration logic
-│   │   ├── storage/       # Cloudflare R2 utilities
 │   │   └── users/         # User profile logic
 │   ├── stores/            # Svelte stores (theme)
 │   ├── types/             # Type declarations
@@ -124,12 +124,8 @@ src/
     ├── (app)/             # Authenticated routes
     │   ├── admin/         # Admin dashboard
     │   ├── changelog/     # App changelog
-    │   ├── family-tree/   # Family tree visualization
-    │   ├── gallery/       # Photo gallery + upload
-    │   ├── profile/       # User profile + relationship management
     │   ├── program/       # Reunion program page
-    │   ├── register/      # Registration + Stripe checkout
-    │   └── shop/          # External shop link page
+    │   └── register/      # Registration + Stripe checkout
     ├── (auth)/            # Unauthenticated routes
     │   └── login/         # SSO + magic link login
     └── api/

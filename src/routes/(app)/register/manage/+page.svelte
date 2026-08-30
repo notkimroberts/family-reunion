@@ -1,6 +1,6 @@
 <script lang="ts">
 import { CheckCircle2, KeyRound, LoaderCircle } from '@lucide/svelte'
-import { onMount, untrack } from 'svelte'
+import { onMount } from 'svelte'
 import { toast } from 'svelte-sonner'
 import { Alert, AlertDescription, AlertTitle } from '$lib/components/ui/alert'
 import { Button } from '$lib/components/ui/button'
@@ -13,7 +13,15 @@ const POLL_TIMEOUT_MS = 30000
 
 let { data } = $props()
 
-let status = $state(untrack(() => (data.missingToken ? null : data.registration.status)))
+/* The registration's status, re-read whenever the load re-runs.
+
+   This was `$state(untrack(() => …))`, which copied the status ONCE at mount and never looked at
+   `data` again. Cancelling redirects back to this route, and the load did re-run with the status now
+   'refunded' — but the copy still said 'paid', so the "Registration cancelled" branch below never
+   rendered. The page kept showing "You're registered!" with the confirmation dialog sitting on top
+   of it, and only a hard refresh (a fresh mount, hence a fresh copy) told the truth. Nothing ever
+   assigned to it, so there was no reason for it to be $state. */
+let status = $derived(data.missingToken ? null : data.registration.status)
 let timedOut = $state(false)
 
 /* A 'pending' registration means two very different things. From the public flow it means a

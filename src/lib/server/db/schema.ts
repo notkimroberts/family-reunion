@@ -21,35 +21,6 @@ export const registrationStatusEnum = pgEnum('registration_status', [
     'refunded',
     'waived',
 ])
-export const relationshipTypeEnum = pgEnum('relationship_type', [
-    'parent',
-    'child',
-    'spouse',
-    'sibling',
-    'grandparent',
-    'grandchild',
-    'great_grandparent',
-    'great_grandchild',
-    'great_great_grandparent',
-    'great_great_grandchild',
-    'great_great_great_grandparent',
-    'great_great_great_grandchild',
-    'great_great_great_great_grandparent',
-    'great_great_great_great_grandchild',
-    'great_great_great_great_great_grandparent',
-    'great_great_great_great_great_grandchild',
-    'aunt_uncle',
-    'niece_nephew',
-    'cousin',
-    'half_sibling',
-    'step_parent',
-    'step_child',
-    'step_sibling',
-    'in_law',
-    'great_aunt_uncle',
-    'great_niece_nephew',
-    'second_cousin',
-])
 
 /* Better Auth tables */
 export const user = pgTable('user', {
@@ -109,8 +80,6 @@ export const verification = pgTable('verification', {
 
 /* Application tables */
 
-export type StorefrontProduct = { name: string; imageUrl: string; description?: string }
-
 export const reunionEvents = pgTable(
     'reunion_events',
     {
@@ -139,9 +108,6 @@ export const reunionEvents = pgTable(
             jsonb('recommended_activities').$type<{ name: string; description?: string }[]>(),
         schedule: jsonb('schedule').$type<{ day: string; time: string; activity: string }[]>(),
         registrationLockDate: timestamp('registration_lock_date'),
-        externalShopUrl: text('external_shop_url'),
-        shopProducts: jsonb('shop_products').$type<StorefrontProduct[]>(),
-        shopActive: boolean('shop_active').notNull().default(false),
         createdAt: timestamp('created_at').notNull().defaultNow(),
         updatedAt: timestamp('updated_at').notNull().defaultNow(),
     },
@@ -190,7 +156,25 @@ export const registrations = pgTable(
             .notNull()
             .references(() => reunionEvents.id),
         stripeSessionId: text('stripe_session_id').unique(),
+        /* The Stripe PaymentIntent for the original checkout, at registration level.
+
+           party_members carries its own copy, but that one is per-member and documented as unreliable —
+           null for a cheque payer AND for an abandoned checkout, with removeMember falling back to
+           retrieving it from the session. This is the id the admin list links to the Stripe dashboard
+           with, so it needs to be the registration's own. */
+        stripePaymentIntentId: text('stripe_payment_intent_id'),
         status: registrationStatusEnum('status').notNull().default('pending'),
+        /* When the money actually arrived, as distinct from updatedAt.
+
+           updatedAt cannot answer this: any later edit — a corrected email, a shirt size — bumps it, so
+           it drifts away from the payment date the moment anyone touches the row. Stripe fulfilment also
+           writes no audit row, so before this column there was no record of when an online payment
+           landed.
+
+           NULL for every registration paid before this column existed, and for anything not paid. The
+           admin list shows the date when it has one and says nothing when it does not, rather than
+           printing updatedAt and calling it a payment date. */
+        paidAt: timestamp('paid_at'),
         createdAt: timestamp('created_at').notNull().defaultNow(),
         updatedAt: timestamp('updated_at').notNull().defaultNow(),
     },
@@ -207,10 +191,6 @@ export const partyMembers = pgTable(
         registrationId: uuid('registration_id')
             .notNull()
             .references(() => registrations.id, { onDelete: 'cascade' }),
-        /* Optional link to the canonical family-tree node for this person. Admin-set, nullable, set null on family_member delete. */
-        familyMemberId: uuid('family_member_id').references(() => familyMembers.id, {
-            onDelete: 'set null',
-        }),
         name: text('name').notNull(),
         birthYear: integer('birth_year'),
         birthMonth: integer('birth_month'),
@@ -259,70 +239,12 @@ export const partyMembers = pgTable(
         uniqueIndex('party_members_one_contact_per_registration')
             .on(t.registrationId)
             .where(sql`${t.isContact}`),
-        index('party_members_family_member_id_idx').on(t.familyMemberId),
         uniqueIndex('party_members_stripe_checkout_session_id_key').on(t.stripeCheckoutSessionId),
         check(
             'party_members_birth_date_prefix',
             sql`(${t.birthDay} IS NULL OR ${t.birthMonth} IS NOT NULL) AND (${t.birthMonth} IS NULL OR ${t.birthYear} IS NOT NULL)`,
         ),
     ],
-)
-
-export const familyMembers = pgTable(
-    'family_members',
-    {
-        id: uuid('id').primaryKey().defaultRandom(),
-        name: text('name').notNull(),
-        birthYear: integer('birth_year'),
-        birthMonth: integer('birth_month'),
-        birthDay: integer('birth_day'),
-        createdAt: timestamp('created_at').notNull().defaultNow(),
-        updatedAt: timestamp('updated_at').notNull().defaultNow(),
-    },
-    (t) => [
-        check(
-            'family_members_birth_date_prefix',
-            sql`(${t.birthDay} IS NULL OR ${t.birthMonth} IS NOT NULL) AND (${t.birthMonth} IS NULL OR ${t.birthYear} IS NOT NULL)`,
-        ),
-    ],
-)
-
-export const relationships = pgTable(
-    'relationships',
-    {
-        id: uuid('id').primaryKey().defaultRandom(),
-        fromMemberId: uuid('from_member_id')
-            .notNull()
-            .references(() => familyMembers.id, { onDelete: 'cascade' }),
-        toMemberId: uuid('to_member_id')
-            .notNull()
-            .references(() => familyMembers.id, { onDelete: 'cascade' }),
-        type: relationshipTypeEnum('type').notNull(),
-        createdAt: timestamp('created_at').notNull().defaultNow(),
-    },
-    (t) => [
-        uniqueIndex('rel_unique').on(t.fromMemberId, t.toMemberId, t.type),
-        index('relationships_to_idx').on(t.toMemberId),
-        check('rel_no_self', sql`${t.fromMemberId} <> ${t.toMemberId}`),
-    ],
-)
-
-export const photos = pgTable(
-    'photos',
-    {
-        id: uuid('id').primaryKey().defaultRandom(),
-        eventId: uuid('event_id')
-            .notNull()
-            .references(() => reunionEvents.id),
-        uploadedByUserId: text('uploaded_by_user_id').references(() => user.id, {
-            onDelete: 'set null',
-        }),
-        r2Key: text('r2_key').notNull(),
-        url: text('url').notNull(),
-        caption: text('caption'),
-        createdAt: timestamp('created_at').notNull().defaultNow(),
-    },
-    (t) => [index('photos_event_id_idx').on(t.eventId)],
 )
 
 export const registrationAuditActionEnum = pgEnum('registration_audit_action', [

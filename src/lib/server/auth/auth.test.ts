@@ -15,8 +15,8 @@ describe('better-auth configuration', () => {
        POST /api/auth/sign-up/email whenever email+password is enabled, and its handler is
        mounted ahead of SvelteKit routing — so there is no route file to guard and the (app)
        layout never sees the request. With sign-up open, anyone could mint a role='user'
-       account, satisfy a presence-only layout check, and read the whole family tree and
-       gallery. The login page states the intent: "Admin access only." */
+       account, satisfy a presence-only layout check, and read every page behind the
+       login. The login page states the intent: "Admin access only." */
     it('does not allow public sign-up', () => {
         expect(auth.options.emailAndPassword?.disableSignUp).toBe(true)
     })

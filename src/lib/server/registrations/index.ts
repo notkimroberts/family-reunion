@@ -10,8 +10,8 @@ export {
 export {
     removeMember,
     cancelRegistration,
+    cancelRegistrationAsAdmin,
     updateMemberDetails,
-    linkPartyMember,
     addAdminMember,
     setRegistrationStatus,
     reissueManagementLink,
@@ -29,8 +29,12 @@ export type { ManagementTokenColumns } from './isManagementTokenValid'
 
 export type { RegistrationMember } from './queries'
 export type { RegistrationSummary } from './queries'
+export type { EventPerson } from './queries'
+export type { EventSummary } from './queries'
 export {
     getConfirmationEmailData,
+    getEventPeople,
+    getEventSummaries,
     getOpenEvent,
     getRegistrationsForEvent,
     getRegistrationByToken,
