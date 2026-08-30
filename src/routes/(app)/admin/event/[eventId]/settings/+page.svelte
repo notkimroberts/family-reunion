@@ -9,7 +9,8 @@ import * as Field from '$lib/components/ui/field'
 import { Input } from '$lib/components/ui/input'
 import { Separator } from '$lib/components/ui/separator'
 import { Textarea } from '$lib/components/ui/textarea'
-import { formatPrice } from '$lib/utils'
+import { EVENT_STATUS_ORDER, EVENT_STATUS_STYLES } from '$lib/general/constants/EVENT_STATUS_STYLES'
+import { cn, formatPrice } from '$lib/utils'
 
 /* Setup's event editor: set once a year, then left alone. Quiet on purpose.
 
@@ -25,24 +26,9 @@ let { data, form } = $props()
 
 const SUBHEAD_CLASS = 'text-muted-foreground text-xs font-semibold uppercase tracking-wide'
 
-/* Spelled out rather than derived from the enum: the ORDER is a decision — the life of a reunion year,
-   from unpublished through open to filed away — and enumValues would give alphabetical. */
-const EVENT_STATUS_CHOICES = [
-    { status: 'draft', label: 'Draft' },
-    { status: 'open', label: 'Open' },
-    { status: 'closed', label: 'Closed' },
-    { status: 'archived', label: 'Archived' },
-] as const
-
-/* What the current status MEANS, in terms of what happens to someone who visits the site. The status
-   word alone does not say that, and choosing wrongly here is the difference between a public
-   registration form and a page saying nobody can register. */
-const STATUS_EXPLANATION = {
-    draft: 'Not published. Nobody outside the admin can register or see this year.',
-    open: 'Live. The public registration form is accepting parties and payments.',
-    closed: 'Registration has ended. Existing registrations stay editable by their owners until the lock date.',
-    archived: 'Filed away. Kept for its numbers; nobody can register.',
-} as const
+/* Labels, icons and colours come from EVENT_STATUS_STYLES, shared with the /admin year cards so the
+   same status cannot look like two different things on two screens. EVENT_STATUS_ORDER is the life of a
+   year — draft, open, closed, archived — rather than the enum's order. */
 
 /* Native select, not a bits-ui one: this drives shirt sizing through a plain POST, and bits-ui's Select
    binds a string | string[] union that breaks SSR here. Sized to match Input beside it. */
@@ -73,7 +59,11 @@ const SHIRT_SELECT_CLASS =
         <h1>{data.event.title}</h1>
         <div class="flex flex-wrap items-center gap-2">
             <p class="text-muted-foreground text-sm">Reunion year {data.event.year}</p>
-            <Badge variant="outline">{data.event.status}</Badge>
+            <!-- Same palette as the card below and as /admin, rather than an outline badge printing the
+                 raw database word in lower case. -->
+            <Badge variant="outline" class={EVENT_STATUS_STYLES[data.event.status].class}>
+                {EVENT_STATUS_STYLES[data.event.status].label}
+            </Badge>
         </div>
     </div>
 </section>
@@ -104,32 +94,43 @@ const SHIRT_SELECT_CLASS =
                 Registration status
             </CardTitle>
             <CardDescription>
-                Only <strong>open</strong> lets anyone register. Draft, closed and archived all mean nobody
-                can — the difference is only what the year means to you. One year can be open at a time.
+                Only <strong>open</strong> lets anyone register. One year can be open at a time.
             </CardDescription>
         </CardHeader>
-        <CardContent>
-            <!-- One button per status rather than a select and a Save: the current one is disabled, so
-             the control shows where you are and what you can do to it in the same glance, and
-             there is no half-changed state to leave unsaved. -->
-            <div class="flex flex-wrap gap-2">
-                {#each EVENT_STATUS_CHOICES as choice (choice.status)}
-                    {@const current = data.event.status === choice.status}
-                    <form method="POST" action="?/update_status" use:enhance>
-                        <input type="hidden" name="status" value={choice.status} />
-                        <Button
-                            type="submit"
-                            size="sm"
-                            variant={current ? 'secondary' : 'outline'}
-                            disabled={current}>
-                            {choice.label}
-                        </Button>
-                    </form>
-                {/each}
+        <CardContent class="flex flex-col gap-4">
+            <!-- The current state stated first, and loudly. This was an outline Badge printing the raw
+                 database word, which made the most consequential fact on the page — whether the public
+                 can register at all — the quietest thing on it. Same palette and icons as the /admin
+                 year cards, so a year recognised there reads the same here. -->
+            {@const current = EVENT_STATUS_STYLES[data.event.status]}
+            {@const CurrentIcon = current.icon}
+            <div class={cn('flex items-start gap-3 rounded-lg border px-4 py-3', current.class)}>
+                <CurrentIcon class="mt-0.5 size-5 shrink-0" />
+                <div class="flex flex-col gap-0.5">
+                    <p class="text-sm font-semibold">{current.headline}</p>
+                    <p class="text-sm">{current.note}</p>
+                </div>
             </div>
-            <p class="text-muted-foreground mt-3 text-xs">
-                {STATUS_EXPLANATION[data.event.status]}
-            </p>
+
+            <div class="flex flex-col gap-2">
+                <p class={SUBHEAD_CLASS}>Change to</p>
+                <!-- One button per status rather than a select and a Save: nothing is half-changed and
+                     left unsaved. The current one is omitted rather than disabled — it is already
+                     stated above, and a disabled copy of it only invites a click that does nothing. -->
+                <div class="flex flex-wrap gap-2">
+                    {#each EVENT_STATUS_ORDER.filter((s) => s !== data.event.status) as status (status)}
+                        {@const style = EVENT_STATUS_STYLES[status]}
+                        {@const Icon = style.icon}
+                        <form method="POST" action="?/update_status" use:enhance>
+                            <input type="hidden" name="status" value={status} />
+                            <Button type="submit" size="sm" variant="outline" class={style.tone}>
+                                <Icon class="size-4" />
+                                {style.label}
+                            </Button>
+                        </form>
+                    {/each}
+                </div>
+            </div>
         </CardContent>
     </Card>
 

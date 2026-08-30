@@ -7,6 +7,7 @@ import { Button } from '$lib/components/ui/button'
 import * as Field from '$lib/components/ui/field'
 import { Input } from '$lib/components/ui/input'
 import { APP_NAME } from '$lib/general/constants'
+import { EVENT_STATUS_STYLES } from '$lib/general/constants/EVENT_STATUS_STYLES'
 import type { EventSummary } from '$lib/server/registrations'
 import { cn, formatDateRange, formatPrice } from '$lib/utils'
 
@@ -20,14 +21,12 @@ import { cn, formatDateRange, formatPrice } from '$lib/utils'
    can carry the primary ring. That makes "the one I am working on" findable at a glance without ranking
    the list by anything other than year. */
 
-/* Status shown as a word on the card rather than as the full EventStatusBanner: the banner explains a
-   consequence at length, which is right above a page you are working on and too much in a list of four. */
-const STATUS_COPY = {
-    open: 'Registration open',
-    draft: 'Not published',
-    closed: 'Registration closed',
-    archived: 'Archived',
-} as const
+/* Status shown as a short headline rather than as the full EventStatusBanner: the banner explains a
+   consequence at length, which is right above a page you are working on and too much in a list of four.
+
+   Labels, icons and colours come from EVENT_STATUS_STYLES, shared with the settings page. This file used
+   to carry its own STATUS_COPY and statusTone(), which is how `closed` ended up grey here and amber in
+   the banner. */
 
 let { data, form } = $props()
 
@@ -45,22 +44,6 @@ $effect(() => {
         goto(`/admin/event/${form.createdEventId}/settings`)
     }
 })
-
-function cardRing(status: EventSummary['status']): string {
-    return status === 'open'
-        ? 'border-primary/40 ring-1 ring-primary/20'
-        : 'border-border hover:border-foreground/20'
-}
-
-function statusTone(status: EventSummary['status']): string {
-    if (status === 'open') {
-        return 'text-green-700 dark:text-green-400'
-    }
-    if (status === 'draft') {
-        return 'text-sky-700 dark:text-sky-400'
-    }
-    return 'text-muted-foreground'
-}
 
 function dates(event: EventSummary): string | undefined {
     if (!event.startDate || !event.endDate) {
@@ -164,11 +147,17 @@ function dates(event: EventSummary): string | undefined {
         <div class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
             {#each data.events as event (event.id)}
                 {@const range = dates(event)}
+                {@const status = EVENT_STATUS_STYLES[event.status]}
+                {@const StatusIcon = status.icon}
+                <!-- The border carries the status, from the same palette as the badge inside the card
+                     and as the settings page: green is open and working, sky is a draft, amber is closed,
+                     grey is archived. It replaces a primary-coloured ring that marked the open year but
+                     said nothing about the other three, so a draft and an archived year looked alike. -->
                 <a
                     href="/admin/event/{event.id}/registrations"
                     class={cn(
                         'group flex flex-col gap-4 rounded-xl border bg-card p-5 transition-colors hover:bg-muted/40',
-                        cardRing(event.status),
+                        status.border,
                     )}>
                     <div class="flex items-start justify-between gap-3">
                         <div class="flex flex-col gap-0.5">
@@ -181,8 +170,11 @@ function dates(event: EventSummary): string | undefined {
                     </div>
 
                     <div class="flex flex-col gap-0.5">
-                        <span class="text-xs font-semibold {statusTone(event.status)}">
-                            {STATUS_COPY[event.status]}
+                        <!-- Icon as well as colour: roughly one man in twelve cannot separate the greens
+                             from the ambers, so the shape has to say the same thing. -->
+                        <span class="flex items-center gap-1.5 text-xs font-semibold {status.tone}">
+                            <StatusIcon class="size-3.5" />
+                            {status.headline}
                         </span>
                         {#if range}
                             <span class="text-muted-foreground text-xs">{range}</span>
