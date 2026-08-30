@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import type { RegistrationSummary } from '$lib/server/registrations'
+import { grossUpForStripe, stripeFeeOnChargeCents } from '$lib/utils/stripeFee'
 import { getRegistrationTotals } from './registrationTotals'
 
 function reg(overrides: Partial<RegistrationSummary>): RegistrationSummary {
@@ -27,6 +28,10 @@ describe('getRegistrationTotals', () => {
             pendingPeopleCount: 0,
             pendingPartyCount: 0,
             paidCents: 0,
+            cardPaidCents: 0,
+            offlinePaidCents: 0,
+            estimatedFeeCents: 0,
+            bankedCents: 0,
             outstandingCents: 0,
         })
     })
@@ -114,5 +119,105 @@ describe('getRegistrationTotals', () => {
         expect(totals.pendingPartyCount).toBe(0)
         expect(totals.pendingPeopleCount).toBe(0)
         expect(totals.outstandingCents).toBe(0)
+    })
+
+    /* Collected is what registrants paid; it is not what the reunion can spend. The fee breakdown below
+       is the difference, and getting it wrong in the optimistic direction means budgeting money Stripe
+       has already taken. */
+    describe('fees versus what reaches the bank', () => {
+        /* An adult place nets $160, so the card is charged $165.09 and Stripe keeps $5.09. */
+        const ADULT_GROSS = grossUpForStripe(16000)
+
+        it('separates card money from cash and cheques', () => {
+            const totals = getRegistrationTotals([
+                reg({ id: 'a', stripeSessionId: 'cs_1', totalCents: ADULT_GROSS }),
+                reg({ id: 'b', stripeSessionId: null, totalCents: 16000 }),
+            ])
+
+            expect(totals.cardPaidCents).toBe(ADULT_GROSS)
+            expect(totals.offlinePaidCents).toBe(16000)
+        })
+
+        /* THE point of the split. Cash never went near Stripe, so no fee may be deducted from it —
+           a flat "Collected minus 2.9%" would quietly shrink a year of paper registrations. */
+        it('charges no fee against cash or cheques', () => {
+            const totals = getRegistrationTotals([
+                reg({ id: 'a', stripeSessionId: null, totalCents: 58000 }),
+            ])
+
+            expect(totals.estimatedFeeCents).toBe(0)
+            expect(totals.bankedCents).toBe(58000)
+        })
+
+        /* The gross-up is designed so the org nets the tier price. That is the sum this must reproduce:
+           charge $165.09, Stripe keeps $5.09, $160 lands. */
+        it('lands the intended net on a single card payment', () => {
+            const totals = getRegistrationTotals([
+                reg({ stripeSessionId: 'cs_1', totalCents: ADULT_GROSS }),
+            ])
+
+            expect(totals.paidCents).toBe(ADULT_GROSS)
+            expect(totals.bankedCents).toBe(16000)
+        })
+
+        /* 30¢ is charged once per PAYMENT. Deducting it once from the summed total instead would
+           undercount the fee by 30¢ for every registration after the first — the error grows with the
+           reunion. */
+        it('applies the fixed fee once per payment, not once overall', () => {
+            const totals = getRegistrationTotals([
+                reg({ id: 'a', stripeSessionId: 'cs_1', totalCents: ADULT_GROSS }),
+                reg({ id: 'b', stripeSessionId: 'cs_2', totalCents: ADULT_GROSS }),
+                reg({ id: 'c', stripeSessionId: 'cs_3', totalCents: ADULT_GROSS }),
+            ])
+
+            expect(totals.estimatedFeeCents).toBe(3 * stripeFeeOnChargeCents(ADULT_GROSS))
+            /* And strictly more than treating the three as one charge. */
+            expect(totals.estimatedFeeCents).toBeGreaterThan(
+                stripeFeeOnChargeCents(3 * ADULT_GROSS),
+            )
+        })
+
+        it('always adds up: collected minus fees equals banked', () => {
+            const totals = getRegistrationTotals([
+                reg({ id: 'a', stripeSessionId: 'cs_1', totalCents: ADULT_GROSS }),
+                reg({ id: 'b', stripeSessionId: 'cs_2', totalCents: 41236 }),
+                reg({ id: 'c', stripeSessionId: null, totalCents: 26000 }),
+            ])
+
+            expect(totals.cardPaidCents + totals.offlinePaidCents).toBe(totals.paidCents)
+            expect(totals.bankedCents).toBe(totals.paidCents - totals.estimatedFeeCents)
+        })
+
+        /* Only paid money is counted. A pending card registration has been charged nothing, so it must
+           contribute no fee — otherwise the bank figure is reduced by a fee nobody has paid. */
+        it('ignores pending, waived and refunded money', () => {
+            const totals = getRegistrationTotals([
+                reg({ id: 'a', status: 'pending', stripeSessionId: 'cs_1', totalCents: 99900 }),
+                reg({ id: 'b', status: 'waived', stripeSessionId: null, totalCents: 48000 }),
+                reg({ id: 'c', status: 'refunded', stripeSessionId: 'cs_2', totalCents: 77700 }),
+            ])
+
+            expect(totals.cardPaidCents).toBe(0)
+            expect(totals.offlinePaidCents).toBe(0)
+            expect(totals.estimatedFeeCents).toBe(0)
+            expect(totals.bankedCents).toBe(0)
+        })
+
+        /* stripeSessionId is the signal, NOT stripePaymentIntentId — that column is null on every
+           registration paid before it existed, so keying on it would file real card payments as cash
+           and overstate the bank by the whole fee. */
+        it('treats a card payment with no recorded intent as card money', () => {
+            const totals = getRegistrationTotals([
+                reg({
+                    stripeSessionId: 'cs_1',
+                    stripePaymentIntentId: null,
+                    totalCents: ADULT_GROSS,
+                }),
+            ])
+
+            expect(totals.cardPaidCents).toBe(ADULT_GROSS)
+            expect(totals.offlinePaidCents).toBe(0)
+            expect(totals.estimatedFeeCents).toBeGreaterThan(0)
+        })
     })
 })

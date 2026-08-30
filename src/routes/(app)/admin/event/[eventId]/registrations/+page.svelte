@@ -212,6 +212,48 @@ $effect(() => {
                     ${formatPrice(totals.paidCents)}
                 </span>
             </div>
+
+            <!-- What the registrants paid is not what the reunion gets to spend. Card money arrives
+                 short by Stripe's cut; cash and cheques arrive whole. Only the last line is the
+                 spendable number, so it is the one carrying the weight. -->
+            {#if totals.cardPaidCents > 0}
+                <div class="flex flex-col gap-1.5 pl-2">
+                    <div class="flex items-baseline justify-between gap-3">
+                        <span class="text-muted-foreground text-xs">By card</span>
+                        <span class="text-muted-foreground text-xs tabular-nums">
+                            ${formatPrice(totals.cardPaidCents)}
+                        </span>
+                    </div>
+                    {#if totals.offlinePaidCents > 0}
+                        <div class="flex items-baseline justify-between gap-3">
+                            <span class="text-muted-foreground text-xs">Cash or cheque</span>
+                            <span class="text-muted-foreground text-xs tabular-nums">
+                                ${formatPrice(totals.offlinePaidCents)}
+                            </span>
+                        </div>
+                    {/if}
+                    <div class="flex items-baseline justify-between gap-3">
+                        <span class="text-xs text-amber-700 dark:text-amber-400">Stripe fees</span>
+                        <span class="text-xs tabular-nums text-amber-700 dark:text-amber-400">
+                            −${formatPrice(totals.estimatedFeeCents)}
+                        </span>
+                    </div>
+                </div>
+
+                <div class="flex items-baseline justify-between gap-3">
+                    <span class="text-sm font-medium">In the bank</span>
+                    <span class="text-lg font-semibold tabular-nums">
+                        ${formatPrice(totals.bankedCents)}
+                    </span>
+                </div>
+                <!-- Says "estimated" because it is. The real fee is on Stripe's balance transaction,
+                     which this app does not store; an international card costs more than 2.9%, so the
+                     figure above is a ceiling and this one a floor. -->
+                <p class="text-muted-foreground text-xs">
+                    Fees estimated at 2.9% + 30¢ per card payment. Cash and cheques arrive in full,
+                    once deposited.
+                </p>
+            {/if}
         </div>
 
         <Separator />
