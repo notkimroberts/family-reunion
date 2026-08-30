@@ -1,5 +1,5 @@
 <script lang="ts">
-import { ArrowLeft, CalendarPlus } from '@lucide/svelte'
+import { CalendarPlus } from '@lucide/svelte'
 import { enhance } from '$app/forms'
 import { Alert, AlertDescription } from '$lib/components/ui/alert'
 import { Button } from '$lib/components/ui/button'
@@ -21,7 +21,10 @@ let { data, form } = $props()
     <title>Add a reunion year — {APP_NAME}</title>
 </svelte:head>
 
-<section class="col-span-12 flex flex-col gap-3 xl:col-span-6">
+<!-- col-span-12, NOT xl:col-span-6. The card below is 6 wide, so a 6-wide heading sat BESIDE it at
+     xl — heading left, form right — and the empty left column stretched the grid row, stranding
+     everything after it. Sections on this grid stack only when their spans cannot share a row. -->
+<section class="col-span-12 flex flex-col gap-3">
     <nav aria-label="Breadcrumb" class="text-muted-foreground flex items-center gap-2 text-sm">
         <a href="/admin" class="transition-colors hover:text-foreground">Reunions</a>
         <span aria-hidden="true">/</span>
@@ -84,11 +87,4 @@ let { data, form } = $props()
             </form>
         </CardContent>
     </Card>
-</section>
-
-<section class="col-span-12">
-    <Button href="/admin" variant="ghost" size="sm">
-        <ArrowLeft class="size-4" />
-        Back to reunions
-    </Button>
 </section>
