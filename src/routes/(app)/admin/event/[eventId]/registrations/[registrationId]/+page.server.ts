@@ -9,6 +9,7 @@ import { registrationAudit, user as userTable } from '$lib/server/db/schema'
 import { dbg } from '$lib/server/debug'
 import {
     addAdminMember,
+    cancelRegistrationAsAdmin,
     getRegistrationMembers,
     getRegistrationWithEvent,
     notifyRegistrationUpdated,
@@ -331,6 +332,55 @@ export const actions: Actions = {
         })
 
         const feedback: RegistrationActionFeedback = { linkReissued: true }
+        return feedback
+    },
+
+    /* Cancels the whole registration on the registrant's behalf, refunding whatever Stripe took.
+
+       The gap this closes: a paper registration could not be cancelled at all. setRegistrationStatus
+       refuses 'refunded' in both directions on purpose, and cancelRegistration needs the management
+       token, which is only ever stored as a hash — so the only route was to email the family their own
+       link and ask them to do it themselves, for someone who had just rung up to say they cannot come.
+
+       Guarded by requireAdmin like every action here, and cancelRegistrationAsAdmin re-checks the
+       event pairing at the write itself, because this one is irreversible. */
+    cancel: async (event) => {
+        const admin = requireAdmin(event)
+
+        await loadPairedRegistration(event.params)
+
+        try {
+            await cancelRegistrationAsAdmin({
+                registrationId: event.params.registrationId,
+                eventId: event.params.eventId,
+                registerUrl: `${event.url.origin}/register`,
+            })
+        } catch (err) {
+            /* A failed refund leaves the registration untouched — that is the contract
+               _performCancellation holds, and it is why this can safely report and stop rather than
+               leaving the organiser guessing whether the money moved. */
+            reportError('admin cancel registration failed', err, {
+                registrationId: event.params.registrationId,
+            })
+            const feedback: RegistrationActionFeedback = {
+                cancelError:
+                    err instanceof Error
+                        ? `${err.message} Nothing has been cancelled.`
+                        : 'Cancelling failed. Nothing has been cancelled.',
+            }
+            return fail(502, feedback)
+        }
+
+        /* 'status_changed' rather than a new enum value: that is what happened, and adding
+           'registration_cancelled' would need a migration to record something the detail already says. */
+        await recordRegistrationAudit({
+            registrationId: event.params.registrationId,
+            actor: admin,
+            action: 'status_changed',
+            detail: { to: 'refunded', reason: 'cancelled by organiser' },
+        })
+
+        const feedback: RegistrationActionFeedback = { cancelled: true }
         return feedback
     },
 }

@@ -124,7 +124,8 @@ describe('$form is the single source of truth', () => {
             'self.addressState',
             'self.addressZip',
             'self.shirtSize',
-            'self.vegetarianMeal',
+            /* vegetarianMeal is NOT here: it is seeded 'no', so a blank form already satisfies it.
+               See EMPTY_PERSON_DETAILS for the tradeoff that buys. */
             'self.attendedReunion2025',
         ]) {
             expect(failed, `expected ${field} to be rejected`).toContain(field)
@@ -177,9 +178,52 @@ describe('$form is the single source of truth', () => {
     })
 
     /* EMPTY_PERSON_DETAILS must stay assignable to the store, which means the schema's input type
-       has to keep admitting the unanswered ''. */
+       has to keep admitting the unanswered '' — attendedReunion2025 still starts there. */
     it('the blank details constant is a valid starting value', () => {
-        expect(EMPTY_PERSON_DETAILS.vegetarianMeal).toBe('')
         expect(EMPTY_PERSON_DETAILS.attendedReunion2025).toBe('')
+    })
+
+    /* Pre-answered on purpose, so nobody has to declare a dietary preference they do not have. The
+       value must be 'no' and not '' — a blank would put the field back in the way of every submit —
+       and it must be a value the schema accepts, or the form could never be sent at all. */
+    it('pre-answers the vegetarian question as no', () => {
+        expect(EMPTY_PERSON_DETAILS.vegetarianMeal).toBe('no')
+        expect(
+            registrationSchema.safeParse({
+                ...BLANK_FORM,
+                contactFirstName: 'Alice',
+                contactLastName: 'Patterson',
+                contactEmail: 'alice@example.com',
+                self: {
+                    ...EMPTY_PERSON_DETAILS,
+                    tierId: 'tier-adult',
+                    shirtSize: 'L',
+                    addressLine1: '123 Fake Street',
+                    addressCity: 'Oakland',
+                    addressState: 'CA',
+                    addressZip: '94612',
+                    attendedReunion2025: 'yes',
+                },
+            }).success,
+        ).toBe(true)
+    })
+
+    /* The seed has to reach the party builder too — a party of four must not mean four dietary
+       questions. That component keeps its own `new*` state, so it had its own hard-coded '' and its own
+       Save gate requiring an answer; both now read EMPTY_PERSON_DETAILS. Source-matched because the
+       state is internal to the component and not reachable from a unit test. */
+    it('the party-member form seeds its answers from the shared constant', () => {
+        const source = readFileSync(
+            'src/routes/(app)/register/PartyMembersBuilder.svelte',
+            'utf8',
+        ).replace(/\/\*[\s\S]*?\*\//g, '')
+
+        expect(source).toMatch(
+            /newVegetarianMeal = \$state<[^>]+>\(EMPTY_PERSON_DETAILS\.vegetarianMeal\)/,
+        )
+        /* And Save must no longer demand it, or the default buys nothing. */
+        expect(source).not.toMatch(/!!newVegetarianMeal/)
+        /* The question with no defensible default is still asked. */
+        expect(source).toMatch(/!!newAttendedReunion2025/)
     })
 })

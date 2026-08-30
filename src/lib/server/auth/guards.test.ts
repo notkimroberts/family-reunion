@@ -70,9 +70,10 @@ describe('isPublicPath', () => {
         },
     )
 
-    /* Locked for launch: admin-only. The /admin/event/… and /admin/setup shapes are new, and the
-       prefix list already fails them closed — these pin that, so a later "reopen a page after the
-       reunion" edit to PUBLIC_PATH_PREFIXES cannot quietly widen to an admin path. */
+    /* Locked for launch: admin-only. The prefix list already fails these closed — pinned so a later
+       "reopen a page after the reunion" edit to PUBLIC_PATH_PREFIXES cannot quietly widen to an admin
+       path. /admin/setup is included even though the route is gone: the assertion is about the
+       allowlist, and a path that no longer exists must still not become public. */
     it.each([
         '/program',
         '/changelog',

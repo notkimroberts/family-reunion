@@ -1,6 +1,11 @@
 <script lang="ts">
 import { ArrowRight, CalendarDays, Plus } from '@lucide/svelte'
+import { enhance } from '$app/forms'
+import { goto } from '$app/navigation'
+import { Alert, AlertDescription } from '$lib/components/ui/alert'
 import { Button } from '$lib/components/ui/button'
+import * as Field from '$lib/components/ui/field'
+import { Input } from '$lib/components/ui/input'
 import { APP_NAME } from '$lib/general/constants'
 import type { EventSummary } from '$lib/server/registrations'
 import { cn, formatDateRange, formatPrice } from '$lib/utils'
@@ -24,7 +29,22 @@ const STATUS_COPY = {
     archived: 'Archived',
 } as const
 
-let { data } = $props()
+let { data, form } = $props()
+
+/* Open only when asked for. A create form permanently expanded above the list would put a
+   once-a-year action ahead of the one every visit is for, which is picking a year. */
+let adding = $state(false)
+
+/* A new year lands on its own settings page rather than back on the list: it is created in 'draft'
+   with $0 tiers, so it cannot take a registration until it is priced, and the list would not say so.
+   Driven off the action's result rather than a redirect in the action, so a fail() can still render
+   its message on this page. */
+$effect(() => {
+    if (form?.createdEventId) {
+        adding = false
+        goto(`/admin/event/${form.createdEventId}/settings`)
+    }
+})
 
 function cardRing(status: EventSummary['status']): string {
     return status === 'open'
@@ -54,11 +74,71 @@ function dates(event: EventSummary): string | undefined {
     <title>Reunions — {APP_NAME}</title>
 </svelte:head>
 
-<section class="col-span-12 flex flex-col gap-2">
-    <h1>Reunions</h1>
-    <p class="text-muted-foreground text-sm">
-        Pick a year to manage its registrations, or see how a past one did.
-    </p>
+<section class="col-span-12 flex flex-col gap-4">
+    <div class="flex flex-wrap items-end justify-between gap-x-4 gap-y-2">
+        <div class="flex flex-col gap-2">
+            <h1>Reunions</h1>
+            <p class="text-muted-foreground text-sm">
+                Pick a year to manage its registrations, or see how a past one did.
+            </p>
+        </div>
+        {#if data.isOwner && !adding && data.events.length > 0}
+            <Button variant="outline" size="sm" onclick={() => (adding = true)}>
+                <Plus class="size-4" />
+                Add new event
+            </Button>
+        {/if}
+    </div>
+
+    {#if adding}
+        <div class="flex flex-col gap-4 rounded-xl border bg-card p-5">
+            <div class="flex flex-col gap-1">
+                <p class="font-medium">Add a reunion year</p>
+                <!-- Says what happens next, because "draft" and "$0 tiers" are the two facts that
+                     decide whether the year is usable, and neither is visible from the list. -->
+                <p class="text-muted-foreground text-sm">
+                    It starts as a draft with Adult and Child tiers at $0, so nobody can register
+                    until you price them and open it.
+                </p>
+            </div>
+
+            {#if form?.createError}
+                <Alert variant="destructive">
+                    <AlertDescription>{form.createError}</AlertDescription>
+                </Alert>
+            {/if}
+
+            <form
+                method="POST"
+                action="?/create_event"
+                use:enhance
+                class="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_8rem_auto] sm:items-end">
+                <Field.Field class="gap-2">
+                    <Field.Label for="new-event-title">Title</Field.Label>
+                    <Input
+                        id="new-event-title"
+                        name="title"
+                        type="text"
+                        placeholder="Patterson Family Reunion"
+                        required />
+                </Field.Field>
+                <Field.Field class="gap-2">
+                    <Field.Label for="new-event-year">Year</Field.Label>
+                    <Input id="new-event-year" name="year" type="number" required />
+                </Field.Field>
+                <div class="flex gap-2">
+                    <Button type="submit" size="sm" class="w-full sm:w-auto">Create</Button>
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onclick={() => (adding = false)}>
+                        Cancel
+                    </Button>
+                </div>
+            </form>
+        </div>
+    {/if}
 </section>
 
 {#if data.events.length === 0}
@@ -68,14 +148,15 @@ function dates(event: EventSummary): string | undefined {
             <div class="flex flex-col gap-1">
                 <p class="font-medium">No reunions yet</p>
                 <p class="text-muted-foreground text-sm">
-                    Add a year in Setup, price its tiers, then open it when registration should
-                    start.
+                    Add a year, price its tiers, then open it when registration should start.
                 </p>
             </div>
-            <Button href="/admin/setup/events" size="sm">
-                <Plus class="size-4" />
-                Add the first year
-            </Button>
+            {#if data.isOwner}
+                <Button size="sm" onclick={() => (adding = true)}>
+                    <Plus class="size-4" />
+                    Add the first year
+                </Button>
+            {/if}
         </div>
     </section>
 {:else}

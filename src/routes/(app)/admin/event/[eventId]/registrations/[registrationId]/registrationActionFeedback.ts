@@ -12,4 +12,6 @@ export type RegistrationActionFeedback = {
     memberAdded?: boolean
     linkReissued?: boolean
     reissueError?: string
+    cancelled?: boolean
+    cancelError?: string
 }

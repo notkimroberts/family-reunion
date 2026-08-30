@@ -361,9 +361,12 @@ $effect(() => {
                  action and remote function guards itself; this only stops advertising a door that will
                  not open. -->
             {#if data.isOwner}
-                <Button href="/admin/setup" variant="ghost" size="sm">
+                <!-- This year's settings, not a Setup area. /admin/setup was a landing page whose only
+                     remaining job was linking here and to the create-a-year form, which now lives on
+                     /admin beside the year cards. -->
+                <Button href="/admin/event/{data.event.id}/settings" variant="ghost" size="sm">
                     <Settings class="size-4" />
-                    Setup
+                    Event settings
                 </Button>
             {/if}
         </div>

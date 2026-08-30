@@ -1,4 +1,4 @@
-import { desc, eq } from 'drizzle-orm'
+import { desc } from 'drizzle-orm'
 import { env } from '$env/dynamic/private'
 import { requireAdmin } from '$lib/server/auth/guards'
 import { isOwner } from '$lib/server/auth/isOwner'
@@ -23,22 +23,16 @@ export const load: LayoutServerLoad = async (event) => {
         .from(reunionEvents)
         .orderBy(desc(reunionEvents.year))
 
-    /* Which event the Organizer links point at when the URL does not name one — every Setup page, and
-       /admin itself. Open first because only one event can be open at a time (the one_open_event
-       partial unique index), so it is unambiguous; most recent as the fallback for between years. */
-    const [openEvent] = await db
-        .select({ id: reunionEvents.id })
-        .from(reunionEvents)
-        .where(eq(reunionEvents.status, 'open'))
-        .orderBy(desc(reunionEvents.year))
-        .limit(1)
-
+    /* No currentEventId any more. It answered "which event do the links point at when the URL does not
+       name one", which was only ever a question for the Setup pages — every remaining admin route
+       except /admin has the id in its path, and /admin is a list of all of them. It cost a second
+       query on every admin page load to resolve an event nothing then used. */
     return {
         user,
         events,
-        currentEventId: openEvent?.id ?? events[0]?.id,
-        /* Drives whether the header renders the Setup pill at all. The server still guards every Setup
-           load, action and remote function — this only stops advertising a door that will not open. */
+        /* Drives whether the registrations page offers the Event settings link. The server still
+           guards the settings load and every action there — this only stops advertising a door that
+           will not open. */
         isOwner: isOwner(user, env.OWNER_EMAIL),
     }
 }

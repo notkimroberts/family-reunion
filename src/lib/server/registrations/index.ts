@@ -10,6 +10,7 @@ export {
 export {
     removeMember,
     cancelRegistration,
+    cancelRegistrationAsAdmin,
     updateMemberDetails,
     addAdminMember,
     setRegistrationStatus,

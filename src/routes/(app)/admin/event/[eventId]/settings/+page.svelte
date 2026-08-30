@@ -1,5 +1,5 @@
 <script lang="ts">
-import { ArrowLeft, CalendarCog, Lock, Plus, Tags, Trash2 } from '@lucide/svelte'
+import { ArrowLeft, CalendarCog, Lock, Plus, Tags, ToggleRight, Trash2 } from '@lucide/svelte'
 import { enhance } from '$app/forms'
 import { Alert, AlertDescription } from '$lib/components/ui/alert'
 import { Badge } from '$lib/components/ui/badge'
@@ -25,6 +25,25 @@ let { data, form } = $props()
 
 const SUBHEAD_CLASS = 'text-muted-foreground text-xs font-semibold uppercase tracking-wide'
 
+/* Spelled out rather than derived from the enum: the ORDER is a decision — the life of a reunion year,
+   from unpublished through open to filed away — and enumValues would give alphabetical. */
+const EVENT_STATUS_CHOICES = [
+    { status: 'draft', label: 'Draft' },
+    { status: 'open', label: 'Open' },
+    { status: 'closed', label: 'Closed' },
+    { status: 'archived', label: 'Archived' },
+] as const
+
+/* What the current status MEANS, in terms of what happens to someone who visits the site. The status
+   word alone does not say that, and choosing wrongly here is the difference between a public
+   registration form and a page saying nobody can register. */
+const STATUS_EXPLANATION = {
+    draft: 'Not published. Nobody outside the admin can register or see this year.',
+    open: 'Live. The public registration form is accepting parties and payments.',
+    closed: 'Registration has ended. Existing registrations stay editable by their owners until the lock date.',
+    archived: 'Filed away. Kept for its numbers; nobody can register.',
+} as const
+
 /* Native select, not a bits-ui one: this drives shirt sizing through a plain POST, and bits-ui's Select
    binds a string | string[] union that breaks SSR here. Sized to match Input beside it. */
 const SHIRT_SELECT_CLASS =
@@ -37,9 +56,15 @@ const SHIRT_SELECT_CLASS =
 
 <section class="col-span-12 flex flex-col gap-3 xl:col-span-8">
     <nav aria-label="Breadcrumb" class="text-muted-foreground flex items-center gap-2 text-sm">
-        <a href="/admin/setup" class="transition-colors hover:text-foreground">Setup</a>
+        <a href="/admin" class="transition-colors hover:text-foreground">Reunions</a>
         <span aria-hidden="true">/</span>
-        <span class="text-foreground">{data.event.title}</span>
+        <a
+            href="/admin/event/{data.event.id}/registrations"
+            class="transition-colors hover:text-foreground">
+            {data.event.year}
+        </a>
+        <span aria-hidden="true">/</span>
+        <span class="text-foreground">Settings</span>
     </nav>
 
     <div class="flex flex-wrap items-end justify-between gap-x-4 gap-y-3">
@@ -363,6 +388,44 @@ const SHIRT_SELECT_CLASS =
     <Card>
         <CardHeader>
             <CardTitle class="flex items-center gap-2">
+                <ToggleRight class="text-muted-foreground size-4" />
+                Registration status
+            </CardTitle>
+            <CardDescription>
+                Only <strong>open</strong> lets anyone register. Draft, closed and archived all mean nobody
+                can — the difference is only what the year means to you. One year can be open at a time.
+            </CardDescription>
+        </CardHeader>
+        <CardContent>
+            <!-- One button per status rather than a select and a Save: the current one is disabled, so
+                 the control shows where you are and what you can do to it in the same glance, and
+                 there is no half-changed state to leave unsaved. -->
+            <div class="flex flex-wrap gap-2">
+                {#each EVENT_STATUS_CHOICES as choice (choice.status)}
+                    {@const current = data.event.status === choice.status}
+                    <form method="POST" action="?/update_status" use:enhance>
+                        <input type="hidden" name="status" value={choice.status} />
+                        <Button
+                            type="submit"
+                            size="sm"
+                            variant={current ? 'secondary' : 'outline'}
+                            disabled={current}>
+                            {choice.label}
+                        </Button>
+                    </form>
+                {/each}
+            </div>
+            <p class="text-muted-foreground mt-3 text-xs">
+                {STATUS_EXPLANATION[data.event.status]}
+            </p>
+        </CardContent>
+    </Card>
+</section>
+
+<section class="col-span-12 xl:col-span-8">
+    <Card>
+        <CardHeader>
+            <CardTitle class="flex items-center gap-2">
                 <Lock class="text-muted-foreground size-4" />
                 Registration lock date
             </CardTitle>
@@ -396,8 +459,10 @@ const SHIRT_SELECT_CLASS =
 </section>
 
 <section class="col-span-12">
-    <Button href="/admin/setup" variant="ghost" size="sm">
+    <!-- The way back. With no admin header and no Setup area, the breadcrumb and this are the only
+         routes out of here. -->
+    <Button href="/admin/event/{data.event.id}/registrations" variant="ghost" size="sm">
         <ArrowLeft class="size-4" />
-        Back to Setup
+        Back to registrations
     </Button>
 </section>

@@ -1,5 +1,6 @@
 export { removeMember } from './removeMember'
 export { cancelRegistration } from './cancelRegistration'
+export { cancelRegistrationAsAdmin } from './cancelRegistrationAsAdmin'
 export { updateMemberDetails } from './updateMemberDetails'
 export { addAdminMember } from './addAdminMember'
 export { setRegistrationStatus, type AdminSettableStatus } from './setRegistrationStatus'

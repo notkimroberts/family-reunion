@@ -2,7 +2,7 @@ import { error, fail } from '@sveltejs/kit'
 import { eq } from 'drizzle-orm'
 import { requireOwner } from '$lib/server/auth/guards'
 import { db } from '$lib/server/db'
-import { reunionEvents, shirtSizeCategoryEnum } from '$lib/server/db/schema'
+import { eventStatusEnum, reunionEvents, shirtSizeCategoryEnum } from '$lib/server/db/schema'
 import { dbg } from '$lib/server/debug'
 import { createTier, deleteTier, getTiersForEvent, updateTier } from '$lib/server/tiers'
 import type { PageServerLoad, Actions } from './$types'
@@ -42,6 +42,12 @@ function parseTierForm(data: FormData):
     }
 
     return { label, priceCents: Math.round(priceFloat * 100), shirtSizeCategory }
+}
+
+/* Narrows a posted string to the enum, so the update cannot be handed a status Postgres will reject
+   with a 500. Mirrors isShirtSizeCategory above rather than casting. */
+function isEventStatus(value: string): value is (typeof eventStatusEnum.enumValues)[number] {
+    return (eventStatusEnum.enumValues as readonly string[]).includes(value)
 }
 
 export const load: PageServerLoad = async (event) => {
@@ -165,6 +171,47 @@ export const actions: Actions = {
             .update(reunionEvents)
             .set({ registrationLockDate, updatedAt: new Date() })
             .where(eq(reunionEvents.id, event.params.eventId))
+
+        return { success: true }
+    },
+
+    /* Opens, closes, drafts or archives the year — the control that used to live on
+       /admin/setup/events, moved here because the status belongs to the event and this is the event's
+       page. It was the last reason that route existed.
+
+       The friendly 23505 handling is the point: `one_open_event` is a partial unique index, so opening a
+       second year is a database error rather than a validation failure, and without this the organiser
+       gets a 500 for a mistake with an obvious remedy. */
+    update_status: async (event) => {
+        requireOwner(event)
+
+        const data = await event.request.formData()
+        const status = String(data.get('status') ?? '')
+
+        if (!isEventStatus(status)) {
+            return fail(400, { error: 'Unknown status' })
+        }
+
+        dbg.admin('update_status eventId=%s status=%s', event.params.eventId, status)
+
+        try {
+            await db
+                .update(reunionEvents)
+                .set({ status, updatedAt: new Date() })
+                .where(eq(reunionEvents.id, event.params.eventId))
+        } catch (err) {
+            if (
+                typeof err === 'object' &&
+                err !== null &&
+                'code' in err &&
+                (err as { code?: string }).code === '23505'
+            ) {
+                return fail(409, {
+                    error: 'Another year is already open. Close that one first.',
+                })
+            }
+            throw err
+        }
 
         return { success: true }
     },

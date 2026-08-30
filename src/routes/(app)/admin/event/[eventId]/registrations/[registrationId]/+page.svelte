@@ -1,5 +1,5 @@
 <script lang="ts">
-import { Check, Copy, Mail, Pencil, TriangleAlert } from '@lucide/svelte'
+import { Ban, Check, Copy, Mail, Pencil, TriangleAlert } from '@lucide/svelte'
 import { toast } from 'svelte-sonner'
 import { enhance } from '$app/forms'
 import { page } from '$app/state'
@@ -13,6 +13,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '$lib/components/ui/tool
 import { formatPrice, getMemberPaymentOrigin, getPaymentState } from '$lib/utils'
 import { formatPartialBirthDate } from '$lib/utils/age'
 import RegistrationStatusBadge from '../RegistrationStatusBadge.svelte'
+import AdminCancelDialog from './AdminCancelDialog.svelte'
 import RegistrationEditForm from './RegistrationEditForm.svelte'
 import RegistrationHistory from './RegistrationHistory.svelte'
 
@@ -82,6 +83,17 @@ $effect(() => {
         }
     }
 
+    if (actionData.cancelError) {
+        toast.error(actionData.cancelError, { duration: Number.POSITIVE_INFINITY })
+    }
+
+    if (actionData.cancelled) {
+        toast.success('Registration cancelled', {
+            description:
+                'They have been emailed a record of it, including whether a refund is on its way.',
+        })
+    }
+
     if (actionData.linkReissued) {
         toast.success('New management link sent', {
             description:
@@ -91,6 +103,7 @@ $effect(() => {
 })
 let editing = $state(false)
 let copiedEmail = $state(false)
+let cancelDialogOpen = $state(false)
 
 let payment = $derived(getPaymentState(data.registration))
 let pendingReason = $derived(pendingReasonValue[payment as keyof typeof pendingReasonValue])
@@ -191,6 +204,13 @@ async function handleCopyEmail() {
                     </TooltipContent>
                 </Tooltip>
                 {#if !isCancelled}
+                    <!-- Outline rather than destructive: it sits beside the primary action an
+                         organiser actually came here for, and the dialog behind it is where the
+                         weight belongs. -->
+                    <Button variant="outline" size="sm" onclick={() => (cancelDialogOpen = true)}>
+                        <Ban class="size-4" />
+                        Cancel registration
+                    </Button>
                     <Button onclick={() => (editing = true)}>
                         <Pencil class="size-4" />
                         Edit registration
@@ -322,3 +342,12 @@ async function handleCopyEmail() {
         <RegistrationHistory history={data.history} />
     {/if}
 </section>
+
+{#if !isCancelled}
+    <AdminCancelDialog
+        contactName={data.registration.contactName}
+        paymentState={payment}
+        totalCents={data.totalCents}
+        memberCount={data.members.length}
+        bind:open={cancelDialogOpen} />
+{/if}
