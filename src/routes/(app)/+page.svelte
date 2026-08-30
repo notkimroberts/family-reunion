@@ -5,6 +5,7 @@ import { StayConnected, ReunionLocations } from '$lib/components'
 import { Button } from '$lib/components/ui/button'
 import { Card, CardContent } from '$lib/components/ui/card'
 import { APP_NAME, CONTACT_EMAIL, CONTACT_PHONE, FACEBOOK_GROUP_URL } from '$lib/general/constants'
+import { toE164 } from '$lib/utils'
 
 let { data } = $props()
 
@@ -328,9 +329,7 @@ const FAMILY_STATS = [
                     </a>
                 {/if}
                 {#if contactPhone}
-                    <a
-                        href="sms:{contactPhone.replace(/[^\d+]/g, '')}"
-                        class="flex items-center gap-3 group">
+                    <a href="sms:{toE164(contactPhone)}" class="flex items-center gap-3 group">
                         <div
                             class="rounded-md bg-primary/10 p-2 text-primary shrink-0 group-hover:bg-primary/20 transition-colors">
                             <MessageSquare class="h-4 w-4" />

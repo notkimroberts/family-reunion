@@ -9,6 +9,7 @@ import { assertRegistrationEditable } from '../assertRegistrationEditable'
 import { getRegistrationLockDate } from '../getRegistrationLockDate'
 import { generateManagementToken } from '../hashManagementToken'
 import type { MemberInput } from './MemberInput'
+import { assertContactTierIsAdult } from './_assertContactTierIsAdult'
 import { buildCheckoutLineItems } from './buildCheckoutLineItems'
 import { buildPartyMemberRow } from './buildPartyMemberRow'
 
@@ -44,6 +45,8 @@ export async function createPendingRegistration(params: {
         params.eventId,
         params.members.map((member) => member.tierId),
     )
+
+    assertContactTierIsAdult(params.members, pricingByTierId)
 
     const lineItems = buildCheckoutLineItems(params.members, pricingByTierId)
 

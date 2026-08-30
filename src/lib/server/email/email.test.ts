@@ -1,5 +1,9 @@
 import { describe, it, expect, vi } from 'vitest'
-import { renderRecoveryEmail, renderRegistrationConfirmation } from './templates'
+import {
+    renderCancellationEmail,
+    renderRecoveryEmail,
+    renderRegistrationConfirmation,
+} from './templates'
 import type { RegistrationConfirmationData } from './templates'
 
 vi.mock('$lib/general/constants', () => ({
@@ -160,5 +164,57 @@ describe('renderRegistrationConfirmation', () => {
         expect(html.startsWith('<!doctype html>')).toBe(true)
         expect(html).toContain('mso-hide:all')
         expect(html).toContain('2 people registered')
+    })
+})
+
+/* Every template ends in the same contact footer, and the footer was shipping a broken link:
+   `tel:(510) 575-9080` puts raw spaces and parens in an href, which is not a valid URI. Resend's
+   insights flagged it and some clients drop the link entirely.
+
+   Asserted on all three at once, because the footer is copy-pasted between them rather than shared —
+   fixing one and missing another is the obvious failure mode. The number must still READ in its
+   human format, so this pins the href and the visible text separately: an assertion on the rendered
+   digits alone would pass with the href still malformed. */
+describe('the contact footer in every template', () => {
+    const rendered = [
+        ['recovery', renderRecoveryEmail({ eventTitle: 'Reunion', manageUrl: 'https://x/y' })],
+        [
+            'confirmation',
+            renderRegistrationConfirmation({
+                name: 'Alice',
+                eventTitle: 'Reunion',
+                partyMembers: [{ name: 'Alice', tierLabel: 'Adult', priceCents: 16000 }],
+                totalCents: 16000,
+                manageUrl: 'https://x/y',
+                status: 'paid',
+            }),
+        ],
+        [
+            'cancellation',
+            renderCancellationEmail({
+                name: 'Alice',
+                eventTitle: 'Reunion',
+                partyNames: ['Alice'],
+                totalCents: 16000,
+                refundRoute: 'stripe',
+                registerUrl: 'https://x/register',
+            }),
+        ],
+    ] as const
+
+    it.each(rendered)('%s links the phone number as a usable URI', (_label, { html }) => {
+        expect(html).toContain('href="tel:+15550100"')
+    })
+
+    /* The specific defect: anything between `tel:` and the closing quote that a URI parser rejects. */
+    it.each(rendered)('%s puts no space or paren in the tel href', (_label, { html }) => {
+        const href = html.match(/href="tel:([^"]*)"/)?.[1]
+        expect(href).toBeDefined()
+        expect(href).toMatch(/^\+?\d+$/)
+    })
+
+    /* And the number is still readable, which is the whole reason CONTACT_PHONE is stored formatted. */
+    it.each(rendered)('%s still shows the number in human form', (_label, { html }) => {
+        expect(html).toContain('+1 555 0100')
     })
 })

@@ -1,15 +1,18 @@
 <script lang="ts">
-import { UserCircle } from '@lucide/svelte'
+import { TriangleAlert, UserCircle } from '@lucide/svelte'
 import { DatePicker } from '$lib/components'
+import { Alert, AlertDescription, AlertTitle } from '$lib/components/ui/alert'
 import { Button } from '$lib/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card'
 import { Input } from '$lib/components/ui/input'
 import { Separator } from '$lib/components/ui/separator'
-import { formatPhoneInput, formatPrice, getMemberAge, isValidPhone, isValidZip } from '$lib/utils'
+import { isChildTierLabel } from '$lib/general/tiers'
+import { formatPhoneInput, formatPrice, getMemberAge, isValidPhone } from '$lib/utils'
 import AdditionalQuestionsFields from './AdditionalQuestionsFields.svelte'
 import AddressFields from './AddressFields.svelte'
 import ShirtSizeSelect from './ShirtSizeSelect.svelte'
 import TierSelect from './TierSelect.svelte'
+import { contactSaveProblems } from './contactSaveProblems'
 import type { PersonDetails, TierOption } from './types'
 
 let {
@@ -33,25 +36,32 @@ let {
     saved?: boolean
 } = $props()
 
+/* The person booking and paying for the party is an adult, so a child place is not on offer for
+   them. The server enforces the same rule on both create paths — hiding the option is a courtesy,
+   not the guard. */
+let contactTiers = $derived(tiers.filter((tier) => !isChildTierLabel(tier.label)))
+
 let phoneValid = $derived(!phone.trim() || isValidPhone(phone))
-let zipValid = $derived(!info.addressZip.trim() || isValidZip(info.addressZip))
-let canSave = $derived(
-    !!firstName.trim() &&
-        !!lastName.trim() &&
-        !!email.trim() &&
-        !!info.tierId &&
-        !!info.addressLine1.trim() &&
-        !!info.addressCity.trim() &&
-        !!info.addressState.trim() &&
-        !!info.addressZip.trim() &&
-        zipValid &&
-        !!info.shirtSize &&
-        !!info.vegetarianMeal &&
-        !!info.attendedReunion2025 &&
-        phoneValid,
-)
 let age = $derived(getMemberAge(info.birthDate))
 let selectedTier = $derived(tiers.find((t) => t.id === info.tierId))
+
+/* Shown only after a Save that could not go through. Recomputed live from that point on, so the
+   list shrinks as the registrant fills fields in rather than going stale under them. A disabled
+   button was what this replaced: it said no without saying why, on a form long enough for the
+   missing field to be off screen. */
+let saveAttempted = $state(false)
+let problems = $derived(
+    saveAttempted ? contactSaveProblems({ firstName, lastName, email, phone, details: info }) : [],
+)
+
+function handleSave() {
+    saveAttempted = true
+
+    if (contactSaveProblems({ firstName, lastName, email, phone, details: info }).length === 0) {
+        saved = true
+        saveAttempted = false
+    }
+}
 </script>
 
 <Card>
@@ -83,6 +93,20 @@ let selectedTier = $derived(tiers.find((t) => t.id === info.tierId))
                 </Button>
             </div>
         {:else}
+            {#if problems.length > 0}
+                <Alert variant="destructive">
+                    <TriangleAlert class="size-4" />
+                    <AlertTitle>Please fix the following before saving</AlertTitle>
+                    <AlertDescription>
+                        <ul class="flex list-disc flex-col gap-1 pl-4">
+                            {#each problems as problem (problem)}
+                                <li>{problem}</li>
+                            {/each}
+                        </ul>
+                    </AlertDescription>
+                </Alert>
+            {/if}
+
             <div class="space-y-4">
                 <p class="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
                     Contact Info
@@ -154,6 +178,22 @@ let selectedTier = $derived(tiers.find((t) => t.id === info.tierId))
                         {/if}
                     </div>
                 </div>
+                <!-- Birthday sits with the name and email it belongs to, not down in Registration
+                     Details beside the tier and the shirt size. It is a fact about the person; those
+                     are facts about their place at the reunion. -->
+                <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <div class="space-y-1.5">
+                        <label for="selfBirthDate" class="text-sm font-medium">
+                            Birthday
+                            <span class="text-muted-foreground font-normal text-xs"
+                                >(optional)</span>
+                        </label>
+                        <DatePicker
+                            id="selfBirthDate"
+                            bind:value={info.birthDate}
+                            placeholder="Your birthday" />
+                    </div>
+                </div>
             </div>
 
             <Separator />
@@ -178,12 +218,13 @@ let selectedTier = $derived(tiers.find((t) => t.id === info.tierId))
                 <p class="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
                     Registration Details
                 </p>
-                <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     <div class="space-y-1.5">
                         <label for="selfTier" class="text-sm font-medium">
                             Tier <span class="text-destructive">*</span>
                         </label>
-                        <TierSelect id="selfTier" bind:tierId={info.tierId} {tiers} />
+                        <!-- Adult tiers only. The person booking the party pays for it. -->
+                        <TierSelect id="selfTier" bind:tierId={info.tierId} tiers={contactTiers} />
                     </div>
 
                     <div class="space-y-1.5">
@@ -194,27 +235,12 @@ let selectedTier = $derived(tiers.find((t) => t.id === info.tierId))
                             id="selfShirtSize"
                             bind:value={() => info.shirtSize ?? '', (v) => (info.shirtSize = v)} />
                     </div>
-
-                    <div class="space-y-1.5">
-                        <label for="selfBirthDate" class="text-sm font-medium">
-                            Birthday
-                            <span class="text-muted-foreground font-normal text-xs"
-                                >(optional)</span>
-                        </label>
-                        <DatePicker
-                            id="selfBirthDate"
-                            bind:value={info.birthDate}
-                            placeholder="Your birthday" />
-                    </div>
                 </div>
-            </div>
 
-            <Separator />
-
-            <div class="space-y-4">
-                <p class="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                    Additional Questions
-                </p>
+                <!-- The catering and turnout questions live here rather than under a heading of their
+                     own. They are required, they are about this person's place at the reunion, and a
+                     separate "Additional Questions" section below the Save button read as optional
+                     extras — which is how an unanswered one became a Save that did nothing. -->
                 <AdditionalQuestionsFields
                     idPrefix="self"
                     bind:vegetarianMeal={info.vegetarianMeal}
@@ -222,9 +248,7 @@ let selectedTier = $derived(tiers.find((t) => t.id === info.tierId))
             </div>
 
             <div class="flex justify-end">
-                <Button type="button" size="sm" disabled={!canSave} onclick={() => (saved = true)}>
-                    Save
-                </Button>
+                <Button type="button" size="sm" onclick={handleSave}>Save</Button>
             </div>
         {/if}
     </CardContent>

@@ -6,6 +6,7 @@ import { Alert, AlertDescription, AlertTitle } from '$lib/components/ui/alert'
 import { Button } from '$lib/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card'
 import { APP_NAME, CONTACT_EMAIL, CONTACT_PHONE } from '$lib/general/constants'
+import { toE164 } from '$lib/utils'
 import RegistrationManager from '../RegistrationManager.svelte'
 
 const POLL_INTERVAL_MS = 2000
@@ -149,7 +150,8 @@ $effect(() => {
                 <AlertDescription>
                     Your place is recorded but payment hasn't been received yet. Contact
                     <a class="underline" href="mailto:{CONTACT_EMAIL}">{CONTACT_EMAIL}</a>
-                    or call <a class="underline" href="sms:{CONTACT_PHONE}">{CONTACT_PHONE}</a>
+                    or call
+                    <a class="underline" href="sms:{toE164(CONTACT_PHONE)}">{CONTACT_PHONE}</a>
                     to arrange it.
                 </AlertDescription>
             </Alert>

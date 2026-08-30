@@ -28,6 +28,7 @@ vi.mock('resend', () => ({ Resend: MockResend }))
 vi.mock('$lib/general/constants', () => ({
     APP_NAME: 'Test App',
     APP_DOMAIN: 'example.com',
+    EMAIL_FROM_ADDRESS: 'reunion@example.com',
     CONTACT_EMAIL: 'organiser@example.com',
     CONTACT_PHONE: '+1 555 0100',
 }))

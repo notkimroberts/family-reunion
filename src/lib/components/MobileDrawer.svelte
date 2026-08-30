@@ -1,10 +1,10 @@
 <script lang="ts">
-import { ClipboardPen, Home, LogOut, Mail } from '@lucide/svelte'
+import { ClipboardPen, Home, LayoutDashboard, LogOut } from '@lucide/svelte'
 import { page } from '$app/state'
 import { authClient } from '$lib/auth-client'
 import { Avatar, AvatarFallback } from '$lib/components/ui/avatar'
 import { Sheet, SheetContent } from '$lib/components/ui/sheet'
-import { APP_NAME, CONTACT_NAV_LINK, REGISTER_NAV_LINK } from '$lib/general/constants'
+import { APP_NAME, REGISTER_NAV_LINK } from '$lib/general/constants'
 import { getInitials } from '$lib/utils'
 
 type Props = {
@@ -49,10 +49,12 @@ const linkClass = (active: boolean) =>
                 <Home class="h-4 w-4" />
                 Home
             </a>
-            <a href={CONTACT_NAV_LINK.href} onclick={onClose} class={linkClass(false)}>
-                <Mail class="h-4 w-4" />
-                {CONTACT_NAV_LINK.label}
-            </a>
+            {#if user?.role === 'admin'}
+                <a href="/admin" onclick={onClose} class={linkClass(isActive('/admin'))}>
+                    <LayoutDashboard class="h-4 w-4" />
+                    Admin
+                </a>
+            {/if}
 
             <div class="pt-3">
                 <a
