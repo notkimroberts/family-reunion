@@ -6,12 +6,15 @@ import { tiers } from '$lib/server/db/schema'
 export type TierPricing = {
     label: string
     priceCents: number
-    shirtSizeCategory: 'adult' | 'child'
 }
 
 /* Validates every requested tier id belongs to the given event, then resolves each to its
-   current label/price/shirt-size-category. Fail-closed: any id that isn't a tier on this
-   event is a 400 (client sent a stale or foreign tier id). */
+   current label and price. Fail-closed: any id that isn't a tier on this event is a 400 (client
+   sent a stale or foreign tier id).
+
+   No shirt-size category: the tiers table used to carry an adult/child flag that this returned to
+   four call sites and none of them read. The tier LABEL is what distinguishes an adult place from a
+   child one, and it is what the order sheet groups by — see getPeopleSummary. */
 export async function resolveTierPricing(
     eventId: string,
     tierIds: string[],
@@ -23,7 +26,6 @@ export async function resolveTierPricing(
             id: tiers.id,
             label: tiers.label,
             priceCents: tiers.priceCents,
-            shirtSizeCategory: tiers.shirtSizeCategory,
         })
         .from(tiers)
         .where(and(eq(tiers.eventId, eventId), inArray(tiers.id, uniqueIds)))

@@ -200,18 +200,8 @@ async function seed() {
     dbg.seed('Seeding tiers...')
     await db.insert(schema.tiers).values(
         events.flatMap((event) => [
-            {
-                eventId: event.id,
-                label: 'Adult',
-                priceCents: ADULT_PRICE_CENTS,
-                shirtSizeCategory: 'adult' as const,
-            },
-            {
-                eventId: event.id,
-                label: 'Child',
-                priceCents: CHILD_PRICE_CENTS,
-                shirtSizeCategory: 'child' as const,
-            },
+            { eventId: event.id, label: 'Adult', priceCents: ADULT_PRICE_CENTS },
+            { eventId: event.id, label: 'Child', priceCents: CHILD_PRICE_CENTS },
         ]),
     )
 

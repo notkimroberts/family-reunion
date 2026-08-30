@@ -77,12 +77,12 @@ export type EventDetails = {
     registrationLockDate: Date | null
 }
 
-/* Tier available for selection on an event */
+/* Tier available for selection on an event. Label and price only — the tiers table used to carry an
+   adult/child shirt-size flag that nothing rendering a size list ever read. */
 export type TierOption = {
     id: string
     label: string
     priceCents: number
-    shirtSizeCategory: 'adult' | 'child'
 }
 
 /* Contact's own address, threaded down so additional members can copy it via "same as" */

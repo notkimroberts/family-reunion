@@ -67,8 +67,8 @@ export const actions: Actions = {
            left to the settings page because a year with no tiers cannot accept a registration at all,
            and nothing else would tell you that was why. */
         await db.insert(tiers).values([
-            { eventId: reunionEvent.id, label: 'Adult', priceCents: 0, shirtSizeCategory: 'adult' },
-            { eventId: reunionEvent.id, label: 'Child', priceCents: 0, shirtSizeCategory: 'child' },
+            { eventId: reunionEvent.id, label: 'Adult', priceCents: 0 },
+            { eventId: reunionEvent.id, label: 'Child', priceCents: 0 },
         ])
 
         /* Straight to its settings: a draft year with $0 tiers is not usable until it is priced, so

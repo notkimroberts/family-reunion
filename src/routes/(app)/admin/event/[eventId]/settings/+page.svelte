@@ -45,11 +45,6 @@ const METADATA_EXAMPLE = `{
 /* Labels, icons and colours come from EVENT_STATUS_STYLES, shared with the /admin year cards so the
    same status cannot look like two different things on two screens. EVENT_STATUS_ORDER is the life of a
    year — draft, open, closed, archived — rather than the enum's order. */
-
-/* Native select, not a bits-ui one: this drives shirt sizing through a plain POST, and bits-ui's Select
-   binds a string | string[] union that breaks SSR here. Sized to match Input beside it. */
-const SHIRT_SELECT_CLASS =
-    'h-9 w-full rounded-md border border-input bg-transparent px-2.5 text-base shadow-xs md:text-sm'
 </script>
 
 <svelte:head>
@@ -285,11 +280,11 @@ const SHIRT_SELECT_CLASS =
             {/if}
 
             {#each data.tiers as tier (tier.id)}
-                <!-- Two sibling forms share one five-track grid: display:contents on the update form
-                     lifts its own children into that grid, so Save lands in track four and Delete in
-                     track five. Drop it and the whole row collapses into a single cell. -->
+                <!-- Two sibling forms share one four-track grid: display:contents on the update form
+                     lifts its own children into that grid, so Save lands in track three and Delete in
+                     track four. Drop it and the whole row collapses into a single cell. -->
                 <div
-                    class="grid grid-cols-1 gap-3 rounded-lg border p-3 sm:grid-cols-[1fr_auto_auto_auto_auto] sm:items-end">
+                    class="grid grid-cols-1 gap-3 rounded-lg border p-3 sm:grid-cols-[1fr_auto_auto_auto] sm:items-end">
                     <form method="POST" action="?/update_tier" use:enhance class="contents">
                         <input type="hidden" name="tierId" value={tier.id} />
                         <Field.Field class="gap-2">
@@ -311,17 +306,6 @@ const SHIRT_SELECT_CLASS =
                                 step="0.01"
                                 value={formatPrice(tier.priceCents)}
                                 required />
-                        </Field.Field>
-                        <Field.Field class="gap-2">
-                            <Field.Label for="tier-shirt-{tier.id}">Shirt sizing</Field.Label>
-                            <select
-                                id="tier-shirt-{tier.id}"
-                                name="shirtSizeCategory"
-                                value={tier.shirtSizeCategory}
-                                class={SHIRT_SELECT_CLASS}>
-                                <option value="adult">Adult</option>
-                                <option value="child">Child</option>
-                            </select>
                         </Field.Field>
                         <Button
                             type="submit"
@@ -351,7 +335,7 @@ const SHIRT_SELECT_CLASS =
                     method="POST"
                     action="?/add_tier"
                     use:enhance
-                    class="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_auto_auto_auto] sm:items-end">
+                    class="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_auto_auto] sm:items-end">
                     <Field.Field class="gap-2">
                         <Field.Label for="new-tier-label">Label</Field.Label>
                         <Input id="new-tier-label" name="label" type="text" required />
@@ -364,16 +348,6 @@ const SHIRT_SELECT_CLASS =
                             type="number"
                             step="0.01"
                             required />
-                    </Field.Field>
-                    <Field.Field class="gap-2">
-                        <Field.Label for="new-tier-shirt">Shirt sizing</Field.Label>
-                        <select
-                            id="new-tier-shirt"
-                            name="shirtSizeCategory"
-                            class={SHIRT_SELECT_CLASS}>
-                            <option value="adult">Adult</option>
-                            <option value="child">Child</option>
-                        </select>
                     </Field.Field>
                     <Button type="submit" size="sm" variant="secondary" class="w-full sm:w-auto">
                         <Plus class="size-4" />

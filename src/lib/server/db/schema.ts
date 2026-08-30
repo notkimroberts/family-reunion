@@ -15,7 +15,6 @@ import {
 import type { ReunionMetadata } from '$lib/general/reunionMetadata'
 
 export const eventStatusEnum = pgEnum('event_status', ['draft', 'open', 'closed', 'archived'])
-export const shirtSizeCategoryEnum = pgEnum('shirt_size_category', ['adult', 'child'])
 export const registrationStatusEnum = pgEnum('registration_status', [
     'pending',
     'paid',
@@ -121,7 +120,6 @@ export const tiers = pgTable(
             .references(() => reunionEvents.id, { onDelete: 'cascade' }),
         label: text('label').notNull(),
         priceCents: integer('price_cents').notNull(),
-        shirtSizeCategory: shirtSizeCategoryEnum('shirt_size_category').notNull().default('adult'),
         createdAt: timestamp('created_at').notNull().defaultNow(),
         updatedAt: timestamp('updated_at').notNull().defaultNow(),
     },
@@ -157,6 +155,22 @@ export const registrations = pgTable(
            retrieving it from the session. This is the id the admin list links to the Stripe dashboard
            with, so it needs to be the registration's own. */
         stripePaymentIntentId: text('stripe_payment_intent_id'),
+        /* What Stripe actually took in fees, in cents, ACCUMULATED across every charge on this
+           registration.
+
+           Accumulated because the unit is the charge, not the registration: the initial checkout is one
+           PaymentIntent and every add_member is another, each paying 2.9% + 30¢ again.
+           stripe_payment_intent_id only ever holds the first, so the total cannot be recovered from it
+           afterwards — it has to be added up as the webhooks arrive.
+
+           NULL means not known: every row that predates this column, and any charge whose balance
+           transaction could not be read. The admin panel falls back to the 2.9% + 30¢ estimate for
+           those and says it is estimating. Zero is a real answer and means a charge with no fee.
+
+           This is also the amount LOST when a registration is refunded — Stripe does not return the
+           processing fee, so the refund's own balance transaction has fee 0 and this figure is simply
+           gone. No second column is needed to report that. */
+        stripeFeeCents: integer('stripe_fee_cents'),
         status: registrationStatusEnum('status').notNull().default('pending'),
         /* When the money actually arrived, as distinct from updatedAt.
 

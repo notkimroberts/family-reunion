@@ -1,10 +1,10 @@
-import { and, eq } from 'drizzle-orm'
+import { and, eq, sql } from 'drizzle-orm'
 import type Stripe from 'stripe'
 import { db } from '$lib/server/db'
 import { partyMembers, registrations } from '$lib/server/db/schema'
 import { dbg } from '$lib/server/debug'
 import { sendRegistrationConfirmation } from '$lib/server/email'
-import { decodeSessionMetadata } from '$lib/server/payments'
+import { decodeSessionMetadata, retrievePaymentFee } from '$lib/server/payments'
 import { reportError } from '$lib/server/reportError'
 import { parseBirthDate } from '$lib/utils/age'
 /* Relative import, not the $lib/server/registrations barrel: that barrel re-exports this
@@ -62,6 +62,9 @@ export async function fulfillCheckout(
            a redelivery of one of those is not deduped by this key. Stripe only redelivers within
            a few days and no live add_member charges predate this change. */
         const parsed = memberBirthDate ? parseBirthDate(memberBirthDate) : null
+        /* Read before the transaction: it is a network call to Stripe and must not hold a DB
+           transaction open. Undefined when the fee could not be read, which leaves the column alone. */
+        const feeCents = paymentIntentId ? await retrievePaymentFee(paymentIntentId) : undefined
         const inserted = await db.transaction(async (tx) => {
             const rows = await tx
                 .insert(partyMembers)
@@ -94,11 +97,25 @@ export async function fulfillCheckout(
                 .returning({ id: partyMembers.id })
 
             /* Only touch the parent when a row was actually added — on a redelivery nothing
-               about the registration has changed. */
+               about the registration has changed.
+
+               The fee is ADDED here rather than assigned: this is a second charge on a registration
+               that already paid one fee for its initial checkout. coalesce covers the rows that
+               predate the column, so the first add_member on an old registration still lands a value
+               instead of adding to null. Inside the same guard as updatedAt, so the unique index on
+               stripe_checkout_session_id — which is what rejects a redelivered insert — is also what
+               stops the fee being counted twice. */
             if (rows.length > 0) {
                 await tx
                     .update(registrations)
-                    .set({ updatedAt: new Date() })
+                    .set({
+                        updatedAt: new Date(),
+                        ...(feeCents === undefined
+                            ? {}
+                            : {
+                                  stripeFeeCents: sql`coalesce(${registrations.stripeFeeCents}, 0) + ${feeCents}`,
+                              }),
+                    })
                     .where(eq(registrations.id, registrationId))
             }
             return rows
@@ -124,6 +141,12 @@ export async function fulfillCheckout(
        confirmation email is sent. An unconditional update would re-send on every redelivery.
        'pending' is the only legal source state — a waived or refunded registration must not
        be flipped by a stray webhook. */
+    /* Read before the update for the same reason as above, and because the update is the conditional
+       transition that must stay a single statement. */
+    const registrationFeeCents = paymentIntentId
+        ? await retrievePaymentFee(paymentIntentId)
+        : undefined
+
     const updated = await db
         .update(registrations)
         .set({
@@ -136,6 +159,10 @@ export async function fulfillCheckout(
                Stripe dashboard with. party_members gets its own copy below, but that one is per-member
                and null for anyone who did not pay online. */
             stripePaymentIntentId: paymentIntentId,
+            /* Assigned, not accumulated: this is the registration's first charge, and the conditional
+               pending -> paid transition below means exactly one redelivery can reach this line.
+               Later add_member charges accumulate on top of it. */
+            ...(registrationFeeCents === undefined ? {} : { stripeFeeCents: registrationFeeCents }),
             updatedAt: new Date(),
         })
         .where(and(eq(registrations.id, registrationId), eq(registrations.status, 'pending')))
