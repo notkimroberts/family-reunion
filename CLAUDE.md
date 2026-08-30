@@ -360,6 +360,24 @@ The app is fully responsive with a `md:` (768px) breakpoint separating mobile an
 - Use `bun run format` whenever the format is not correct
 - Prefer running single tests, and not the whole test suite, for performance
 - **Tests**: run `bun run test` after any change to logic covered by tests; add or update co-located `.test.ts` files whenever new utility functions or server logic is added or modified. Tests live next to the source file (e.g. `price.test.ts` beside `price.ts`)
+
+#### Tests that touch the database run against a real Postgres
+
+`vitest.config.ts` aliases `$lib/server/db` to `db/testing/pgliteDb.ts`, so a test importing a module that queries gets **PGLite** — a real Postgres in-process — instead of the production client. Production is untouched: there is no test branch in `db/index.ts` and PGLite never reaches the build.
+
+```ts
+let db: Awaited<ReturnType<typeof resetTestDb>>
+beforeEach(async () => {
+    db = await resetTestDb() // fresh, fully migrated, ~145ms
+})
+const seeded = await seedRegistration(db, { members: [...] })
+```
+
+- `globalSetup` migrates an empty database **from the real `drizzle/` SQL** once per run and dumps it; `resetTestDb()` restores that dump per test. A migration that would fail on deploy fails here first.
+- `seedRegistration` returns the **plaintext** management token, which nothing else can — only the hash is stored — so the token gate is exercised rather than mocked.
+- Assert on **rows**, not on calls. Stripe and Resend stay mocked (`$lib/server/payments`, `$lib/server/email`): those are genuinely external. The database is not.
+- **Do not add a new hand-rolled drizzle mock.** Fourteen test files still contain one — a chainable object whose queued values must be listed in the order the function happens to query them, with `drizzle-orm` itself mocked so `eq` is a `vi.fn()` and no WHERE clause is ever evaluated. They pin the implementation, not the contract, and they cannot catch a wrong predicate. Convert one when you touch it; never write the fifteenth.
+- Real constraints now apply, and they will catch fixture mistakes that the fakes waved through: `one_open_event` (only one `open` reunion event — pass `eventStatus` for a second year), the unique `stripe_session_id`, the one-contact-per-registration index, and the birth-date prefix CHECK.
 - **Commits**: follow [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/). Format: `<type>[optional scope]: <description>`. Common types: `feat`, `fix`, `docs`, `refactor`, `test`, `chore`, `ci`. Breaking changes use `!` before the colon (e.g. `feat!: ...`) or a `BREAKING CHANGE:` footer. This project uses `commit-and-tag-version` for releases which relies on this format to determine version bumps.
 
 # Dependency management
