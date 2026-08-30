@@ -1,2 +1,7 @@
 [install]
 registry = "https://registry.npmjs.org/"
+
+# Loaded only by `bun test` — Bun's own runner, which is NOT this project's. vitest never sees this.
+# See scripts/blockBunTest.ts for why the two are not interchangeable.
+[test]
+preload = ["./scripts/blockBunTest.ts"]

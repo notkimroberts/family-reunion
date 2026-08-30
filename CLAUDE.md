@@ -10,7 +10,7 @@ bun run build            # Production build
 bun run check            # Svelte type checking
 bun run lint             # Prettier check + ESLint
 bun run format           # Prettier write (auto-fix formatting)
-bun run test             # Run Vitest unit tests
+bun run test             # Run Vitest unit tests (NOT `bun test` — see below)
 
 bun run db:generate      # Generate migration from schema changes
 bun run db:migrate       # Apply pending migrations
@@ -360,6 +360,12 @@ The app is fully responsive with a `md:` (768px) breakpoint separating mobile an
 - Use `bun run format` whenever the format is not correct
 - Prefer running single tests, and not the whole test suite, for performance
 - **Tests**: run `bun run test` after any change to logic covered by tests; add or update co-located `.test.ts` files whenever new utility functions or server logic is added or modified. Tests live next to the source file (e.g. `price.test.ts` beside `price.ts`)
+
+#### `bun test` is not this project's test runner
+
+`bun test` is Bun's own runner and `bun run test` is vitest. The difference is silent and total: Bun's runner ignores `package.json` scripts AND `vitest.config.ts`, so every alias below disappears — `$lib/server/db` points at the real Postgres client, `$env/dynamic/private` and `$app/environment` do not resolve, and `globalSetup` never builds the PGLite template. Bun's `vi` shim is partial too, so tests fail on missing helpers like `setSystemTime`. It reports several hundred fewer tests than exist, which is the part that could mislead someone into reading a run as green.
+
+`bunfig.toml` registers `scripts/blockBunTest.ts` as the `[test]` preload, so `bun test` now exits 1 with that explanation. vitest never loads it.
 
 #### Tests that touch the database run against a real Postgres
 
