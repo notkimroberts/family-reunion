@@ -296,6 +296,7 @@ function toDateTimeLocal(value: Date | string | null): string {
                                 aria-label="Price in dollars for the {tier.label} tier"
                                 name="priceCents"
                                 type="number"
+                                inputmode="decimal"
                                 step="0.01"
                                 min="0"
                                 value={formatPrice(tier.priceCents)}
@@ -343,6 +344,7 @@ function toDateTimeLocal(value: Date | string | null): string {
                         aria-label="Price in dollars for the new tier"
                         name="priceCents"
                         type="number"
+                        inputmode="decimal"
                         step="0.01"
                         min="0"
                         placeholder="0.00"
