@@ -1,6 +1,7 @@
 <script lang="ts">
-import { ArrowLeft, CalendarCog, Lock, Plus, Tags, ToggleRight, Trash2 } from '@lucide/svelte'
+import { ArrowLeft, Braces, CalendarRange, Lock, Plus, Tags, ToggleRight, X } from '@lucide/svelte'
 import { enhance } from '$app/forms'
+import { DateTimeField } from '$lib/components'
 import { Alert, AlertDescription } from '$lib/components/ui/alert'
 import { Badge } from '$lib/components/ui/badge'
 import { Button } from '$lib/components/ui/button'
@@ -14,10 +15,15 @@ import { cn, formatPrice } from '$lib/utils'
 
 /* Setup's event editor: set once a year, then left alone. Quiet on purpose.
 
-   The Event details card is ONE form, however many subheadings it carries. ?/update_event writes the
-   dates and the whole metadata object in a single db.update and clears anything the POST omits, so
-   promoting a subheading to its own card with its own Save would erase whatever that Save did not
-   carry. Group with subheadings; never with a second form. ?/update_lock_date has the same shape.
+   FOUR CARDS, four Saves, and each writes only its own columns. The dates and the program JSON used to
+   share one card and one ?/update_event, which was not a layout choice — that action wrote both sets of
+   columns in a single db.update and cleared anything the POST omitted, so a second Save on the same row
+   would have blanked whatever it did not carry. Splitting the card therefore required splitting the
+   action first; ?/update_dates and ?/update_program each set only their own fields.
+
+   Dates now sit with Tiers, because those two are what an organiser revisits: when it is and what it
+   costs. The JSON textarea is 96 lines tall and is edited once a year — pairing it with the dates meant
+   scrolling past the whole program to reach a field you came to change.
 
    `form` is the only channel for the fail()s these actions raise. The page rendered no form prop at
    all, so a rejected price or lock date arrived and vanished — Save looked like it did nothing. */
@@ -45,6 +51,16 @@ const METADATA_EXAMPLE = `{
 /* Labels, icons and colours come from EVENT_STATUS_STYLES, shared with the /admin year cards so the
    same status cannot look like two different things on two screens. EVENT_STATUS_ORDER is the life of a
    year — draft, open, closed, archived — rather than the enum's order. */
+
+/* datetime-local wants exactly "YYYY-MM-DDTHH:mm". toISOString gives UTC, which is what the server
+   reads the posted value back as on Railway — see the note in DateTimeField about why the echo under
+   the box is formatted the same way. */
+function toDateTimeLocal(value: Date | string | null): string {
+    if (!value) {
+        return ''
+    }
+    return new Date(value).toISOString().slice(0, 16)
+}
 </script>
 
 <svelte:head>
@@ -161,122 +177,97 @@ const METADATA_EXAMPLE = `{
                 method="POST"
                 action="?/update_lock_date"
                 use:enhance
-                class="grid grid-cols-1 gap-3 sm:grid-cols-[auto_auto] sm:items-end">
-                <Field.Field class="gap-2">
-                    <Field.Label for="registrationLockDate">Lock date</Field.Label>
-                    <Input
-                        id="registrationLockDate"
-                        name="registrationLockDate"
-                        type="datetime-local"
-                        value={data.event.registrationLockDate
-                            ? new Date(data.event.registrationLockDate).toISOString().slice(0, 16)
-                            : ''} />
-                </Field.Field>
-                <Button type="submit" size="sm" variant="secondary" class="w-full sm:w-auto">
-                    Save lock date
-                </Button>
+                class="flex flex-col items-start gap-3">
+                <DateTimeField
+                    id="registrationLockDate"
+                    name="registrationLockDate"
+                    label="Lock date"
+                    value={toDateTimeLocal(data.event.registrationLockDate)}
+                    emptyNote="No lock — registrants can edit right up to the reunion." />
+                <Button type="submit" size="sm" variant="secondary">Save lock date</Button>
             </form>
         </CardContent>
     </Card>
 </section>
 
-<section class="col-span-12 xl:col-span-8">
+<!-- When it is and what it costs: the two things an organiser comes back to. Two forms in one card,
+     each with its own Save — ?/update_dates and the tier actions write disjoint tables, so neither can
+     clear the other's fields. That is the property that made the old single-card/single-Save rule
+     necessary, and it does not apply here. -->
+<section class="col-span-12 flex flex-col gap-6 xl:col-span-8">
     <Card>
         <CardHeader>
             <CardTitle class="flex items-center gap-2">
-                <CalendarCog class="text-muted-foreground size-4" />
-                Event details
+                <CalendarRange class="text-muted-foreground size-4" />
+                When
             </CardTitle>
             <CardDescription>
-                The dates, and everything the program page shows. One Save writes all of it, and a
-                field left blank is cleared.
+                The reunion's start and end. These drive the countdown on the home page and the
+                schedule's default day.
             </CardDescription>
         </CardHeader>
         <CardContent>
-            <form method="POST" action="?/update_event" use:enhance class="flex flex-col gap-6">
-                <div class="flex flex-col gap-3">
-                    <p class={SUBHEAD_CLASS}>When</p>
-                    <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-                        <Field.Field class="gap-2">
-                            <Field.Label for="startDate">Start</Field.Label>
-                            <Input
-                                id="startDate"
-                                name="startDate"
-                                type="datetime-local"
-                                value={data.event.startDate
-                                    ? new Date(data.event.startDate).toISOString().slice(0, 16)
-                                    : ''} />
-                        </Field.Field>
-                        <Field.Field class="gap-2">
-                            <Field.Label for="endDate">End</Field.Label>
-                            <Input
-                                id="endDate"
-                                name="endDate"
-                                type="datetime-local"
-                                value={data.event.endDate
-                                    ? new Date(data.event.endDate).toISOString().slice(0, 16)
-                                    : ''} />
-                        </Field.Field>
-                    </div>
+            <form method="POST" action="?/update_dates" use:enhance class="flex flex-col gap-4">
+                <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <DateTimeField
+                        id="startDate"
+                        name="startDate"
+                        label="Start"
+                        value={toDateTimeLocal(data.event.startDate)}
+                        emptyNote="Not set — the home page shows no countdown." />
+                    <DateTimeField
+                        id="endDate"
+                        name="endDate"
+                        label="End"
+                        value={toDateTimeLocal(data.event.endDate)}
+                        emptyNote="Not set — the reunion reads as a single day." />
                 </div>
-
-                <Separator />
-
-                <div class="flex flex-col gap-3">
-                    <p class={SUBHEAD_CLASS}>Program content</p>
-                    <p class="text-muted-foreground text-sm">
-                        Venue, food and the schedule, as one JSON object. Anything that does not
-                        parse — or uses a key that is not in the example — is rejected with a
-                        message and <strong>nothing on this card is saved</strong>, so a bad paste
-                        can never blank the program page. Every key is optional.
-                    </p>
-                    <Field.Field class="gap-2">
-                        <Field.Label for="metadata">Event details JSON</Field.Label>
-                        <!-- form?.metadata is the text that was just rejected. Falling back to it
-                             first means a failed Save returns the owner's own paste to them, with
-                             the error above it, rather than silently reverting to what is stored. -->
-                        <Textarea
-                            id="metadata"
-                            name="metadata"
-                            class="min-h-96 font-mono text-xs"
-                            value={form?.metadata ??
-                                JSON.stringify(data.event.metadata, null, 2)} />
-                        <Field.Description>
-                            <pre
-                                class="bg-muted mt-1 overflow-x-auto rounded-md p-3 text-xs">{METADATA_EXAMPLE}</pre>
-                        </Field.Description>
-                    </Field.Field>
-                </div>
-
-                <div class="flex flex-wrap items-center gap-3">
-                    <Button type="submit" variant="secondary">Save event details</Button>
-                    <p class="text-muted-foreground text-xs">Writes every field in this card.</p>
+                <div>
+                    <Button type="submit" size="sm" variant="secondary">Save dates</Button>
                 </div>
             </form>
         </CardContent>
     </Card>
-</section>
 
-<!-- The Setup landing links to #tiers, and this anchor is NEW — before the restructure that link went
-     nowhere. It is load-bearing now, so do not rename it. -->
-<section id="tiers" class="col-span-12 scroll-mt-6 xl:col-span-8">
-    <Card>
+    <!-- The Setup landing links to #tiers, and this anchor is NEW — before the restructure that link
+         went nowhere. It is load-bearing now, so do not rename it. -->
+    <Card id="tiers" class="scroll-mt-6">
         <CardHeader>
             <CardTitle class="flex items-center gap-2">
                 <Tags class="text-muted-foreground size-4" />
                 Tiers & prices
             </CardTitle>
             <CardDescription>
-                What each kind of attendee pays, in dollars. Party members keep the label and price
-                they were charged, so renaming or repricing a tier never changes a registration that
-                already exists.
+                What each kind of attendee pays. Party members keep the label and price they were
+                charged, so renaming or repricing never changes a registration that already exists.
             </CardDescription>
         </CardHeader>
-        <CardContent class="flex flex-col gap-4">
+        <CardContent class="flex flex-col gap-3">
             {#if data.tiers.length === 0}
                 <p class="text-muted-foreground text-sm">
                     No tiers yet — the register form has nothing to offer until there is one.
                 </p>
+            {/if}
+
+            <!-- COMPACT. Each tier was a bordered card holding two labelled fields and a full-width
+                 Save, so four tiers filled a screen to show four labels and four numbers. Now one row
+                 per tier with the labels carried once by a header, the price prefixed with $ instead of
+                 captioned "Price ($)", and Delete as an icon.
+
+                 The header is md:+ only. Stacked at 375px a row sits directly under its neighbour with
+                 no header in reach, so each field keeps its own sr-only label — the visible header is
+                 decoration for the wide case, never the only naming. -->
+            {#if data.tiers.length > 0}
+                <div
+                    class={cn(
+                        'hidden gap-3 px-1 md:grid md:grid-cols-[1fr_9rem_auto_auto] md:items-center',
+                        SUBHEAD_CLASS,
+                    )}>
+                    <span>Label</span>
+                    <span>Price</span>
+                    <span class="sr-only">Save</span>
+                    <span class="sr-only">Delete</span>
+                </div>
             {/if}
 
             {#each data.tiers as tier (tier.id)}
@@ -284,44 +275,48 @@ const METADATA_EXAMPLE = `{
                      lifts its own children into that grid, so Save lands in track three and Delete in
                      track four. Drop it and the whole row collapses into a single cell. -->
                 <div
-                    class="grid grid-cols-1 gap-3 rounded-lg border p-3 sm:grid-cols-[1fr_auto_auto_auto] sm:items-end">
+                    class="grid grid-cols-1 items-center gap-2 md:grid-cols-[1fr_9rem_auto_auto] md:gap-3">
                     <form method="POST" action="?/update_tier" use:enhance class="contents">
                         <input type="hidden" name="tierId" value={tier.id} />
-                        <Field.Field class="gap-2">
-                            <Field.Label for="tier-label-{tier.id}">Label</Field.Label>
+                        <Input
+                            aria-label="Label for the {tier.label} tier"
+                            name="label"
+                            type="text"
+                            value={tier.label}
+                            required />
+                        <!-- Dollars, not cents — the action multiplies by 100 on the way in. The $ is
+                             in the box rather than in a caption above it, which is what let the whole
+                             row lose its two field labels. -->
+                        <div class="relative">
+                            <span
+                                class="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 -translate-y-1/2 text-sm">
+                                $
+                            </span>
                             <Input
-                                id="tier-label-{tier.id}"
-                                name="label"
-                                type="text"
-                                value={tier.label}
-                                required />
-                        </Field.Field>
-                        <Field.Field class="gap-2">
-                            <!-- Dollars, not cents — the action multiplies by 100 on the way in. -->
-                            <Field.Label for="tier-price-{tier.id}">Price ($)</Field.Label>
-                            <Input
-                                id="tier-price-{tier.id}"
+                                aria-label="Price in dollars for the {tier.label} tier"
                                 name="priceCents"
                                 type="number"
+                                inputmode="decimal"
                                 step="0.01"
+                                min="0"
                                 value={formatPrice(tier.priceCents)}
+                                class="pl-6"
                                 required />
-                        </Field.Field>
+                        </div>
+                        <Button type="submit" size="sm" variant="secondary">Save</Button>
+                    </form>
+                    <form method="POST" action="?/delete_tier" use:enhance>
+                        <!-- Icon-only on md+, but never icon-only on mobile: stacked at 375px this is
+                             a full-width control directly under Save with no confirmation behind it,
+                             and an unlabelled bin there is one mis-tap from deleting a tier. -->
+                        <input type="hidden" name="tierId" value={tier.id} />
                         <Button
                             type="submit"
                             size="sm"
-                            variant="secondary"
-                            class="w-full sm:w-auto">
-                            Save
-                        </Button>
-                    </form>
-                    <form method="POST" action="?/delete_tier" use:enhance>
-                        <input type="hidden" name="tierId" value={tier.id} />
-                        <!-- Left narrow on purpose: stacked at 375px this sits directly under Save,
-                             and there is no confirmation behind it. -->
-                        <Button type="submit" size="sm" variant="ghost" class="text-destructive">
-                            <Trash2 class="size-4" />
-                            Delete
+                            variant="ghost"
+                            class="text-destructive w-full md:w-auto">
+                            <X class="size-4" />
+                            <span class="md:sr-only">Delete {tier.label}</span>
                         </Button>
                     </form>
                 </div>
@@ -329,32 +324,82 @@ const METADATA_EXAMPLE = `{
 
             <Separator />
 
-            <div class="flex flex-col gap-3">
-                <p class={SUBHEAD_CLASS}>Add a tier</p>
-                <form
-                    method="POST"
-                    action="?/add_tier"
-                    use:enhance
-                    class="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_auto_auto] sm:items-end">
-                    <Field.Field class="gap-2">
-                        <Field.Label for="new-tier-label">Label</Field.Label>
-                        <Input id="new-tier-label" name="label" type="text" required />
-                    </Field.Field>
-                    <Field.Field class="gap-2">
-                        <Field.Label for="new-tier-price">Price ($)</Field.Label>
-                        <Input
-                            id="new-tier-price"
-                            name="priceCents"
-                            type="number"
-                            step="0.01"
-                            required />
-                    </Field.Field>
-                    <Button type="submit" size="sm" variant="secondary" class="w-full sm:w-auto">
-                        <Plus class="size-4" />
-                        Add tier
+            <form
+                method="POST"
+                action="?/add_tier"
+                use:enhance
+                class="grid grid-cols-1 items-center gap-2 md:grid-cols-[1fr_9rem_auto] md:gap-3">
+                <Input
+                    aria-label="Label for the new tier"
+                    name="label"
+                    type="text"
+                    placeholder="Adult"
+                    required />
+                <div class="relative">
+                    <span
+                        class="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 -translate-y-1/2 text-sm">
+                        $
+                    </span>
+                    <Input
+                        aria-label="Price in dollars for the new tier"
+                        name="priceCents"
+                        type="number"
+                        inputmode="decimal"
+                        step="0.01"
+                        min="0"
+                        placeholder="0.00"
+                        class="pl-6"
+                        required />
+                </div>
+                <Button type="submit" size="sm" variant="secondary">
+                    <Plus class="size-4" />
+                    Add tier
+                </Button>
+            </form>
+        </CardContent>
+    </Card>
+</section>
+
+<!-- Standing alone, and last. It is a 96-line textarea plus a worked example, edited once a year;
+     above the dates and the tiers it put the whole program between the organiser and the two fields
+     they actually came back for. -->
+<section class="col-span-12 xl:col-span-8">
+    <Card>
+        <CardHeader>
+            <CardTitle class="flex items-center gap-2">
+                <Braces class="text-muted-foreground size-4" />
+                Program content
+            </CardTitle>
+            <CardDescription>
+                Venue, food, places and the schedule — everything the program page shows, as one
+                JSON object. Anything that does not parse — or uses a key that is not in the example
+                — is rejected with a message and <strong>nothing is saved</strong>, so a bad paste
+                can never blank the program page. Every key is optional.
+            </CardDescription>
+        </CardHeader>
+        <CardContent>
+            <form method="POST" action="?/update_program" use:enhance class="flex flex-col gap-4">
+                <Field.Field class="gap-2">
+                    <Field.Label for="metadata">Event details JSON</Field.Label>
+                    <!-- form?.metadata is the text that was just rejected. Falling back to it first
+                         means a failed Save returns the owner's own paste to them, with the error
+                         above it, rather than silently reverting to what is stored. -->
+                    <Textarea
+                        id="metadata"
+                        name="metadata"
+                        class="min-h-96 font-mono text-xs"
+                        value={form?.metadata ?? JSON.stringify(data.event.metadata, null, 2)} />
+                    <Field.Description>
+                        <pre
+                            class="bg-muted mt-1 overflow-x-auto rounded-md p-3 text-xs">{METADATA_EXAMPLE}</pre>
+                    </Field.Description>
+                </Field.Field>
+                <div>
+                    <Button type="submit" size="sm" variant="secondary">
+                        Save program content
                     </Button>
-                </form>
-            </div>
+                </div>
+            </form>
         </CardContent>
     </Card>
 </section>

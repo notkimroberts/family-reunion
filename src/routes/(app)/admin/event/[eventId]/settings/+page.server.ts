@@ -13,6 +13,26 @@ function parseFiniteFloat(raw: string): number | null {
     return Number.isFinite(n) ? n : null
 }
 
+/* A datetime-local field that is allowed to be empty, but not allowed to be wrong.
+
+   Blank means "clear this date" and is a legitimate save. Anything unparseable is refused, which is a
+   change: update_event used to leave a bad value as null and write it, so a typo in Start CLEARED the
+   start date and reported success. The countdown on the home page keys off that column, so the failure
+   was silent and off-screen. */
+function parseOptionalDate(
+    raw: FormDataEntryValue | null,
+): { date: Date | null } | { error: string } {
+    const trimmed = String(raw ?? '').trim()
+    if (!trimmed) {
+        return { date: null }
+    }
+    const parsed = new Date(trimmed)
+    if (Number.isNaN(parsed.getTime())) {
+        return { error: `"${trimmed}" is not a date we can read.` }
+    }
+    return { date: parsed }
+}
+
 /* Parses and validates the add_tier/update_tier form fields shared by both actions.
 
    A tier is a label and a price. It used to carry an adult/child shirt-size flag as well, which no
@@ -62,47 +82,66 @@ export const load: PageServerLoad = async (event) => {
 }
 
 export const actions: Actions = {
-    update_event: async (event) => {
+    /* The dates, and NOTHING else.
+
+       This and update_program were one `update_event` action writing both the dates and the whole
+       metadata object in a single db.update. That coupling was load-bearing while they shared a card:
+       the update cleared any column the POST omitted, so a second Save on the same row of data would
+       have blanked whatever it did not carry.
+
+       Splitting the card required splitting the action, not the other way round. Each now sets only its
+       own columns, so a form that never mentions metadata cannot touch it. The safety property that
+       mattered — a rejected paste must not leave the dates saved and the program stale — survives
+       trivially, because the dates are no longer part of that POST at all. */
+    update_dates: async (event) => {
         requireOwner(event)
-        dbg.admin('update_event id=%s', event.params.eventId)
+        dbg.admin('update_dates id=%s', event.params.eventId)
         const data = await event.request.formData()
 
-        const startDateRaw = data.get('startDate') as string
-        const endDateRaw = data.get('endDate') as string
+        const startDate = parseOptionalDate(data.get('startDate'))
+        const endDate = parseOptionalDate(data.get('endDate'))
+
+        if ('error' in startDate) {
+            return fail(400, { error: `Start date: ${startDate.error}` })
+        }
+        if ('error' in endDate) {
+            return fail(400, { error: `End date: ${endDate.error}` })
+        }
+
+        /* Caught here rather than left to the reader of /program, where a reversed range renders a
+           countdown to a date already past and a range that reads backwards. Equal is allowed — a
+           one-session reunion is legitimate. */
+        if (startDate.date && endDate.date && endDate.date < startDate.date) {
+            return fail(400, { error: 'The end date is before the start date.' })
+        }
+
+        await db
+            .update(reunionEvents)
+            .set({ startDate: startDate.date, endDate: endDate.date, updatedAt: new Date() })
+            .where(eq(reunionEvents.id, event.params.eventId))
+
+        return { success: true }
+    },
+
+    /* The program content, and nothing else — see update_dates.
+
+       Parsed before anything is written, and a failure writes NOTHING. The raw text comes back with the
+       error so the owner does not lose what they typed. */
+    update_program: async (event) => {
+        requireOwner(event)
+        dbg.admin('update_program id=%s', event.params.eventId)
+        const data = await event.request.formData()
+
         const metadataRaw = (data.get('metadata') as string) ?? ''
 
-        /* Parsed before anything is written, and a failure writes NOTHING — not the dates either.
-           One card, one Save, one outcome: a rejected paste must not leave the dates saved and the
-           program content stale, with the alert implying neither went through. The raw text comes
-           back with the error so the owner does not lose what they typed. */
         const parsedMetadata = parseReunionMetadata(metadataRaw)
         if ('error' in parsedMetadata) {
             return fail(400, { error: parsedMetadata.error, metadata: metadataRaw })
         }
 
-        let startDate: Date | null = null
-        if (startDateRaw) {
-            const d = new Date(startDateRaw)
-            if (!Number.isNaN(d.getTime())) {
-                startDate = d
-            }
-        }
-        let endDate: Date | null = null
-        if (endDateRaw) {
-            const d = new Date(endDateRaw)
-            if (!Number.isNaN(d.getTime())) {
-                endDate = d
-            }
-        }
-
         await db
             .update(reunionEvents)
-            .set({
-                startDate,
-                endDate,
-                metadata: parsedMetadata.metadata,
-                updatedAt: new Date(),
-            })
+            .set({ metadata: parsedMetadata.metadata, updatedAt: new Date() })
             .where(eq(reunionEvents.id, event.params.eventId))
 
         return { success: true }
