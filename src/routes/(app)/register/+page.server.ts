@@ -1,15 +1,14 @@
 import { redirect, fail } from '@sveltejs/kit'
-import { defaults } from 'sveltekit-superforms'
 import { zod4 as zod } from 'sveltekit-superforms/adapters'
-import { superValidate } from 'sveltekit-superforms/server'
+import { defaults, superValidate } from 'sveltekit-superforms/server'
 import { dbg } from '$lib/server/debug'
 import { createPendingRegistration, getOpenEvent } from '$lib/server/registrations'
 import { getTiersForEvent } from '$lib/server/tiers'
-import { parseYesNo, splitFullName } from '$lib/utils'
+import { splitFullName } from '$lib/utils'
 import type { PageServerLoad, Actions } from './$types'
 import { EMPTY_PERSON_DETAILS } from './EMPTY_PERSON_DETAILS'
 import { registrationSchema } from './schema'
-import { toMemberInputs } from './toMemberInputs'
+import { toRegistrationIntake } from './toRegistrationIntake'
 
 export const load: PageServerLoad = async ({ locals }) => {
     const openEvent = await getOpenEvent()
@@ -53,39 +52,18 @@ export const actions: Actions = {
             return fail(400, { form })
         }
 
-        const { eventId, contactEmail, contactPhone, self, members } = form.data
-
-        /* Normalisation lives here rather than in the schema: a schema transform would rewrite
-           what the user is typing during client-side validation. Lowercasing matters because
-           /register/recover looks registrations up by exact contact email. */
-        const contactName =
-            `${form.data.contactFirstName.trim()} ${form.data.contactLastName.trim()}`.trim()
-        const normalizedEmail = contactEmail.trim().toLowerCase()
-        const additionalMembers = toMemberInputs(members)
+        const intake = toRegistrationIntake(form.data)
 
         dbg.register(
             'email=%s eventId=%s members=%d',
-            normalizedEmail,
-            eventId,
-            additionalMembers.length + 1,
+            intake.contactEmail,
+            form.data.eventId,
+            intake.members.length,
         )
 
         const { checkoutUrl } = await createPendingRegistration({
-            contactName,
-            contactEmail: normalizedEmail,
-            contactPhone: contactPhone || undefined,
-            eventId,
-            selfTierId: self.tierId,
-            selfBirthDate: self.birthDate || undefined,
-            selfShirtSize: self.shirtSize || undefined,
-            selfAddressLine1: self.addressLine1,
-            selfAddressLine2: self.addressLine2,
-            selfAddressCity: self.addressCity,
-            selfAddressState: self.addressState,
-            selfAddressZip: self.addressZip,
-            selfVegetarianMeal: parseYesNo(self.vegetarianMeal),
-            selfAttendedReunion2025: parseYesNo(self.attendedReunion2025),
-            additionalMembers,
+            ...intake,
+            eventId: form.data.eventId,
             successUrl: (token) => `${event.url.origin}/register/manage?token=${token}`,
             cancelUrl: (token) => `${event.url.origin}/register?cancelled=true&token=${token}`,
         })

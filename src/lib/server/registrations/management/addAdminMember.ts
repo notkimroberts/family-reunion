@@ -4,8 +4,9 @@ import { db } from '$lib/server/db'
 import { partyMembers, registrations } from '$lib/server/db/schema'
 import { dbg } from '$lib/server/debug'
 import { resolveTierPricing } from '$lib/server/tiers'
-import { parseBirthDate } from '$lib/utils/age'
 import type { MemberInput } from '../checkout'
+import { buildPartyMemberRow } from '../checkout/buildPartyMemberRow'
+import { assertRegistrationMutable, touchRegistration } from '../lifecycle'
 
 /* Adds one party member to an existing registration, offline.
 
@@ -40,40 +41,24 @@ export async function addAdminMember(params: {
 
     /* A refunded registration has been cancelled and its money returned; adding to it would
        create an attendee nobody has paid for and that no total accounts for. */
-    if (registration.status === 'refunded') {
-        throw error(409, 'Cannot add members to a cancelled registration')
-    }
+    assertRegistrationMutable(registration.status, 'Cannot add members to a cancelled registration')
 
     const pricingByTierId = await resolveTierPricing(registration.eventId, [params.member.tierId])
     const pricing = pricingByTierId[params.member.tierId]
 
-    const parsed = params.member.birthDate ? parseBirthDate(params.member.birthDate) : null
-
     const [inserted] = await db
         .insert(partyMembers)
-        .values({
-            registrationId: params.registrationId,
-            name: params.member.name.trim(),
-            birthYear: parsed?.birthYear ?? null,
-            birthMonth: parsed?.birthMonth ?? null,
-            birthDay: parsed?.birthDay ?? null,
-            shirtSize: params.member.shirtSize || null,
-            addressLine1: params.member.addressLine1 || null,
-            addressLine2: params.member.addressLine2 || null,
-            addressCity: params.member.addressCity || null,
-            addressState: params.member.addressState || null,
-            addressZip: params.member.addressZip || null,
-            vegetarianMeal: params.member.vegetarianMeal ?? null,
-            attendedReunion2025: params.member.attendedReunion2025 ?? null,
-            tierLabel: pricing.label,
-            priceCents: pricing.priceCents,
-        })
+        .values(
+            buildPartyMemberRow({
+                registrationId: params.registrationId,
+                member: params.member,
+                tierLabel: pricing.label,
+                priceCents: pricing.priceCents,
+            }),
+        )
         .returning({ id: partyMembers.id })
 
-    await db
-        .update(registrations)
-        .set({ updatedAt: new Date() })
-        .where(eq(registrations.id, params.registrationId))
+    await touchRegistration(params.registrationId)
 
     dbg.register(
         'admin added member %s to registration %s at net %d',

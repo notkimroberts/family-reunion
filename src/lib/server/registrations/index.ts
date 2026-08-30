@@ -1,6 +1,5 @@
 export type { MemberInput } from './checkout'
 export {
-    calculateTotal,
     createPendingRegistration,
     addMember,
     createAdminRegistration,

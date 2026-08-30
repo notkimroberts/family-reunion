@@ -5,3 +5,4 @@ drizzle
 package-lock.json
 bun.lock
 .claude
+.agents

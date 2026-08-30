@@ -1,9 +1,9 @@
 import { db } from '$lib/server/db'
 import { partyMembers, registrations, registrationStatusEnum } from '$lib/server/db/schema'
 import { resolveTierPricing } from '$lib/server/tiers'
-import { parseBirthDate } from '$lib/utils/age'
 import { generateManagementToken } from '../hashManagementToken'
 import type { MemberInput } from './MemberInput'
+import { buildPartyMemberRow } from './buildPartyMemberRow'
 
 /* Inserts a registration directly at the given status (bypasses Stripe). Generates a managementToken so the contact can self-manage later; the DB stores only the SHA-256 hash, the plaintext is returned to the caller. */
 export async function createAdminRegistration(params: {
@@ -34,29 +34,17 @@ export async function createAdminRegistration(params: {
         .returning()
 
     await db.insert(partyMembers).values(
-        params.members.map((m, index) => {
-            const parsed = m.birthDate ? parseBirthDate(m.birthDate) : null
-            const pricing = pricingByTierId[m.tierId]
-            return {
+        params.members.map((member, index) => {
+            const pricing = pricingByTierId[member.tierId]
+            return buildPartyMemberRow({
                 registrationId: registration.id,
-                name: m.name.trim(),
+                member,
+                tierLabel: pricing.label,
+                priceCents: pricing.priceCents,
                 /* The caller puts the contact first — see admin/registrations/new. Flagged so their
                    name has a single editable field; see party_members.isContact. */
                 isContact: index === 0,
-                birthYear: parsed?.birthYear ?? null,
-                birthMonth: parsed?.birthMonth ?? null,
-                birthDay: parsed?.birthDay ?? null,
-                shirtSize: m.shirtSize || null,
-                addressLine1: m.addressLine1 || null,
-                addressLine2: m.addressLine2 || null,
-                addressCity: m.addressCity || null,
-                addressState: m.addressState || null,
-                addressZip: m.addressZip || null,
-                vegetarianMeal: m.vegetarianMeal ?? null,
-                attendedReunion2025: m.attendedReunion2025 ?? null,
-                tierLabel: pricing.label,
-                priceCents: pricing.priceCents,
-            }
+            })
         }),
     )
 

@@ -10,7 +10,7 @@ bun run build            # Production build
 bun run check            # Svelte type checking
 bun run lint             # Prettier check + ESLint
 bun run format           # Prettier write (auto-fix formatting)
-bun run test             # Run Vitest unit tests
+bun run test             # Run Vitest unit tests (NOT `bun test` — see below)
 
 bun run db:generate      # Generate migration from schema changes
 bun run db:migrate       # Apply pending migrations
@@ -179,7 +179,7 @@ Everything an organiser does concerns one reunion, and the reunion is named in t
 - **sveltekit-superforms** + **zod** for server-validated forms. Always use the zod v4 adapters:
   - Server: `import { superValidate } from 'sveltekit-superforms/server'` and `import { zod4 as zod } from 'sveltekit-superforms/adapters'`
   - Client: `import { superForm } from 'sveltekit-superforms'` and `import { zod4Client as zodClient } from 'sveltekit-superforms/adapters'`
-  - Never import `superValidate` from the `sveltekit-superforms` barrel on the server — it re-exports `SuperDebug.svelte` which breaks SSR
+  - Never import `superValidate` **or `defaults`** from the `sveltekit-superforms` barrel on the server — it re-exports `SuperDebug.svelte`, and a node import of it dies with `Unknown file extension ".svelte"`. Both are exported from `sveltekit-superforms/server`; import them from there.
 - **shadcn-svelte field components** (`$lib/components/ui/field/`) for form field structure: `Field.Group`, `Field.Field`, `Field.Label`, `Field.Error`, `Field.Description`
 - **bits-ui Select** has a `string | string[]` union for `value` — avoid `bind:value` on a `string` variable; use a native `<select>` styled with Tailwind or use `onValueChange` without bind
 - Define zod schemas in a co-located `schema.ts` file next to the route
@@ -360,6 +360,33 @@ The app is fully responsive with a `md:` (768px) breakpoint separating mobile an
 - Use `bun run format` whenever the format is not correct
 - Prefer running single tests, and not the whole test suite, for performance
 - **Tests**: run `bun run test` after any change to logic covered by tests; add or update co-located `.test.ts` files whenever new utility functions or server logic is added or modified. Tests live next to the source file (e.g. `price.test.ts` beside `price.ts`)
+
+#### `bun test` is not this project's test runner
+
+`bun test` is Bun's own runner and `bun run test` is vitest. The difference is silent and total: Bun's runner ignores `package.json` scripts AND `vitest.config.ts`, so every alias below disappears — `$lib/server/db` points at the real Postgres client, `$env/dynamic/private` and `$app/environment` do not resolve, and `globalSetup` never builds the PGLite template. Bun's `vi` shim is partial too, so tests fail on missing helpers like `setSystemTime`. It reports several hundred fewer tests than exist, which is the part that could mislead someone into reading a run as green.
+
+`bunfig.toml` registers `scripts/blockBunTest.ts` as the `[test]` preload, so `bun test` now exits 1 with that explanation. vitest never loads it.
+
+#### Tests that touch the database run against a real Postgres
+
+`vitest.config.ts` aliases `$lib/server/db` to `db/testing/pgliteDb.ts`, so a test importing a module that queries gets **PGLite** — a real Postgres in-process — instead of the production client. Production is untouched: there is no test branch in `db/index.ts` and PGLite never reaches the build.
+
+```ts
+let db: Awaited<ReturnType<typeof resetTestDb>>
+beforeEach(async () => {
+    db = await resetTestDb() // fresh, fully migrated, ~145ms
+})
+const seeded = await seedRegistration(db, { members: [...] })
+```
+
+- `globalSetup` migrates an empty database **from the real `drizzle/` SQL** once per run and dumps it; `resetTestDb()` restores that dump per test. A migration that would fail on deploy fails here first.
+- `seedRegistration` returns the **plaintext** management token, which nothing else can — only the hash is stored — so the token gate is exercised rather than mocked.
+- Assert on **rows**, not on calls. Stripe and Resend stay mocked (`$lib/server/payments`, `$lib/server/email`): those are genuinely external. The database is not.
+- **Posting a form in a test is not posting JSON.** The registration forms run `superForm` with `dataType: 'json'`, so the browser sends `FormData` carrying one `__superform_json` field of **devalue-encoded** data. A test that sends a JSON body instead gets `posted: false`, a blank `data`, and a 400 that looks like a schema bug. Build it the real way — `formData.append('__superform_json', stringify(body))` with `stringify` from `devalue` — see `register/server.test.ts`.
+- **Never hand-roll a drizzle mock.** There are none left. They were chainable objects whose queued values had to be listed in the order the function happened to query them, with `drizzle-orm` itself mocked so `eq` was a `vi.fn()` and no WHERE clause was ever evaluated — they pinned the implementation rather than the contract, and could not catch a wrong predicate. Every test that touches the database now uses `resetTestDb()`.
+- **Two files still substitute the db module, and both are right to.** `api/health/server.test.ts` replaces it with `{ execute }` because its subject is what happens when the database is UNREACHABLE, which a working PGLite cannot simulate. `auth/auth.test.ts` stubs `getDb` because it asserts on Better Auth's resolved `options` and never issues a query. Neither is a query-builder fake; do not "finish the job" by converting them.
+- `vitest.config.ts` also aliases `$env/dynamic/private` and `$app/environment`, which SvelteKit generates at build time and which therefore do not resolve in a node test run. Without them, importing any real server module fails as soon as one of its transitive dependencies reads an environment variable. `dev` is stubbed **false** on purpose: it is the stricter branch, and a suite running as dev would exercise neither `send()`'s missing-key throw nor the real auth guard.
+- Real constraints now apply, and they will catch fixture mistakes that the fakes waved through: `one_open_event` (only one `open` reunion event — pass `eventStatus` for a second year), the unique `stripe_session_id`, the one-contact-per-registration index, and the birth-date prefix CHECK.
 - **Commits**: follow [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/). Format: `<type>[optional scope]: <description>`. Common types: `feat`, `fix`, `docs`, `refactor`, `test`, `chore`, `ci`. Breaking changes use `!` before the colon (e.g. `feat!: ...`) or a `BREAKING CHANGE:` footer. This project uses `commit-and-tag-version` for releases which relies on this format to determine version bumps.
 
 # Dependency management

@@ -4,8 +4,8 @@ import * as Sentry from '@sentry/sveltekit'
 import { superForm } from 'sveltekit-superforms'
 import { zod4Client as zodClient } from 'sveltekit-superforms/adapters'
 import { APP_NAME, CONTACT_EMAIL, CONTACT_PHONE } from '$lib/general/constants'
+import { quotePartyTotal } from '$lib/general/pricing'
 import { formatDateRange, formatPrice, getTierPriceCents, isValidPhone } from '$lib/utils'
-import { stripeFeeCents } from '$lib/utils/stripeFee'
 import { EMPTY_PERSON_DETAILS } from './EMPTY_PERSON_DETAILS'
 import FormErrorSummary from './FormErrorSummary.svelte'
 import OrderSummaryCard from './OrderSummaryCard.svelte'
@@ -66,18 +66,14 @@ let contactAddress = $derived({
     addressZip: self.addressZip,
 })
 
-/* Subtotal in net cents (sum of selected tier prices). */
-let subtotal = $derived(
-    (self.tierId ? getTierPriceCents(self.tierId, tiers) : 0) +
-        members.reduce((sum, m) => sum + getTierPriceCents(m.tierId, tiers), 0),
+/* One quote for the whole party, from the same module the server builds its Stripe line items
+   against — so what the payer is shown and what the card is charged cannot disagree. */
+let quote = $derived(
+    quotePartyTotal([
+        ...(self.tierId ? [getTierPriceCents(self.tierId, tiers)] : []),
+        ...members.map((m) => getTierPriceCents(m.tierId, tiers)),
+    ]),
 )
-/* Fee is the sum of per-member gross-ups so it never disagrees with what Stripe will actually
-   charge (the server uses the same per-member gross-up). */
-let processingFee = $derived(
-    (self.tierId ? stripeFeeCents(getTierPriceCents(self.tierId, tiers)) : 0) +
-        members.reduce((sum, m) => sum + stripeFeeCents(getTierPriceCents(m.tierId, tiers)), 0),
-)
-let total = $derived(subtotal + processingFee)
 
 let canSubmit = $derived(
     contactSaved &&
@@ -209,10 +205,9 @@ let isLocked = $derived(
                         selfTierId={self.tierId}
                         {members}
                         {tiers}
-                        {subtotal}
-                        {processingFee}
+                        {quote}
                         {canSubmit}
-                        submitLabel={`Pay $${formatPrice(total)} & Register`}
+                        submitLabel={`Pay $${formatPrice(quote.totalCents)} & Register`}
                         submitting={$submitting}
                         placeholderText="Fill in your details above and press Save to continue."
                         submitFootnote="You'll be redirected to a secure checkout." />

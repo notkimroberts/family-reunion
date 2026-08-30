@@ -1,4 +1,5 @@
 import { eq } from 'drizzle-orm'
+import { sumMemberPrices } from '$lib/general/pricing'
 import { db } from '$lib/server/db'
 import { partyMembers, registrations, reunionEvents } from '$lib/server/db/schema'
 import type { ConfirmationStatus, RegistrationConfirmationData } from '$lib/server/email'
@@ -97,7 +98,7 @@ export async function getConfirmationEmailData(params: {
                     detail: extras.length > 0 ? extras.join(', ') : undefined,
                 }
             }),
-            totalCents: members.reduce((sum, member) => sum + member.priceCents, 0),
+            totalCents: sumMemberPrices(members),
             manageUrl: params.manageUrl,
         },
     }

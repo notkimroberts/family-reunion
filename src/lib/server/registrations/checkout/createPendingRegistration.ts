@@ -4,13 +4,13 @@ import { partyMembers, registrations } from '$lib/server/db/schema'
 import { dbg } from '$lib/server/debug'
 import { createRegistrationCheckout } from '$lib/server/payments'
 import { resolveTierPricing } from '$lib/server/tiers'
-import { parseBirthDate } from '$lib/utils/age'
 import { grossUpForStripe } from '$lib/utils/stripeFee'
 import { assertRegistrationEditable } from '../assertRegistrationEditable'
 import { getRegistrationLockDate } from '../getRegistrationLockDate'
 import { generateManagementToken } from '../hashManagementToken'
 import type { MemberInput } from './MemberInput'
-import { calculateTotal } from './calculateTotal'
+import { buildCheckoutLineItems } from './buildCheckoutLineItems'
+import { buildPartyMemberRow } from './buildPartyMemberRow'
 
 /* Creates a 'pending' registration + party members, then opens a Stripe Checkout session.
    Each registration gets a permanent managementToken used as the ownership credential.
@@ -27,17 +27,10 @@ export async function createPendingRegistration(params: {
     contactEmail: string
     contactPhone?: string
     eventId: string
-    selfTierId: string
-    selfBirthDate?: string
-    selfShirtSize?: string
-    selfAddressLine1?: string
-    selfAddressLine2?: string
-    selfAddressCity?: string
-    selfAddressState?: string
-    selfAddressZip?: string
-    selfVegetarianMeal?: boolean
-    selfAttendedReunion2025?: boolean
-    additionalMembers: MemberInput[]
+    /* The contact first, then their guests — the same shape createAdminRegistration takes. It used
+       to be eleven `self*` parameters beside an `additionalMembers` array, which made the contact's
+       own details a third spelling of MemberInput and meant the caller mapped them by hand. */
+    members: MemberInput[]
     successUrl: (token: string) => string
     cancelUrl: (token: string) => string
 }): Promise<{ registrationId: string; managementToken: string; checkoutUrl: string }> {
@@ -47,16 +40,12 @@ export async function createPendingRegistration(params: {
        Admin paper entry deliberately skips this check — see admin/registrations. */
     assertRegistrationEditable(await getRegistrationLockDate(params.eventId))
 
-    const allTierIds = [params.selfTierId, ...params.additionalMembers.map((m) => m.tierId)]
-    const pricingByTierId = await resolveTierPricing(params.eventId, allTierIds)
-    const selfPricing = pricingByTierId[params.selfTierId]
-
-    const { lineItems } = calculateTotal(
-        params.contactName,
-        selfPricing,
-        params.additionalMembers,
-        pricingByTierId,
+    const pricingByTierId = await resolveTierPricing(
+        params.eventId,
+        params.members.map((member) => member.tierId),
     )
+
+    const lineItems = buildCheckoutLineItems(params.members, pricingByTierId)
 
     const { plaintext: managementToken, hash: tokenHash } = generateManagementToken()
 
@@ -72,51 +61,21 @@ export async function createPendingRegistration(params: {
         })
         .returning()
 
-    const selfParsed = params.selfBirthDate ? parseBirthDate(params.selfBirthDate) : null
-    await db.insert(partyMembers).values([
-        {
-            registrationId: registration.id,
-            name: params.contactName,
-            /* This row is the contact attending their own reunion. Flagged so their name has one
-               editable field rather than two copies that drift — see party_members.isContact. */
-            isContact: true,
-            birthYear: selfParsed?.birthYear ?? null,
-            birthMonth: selfParsed?.birthMonth ?? null,
-            birthDay: selfParsed?.birthDay ?? null,
-            shirtSize: params.selfShirtSize || null,
-            addressLine1: params.selfAddressLine1 || null,
-            addressLine2: params.selfAddressLine2 || null,
-            addressCity: params.selfAddressCity || null,
-            addressState: params.selfAddressState || null,
-            addressZip: params.selfAddressZip || null,
-            vegetarianMeal: params.selfVegetarianMeal ?? null,
-            attendedReunion2025: params.selfAttendedReunion2025 ?? null,
-            tierLabel: selfPricing.label,
-            /* Snapshot the gross — what the customer is being charged. Refund math reads this directly. */
-            priceCents: grossUpForStripe(selfPricing.priceCents),
-        },
-        ...params.additionalMembers.map((m) => {
-            const parsed = m.birthDate ? parseBirthDate(m.birthDate) : null
-            const pricing = pricingByTierId[m.tierId]
-            return {
+    await db.insert(partyMembers).values(
+        params.members.map((member, index) => {
+            const pricing = pricingByTierId[member.tierId]
+            return buildPartyMemberRow({
                 registrationId: registration.id,
-                name: m.name,
-                birthYear: parsed?.birthYear ?? null,
-                birthMonth: parsed?.birthMonth ?? null,
-                birthDay: parsed?.birthDay ?? null,
-                shirtSize: m.shirtSize || null,
-                addressLine1: m.addressLine1 || null,
-                addressLine2: m.addressLine2 || null,
-                addressCity: m.addressCity || null,
-                addressState: m.addressState || null,
-                addressZip: m.addressZip || null,
-                vegetarianMeal: m.vegetarianMeal ?? null,
-                attendedReunion2025: m.attendedReunion2025 ?? null,
+                member,
                 tierLabel: pricing.label,
+                /* Snapshot the GROSS — what the card is charged. Refund maths reads this directly. */
                 priceCents: grossUpForStripe(pricing.priceCents),
-            }
+                /* Index 0 is the contact attending their own reunion, flagged so their name has one
+                   editable field rather than two copies that drift — see party_members.isContact. */
+                isContact: index === 0,
+            })
         }),
-    ])
+    )
 
     dbg.register(
         'registration created id=%s email=%s, creating stripe session',

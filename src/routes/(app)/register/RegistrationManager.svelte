@@ -12,6 +12,7 @@ import {
     TableHeader,
     TableRow,
 } from '$lib/components/ui/table'
+import { sumMemberPrices } from '$lib/general/pricing'
 import { formatPrice } from '$lib/utils'
 import { formatPartialBirthDate } from '$lib/utils/age'
 import AddMemberForm from './AddMemberForm.svelte'
@@ -35,7 +36,7 @@ let {
 } = $props()
 
 let members = $derived(initialMembers)
-let totalCents = $derived(members.reduce((sum, m) => sum + m.priceCents, 0))
+let totalCents = $derived(sumMemberPrices(members))
 /* Removing the only member is not a removal — removeMember refunds them, finds nothing left and marks
    the whole registration 'refunded' (removeMember.ts:80). That is cancelling, so it is offered as
    Cancel Registration, which says what it does and asks twice. */

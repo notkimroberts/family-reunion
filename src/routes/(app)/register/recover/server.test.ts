@@ -1,74 +1,38 @@
+import { stringify } from 'devalue'
+import { eq } from 'drizzle-orm'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { actions } from './+page.server'
+import { registrations } from '$lib/server/db/schema'
+import { resetTestDb } from '$lib/server/db/testing/resetTestDb'
+import { hashManagementToken } from '$lib/server/registrations/hashManagementToken'
+import { seedEvent } from '$lib/server/testing/seedEvent'
+import { seedRegistration } from '$lib/server/testing/seedRegistration'
 
-const { mockSuperValidate } = vi.hoisted(() => ({
-    mockSuperValidate: vi.fn(),
-}))
+/* Recovering a lost management link.
 
-const { mockRotate } = vi.hoisted(() => ({ mockRotate: vi.fn() }))
+   Resend is mocked at the SDK, but nothing between the action and it is: the real
+   action → deliverManagementLink → sendRecoveryEmail → send() chain runs, because the link that was
+   actually broken is send() swallowing Resend's `{ error }`.
 
-const { mockUpdate, mockSet, mockWhere, mockDb } = vi.hoisted(() => {
-    const mockUpdate = vi.fn()
-    const mockSet = vi.fn()
-    const mockWhere = vi.fn().mockResolvedValue(undefined)
-    const chain = { update: mockUpdate, set: mockSet, where: mockWhere }
-    mockUpdate.mockReturnValue(chain)
-    mockSet.mockReturnValue(chain)
-    return { mockUpdate, mockSet, mockWhere, mockDb: chain }
-})
+   The database is real, so "did not rotate" is now the stored hash still matching the token the
+   registrant is holding — the thing that decides whether they can get back into a paid booking.
+   The old version asserted a `rotateManagementToken` mock went uncalled, which is a statement about
+   the code's shape rather than about their access. */
 
-const { mockGetRegistrationsByEmail, mockGenerateToken } = vi.hoisted(() => ({
-    mockGetRegistrationsByEmail: vi.fn(),
-    mockGenerateToken: vi.fn(),
-}))
-
-/* Resend is mocked, but $lib/server/email is NOT: the whole point is to exercise the real
-   action → sendRecoveryEmail → send → Resend chain. Mocking sendRecoveryEmail here would
-   skip the link that was actually broken (send() swallowing Resend's { error }). */
-const { mockEnv, mockEmailSend, MockResend } = vi.hoisted(() => {
+const { mockEmailSend, MockResend, mockEnv } = vi.hoisted(() => {
     const mockEnv = { RESEND_API_KEY: 're_test_key' }
-    const mockEmailSend = vi.fn().mockResolvedValue({ data: { id: 'email-1' }, error: null })
+    const mockEmailSend = vi.fn()
     function MockResendConstructor() {
         return { emails: { send: mockEmailSend } }
     }
-    return { mockEnv, mockEmailSend, MockResend: vi.fn(MockResendConstructor) }
+    return { mockEmailSend, MockResend: vi.fn(MockResendConstructor), mockEnv }
 })
+const mockReportError = vi.fn()
 
-const { mockReportError } = vi.hoisted(() => ({ mockReportError: vi.fn() }))
-
-vi.mock('sveltekit-superforms/server', () => ({ superValidate: mockSuperValidate }))
-vi.mock('sveltekit-superforms/adapters', () => ({ zod4: (s: unknown) => s }))
-vi.mock('$lib/server/db', () => ({ db: mockDb }))
-vi.mock('$lib/server/db/schema', () => ({ registrations: { id: 'id' } }))
-vi.mock('$lib/server/debug', () => ({ dbg: { register: vi.fn(), email: vi.fn() } }))
-vi.mock('$lib/server/reportError', () => ({ reportError: mockReportError }))
-vi.mock('$lib/server/registrations', () => ({
-    getRegistrationsByEmail: mockGetRegistrationsByEmail,
-}))
-vi.mock('$lib/server/registrations/hashManagementToken', () => ({
-    generateManagementToken: mockGenerateToken,
-}))
-vi.mock('$lib/server/registrations/rotateManagementToken', () => ({
-    rotateManagementToken: mockRotate,
-}))
-vi.mock('./schema', () => ({ recoverSchema: {} }))
-vi.mock('drizzle-orm', () => ({ eq: vi.fn() }))
 vi.mock('resend', () => ({ Resend: MockResend }))
 vi.mock('$env/dynamic/private', () => ({ env: mockEnv }))
-vi.mock('$app/environment', () => ({ dev: false }))
-vi.mock('$lib/general/constants', () => ({
-    APP_NAME: 'Test App',
-    APP_DOMAIN: 'example.com',
-    CONTACT_EMAIL: 'organiser@example.com',
-    CONTACT_PHONE: '+1 555 0100',
-}))
+vi.mock('$lib/server/reportError', () => ({ reportError: mockReportError }))
 
-function makeEvent() {
-    return {
-        request: new Request('http://localhost/register/recover', { method: 'POST' }),
-        url: new URL('http://localhost/register/recover'),
-    } as unknown as Parameters<typeof actions.default>[0]
-}
+const { actions } = await import('./+page.server')
 
 const RESEND_OK = { data: { id: 'email-1' }, error: null }
 const RESEND_FAILED = {
@@ -76,86 +40,127 @@ const RESEND_FAILED = {
     error: { name: 'validation_error', message: 'The example.com domain is not verified' },
 }
 
-const oneMatch = [{ id: 'reg-1', eventTitle: 'Family Reunion 2027' }]
+let db: Awaited<ReturnType<typeof resetTestDb>>
+
+function recover(email = 'alice@example.com') {
+    const formData = new FormData()
+    formData.append('__superform_json', stringify({ email }))
+    return actions.default({
+        request: new Request('http://localhost/register/recover', {
+            method: 'POST',
+            body: formData,
+        }),
+        url: new URL('http://localhost/register/recover'),
+    } as unknown as Parameters<typeof actions.default>[0])
+}
+
+async function storedHash(registrationId: string) {
+    const [row] = await db
+        .select({ managementToken: registrations.managementToken })
+        .from(registrations)
+        .where(eq(registrations.id, registrationId))
+    return row.managementToken
+}
 
 describe('POST /register/recover', () => {
-    beforeEach(() => {
+    beforeEach(async () => {
         vi.clearAllMocks()
-        mockSuperValidate.mockResolvedValue({ valid: true, data: { email: 'alice@example.com' } })
-        mockGetRegistrationsByEmail.mockResolvedValue(oneMatch)
-        mockGenerateToken.mockReturnValue({ plaintext: 'new-plain', hash: 'new-hash' })
-        mockEmailSend.mockReset()
+        mockEnv.RESEND_API_KEY = 're_test_key'
         mockEmailSend.mockResolvedValue(RESEND_OK)
-        mockUpdate.mockReturnValue(mockDb)
-        mockSet.mockReturnValue(mockDb)
-        mockWhere.mockResolvedValue(undefined)
-        mockRotate.mockReset()
-        mockRotate.mockResolvedValue(undefined)
+        db = await resetTestDb()
     })
 
-    it('rotates the token after a successful send', async () => {
-        const result = await actions.default(makeEvent())
+    it('emails a working link and rotates to it once the send is confirmed', async () => {
+        const seeded = await seedRegistration(db, { contactEmail: 'alice@example.com' })
+
+        const result = await recover()
 
         const [payload] = mockEmailSend.mock.calls[0]
         expect(payload.to).toBe('alice@example.com')
-        expect(payload.text).toContain('http://localhost/register/manage?token=new-plain')
-        expect(mockRotate).toHaveBeenCalledWith({ registrationId: 'reg-1', newHash: 'new-hash' })
+        const sentToken = payload.text.match(/token=([\w-]+)/)?.[1]
+        /* The link in the email is the one that now opens the booking. */
+        expect(await storedHash(seeded.registrationId)).toBe(hashManagementToken(sentToken))
         expect(result).toMatchObject({ sent: true })
     })
 
-    /* The regression this file exists for. The DB stores only the token hash, so rotating
-       before a confirmed delivery is unrecoverable: the registrant's old link no longer
-       hashes to anything and the new one never arrived. Resend resolves with { error }
-       rather than rejecting, so this only holds while send() inspects it. */
+    /* The regression this file exists for. The DB stores only the token hash, so rotating before a
+       confirmed delivery is unrecoverable: the registrant's old link no longer hashes to anything
+       and the new one never arrived. Resend resolves with { error } rather than rejecting, so this
+       only holds while send() inspects it. */
     it('does NOT rotate the token when Resend reports a failure', async () => {
+        const seeded = await seedRegistration(db, { contactEmail: 'alice@example.com' })
         mockEmailSend.mockResolvedValue(RESEND_FAILED)
 
-        const result = await actions.default(makeEvent())
+        const result = await recover()
 
         expect(mockEmailSend).toHaveBeenCalledOnce()
-        expect(mockRotate).not.toHaveBeenCalled()
+        /* The link they are already holding still works. */
+        expect(await storedHash(seeded.registrationId)).toBe(
+            hashManagementToken(seeded.managementToken),
+        )
         /* Still a generic success, to avoid leaking which addresses are registered. */
         expect(result).toMatchObject({ sent: true })
-        /* The registrant asked for a link and silently got nothing, and the generic response
-           hides that from them — so it has to reach an operator. dbg alone does not: the debug
-           package is never enabled under `node build/index.js`. */
+        /* The registrant asked for a link and silently got nothing, and the generic response hides
+           that from them — so it has to reach an operator. dbg alone does not: the debug package is
+           never enabled under `node build/index.js`. */
         expect(mockReportError).toHaveBeenCalledWith(
             expect.stringContaining('not rotated'),
-            expect.any(Error),
-            { registrationId: 'reg-1' },
+            expect.anything(),
+            { registrationId: seeded.registrationId },
         )
     })
 
     it('does NOT rotate the token when RESEND_API_KEY is missing in production', async () => {
+        const seeded = await seedRegistration(db, { contactEmail: 'alice@example.com' })
         mockEnv.RESEND_API_KEY = ''
-        try {
-            await actions.default(makeEvent())
-            expect(mockRotate).not.toHaveBeenCalled()
-        } finally {
-            mockEnv.RESEND_API_KEY = 're_test_key'
-        }
+
+        await recover()
+
+        expect(await storedHash(seeded.registrationId)).toBe(
+            hashManagementToken(seeded.managementToken),
+        )
     })
 
+    /* One address can own several years' bookings. A failure on one must not cost them the other. */
     it('rotates only the registrations whose email actually sent', async () => {
-        mockGetRegistrationsByEmail.mockResolvedValue([
-            { id: 'reg-1', eventTitle: 'Reunion 2026' },
-            { id: 'reg-2', eventTitle: 'Reunion 2027' },
-        ])
+        const current = await seedEvent(db, { year: 2027 })
+        const past = await seedEvent(db, { year: 2026, status: 'closed' })
+        const a = await seedRegistration(db, {
+            eventId: current,
+            contactEmail: 'alice@example.com',
+        })
+        const b = await seedRegistration(db, { eventId: past, contactEmail: 'alice@example.com' })
         mockEmailSend.mockResolvedValueOnce(RESEND_FAILED).mockResolvedValueOnce(RESEND_OK)
 
-        await actions.default(makeEvent())
+        await recover()
 
         expect(mockEmailSend).toHaveBeenCalledTimes(2)
-        expect(mockRotate).toHaveBeenCalledTimes(1)
+        const stored = await Promise.all([
+            storedHash(a.registrationId),
+            storedHash(b.registrationId),
+        ])
+        const original = [
+            hashManagementToken(a.managementToken),
+            hashManagementToken(b.managementToken),
+        ]
+        /* Exactly one rotated: the booking whose email failed keeps the link its owner still has. */
+        expect(stored.filter((hash, index) => hash === original[index])).toHaveLength(1)
     })
 
+    /* Email enumeration: an unknown address must be indistinguishable from a known one. */
     it('reports generic success when no registration matches the email', async () => {
-        mockGetRegistrationsByEmail.mockResolvedValue([])
+        await seedRegistration(db, { contactEmail: 'someone@example.com' })
 
-        const result = await actions.default(makeEvent())
+        const result = await recover('nobody@example.com')
 
         expect(mockEmailSend).not.toHaveBeenCalled()
-        expect(mockRotate).not.toHaveBeenCalled()
         expect(result).toMatchObject({ sent: true })
+    })
+
+    it('rejects a malformed address without sending anything', async () => {
+        const result = await recover('not-an-email')
+
+        expect(result).toMatchObject({ status: 400 })
+        expect(mockEmailSend).not.toHaveBeenCalled()
     })
 })

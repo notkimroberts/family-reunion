@@ -1,124 +1,125 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { eq } from 'drizzle-orm'
+import { describe, it, expect, beforeEach } from 'vitest'
+import { registrations } from '$lib/server/db/schema'
+import { resetTestDb } from '$lib/server/db/testing/resetTestDb'
+import { seedRegistration } from '$lib/server/testing/seedRegistration'
 
-const { mockTerminal, mockSet, mockDb } = vi.hoisted(() => {
-    const mockTerminal = vi.fn().mockResolvedValue([])
-    const mockSet = vi.fn()
-    const chain: Record<string, ReturnType<typeof vi.fn>> = {
-        select: vi.fn(),
-        from: vi.fn(),
-        where: vi.fn(),
-        limit: vi.fn(),
-        update: vi.fn(),
-        set: mockSet,
-    }
-    for (const key of ['select', 'from', 'where', 'limit', 'update']) {
-        chain[key].mockReturnValue(chain)
-    }
-    mockSet.mockReturnValue(chain)
-    ;(chain as unknown as { then: unknown }).then = (onFulfilled: unknown, onRejected: unknown) =>
-        (mockTerminal as unknown as () => Promise<unknown>)().then(
-            onFulfilled as (value: unknown) => unknown,
-            onRejected as (reason: unknown) => unknown,
-        )
-    return { mockTerminal, mockSet, mockDb: chain }
-})
+/* Recording that a paper registration's money arrived, was waived, or is still outstanding.
 
-vi.mock('$lib/server/db', () => ({ db: mockDb }))
-vi.mock('$lib/server/db/schema', () => ({ registrations: {} }))
-vi.mock('$lib/server/debug', () => ({ dbg: { register: vi.fn() } }))
-vi.mock('drizzle-orm', () => ({ eq: vi.fn() }))
+   Against a real Postgres, so paidAt is read back as a column rather than inspected on the object
+   handed to a fake. */
 
 const { setRegistrationStatus } = await import('./setRegistrationStatus')
 
+let db: Awaited<ReturnType<typeof resetTestDb>>
+
+async function rowOf(registrationId: string) {
+    const [row] = await db
+        .select({ status: registrations.status, paidAt: registrations.paidAt })
+        .from(registrations)
+        .where(eq(registrations.id, registrationId))
+    return row
+}
+
 describe('setRegistrationStatus', () => {
-    beforeEach(() => {
-        vi.clearAllMocks()
-        mockTerminal.mockReset()
-        mockTerminal.mockResolvedValue([])
-        mockSet.mockReturnValue(mockDb)
+    beforeEach(async () => {
+        db = await resetTestDb()
     })
 
     /* The gap this function exists to close: only fulfillCheckout could set 'paid', via Stripe, so
        a paper registration entered as pending was stuck permanently. */
     it('records that a pending paper registration was paid', async () => {
-        mockTerminal.mockResolvedValueOnce([{ status: 'pending' }])
+        const seeded = await seedRegistration(db, { status: 'pending' })
 
-        await setRegistrationStatus({ registrationId: 'reg-1', status: 'paid' })
+        await setRegistrationStatus({ registrationId: seeded.registrationId, status: 'paid' })
 
-        expect(mockSet).toHaveBeenCalledWith(expect.objectContaining({ status: 'paid' }))
+        expect((await rowOf(seeded.registrationId)).status).toBe('paid')
     })
 
     /* paidAt is the only record of WHEN the money arrived. updatedAt cannot answer it — any later edit
        bumps it — so the admin list would otherwise have to print a date that drifts. */
     it('stamps paidAt when the money is recorded as arrived', async () => {
-        mockTerminal.mockResolvedValueOnce([{ status: 'pending' }])
+        const seeded = await seedRegistration(db, { status: 'pending' })
 
-        await setRegistrationStatus({ registrationId: 'reg-1', status: 'paid' })
+        await setRegistrationStatus({ registrationId: seeded.registrationId, status: 'paid' })
 
-        const [written] = mockSet.mock.calls[0]
-        expect(written.paidAt).toBeInstanceOf(Date)
+        expect((await rowOf(seeded.registrationId)).paidAt).toBeInstanceOf(Date)
     })
 
     /* Taken back means owed again. A paid date left sitting beside a Pending badge reads as a payment
        that has gone missing, which is worse than no date at all. */
     it('clears paidAt when a paid registration is moved back to pending', async () => {
-        mockTerminal.mockResolvedValueOnce([{ status: 'paid' }])
+        const seeded = await seedRegistration(db, { status: 'pending' })
+        await setRegistrationStatus({ registrationId: seeded.registrationId, status: 'paid' })
 
-        await setRegistrationStatus({ registrationId: 'reg-1', status: 'pending' })
+        await setRegistrationStatus({ registrationId: seeded.registrationId, status: 'pending' })
 
-        expect(mockSet).toHaveBeenCalledWith(expect.objectContaining({ paidAt: null }))
+        expect(await rowOf(seeded.registrationId)).toMatchObject({
+            status: 'pending',
+            paidAt: null,
+        })
     })
 
     /* Waived is a place with no payment, so there is no payment date to show. */
     it('leaves paidAt null when a place is waived', async () => {
-        mockTerminal.mockResolvedValueOnce([{ status: 'pending' }])
+        const seeded = await seedRegistration(db, { status: 'pending' })
 
-        await setRegistrationStatus({ registrationId: 'reg-1', status: 'waived' })
+        await setRegistrationStatus({ registrationId: seeded.registrationId, status: 'waived' })
 
-        expect(mockSet).toHaveBeenCalledWith(expect.objectContaining({ paidAt: null }))
+        expect((await rowOf(seeded.registrationId)).paidAt).toBeNull()
     })
 
     it.each([
         ['pending', 'waived'],
         ['paid', 'pending'],
         ['waived', 'paid'],
-    ])('moves %s -> %s', async (from, to) => {
-        mockTerminal.mockResolvedValueOnce([{ status: from }])
-        await setRegistrationStatus({
-            registrationId: 'reg-1',
-            status: to as 'pending' | 'paid' | 'waived',
-        })
-        expect(mockSet).toHaveBeenCalledWith(expect.objectContaining({ status: to }))
+    ] as const)('moves %s -> %s', async (from, to) => {
+        const seeded = await seedRegistration(db, { status: from })
+
+        await setRegistrationStatus({ registrationId: seeded.registrationId, status: to })
+
+        expect((await rowOf(seeded.registrationId)).status).toBe(to)
     })
 
     /* Reviving a cancelled party would present a registration as paid when the money went back. */
     it('refuses to move a refunded registration', async () => {
-        mockTerminal.mockResolvedValueOnce([{ status: 'refunded' }])
+        const seeded = await seedRegistration(db, { status: 'refunded' })
 
         await expect(
-            setRegistrationStatus({ registrationId: 'reg-1', status: 'paid' }),
+            setRegistrationStatus({ registrationId: seeded.registrationId, status: 'paid' }),
         ).rejects.toThrow()
-        expect(mockSet).not.toHaveBeenCalled()
+
+        expect((await rowOf(seeded.registrationId)).status).toBe('refunded')
     })
 
     it('404s on a missing registration without writing', async () => {
-        mockTerminal.mockResolvedValueOnce([])
+        const seeded = await seedRegistration(db, { status: 'pending' })
+
         await expect(
-            setRegistrationStatus({ registrationId: 'nope', status: 'paid' }),
+            setRegistrationStatus({
+                registrationId: '00000000-0000-0000-0000-000000000000',
+                status: 'paid',
+            }),
         ).rejects.toThrow()
-        expect(mockSet).not.toHaveBeenCalled()
+
+        expect((await rowOf(seeded.registrationId)).status).toBe('pending')
     })
 
-    it('is a no-op when the status already matches', async () => {
-        mockTerminal.mockResolvedValueOnce([{ status: 'paid' }])
-        await setRegistrationStatus({ registrationId: 'reg-1', status: 'paid' })
-        expect(mockSet).not.toHaveBeenCalled()
-    })
+    /* A no-op must not bump updatedAt either — an organiser re-selecting the status they are already
+       on should not move the registration up a list sorted by recency. */
+    it('writes nothing when the status already matches', async () => {
+        const seeded = await seedRegistration(db, { status: 'paid' })
+        const [before] = await db
+            .select({ updatedAt: registrations.updatedAt })
+            .from(registrations)
+            .where(eq(registrations.id, seeded.registrationId))
 
-    /* Setting 'refunded' has to go through cancelRegistration so the refund is actually issued —
-       the type forbids it, and this records why. */
-    it('does not accept refunded as a target', () => {
-        const settable: Array<'pending' | 'paid' | 'waived'> = ['pending', 'paid', 'waived']
-        expect(settable).not.toContain('refunded')
+        await setRegistrationStatus({ registrationId: seeded.registrationId, status: 'paid' })
+
+        const [after] = await db
+            .select({ updatedAt: registrations.updatedAt })
+            .from(registrations)
+            .where(eq(registrations.id, seeded.registrationId))
+        expect(after.updatedAt).toEqual(before.updatedAt)
     })
 })

@@ -7,6 +7,7 @@ import { refundPaymentIntent, retrieveSessionPaymentIntent } from '$lib/server/p
 import { assertRegistrationEditable } from '../assertRegistrationEditable'
 import { hashManagementToken } from '../hashManagementToken'
 import { isManagementTokenValid } from '../isManagementTokenValid'
+import { markRegistrationRefunded, touchRegistration } from '../lifecycle'
 
 /* Issues a partial refund for the member's recorded price (using the member id as a Stripe
    idempotency key so retries cannot double-refund), deletes the member row, then marks the
@@ -78,15 +79,9 @@ export async function removeMember(memberId: string, managementToken: string): P
         .limit(1)
 
     if (!anyRemaining) {
-        await db
-            .update(registrations)
-            .set({ status: 'refunded', updatedAt: new Date() })
-            .where(eq(registrations.id, member.registrationId))
+        await markRegistrationRefunded(member.registrationId)
         dbg.register('last member removed, registration %s marked refunded', member.registrationId)
     } else {
-        await db
-            .update(registrations)
-            .set({ updatedAt: new Date() })
-            .where(eq(registrations.id, member.registrationId))
+        await touchRegistration(member.registrationId)
     }
 }

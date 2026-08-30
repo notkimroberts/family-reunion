@@ -1,8 +1,8 @@
 import { error, fail } from '@sveltejs/kit'
 import { desc, eq } from 'drizzle-orm'
-import { defaults } from 'sveltekit-superforms'
 import { zod4 as zod } from 'sveltekit-superforms/adapters'
-import { superValidate } from 'sveltekit-superforms/server'
+import { defaults, superValidate } from 'sveltekit-superforms/server'
+import { sumMemberPrices } from '$lib/general/pricing'
 import { requireAdmin } from '$lib/server/auth/guards'
 import { db } from '$lib/server/db'
 import { registrationAudit, user as userTable } from '$lib/server/db/schema'
@@ -104,7 +104,7 @@ export const load: PageServerLoad = async (event) => {
         tiers,
         history,
         /* Sum of the price snapshots, so a later tier reprice never rewrites this total. */
-        totalCents: members.reduce((sum, member) => sum + member.priceCents, 0),
+        totalCents: sumMemberPrices(members),
     }
 }
 
