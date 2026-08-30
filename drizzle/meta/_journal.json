@@ -92,6 +92,20 @@
       "when": 1788060155388,
       "tag": "0012_smart_hairball",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1788065333162,
+      "tag": "0013_far_captain_cross",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1788065361396,
+      "tag": "0014_volatile_dragon_man",
+      "breakpoints": true
     }
   ]
 }

@@ -12,6 +12,7 @@ import {
     index,
     check,
 } from 'drizzle-orm/pg-core'
+import type { ReunionMetadata } from '$lib/general/reunionMetadata'
 
 export const eventStatusEnum = pgEnum('event_status', ['draft', 'open', 'closed', 'archived'])
 export const shirtSizeCategoryEnum = pgEnum('shirt_size_category', ['adult', 'child'])
@@ -89,24 +90,17 @@ export const reunionEvents = pgTable(
         status: eventStatusEnum('status').notNull().default('draft'),
         startDate: timestamp('start_date'),
         endDate: timestamp('end_date'),
-        venue: jsonb('venue').$type<{
-            name: string
-            address: string
-            description: string
-            imageUrl?: string
-        }>(),
-        menu: jsonb('menu').$type<string[]>(),
-        drinks: jsonb('drinks').$type<string[]>(),
-        recommendedSites: jsonb('recommended_sites').$type<
-            {
-                name: string
-                description?: string
-                url?: string
-            }[]
-        >(),
-        recommendedActivities:
-            jsonb('recommended_activities').$type<{ name: string; description?: string }[]>(),
-        schedule: jsonb('schedule').$type<{ day: string; time: string; activity: string }[]>(),
+        /* Everything /program displays: venue, menu, drinks, sites, activities, schedule.
+
+           This was six jsonb columns. None of them was ever a predicate — nothing filtered, ordered,
+           joined or indexed on any — so they cost a migration per shape change and bought nothing.
+           Every column that remains on this table IS read as a predicate: status carries the
+           one_open_event index, year is the ordering, the dates drive the countdown and the lock.
+
+           NOT NULL DEFAULT '{}' so readers write `event.metadata.venue?.name`, never
+           `event.metadata?.venue?.name`. The shape lives in $lib/general/reunionMetadata and the
+           settings editor validates against it before writing — that is the only writer. */
+        metadata: jsonb('metadata').$type<ReunionMetadata>().notNull().default({}),
         registrationLockDate: timestamp('registration_lock_date'),
         createdAt: timestamp('created_at').notNull().defaultNow(),
         updatedAt: timestamp('updated_at').notNull().defaultNow(),

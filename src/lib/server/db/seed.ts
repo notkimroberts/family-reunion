@@ -133,19 +133,23 @@ async function seed() {
                 year: 2024,
                 title: 'Patterson Family Reunion',
                 status: 'archived' as const,
-                venue: randomVenue(),
-                menu: randomMenu(),
-                drinks: randomDrinks(),
-                schedule: randomSchedule(['Saturday']),
+                metadata: {
+                    venue: randomVenue(),
+                    menu: randomMenu(),
+                    drinks: randomDrinks(),
+                    schedule: randomSchedule(['Saturday']),
+                },
             },
             {
                 year: 2025,
                 title: 'Patterson Family Reunion',
                 status: 'closed' as const,
-                venue: randomVenue(),
-                menu: randomMenu(),
-                drinks: randomDrinks(),
-                schedule: randomSchedule(['Saturday', 'Sunday']),
+                metadata: {
+                    venue: randomVenue(),
+                    menu: randomMenu(),
+                    drinks: randomDrinks(),
+                    schedule: randomSchedule(['Saturday', 'Sunday']),
+                },
             },
             {
                 year: 2027,
@@ -153,36 +157,42 @@ async function seed() {
                 status: 'open' as const,
                 startDate: new Date('2027-07-23T16:00:00'),
                 endDate: new Date('2027-07-25T12:00:00'),
-                venue: {
-                    name: 'OakStop',
-                    address: '1721 Broadway, Oakland, CA 94612',
-                    description: 'Mountain resort with hiking trails, pool, and conference rooms',
+                metadata: {
+                    venue: {
+                        name: 'OakStop',
+                        address: '1721 Broadway, Oakland, CA 94612',
+                        description:
+                            'Mountain resort with hiking trails, pool, and conference rooms',
+                    },
+                    menu: ['TBD — voting opens soon!'],
+                    drinks: ['TBD'],
+                    sites: [
+                        {
+                            name: 'Blue Ridge Scenic Railway',
+                            description: 'Historic train ride through the mountains',
+                        },
+                        { name: 'Mercier Orchards', description: 'U-pick fruit farm and bakery' },
+                    ],
+                    activities: [
+                        {
+                            name: 'Group Hike',
+                            description: 'Moderate 3-mile trail to waterfall overlook',
+                        },
+                        {
+                            name: 'Pool Party',
+                            description: 'Resort pool reserved Saturday afternoon',
+                        },
+                    ],
+                    schedule: [
+                        { day: 'Friday', time: '4:00 PM', activity: 'Check-in & Welcome' },
+                        { day: 'Saturday', time: '9:00 AM', activity: 'Breakfast' },
+                        { day: 'Saturday', time: '10:00 AM', activity: 'Group Hike' },
+                        { day: 'Saturday', time: '1:00 PM', activity: 'Lunch & Family Meeting' },
+                        { day: 'Saturday', time: '3:00 PM', activity: 'Pool Party' },
+                        { day: 'Saturday', time: '6:00 PM', activity: 'Dinner & Dance' },
+                        { day: 'Sunday', time: '9:00 AM', activity: 'Farewell Brunch' },
+                    ],
                 },
-                menu: ['TBD — voting opens soon!'],
-                drinks: ['TBD'],
-                recommendedSites: [
-                    {
-                        name: 'Blue Ridge Scenic Railway',
-                        description: 'Historic train ride through the mountains',
-                    },
-                    { name: 'Mercier Orchards', description: 'U-pick fruit farm and bakery' },
-                ],
-                recommendedActivities: [
-                    {
-                        name: 'Group Hike',
-                        description: 'Moderate 3-mile trail to waterfall overlook',
-                    },
-                    { name: 'Pool Party', description: 'Resort pool reserved Saturday afternoon' },
-                ],
-                schedule: [
-                    { day: 'Friday', time: '4:00 PM', activity: 'Check-in & Welcome' },
-                    { day: 'Saturday', time: '9:00 AM', activity: 'Breakfast' },
-                    { day: 'Saturday', time: '10:00 AM', activity: 'Group Hike' },
-                    { day: 'Saturday', time: '1:00 PM', activity: 'Lunch & Family Meeting' },
-                    { day: 'Saturday', time: '3:00 PM', activity: 'Pool Party' },
-                    { day: 'Saturday', time: '6:00 PM', activity: 'Dinner & Dance' },
-                    { day: 'Sunday', time: '9:00 AM', activity: 'Farewell Brunch' },
-                ],
             },
         ])
         .returning()
@@ -257,9 +267,15 @@ async function seed() {
                 .returning()
 
             await db.insert(schema.partyMembers).values(
-                partyData.map((p) => ({
+                partyData.map((p, index) => ({
                     registrationId: reg.id,
                     name: p.name,
+                    /* contactName is partyData[0].name, so the first row IS the contact. Without
+                       this flag no seeded registration had one, and every code path that looks the
+                       contact up by it — updateRegistrationContact's name write, the admin edit
+                       form's read-only contact row, removeAdminMember's refusal — silently did
+                       nothing locally while working in production. */
+                    isContact: index === 0,
                     birthYear: p.birthYear,
                     birthMonth: p.birthMonth,
                     birthDay: p.birthDay,

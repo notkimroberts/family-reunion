@@ -145,11 +145,11 @@ let isLocked = $derived(
                             {dateRange}
                         </span>
                     {/if}
-                    {#if data.event.venue?.name}
+                    {#if data.event.metadata.venue?.name}
                         <span class="hidden h-1 w-1 rounded-full bg-border md:inline-block"></span>
                         <span class="inline-flex items-center gap-1.5">
                             <MapPin class="h-4 w-4 text-primary/70" />
-                            {data.event.venue.name}
+                            {data.event.metadata.venue.name}
                         </span>
                     {/if}
                 </div>

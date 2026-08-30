@@ -6,6 +6,7 @@ import { eventStatusEnum, reunionEvents, shirtSizeCategoryEnum } from '$lib/serv
 import { dbg } from '$lib/server/debug'
 import { createTier, deleteTier, getTiersForEvent, updateTier } from '$lib/server/tiers'
 import type { PageServerLoad, Actions } from './$types'
+import { parseReunionMetadata } from './parseReunionMetadata'
 
 function parseFiniteFloat(raw: string): number | null {
     const n = parseFloat(raw)
@@ -75,14 +76,16 @@ export const actions: Actions = {
 
         const startDateRaw = data.get('startDate') as string
         const endDateRaw = data.get('endDate') as string
-        const venueName = data.get('venueName') as string
-        const venueAddress = data.get('venueAddress') as string
-        const venueDescription = data.get('venueDescription') as string
-        const menuRaw = data.get('menu') as string
-        const drinksRaw = data.get('drinks') as string
-        const scheduleRaw = data.get('schedule') as string
-        const sitesRaw = data.get('recommendedSites') as string
-        const activitiesRaw = data.get('recommendedActivities') as string
+        const metadataRaw = (data.get('metadata') as string) ?? ''
+
+        /* Parsed before anything is written, and a failure writes NOTHING — not the dates either.
+           One card, one Save, one outcome: a rejected paste must not leave the dates saved and the
+           program content stale, with the alert implying neither went through. The raw text comes
+           back with the error so the owner does not lose what they typed. */
+        const parsedMetadata = parseReunionMetadata(metadataRaw)
+        if ('error' in parsedMetadata) {
+            return fail(400, { error: parsedMetadata.error, metadata: metadataRaw })
+        }
 
         let startDate: Date | null = null
         if (startDateRaw) {
@@ -99,51 +102,12 @@ export const actions: Actions = {
             }
         }
 
-        const venue = venueName
-            ? { name: venueName, address: venueAddress || '', description: venueDescription || '' }
-            : null
-
-        const menu = menuRaw ? menuRaw.split('\n').filter((l) => l.trim()) : null
-        const drinks = drinksRaw ? drinksRaw.split('\n').filter((l) => l.trim()) : null
-
-        let schedule = null
-        if (scheduleRaw) {
-            try {
-                schedule = JSON.parse(scheduleRaw)
-            } catch {
-                schedule = null
-            }
-        }
-
-        let recommendedSites = null
-        if (sitesRaw) {
-            try {
-                recommendedSites = JSON.parse(sitesRaw)
-            } catch {
-                recommendedSites = null
-            }
-        }
-
-        let recommendedActivities = null
-        if (activitiesRaw) {
-            try {
-                recommendedActivities = JSON.parse(activitiesRaw)
-            } catch {
-                recommendedActivities = null
-            }
-        }
-
         await db
             .update(reunionEvents)
             .set({
                 startDate,
                 endDate,
-                venue,
-                menu,
-                drinks,
-                schedule,
-                recommendedSites,
-                recommendedActivities,
+                metadata: parsedMetadata.metadata,
                 updatedAt: new Date(),
             })
             .where(eq(reunionEvents.id, event.params.eventId))
