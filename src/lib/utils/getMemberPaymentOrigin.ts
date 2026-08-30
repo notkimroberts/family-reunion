@@ -1,9 +1,5 @@
 export type MemberPaymentOrigin =
-    | 'paid_online'
-    | 'added_online'
-    | 'recorded_offline'
-    | 'unpaid'
-    | 'comped'
+    'paid_online' | 'added_online' | 'recorded_offline' | 'unpaid' | 'comped'
 
 /* How one party member's place was paid for.
 
