@@ -47,10 +47,3 @@ export const adminEditRegistrationSchema = z.object({
        stays one save the registrant hears about once. */
     removedMemberIds: z.array(z.string()),
 })
-
-/* Only the statuses an organiser may set by hand. 'refunded' is absent on purpose: that transition
-   must go through cancelRegistration so the money actually goes back — see
-   setRegistrationStatus. */
-export const adminSetStatusSchema = z.object({
-    status: z.enum(['pending', 'paid', 'waived'], 'Please choose a status'),
-})

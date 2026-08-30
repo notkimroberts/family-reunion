@@ -27,17 +27,10 @@ export async function createPendingRegistration(params: {
     contactEmail: string
     contactPhone?: string
     eventId: string
-    selfTierId: string
-    selfBirthDate?: string
-    selfShirtSize?: string
-    selfAddressLine1?: string
-    selfAddressLine2?: string
-    selfAddressCity?: string
-    selfAddressState?: string
-    selfAddressZip?: string
-    selfVegetarianMeal?: boolean
-    selfAttendedReunion2025?: boolean
-    additionalMembers: MemberInput[]
+    /* The contact first, then their guests — the same shape createAdminRegistration takes. It used
+       to be eleven `self*` parameters beside an `additionalMembers` array, which made the contact's
+       own details a third spelling of MemberInput and meant the caller mapped them by hand. */
+    members: MemberInput[]
     successUrl: (token: string) => string
     cancelUrl: (token: string) => string
 }): Promise<{ registrationId: string; managementToken: string; checkoutUrl: string }> {
@@ -47,16 +40,12 @@ export async function createPendingRegistration(params: {
        Admin paper entry deliberately skips this check — see admin/registrations. */
     assertRegistrationEditable(await getRegistrationLockDate(params.eventId))
 
-    const allTierIds = [params.selfTierId, ...params.additionalMembers.map((m) => m.tierId)]
-    const pricingByTierId = await resolveTierPricing(params.eventId, allTierIds)
-    const selfPricing = pricingByTierId[params.selfTierId]
-
-    const lineItems = buildCheckoutLineItems(
-        params.contactName,
-        selfPricing,
-        params.additionalMembers,
-        pricingByTierId,
+    const pricingByTierId = await resolveTierPricing(
+        params.eventId,
+        params.members.map((member) => member.tierId),
     )
+
+    const lineItems = buildCheckoutLineItems(params.members, pricingByTierId)
 
     const { plaintext: managementToken, hash: tokenHash } = generateManagementToken()
 
@@ -72,38 +61,21 @@ export async function createPendingRegistration(params: {
         })
         .returning()
 
-    await db.insert(partyMembers).values([
-        buildPartyMemberRow({
-            registrationId: registration.id,
-            member: {
-                name: params.contactName,
-                birthDate: params.selfBirthDate,
-                shirtSize: params.selfShirtSize,
-                addressLine1: params.selfAddressLine1,
-                addressLine2: params.selfAddressLine2,
-                addressCity: params.selfAddressCity,
-                addressState: params.selfAddressState,
-                addressZip: params.selfAddressZip,
-                vegetarianMeal: params.selfVegetarianMeal,
-                attendedReunion2025: params.selfAttendedReunion2025,
-            },
-            tierLabel: selfPricing.label,
-            /* Snapshot the gross — what the customer is being charged. Refund math reads this directly. */
-            priceCents: grossUpForStripe(selfPricing.priceCents),
-            /* This row is the contact attending their own reunion. Flagged so their name has one
-               editable field rather than two copies that drift — see party_members.isContact. */
-            isContact: true,
-        }),
-        ...params.additionalMembers.map((member) => {
+    await db.insert(partyMembers).values(
+        params.members.map((member, index) => {
             const pricing = pricingByTierId[member.tierId]
             return buildPartyMemberRow({
                 registrationId: registration.id,
                 member,
                 tierLabel: pricing.label,
+                /* Snapshot the GROSS — what the card is charged. Refund maths reads this directly. */
                 priceCents: grossUpForStripe(pricing.priceCents),
+                /* Index 0 is the contact attending their own reunion, flagged so their name has one
+                   editable field rather than two copies that drift — see party_members.isContact. */
+                isContact: index === 0,
             })
         }),
-    ])
+    )
 
     dbg.register(
         'registration created id=%s email=%s, creating stripe session',

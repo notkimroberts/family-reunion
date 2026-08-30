@@ -17,6 +17,17 @@ export default defineConfig({
                 find: /^\$lib\/server\/db$/,
                 replacement: resolve('./src/lib/server/db/testing/pgliteDb.ts'),
             },
+            /* SvelteKit generates this module at build time, so it does not exist in a node test
+               run. Without it, importing any real server module fails the moment one of its
+               transitive dependencies reads an environment variable. */
+            {
+                find: /^\$env\/dynamic\/private$/,
+                replacement: resolve('./src/lib/server/testing/envStub.ts'),
+            },
+            {
+                find: /^\$app\/environment$/,
+                replacement: resolve('./src/lib/server/testing/appEnvironmentStub.ts'),
+            },
             { find: /^\$lib/, replacement: resolve('./src/lib') },
         ],
     },

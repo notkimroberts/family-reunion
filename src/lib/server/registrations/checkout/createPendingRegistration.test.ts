@@ -41,22 +41,25 @@ async function membersOf(registrationId: string) {
         .orderBy(partyMembers.name)
 }
 
+const CONTACT = {
+    name: 'Alice Patterson',
+    birthDate: '1980-04-02',
+    shirtSize: 'M',
+    addressLine1: '1 Main St',
+    addressCity: 'Oakland',
+    addressState: 'CA',
+    addressZip: '94612',
+    vegetarianMeal: true,
+    attendedReunion2025: false,
+}
+
 function register(overrides: Record<string, unknown> = {}) {
     return createPendingRegistration({
         contactName: 'Alice Patterson',
         contactEmail: 'alice@example.com',
         contactPhone: '5105550123',
         eventId,
-        selfTierId: adultTierId,
-        selfBirthDate: '1980-04-02',
-        selfShirtSize: 'M',
-        selfAddressLine1: '1 Main St',
-        selfAddressCity: 'Oakland',
-        selfAddressState: 'CA',
-        selfAddressZip: '94612',
-        selfVegetarianMeal: true,
-        selfAttendedReunion2025: false,
-        additionalMembers: [],
+        members: [{ ...CONTACT, tierId: adultTierId }],
         successUrl: (token: string) => `https://example.com/ok?token=${token}`,
         cancelUrl: () => 'https://example.com/cancelled',
         ...overrides,
@@ -121,7 +124,8 @@ describe('createPendingRegistration', () => {
 
     it('inserts guests unflagged, each on their own tier', async () => {
         const result = await register({
-            additionalMembers: [
+            members: [
+                { ...CONTACT, tierId: adultTierId },
                 { name: 'Bo Patterson', tierId: childTierId, shirtSize: 'S' },
                 { name: 'Marcus Patterson', tierId: adultTierId },
             ],
@@ -139,7 +143,10 @@ describe('createPendingRegistration', () => {
        must never arrive flagged. */
     it('flags exactly one member as the contact', async () => {
         const result = await register({
-            additionalMembers: [{ name: 'Bo Patterson', tierId: childTierId }],
+            members: [
+                { ...CONTACT, tierId: adultTierId },
+                { name: 'Bo Patterson', tierId: childTierId },
+            ],
         })
 
         const members = await membersOf(result.registrationId)
@@ -151,7 +158,10 @@ describe('createPendingRegistration', () => {
     it('trims names on every row', async () => {
         const result = await register({
             contactName: '  Alice Patterson  ',
-            additionalMembers: [{ name: '  Bo Patterson  ', tierId: childTierId }],
+            members: [
+                { ...CONTACT, name: '  Alice Patterson  ', tierId: adultTierId },
+                { name: '  Bo Patterson  ', tierId: childTierId },
+            ],
         })
 
         const members = await membersOf(result.registrationId)
@@ -160,10 +170,16 @@ describe('createPendingRegistration', () => {
 
     it('stores absent optional details as null rather than empty strings', async () => {
         const result = await register({
-            selfBirthDate: undefined,
-            selfShirtSize: '',
-            selfAddressLine2: '',
-            selfVegetarianMeal: undefined,
+            members: [
+                {
+                    ...CONTACT,
+                    tierId: adultTierId,
+                    birthDate: undefined,
+                    shirtSize: '',
+                    addressLine2: '',
+                    vegetarianMeal: undefined,
+                },
+            ],
         })
 
         const [contact] = await membersOf(result.registrationId)
@@ -190,7 +206,12 @@ describe('createPendingRegistration', () => {
     /* Charged per member, grossed up per member, because Stripe's 30c is per charge and the app
        deliberately quotes it that way — see stripeFee.ts. */
     it('charges Stripe the same gross it snapshotted', async () => {
-        await register({ additionalMembers: [{ name: 'Bo', tierId: childTierId }] })
+        await register({
+            members: [
+                { ...CONTACT, tierId: adultTierId },
+                { name: 'Bo', tierId: childTierId },
+            ],
+        })
 
         const [{ lineItems }] = mockCreateCheckout.mock.calls[0]
         expect(lineItems.map((item: { priceCents: number }) => item.priceCents)).toEqual([

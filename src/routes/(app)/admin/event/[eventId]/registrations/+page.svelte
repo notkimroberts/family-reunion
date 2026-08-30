@@ -12,14 +12,20 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '$lib/components/ui/tool
 import type { EventPerson } from '$lib/server/registrations'
 import { cn, formatPrice, formatViewerDateTime, type RegistrationStatus } from '$lib/utils'
 import { formatBirthDate } from '$lib/utils/age'
+import MoneyPanel from './MoneyPanel.svelte'
+import OrderSheet from './OrderSheet.svelte'
 import PaymentChannel from './PaymentChannel.svelte'
 import PaymentNote from './PaymentNote.svelte'
 import PersonFieldForm from './PersonFieldForm.svelte'
 import RegistrationStatusBadge from './RegistrationStatusBadge.svelte'
+import { filterBookings } from './filterBookings'
+import { filterPeople } from './filterPeople'
 import { getPeopleSummary } from './peopleSummary'
 import { REGISTRATION_STATUS_STYLES } from './registrationStatusStyles'
 import { getRegistrationTotals } from './registrationTotals'
+import { lensFromUrl, type RegistrationsLens } from './registrationsViewUrl'
 import { rowAccent } from './rowAccent'
+import { urlForLens } from './urlForLens'
 
 /* One event, two lenses. Bookings is one row per party — who owes what, who to chase. People is one row
    per attendee, which is what catering, shirt counts and the name badges come off: a party of six is one
@@ -101,43 +107,24 @@ let totals = $derived(getRegistrationTotals(data.registrations))
 /* The order sheet — shirt sizes per tier and the meal split. Derived from the same people the People
    lens lists, and only shown there. */
 let summary = $derived(getPeopleSummary(data.people))
-let showPeople = $derived(page.url.searchParams.get('view') === 'people')
+let showPeople = $derived(lensFromUrl(page.url) === 'people')
 
 let search = $state('')
 /* undefined is unfiltered. Holding the database's own value rather than a display label also retires the
    `filter.toLowerCase()` the comparison used to need. */
 let statusFilter = $state<RegistrationStatus | undefined>(undefined)
 
-function setView(next: 'bookings' | 'people') {
-    const url = new URL(page.url)
-    if (next === 'people') {
-        url.searchParams.set('view', 'people')
-    } else {
-        url.searchParams.delete('view')
-    }
-    goto(url, { replaceState: true, keepFocus: true, noScroll: true })
+function setView(next: RegistrationsLens) {
+    goto(urlForLens(page.url, next), { replaceState: true, keepFocus: true, noScroll: true })
 }
 
-function matchesSearch(haystack: string[]): boolean {
-    const term = search.trim().toLowerCase()
-    return term === '' || haystack.some((value) => value.toLowerCase().includes(term))
-}
-
-/* The coloured left edge on a booking row lives in rowAccent.ts — extracted so every payment state
-   can be proven to have decided whether it gets one. Refunded silently had none. */
-
-let visibleBookings = $derived(
-    data.registrations
-        .filter((r) => statusFilter === undefined || r.status === statusFilter)
-        .filter((r) => matchesSearch([r.contactName, r.contactEmail])),
-)
-
-/* People are already paid-or-waived by the query, so the status chips would only ever remove rows and
-   never explain why. Search matches the person and whoever registered them — you are as likely to be
-   handed "the Pattersons" as a first name. */
-let visiblePeople = $derived(
-    data.people.filter((person) => matchesSearch([person.name, person.contactName])),
-)
+/* Which rows each lens shows is decided in filterBookings / filterPeople rather than inline here. The
+   two rules genuinely differ — Bookings honours the status chips, People deliberately ignores them —
+   and a rule that exists only inside a $derived cannot be tested in a project with no component
+   harness. The coloured left edge lives in rowAccent.ts for the same reason: refunded silently had
+   none until it was extracted and every state had to be decided. */
+let visibleBookings = $derived(filterBookings(data.registrations, { search, status: statusFilter }))
+let visiblePeople = $derived(filterPeople(data.people, { search }))
 
 /* Payment dates in the READER's timezone, filled in after mount.
 
@@ -199,187 +186,11 @@ $effect(() => {
 
         <Separator />
 
-        <!-- Two matched groups. The sub-heading carries the qualifier, so the row labels do not have to
-             repeat it and the two sets scan as a pair — which is the point: the numbers only make sense
-             against each other. Before this the qualifier was invisible and "Parties 4" beside eleven
-             bookings read as broken maths. -->
-        <div class="flex flex-col gap-3">
-            <p class={SUBHEAD_CLASS}>Paid or covered</p>
-            <div class="flex items-baseline justify-between gap-3">
-                <span class="text-muted-foreground text-sm">People</span>
-                <span class="text-2xl font-bold tabular-nums">{totals.attendingCount}</span>
-            </div>
-            <div class="flex items-baseline justify-between gap-3">
-                <span class="text-muted-foreground text-sm">Parties</span>
-                <span class="text-lg font-semibold tabular-nums">{totals.partyCount}</span>
-            </div>
-            <div class="flex items-baseline justify-between gap-3">
-                <span class="text-muted-foreground text-sm">Collected</span>
-                <span class="text-lg font-semibold tabular-nums">
-                    ${formatPrice(totals.paidCents)}
-                </span>
-            </div>
-
-            <!-- What the registrants paid is not what the reunion gets to spend. Card money arrives
-                 short by Stripe's cut; cash and cheques arrive whole. Only the last line is the
-                 spendable number, so it is the one carrying the weight.
-
-                 Shown when there is card money OR a cancelled card booking: a year whose only card
-                 registration was refunded has no card income and still lost the fee on it. -->
-            {#if totals.cardPaidCents > 0 || totals.lostToRefundsCents > 0}
-                <div class="flex flex-col gap-1.5 pl-2">
-                    <div class="flex items-baseline justify-between gap-3">
-                        <span class="text-muted-foreground text-xs">By card</span>
-                        <span class="text-muted-foreground text-xs tabular-nums">
-                            ${formatPrice(totals.cardPaidCents)}
-                        </span>
-                    </div>
-                    {#if totals.offlinePaidCents > 0}
-                        <div class="flex items-baseline justify-between gap-3">
-                            <span class="text-muted-foreground text-xs">Cash or cheque</span>
-                            <span class="text-muted-foreground text-xs tabular-nums">
-                                ${formatPrice(totals.offlinePaidCents)}
-                            </span>
-                        </div>
-                    {/if}
-                    <div class="flex items-baseline justify-between gap-3">
-                        <span class="text-xs text-amber-700 dark:text-amber-400">Stripe fees</span>
-                        <span class="text-xs tabular-nums text-amber-700 dark:text-amber-400">
-                            −${formatPrice(totals.feeCents)}
-                        </span>
-                    </div>
-                    <!-- Only when it has happened. A zero line here would invite the question every
-                         time, and the answer is usually "nobody cancelled". -->
-                    {#if totals.lostToRefundsCents > 0}
-                        <div class="flex items-baseline justify-between gap-3">
-                            <span class="text-xs text-amber-700 dark:text-amber-400">
-                                Lost to refunds
-                            </span>
-                            <span class="text-xs tabular-nums text-amber-700 dark:text-amber-400">
-                                −${formatPrice(totals.lostToRefundsCents)}
-                            </span>
-                        </div>
-                    {/if}
-                </div>
-
-                <div class="flex items-baseline justify-between gap-3">
-                    <span class="text-sm font-medium">In the bank</span>
-                    <span class="text-lg font-semibold tabular-nums">
-                        ${formatPrice(totals.bankedCents)}
-                    </span>
-                </div>
-                <!-- The wording tracks what the numbers actually are. Once every card payment has its
-                     fee recorded from Stripe's balance transaction, this stops saying "estimated" —
-                     claiming precision the figures do not have is the failure mode worth avoiding, and
-                     so is disclaiming precision they do have. -->
-                <p class="text-muted-foreground text-xs">
-                    {#if totals.feesAreExact}
-                        Fees as charged by Stripe.
-                    {:else}
-                        Fees estimated at 2.9% + 30¢ per card payment.
-                    {/if}
-                    Cash and cheques arrive in full, once deposited.
-                    {#if totals.lostToRefundsCents > 0}
-                        Stripe keeps its fee when a booking is cancelled, so that money does not
-                        come back.
-                    {/if}
-                </p>
-            {/if}
-        </div>
+        <MoneyPanel {totals} />
 
         <Separator />
 
-        <div class="flex flex-col gap-3">
-            <p class={SUBHEAD_CLASS}>Not paid</p>
-            <div class="flex items-baseline justify-between gap-3">
-                <span class="text-muted-foreground text-sm">People</span>
-                <span class="text-2xl font-bold tabular-nums">{totals.pendingPeopleCount}</span>
-            </div>
-            <div class="flex items-baseline justify-between gap-3">
-                <span class="text-muted-foreground text-sm">Parties</span>
-                <span class="text-lg font-semibold tabular-nums">
-                    {totals.pendingPartyCount}
-                </span>
-            </div>
-            <div class="flex items-baseline justify-between gap-3">
-                <span class="text-muted-foreground text-sm">Outstanding</span>
-                <span
-                    class={cn(
-                        'text-lg font-semibold tabular-nums',
-                        totals.outstandingCents > 0 && 'text-amber-700 dark:text-amber-400',
-                    )}>
-                    ${formatPrice(totals.outstandingCents)}
-                </span>
-            </div>
-        </div>
-
-        <Separator />
-
-        <!-- The order sheet, in the card rather than over the table: it is a summary of the year like the
-             two groups above it, and it belongs where they are.
-
-             Placed AFTER Not paid so the two money groups stay adjacent — they only mean anything read
-             against each other — which means this needs its own note saying whose shirts these are. -->
-        <div class="flex flex-col gap-3">
-            <p class={SUBHEAD_CLASS}>To order</p>
-            <p class="text-muted-foreground text-xs">
-                For the {totals.attendingCount} paid or covered.
-            </p>
-
-            {#if summary.shirtsByTier.length > 0}
-                <div class="flex flex-col gap-1.5">
-                    <p class="text-muted-foreground text-sm">T-shirts</p>
-                    {#each summary.shirtsByTier as tier (tier.tierLabel)}
-                        <div class="flex flex-wrap items-baseline gap-x-2 gap-y-1 pl-2">
-                            <span class="w-12 shrink-0 text-sm">{tier.tierLabel}</span>
-                            {#if tier.sizes.length === 0}
-                                <span class="text-muted-foreground text-sm">none yet</span>
-                            {:else}
-                                {#each tier.sizes as { size, count } (size)}
-                                    <span class="text-sm tabular-nums">
-                                        {size}
-                                        <span class="font-semibold">{count}</span>
-                                    </span>
-                                {/each}
-                            {/if}
-                        </div>
-                    {/each}
-                    {#if summary.shirtsMissing > 0}
-                        <!-- A person to go back to, not a size to guess. -->
-                        <p class="pl-2 text-xs text-amber-700 dark:text-amber-400">
-                            {summary.shirtsMissing} with no size recorded
-                        </p>
-                    {/if}
-                </div>
-
-                <div class="flex flex-col gap-1.5">
-                    <p class="text-muted-foreground text-sm">Meals</p>
-                    <div class="flex items-baseline justify-between gap-3 pl-2">
-                        <span class="text-sm">Vegetarian</span>
-                        <span class="text-sm font-semibold tabular-nums">{summary.vegetarian}</span>
-                    </div>
-                    <div class="flex items-baseline justify-between gap-3 pl-2">
-                        <span class="text-sm">Standard</span>
-                        <span class="text-sm font-semibold tabular-nums">{summary.standard}</span>
-                    </div>
-                    {#if summary.mealUnanswered > 0}
-                        <!-- Kept out of Standard on purpose: three vegetarians and two unknowns is a
-                             different order from three vegetarians. -->
-                        <div class="flex items-baseline justify-between gap-3 pl-2">
-                            <span class="text-sm text-amber-700 dark:text-amber-400">
-                                Not answered
-                            </span>
-                            <span
-                                class="text-sm font-semibold tabular-nums text-amber-700 dark:text-amber-400">
-                                {summary.mealUnanswered}
-                            </span>
-                        </div>
-                    {/if}
-                </div>
-            {:else}
-                <p class="text-muted-foreground text-sm">Nothing to order yet.</p>
-            {/if}
-        </div>
+        <OrderSheet {summary} attendingCount={totals.attendingCount} />
     </aside>
 
     <div class="flex min-w-0 flex-col gap-3">

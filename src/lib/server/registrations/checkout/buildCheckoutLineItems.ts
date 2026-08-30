@@ -20,22 +20,15 @@ export type CheckoutLineItem = {
    calculation the codebase did not want. The totals live in $lib/general/pricing, where the register
    page can reach them too. */
 export function buildCheckoutLineItems(
-    contactName: string,
-    contactPricing: TierPricing,
-    additionalMembers: MemberInput[],
+    members: readonly MemberInput[],
     pricingByTierId: Record<string, TierPricing>,
 ): CheckoutLineItem[] {
-    const party = [
-        { name: contactName, pricing: contactPricing },
-        ...additionalMembers.map((member) => ({
-            name: member.name,
-            pricing: pricingByTierId[member.tierId],
-        })),
-    ]
-
-    return party.map((person) => ({
-        name: `${person.name} (${person.pricing.label})`,
-        netCents: person.pricing.priceCents,
-        grossCents: grossUpForStripe(person.pricing.priceCents),
-    }))
+    return members.map((member) => {
+        const pricing = pricingByTierId[member.tierId]
+        return {
+            name: `${member.name} (${pricing.label})`,
+            netCents: pricing.priceCents,
+            grossCents: grossUpForStripe(pricing.priceCents),
+        }
+    })
 }

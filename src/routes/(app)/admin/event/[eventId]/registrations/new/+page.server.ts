@@ -1,17 +1,15 @@
 import { fail } from '@sveltejs/kit'
-import { defaults } from 'sveltekit-superforms'
 import { zod4 as zod } from 'sveltekit-superforms/adapters'
-import { superValidate } from 'sveltekit-superforms/server'
+import { defaults, superValidate } from 'sveltekit-superforms/server'
 import { requireAdmin } from '$lib/server/auth/guards'
 import { dbg } from '$lib/server/debug'
 import { sendRegistrationConfirmation } from '$lib/server/email'
 import { createAdminRegistration, getConfirmationEmailData } from '$lib/server/registrations'
 import { reportError } from '$lib/server/reportError'
 import { getTiersForEvent } from '$lib/server/tiers'
-import { parseYesNo } from '$lib/utils'
 import { EMPTY_PERSON_DETAILS } from '../../../../../register/EMPTY_PERSON_DETAILS'
 import { adminRegistrationSchema } from '../../../../../register/schema'
-import { toMemberInputs } from '../../../../../register/toMemberInputs'
+import { toRegistrationIntake } from '../../../../../register/toRegistrationIntake'
 import type { PageServerLoad, Actions } from './$types'
 
 export const load: PageServerLoad = async (event) => {
@@ -55,45 +53,22 @@ export const actions: Actions = {
             return fail(400, { form })
         }
 
-        const { eventId, contactEmail, contactPhone, status, self, members } = form.data
-
-        /* Same normalisation as the public action, for the same reason — see the note there. */
-        const contactName =
-            `${form.data.contactFirstName.trim()} ${form.data.contactLastName.trim()}`.trim()
-        const normalizedEmail = contactEmail.trim().toLowerCase()
+        const intake = toRegistrationIntake(form.data)
 
         /* No assertRegistrationEditable here, unlike public registration: an admin must still be
            able to enter a paper form that arrived after the public lock date. */
         const { registrationId, managementToken } = await createAdminRegistration({
-            eventId,
-            contactName,
-            contactEmail: normalizedEmail,
-            contactPhone: contactPhone || undefined,
-            status,
-            members: [
-                {
-                    name: contactName,
-                    tierId: self.tierId,
-                    birthDate: self.birthDate || undefined,
-                    shirtSize: self.shirtSize || undefined,
-                    addressLine1: self.addressLine1,
-                    addressLine2: self.addressLine2,
-                    addressCity: self.addressCity,
-                    addressState: self.addressState,
-                    addressZip: self.addressZip,
-                    vegetarianMeal: parseYesNo(self.vegetarianMeal),
-                    attendedReunion2025: parseYesNo(self.attendedReunion2025),
-                },
-                ...toMemberInputs(members),
-            ],
+            ...intake,
+            eventId: form.data.eventId,
+            status: form.data.status,
         })
 
         dbg.register(
             'admin registration created id=%s email=%s status=%s members=%d',
             registrationId,
-            normalizedEmail,
-            status,
-            members.length + 1,
+            intake.contactEmail,
+            form.data.status,
+            intake.members.length,
         )
 
         /* The plaintext token exists only here — the DB stores its hash — so this is the one
