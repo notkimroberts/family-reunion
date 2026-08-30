@@ -5,6 +5,7 @@ import { Button } from '$lib/components/ui/button'
 import { CONTACT_EMAIL } from '$lib/general/constants'
 import { theme } from '$lib/stores/theme.svelte'
 import '../app.css'
+import { formatError } from './formatError'
 
 let { children } = $props()
 
@@ -27,27 +28,6 @@ function handleRenderError(error: unknown) {
         tags: { source: 'svelte-boundary' },
         extra: { url: typeof location !== 'undefined' ? location.href : undefined },
     })
-}
-
-/* The dev-only readout under the message.
-
-   `String(error)` was printing "[object Object]", which is worse than printing nothing: it says an
-   error exists and refuses to say which. Svelte throws non-Error values for exactly the failures
-   most likely to reach this boundary — a hydration mismatch arrives as a plain object — so the
-   default path hit the unhelpful branch.
-
-   Message and stack for a real Error, JSON for anything shaped, and String() only as the last
-   resort. Wrapped because a value with a circular reference makes JSON.stringify throw, and an
-   error page that throws while describing an error leaves a blank screen. */
-function formatError(error: unknown): string {
-    if (error instanceof Error) {
-        return error.stack ?? `${error.name}: ${error.message}`
-    }
-    try {
-        return JSON.stringify(error, undefined, 2) ?? String(error)
-    } catch {
-        return String(error)
-    }
 }
 </script>
 
@@ -73,8 +53,12 @@ function formatError(error: unknown): string {
                 <a class="underline" href="mailto:{CONTACT_EMAIL}">{CONTACT_EMAIL}</a>
             </p>
             {#if import.meta.env.DEV}
+                <!-- Bounded and scrollable. A Svelte render error carries a hundred-odd frames through
+                     the runtime, and unbounded they pushed Try again and the contact address off the
+                     top of the screen — the two things the page exists to offer. max-h keeps the
+                     controls reachable; the message is first, so it is what you land on. -->
                 <pre
-                    class="text-destructive max-w-full overflow-auto text-left text-xs whitespace-pre-wrap">{formatError(
+                    class="text-destructive bg-muted max-h-64 w-full max-w-3xl overflow-auto rounded-lg border p-4 text-left font-mono text-xs whitespace-pre-wrap">{formatError(
                         error,
                     )}</pre>
             {/if}

@@ -8,6 +8,7 @@ import { Button } from '$lib/components/ui/button'
 import { Input } from '$lib/components/ui/input'
 import { Separator } from '$lib/components/ui/separator'
 import * as Table from '$lib/components/ui/table'
+import { Tooltip, TooltipContent, TooltipTrigger } from '$lib/components/ui/tooltip'
 import type { EventPerson } from '$lib/server/registrations'
 import { cn, formatPrice, formatViewerDateTime, type RegistrationStatus } from '$lib/utils'
 import { formatBirthDate } from '$lib/utils/age'
@@ -118,12 +119,6 @@ function setView(next: 'bookings' | 'people') {
     goto(url, { replaceState: true, keepFocus: true, noScroll: true })
 }
 
-/* Switching year lands on that year's list, dropping the lens and any search: those describe the list you
-   were reading, not the year you asked for. */
-function handleSelectEvent(nextId: string) {
-    goto(`/admin/event/${nextId}/registrations`)
-}
-
 function matchesSearch(haystack: string[]): boolean {
     const term = search.trim().toLowerCase()
     return term === '' || haystack.some((value) => value.toLowerCase().includes(term))
@@ -170,23 +165,36 @@ $effect(() => {
 <section class="col-span-12 grid grid-cols-1 gap-6 lg:grid-cols-[20rem_1fr]">
     <!-- Stays on screen while you work the list, rather than being a dashboard you navigate away from. -->
     <aside class="flex flex-col gap-4 self-start rounded-lg border bg-card p-4 lg:sticky lg:top-6">
-        <div class="flex flex-col gap-1.5">
-            <h1 class="text-base font-semibold">{data.event.title}</h1>
-            {#if data.events.length > 1}
-                <!-- The year as one quiet control, beside the numbers it changes. It replaces a row of
-                     pills that offered "All years" as a peer of a specific year and appeared on five
-                     routes but not two others. -->
-                <select
-                    aria-label="Reunion year"
-                    class="h-8 w-full rounded-md border border-input bg-transparent px-2 text-xs"
-                    value={data.event.id}
-                    onchange={(changed) => handleSelectEvent(changed.currentTarget.value)}>
-                    {#each data.events as option (option.id)}
-                        <option value={option.id}>{option.year}</option>
-                    {/each}
-                </select>
-            {:else}
+        <!-- No year picker. Switching years is what /admin is for — it lists every reunion with its
+             numbers on it, which is more use for choosing between them than a select showing only
+             years. The picker also had to be hidden when there was one event, so it was a control that
+             sometimes existed. -->
+        <div class="flex items-start justify-between gap-2">
+            <div class="flex flex-col gap-1.5">
+                <h1 class="text-base font-semibold">{data.event.title}</h1>
                 <p class="text-muted-foreground text-xs">Reunion year {data.event.year}</p>
+            </div>
+            <!-- Top-right, as an icon: it is the only thing on this card that leaves the page, and it
+                 is not what the card is for. Hidden for anyone who is not the owner — hiding is not the
+                 protection, the settings route guards its own load and every action; this only stops
+                 advertising a door that will not open. -->
+            {#if data.isOwner}
+                <Tooltip>
+                    <TooltipTrigger>
+                        {#snippet child({ props })}
+                            <Button
+                                {...props}
+                                href="/admin/event/{data.event.id}/settings"
+                                variant="ghost"
+                                size="icon"
+                                class="size-8 shrink-0">
+                                <Settings class="size-4" />
+                                <span class="sr-only">Event settings</span>
+                            </Button>
+                        {/snippet}
+                    </TooltipTrigger>
+                    <TooltipContent>Event settings</TooltipContent>
+                </Tooltip>
             {/if}
         </div>
 
@@ -349,27 +357,6 @@ $effect(() => {
                 <p class="text-muted-foreground text-sm">Nothing to order yet.</p>
             {/if}
         </div>
-
-        <Separator />
-
-        <div class="flex flex-col gap-2">
-            <Button href="/admin/event/{data.event.id}/registrations/new" size="sm">
-                <Plus class="size-4" />
-                Add paper registration
-            </Button>
-            <!-- Hidden for anyone who is not the owner. Hiding is not the protection — every Setup load,
-                 action and remote function guards itself; this only stops advertising a door that will
-                 not open. -->
-            {#if data.isOwner}
-                <!-- This year's settings, not a Setup area. /admin/setup was a landing page whose only
-                     remaining job was linking here and to the create-a-year form, which now lives on
-                     /admin beside the year cards. -->
-                <Button href="/admin/event/{data.event.id}/settings" variant="ghost" size="sm">
-                    <Settings class="size-4" />
-                    Event settings
-                </Button>
-            {/if}
-        </div>
     </aside>
 
     <div class="flex min-w-0 flex-col gap-3">
@@ -443,6 +430,22 @@ $effect(() => {
                     {/each}
                 </div>
             {/if}
+
+            <!-- Paper entry sits at the end of the control row rather than in the sidebar, so the one
+                 thing here that CREATES a booking is beside the controls that filter them instead of
+                 under a column of totals it has nothing to do with.
+
+                 ml-auto so it holds the right edge whatever is to its left: the status chips are absent
+                 on the People lens, and without it the button would slide left and change place between
+                 the two views. The separator is what stops it reading as a fifth filter — it is the only
+                 control in the row that navigates. -->
+            <div class="ml-auto flex items-center gap-2">
+                <Separator orientation="vertical" class="hidden h-6 sm:block" />
+                <Button href="/admin/event/{data.event.id}/registrations/new" size="sm">
+                    <Plus class="size-4" />
+                    Add paper registration
+                </Button>
+            </div>
         </div>
 
         {#if showPeople}

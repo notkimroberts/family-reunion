@@ -67,26 +67,20 @@ const SHIRT_SELECT_CLASS =
         <span class="text-foreground">Settings</span>
     </nav>
 
-    <div class="flex flex-wrap items-end justify-between gap-x-4 gap-y-3">
-        <div class="flex flex-col gap-1">
-            <h1>{data.event.title}</h1>
-            <div class="flex flex-wrap items-center gap-2">
-                <p class="text-muted-foreground text-sm">Reunion year {data.event.year}</p>
-                <Badge variant="outline">{data.event.status}</Badge>
-            </div>
+    <!-- No Add paper registration here. Entering a form is working with the list, and the list is one
+         click away; a settings page offering it put a daily action on a page visited twice a year. -->
+    <div class="flex flex-col gap-1">
+        <h1>{data.event.title}</h1>
+        <div class="flex flex-wrap items-center gap-2">
+            <p class="text-muted-foreground text-sm">Reunion year {data.event.year}</p>
+            <Badge variant="outline">{data.event.status}</Badge>
         </div>
-        {#if data.event.status === 'open'}
-            <Button
-                href="/admin/event/{data.event.id}/registrations/new"
-                variant="outline"
-                size="sm">
-                <Plus class="size-4" />
-                Add paper registration
-            </Button>
-        {/if}
     </div>
 </section>
 
+<!-- Above every card, not between two of them. Five actions on this page fail() with this one key —
+     including the status switch, whose 23505 "another year is already open" is the most likely of them —
+     and an alert sitting after the control that raised it reads as a comment on the next card down. -->
 {#if form?.error}
     <section class="col-span-12 xl:col-span-8">
         <Alert variant="destructive">
@@ -94,6 +88,85 @@ const SHIRT_SELECT_CLASS =
         </Alert>
     </section>
 {/if}
+
+<!-- The two switches that decide whether anyone can register, side by side at the top because they
+     answer one question together: is this year open, and until when. Reading them apart — with the
+     venue, the menu and the whole tier table between them — meant checking one and scrolling for the
+     other.
+
+     Both fit the 8-column measure at half width: each holds one control and a sentence. The rest of the
+     page stays full-measure because it holds forms with paired fields and a tier table. -->
+<section class="col-span-12 grid grid-cols-1 gap-6 xl:col-span-8 md:grid-cols-2">
+    <Card>
+        <CardHeader>
+            <CardTitle class="flex items-center gap-2">
+                <ToggleRight class="text-muted-foreground size-4" />
+                Registration status
+            </CardTitle>
+            <CardDescription>
+                Only <strong>open</strong> lets anyone register. Draft, closed and archived all mean nobody
+                can — the difference is only what the year means to you. One year can be open at a time.
+            </CardDescription>
+        </CardHeader>
+        <CardContent>
+            <!-- One button per status rather than a select and a Save: the current one is disabled, so
+             the control shows where you are and what you can do to it in the same glance, and
+             there is no half-changed state to leave unsaved. -->
+            <div class="flex flex-wrap gap-2">
+                {#each EVENT_STATUS_CHOICES as choice (choice.status)}
+                    {@const current = data.event.status === choice.status}
+                    <form method="POST" action="?/update_status" use:enhance>
+                        <input type="hidden" name="status" value={choice.status} />
+                        <Button
+                            type="submit"
+                            size="sm"
+                            variant={current ? 'secondary' : 'outline'}
+                            disabled={current}>
+                            {choice.label}
+                        </Button>
+                    </form>
+                {/each}
+            </div>
+            <p class="text-muted-foreground mt-3 text-xs">
+                {STATUS_EXPLANATION[data.event.status]}
+            </p>
+        </CardContent>
+    </Card>
+
+    <Card>
+        <CardHeader>
+            <CardTitle class="flex items-center gap-2">
+                <Lock class="text-muted-foreground size-4" />
+                Registration lock date
+            </CardTitle>
+            <CardDescription>
+                Once this date passes, registrants can no longer edit details, add or remove
+                members, or cancel — the registration is fully frozen. Leave it blank for no lock.
+            </CardDescription>
+        </CardHeader>
+        <CardContent>
+            <form
+                method="POST"
+                action="?/update_lock_date"
+                use:enhance
+                class="grid grid-cols-1 gap-3 sm:grid-cols-[auto_auto] sm:items-end">
+                <Field.Field class="gap-2">
+                    <Field.Label for="registrationLockDate">Lock date</Field.Label>
+                    <Input
+                        id="registrationLockDate"
+                        name="registrationLockDate"
+                        type="datetime-local"
+                        value={data.event.registrationLockDate
+                            ? new Date(data.event.registrationLockDate).toISOString().slice(0, 16)
+                            : ''} />
+                </Field.Field>
+                <Button type="submit" size="sm" variant="secondary" class="w-full sm:w-auto">
+                    Save lock date
+                </Button>
+            </form>
+        </CardContent>
+    </Card>
+</section>
 
 <section class="col-span-12 xl:col-span-8">
     <Card>
@@ -380,80 +453,6 @@ const SHIRT_SELECT_CLASS =
                     </Button>
                 </form>
             </div>
-        </CardContent>
-    </Card>
-</section>
-
-<section class="col-span-12 xl:col-span-8">
-    <Card>
-        <CardHeader>
-            <CardTitle class="flex items-center gap-2">
-                <ToggleRight class="text-muted-foreground size-4" />
-                Registration status
-            </CardTitle>
-            <CardDescription>
-                Only <strong>open</strong> lets anyone register. Draft, closed and archived all mean nobody
-                can — the difference is only what the year means to you. One year can be open at a time.
-            </CardDescription>
-        </CardHeader>
-        <CardContent>
-            <!-- One button per status rather than a select and a Save: the current one is disabled, so
-                 the control shows where you are and what you can do to it in the same glance, and
-                 there is no half-changed state to leave unsaved. -->
-            <div class="flex flex-wrap gap-2">
-                {#each EVENT_STATUS_CHOICES as choice (choice.status)}
-                    {@const current = data.event.status === choice.status}
-                    <form method="POST" action="?/update_status" use:enhance>
-                        <input type="hidden" name="status" value={choice.status} />
-                        <Button
-                            type="submit"
-                            size="sm"
-                            variant={current ? 'secondary' : 'outline'}
-                            disabled={current}>
-                            {choice.label}
-                        </Button>
-                    </form>
-                {/each}
-            </div>
-            <p class="text-muted-foreground mt-3 text-xs">
-                {STATUS_EXPLANATION[data.event.status]}
-            </p>
-        </CardContent>
-    </Card>
-</section>
-
-<section class="col-span-12 xl:col-span-8">
-    <Card>
-        <CardHeader>
-            <CardTitle class="flex items-center gap-2">
-                <Lock class="text-muted-foreground size-4" />
-                Registration lock date
-            </CardTitle>
-            <CardDescription>
-                Once this date passes, registrants can no longer edit details, add or remove
-                members, or cancel — the registration is fully frozen. Leave it blank for no lock.
-            </CardDescription>
-        </CardHeader>
-        <CardContent>
-            <form
-                method="POST"
-                action="?/update_lock_date"
-                use:enhance
-                class="grid grid-cols-1 gap-3 sm:grid-cols-[auto_auto] sm:items-end">
-                <Field.Field class="gap-2">
-                    <Field.Label for="registrationLockDate">Lock date</Field.Label>
-                    <Input
-                        id="registrationLockDate"
-                        name="registrationLockDate"
-                        type="datetime-local"
-                        value={data.event.registrationLockDate
-                            ? new Date(data.event.registrationLockDate).toISOString().slice(0, 16)
-                            : ''} />
-                </Field.Field>
-                <Button type="submit" size="sm" variant="secondary" class="w-full sm:w-auto">
-                    Save lock date
-                </Button>
-            </form>
         </CardContent>
     </Card>
 </section>
