@@ -101,9 +101,9 @@ Server logic lives under `src/lib/server/`, one domain per folder. Each exported
 
 #### `requireOwner` and the owner-only Setup area
 
-`/admin/setup`, `/admin/storefront`, `/admin/users` and `/admin/event/[eventId]/settings` are restricted to a single account, matched by **email** against `OWNER_EMAIL`. See [ADR 0003](docs/adr/0003-event-scoped-admin-and-owner-only-setup.md).
+`/admin/setup`, `/admin/users` and `/admin/event/[eventId]/settings` are restricted to a single account, matched by **email** against `OWNER_EMAIL`. See [ADR 0003](docs/adr/0003-event-scoped-admin-and-owner-only-setup.md).
 
-- **Never express the owner as a `role`.** Two independent hard-coded `role === 'admin'` comparisons gate the app (`requireAdmin` and `(app)/+layout.server.ts`), so an owner with any other role value loses `/admin`, `/shop` and `/program`. `admin({ adminRoles: [...] })` does not help — it throws at plugin construction, and auth is lazily initialised, so that surfaces on every request including public pages.
+- **Never express the owner as a `role`.** Two independent hard-coded `role === 'admin'` comparisons gate the app (`requireAdmin` and `(app)/+layout.server.ts`), so an owner with any other role value loses `/admin` and `/program`. `admin({ adminRoles: [...] })` does not help — it throws at plugin construction, and auth is lazily initialised, so that surfaces on every request including public pages.
 - Role would not be a boundary anyway: Better Auth mounts `POST /api/auth/admin/set-role` ahead of SvelteKit routing, its only check is that the caller is an admin, and there is no self-target guard. Any admin can already grant themselves any role.
 - **`requireOwner` fails open when `OWNER_EMAIL` is unset**, and reports that to Sentry once per process. Deliberate: the degraded state is the old behaviour (admins only, never the public), whereas failing closed would let one forgotten Railway variable lock the owner out of pricing. Do not "harden" this into a fail-closed check without also making the variable impossible to forget.
 - It must be called in the **load, in every action, and in every remote function** of a Setup page. A layout `load` runs after a form action, and remote functions are served from `/_app/remote/<id>` with route handling skipped entirely — no layout or page guard sees them, so the in-function guard is the whole protection.
@@ -129,7 +129,7 @@ The token is the only credential — no per-request auth check. Email enumeratio
 Route groups:
 
 - `(auth)` — `/login` only, no nav, full-screen card layout. Admin sign-in only. `goto('/admin')` on success is the **only** entry point into the admin area anywhere in the app.
-- `(app)` — public paths are **only** `/` and `/register` (which covers `/register/manage` and `/register/recover`). Everything else in the group — `/shop`, `/program`, `/changelog`, `/admin/*` — redirects to `/login`. The allowlist is `isPublicPath()` in `$lib/server/auth/guards`; widen it there to reopen a page after the reunion. Contact is a section on `/` (`#contact`), not its own route.
+- `(app)` — public paths are **only** `/` and `/register` (which covers `/register/manage` and `/register/recover`). Everything else in the group — `/program`, `/changelog`, `/admin/*` — redirects to `/login`. The allowlist is `isPublicPath()` in `$lib/server/auth/guards`; widen it there to reopen a page after the reunion. Contact is a section on `/` (`#contact`), not its own route.
 
 #### Admin routes are event-scoped
 
@@ -200,19 +200,21 @@ Everything an organiser does concerns one reunion, and the reunion is named in t
 - **Bounces are reported, not retried.** `/api/webhooks/resend` verifies the svix signature and routes `email.bounced` / `email.complained` / `email.failed` to Sentry via `reportError`, naming the affected registration ids. It exists because the confirmation is a _single un-retried attempt_ — the conditional `pending → paid` transition means a Stripe redelivery will not send it again — so without this a typo'd address fails silently and the registrant simply never gets their management link. Needs `RESEND_WEBHOOK_SECRET`; without it the endpoint returns 500 and reports the misconfiguration rather than dropping events quietly.
 - **`webhooks.verify()` does not match Resend's published snippet.** In the installed SDK it is synchronous and _throws_ (no `{ data, error }`), the option is `webhookSecret` not `secret`, and `headers` wants the svix header _values_ as `{ id, timestamp, signature }` — not a Web API `Headers` object. Following the published example type-errors, and would have silently rejected every webhook.
 
-### Genealogy and the photo gallery are gone, tables included
+### Genealogy, the photo gallery and the shop are gone, tables and columns included
 
-The app is a registration app. Genealogy went out of scope before launch ([ADR 0004](docs/adr/0004-genealogy-out-of-scope-for-launch.md)) and the photo gallery followed it ([ADR 0005](docs/adr/0005-drop-genealogy-and-gallery-tables.md)).
+The app is a registration app. Genealogy went out of scope before launch ([ADR 0004](docs/adr/0004-genealogy-out-of-scope-for-launch.md)); the photo gallery and the storefront followed it ([ADR 0005](docs/adr/0005-drop-genealogy-and-gallery-tables.md)).
 
 - **The tables are dropped**, in `drizzle/0011_parched_lady_mastermind.sql`: `family_members`, `relationships`, `photos` and `party_members.family_member_id`. An earlier pass kept them deliberately, on the reasoning that real genealogy might already be entered and the feature could return without a data migration. That was overturned once the family-tree UI had been gone long enough that nothing could have written to them through the app. **This is not reversible** — bringing either feature back means a fresh schema and whatever data was in there is gone.
 - **Cloudflare R2 went with the gallery.** `$lib/server/storage`, `@aws-sdk/client-s3`, `@aws-sdk/s3-request-presigner` and the five `R2_*` variables are all removed. Nothing in the app uploads a file any more. Anything still in the bucket is orphaned — `photos.r2_key` was the only pointer to it — so empty the bucket by hand if it matters, and delete the Railway variables.
 - `db:seed` no longer generates a family tree or photo rows. It still seeds events, tiers, registrations and party members, which is what `db:reseed` is for.
-- If either comes back, it comes back with its own ADR. Do not reintroduce `/family-tree` or `/gallery` by reflex because you found a dangling reference.
+- **The shop went too**, in `drizzle/0012_smart_hairball.sql`: `/shop`, `/admin/storefront`, the `StorefrontProduct` type and `reunion_events.external_shop_url` / `shop_products` / `shop_active`. It was a link to an external store plus a JSONB list of shirts — nothing was ever sold through this app, so no order or payment depended on it. Shirt sizes are still collected at registration and counted in the admin order sheet; that is the part that mattered.
+- **`PRIMARY_NAV_LINKS` and `SECONDARY_NAV_LINKS` are both gone**, and with them the "Family" and "Reunion" dropdowns in `AppHeader` and their sections in `MobileDrawer`. Between them they held only the gallery and the shop, so both arrays were already empty behind an `{#if …length}`. The nav is now logo · Contact · Register · theme · account. `MobileDrawer`'s `iconMap` went with them — nothing renders a link from a list any more.
+- If any of them comes back, it comes back with its own ADR. Do not reintroduce `/family-tree`, `/gallery` or `/shop` by reflex because you found a dangling reference.
 
 ### Icons
 
 - **@lucide/svelte** for all icons — import as named components: `import { Home, Users } from '@lucide/svelte'`
-- Browse available icons at lucide.dev; use PascalCase component names (e.g. `CalendarClock`, `ShoppingBag`)
+- Browse available icons at lucide.dev; use PascalCase component names (e.g. `CalendarClock`, `ExternalLink`)
 - Do **not** use unplugin-icons or `virtual:icons/*` imports — those have been removed
 
 ### Styling

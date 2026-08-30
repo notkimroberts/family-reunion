@@ -80,8 +80,6 @@ export const verification = pgTable('verification', {
 
 /* Application tables */
 
-export type StorefrontProduct = { name: string; imageUrl: string; description?: string }
-
 export const reunionEvents = pgTable(
     'reunion_events',
     {
@@ -110,9 +108,6 @@ export const reunionEvents = pgTable(
             jsonb('recommended_activities').$type<{ name: string; description?: string }[]>(),
         schedule: jsonb('schedule').$type<{ day: string; time: string; activity: string }[]>(),
         registrationLockDate: timestamp('registration_lock_date'),
-        externalShopUrl: text('external_shop_url'),
-        shopProducts: jsonb('shop_products').$type<StorefrontProduct[]>(),
-        shopActive: boolean('shop_active').notNull().default(false),
         createdAt: timestamp('created_at').notNull().defaultNow(),
         updatedAt: timestamp('updated_at').notNull().defaultNow(),
     },

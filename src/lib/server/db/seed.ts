@@ -125,12 +125,6 @@ async function seed() {
     const ADULT_PRICE_CENTS = 16000
     const CHILD_PRICE_CENTS = 10000
 
-    const shopProducts = Array.from({ length: 3 }, () => ({
-        name: faker.commerce.productName(),
-        imageUrl: `https://picsum.photos/seed/${faker.string.alphanumeric(8)}/400/400`,
-        description: faker.commerce.productDescription(),
-    }))
-
     dbg.seed('Seeding reunion events...')
     const events = await db
         .insert(schema.reunionEvents)
@@ -189,9 +183,6 @@ async function seed() {
                     { day: 'Saturday', time: '6:00 PM', activity: 'Dinner & Dance' },
                     { day: 'Sunday', time: '9:00 AM', activity: 'Farewell Brunch' },
                 ],
-                externalShopUrl: 'https://patterson-family-store.example.com',
-                shopProducts,
-                shopActive: true,
             },
         ])
         .returning()

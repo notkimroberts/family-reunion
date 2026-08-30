@@ -1,4 +1,4 @@
-# ADR 0005 — Drop the genealogy and gallery tables
+# ADR 0005 — Drop the genealogy, gallery and storefront tables
 
 **Status:** Accepted
 **Date:** 2026-08-29
@@ -70,3 +70,23 @@ admin login.
   fails and would abort the deploy. It is reordered dependency-first with `IF EXISTS` throughout.
 - ADR 0004's "the genealogy data is kept" clause is superseded. Its other decisions — the deleted
   surface, and Bookings/People as two lenses on one page — still stand.
+
+## Addendum, same day — the storefront
+
+The shop was cut on the same reasoning, in `drizzle/0012_smart_hairball.sql`: `/shop`,
+`/admin/storefront`, the `StorefrontProduct` type, and `reunion_events.external_shop_url`,
+`shop_products` and `shop_active`.
+
+It was a link to an external store plus a JSONB list of shirts to display. **Nothing was ever sold
+through this app** — no order, payment or refund referenced any of it — so unlike the photos there is
+not even an external artifact to orphan. Copy `external_shop_url` out first if it points somewhere
+real; that is the only content worth keeping.
+
+Shirt sizes are unaffected. They are collected during registration, stored on `party_members`, and
+counted in the admin order sheet, which is the part of "merchandise" that a reunion actually needs.
+
+This also emptied both nav arrays. `PRIMARY_NAV_LINKS` held only the gallery and `SECONDARY_NAV_LINKS`
+only the shop, so the "Family" and "Reunion" dropdowns in `AppHeader` — and their counterpart sections
+in `MobileDrawer` — were rendering nothing behind an `{#if …length}` guard. Both constants, both
+dropdowns and the drawer's now-unreachable `iconMap` are deleted. The nav is logo · Contact · Register
+· theme · account.

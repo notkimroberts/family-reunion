@@ -74,7 +74,6 @@ describe('isPublicPath', () => {
        prefix list already fails them closed — these pin that, so a later "reopen a page after the
        reunion" edit to PUBLIC_PATH_PREFIXES cannot quietly widen to an admin path. */
     it.each([
-        '/shop',
         '/program',
         '/changelog',
         '/admin',

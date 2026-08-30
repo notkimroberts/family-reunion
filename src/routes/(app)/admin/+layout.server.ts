@@ -10,7 +10,7 @@ export const load: LayoutServerLoad = async (event) => {
     const user = requireAdmin(event)
 
     /* Only the four columns the shell renders. The previous bare .select() shipped every whole row —
-       venue, menu, drinks, schedule, recommendedSites, recommendedActivities and shopProducts JSONB —
+       venue, menu, drinks, schedule, recommendedSites and recommendedActivities JSONB —
        to the browser on every admin page load. It was invisible because the context type only declared
        four fields. */
     const events = await db

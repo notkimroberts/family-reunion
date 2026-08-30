@@ -1,16 +1,10 @@
 <script lang="ts">
-import { CalendarClock, ClipboardPen, Home, LogOut, Mail, ShoppingBag } from '@lucide/svelte'
-import type { Component } from 'svelte'
+import { ClipboardPen, Home, LogOut, Mail } from '@lucide/svelte'
 import { page } from '$app/state'
 import { authClient } from '$lib/auth-client'
 import { Avatar, AvatarFallback } from '$lib/components/ui/avatar'
 import { Sheet, SheetContent } from '$lib/components/ui/sheet'
-import {
-    APP_NAME,
-    CONTACT_NAV_LINK,
-    REGISTER_NAV_LINK,
-    SECONDARY_NAV_LINKS,
-} from '$lib/general/constants'
+import { APP_NAME, CONTACT_NAV_LINK, REGISTER_NAV_LINK } from '$lib/general/constants'
 import { getInitials } from '$lib/utils'
 
 type Props = {
@@ -27,11 +21,6 @@ function handleSignOut() {
     authClient.signOut().then(() => {
         window.location.href = '/'
     })
-}
-
-const iconMap: Record<string, Component> = {
-    'calendar-clock': CalendarClock,
-    'shopping-bag': ShoppingBag,
 }
 
 function isActive(href: string): boolean {
@@ -64,20 +53,6 @@ const linkClass = (active: boolean) =>
                 <Mail class="h-4 w-4" />
                 {CONTACT_NAV_LINK.label}
             </a>
-
-            {#if SECONDARY_NAV_LINKS.length}
-                <p
-                    class="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest px-3 pt-4 pb-1">
-                    Reunion
-                </p>
-            {/if}
-            {#each SECONDARY_NAV_LINKS as link}
-                {@const Icon = iconMap[link.icon]}
-                <a href={link.href} onclick={onClose} class={linkClass(isActive(link.href))}>
-                    <Icon class="h-4 w-4" />
-                    {link.label}
-                </a>
-            {/each}
 
             <div class="pt-3">
                 <a

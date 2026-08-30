@@ -125,8 +125,7 @@ src/
     │   ├── admin/         # Admin dashboard
     │   ├── changelog/     # App changelog
     │   ├── program/       # Reunion program page
-    │   ├── register/      # Registration + Stripe checkout
-    │   └── shop/          # External shop link page
+    │   └── register/      # Registration + Stripe checkout
     ├── (auth)/            # Unauthenticated routes
     │   └── login/         # SSO + magic link login
     └── api/

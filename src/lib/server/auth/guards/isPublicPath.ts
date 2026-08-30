@@ -2,7 +2,7 @@
 
    For launch this is only the registration funnel: '/' for the landing page, and '/register'
    which covers the form, '/register/manage' and '/register/recover'. Everything else in the
-   group — shop, program, changelog, admin — is admin-only.
+   group — program, changelog, admin — is admin-only.
 
    SCOPE, so this is not mistaken for a complete lock:
    - The (app) layout load calls this, so it gates page VIEWS. A SvelteKit layout load runs

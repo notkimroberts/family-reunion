@@ -32,12 +32,6 @@ let links = $derived([
         href: '/admin/setup/events',
     },
     {
-        label: 'Storefront',
-        note: 'Shirts and merchandise for the open year',
-        Icon: ShoppingBag,
-        href: '/admin/storefront',
-    },
-    {
         label: 'Admin accounts',
         note: 'Who can sign in here',
         Icon: Users,
