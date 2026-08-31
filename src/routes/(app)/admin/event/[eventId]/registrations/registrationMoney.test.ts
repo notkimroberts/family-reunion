@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import { grossUpForStripe, stripeFeeOnChargeCents } from '$lib/utils/stripeFee'
 import { getRegistrationMoney, type RegistrationMoneyInput } from './registrationMoney'
 

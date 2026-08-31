@@ -4,7 +4,7 @@ import { requireOwner } from '$lib/server/auth/guards'
 import { db } from '$lib/server/db'
 import { reunionEvents, tiers } from '$lib/server/db/schema'
 import { dbg } from '$lib/server/debug'
-import type { PageServerLoad, Actions } from './$types'
+import type { Actions, PageServerLoad } from './$types'
 
 /* Creating a reunion year, on its own page.
 

@@ -1,7 +1,7 @@
 import { stringify } from 'devalue'
 import { eq } from 'drizzle-orm'
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { partyMembers, registrations, reunionEvents } from '$lib/server/db/schema'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { donations, partyMembers, registrations, reunionEvents } from '$lib/server/db/schema'
 import { resetTestDb } from '$lib/server/db/testing/resetTestDb'
 import { seedEvent } from '$lib/server/testing/seedEvent'
 import { seedTier } from '$lib/server/testing/seedTier'
@@ -50,6 +50,7 @@ function submit(overrides: Record<string, unknown> = {}) {
         contactPhone: '5105550123',
         self: { ...SELF, tierId: adultTierId },
         members: [],
+        stayingAtHostHotel: 'yes',
         ...overrides,
     }
     const formData = new FormData()
@@ -130,6 +131,23 @@ describe('POST /register?/register', () => {
         expect(registration.stripeSessionId).toBe('cs_test_new')
     })
 
+    /* The room block is guesswork without an answer, so the form refuses rather than defaulting —
+       and it must not default to 'yes' either, which would book a room nobody asked for. */
+    describe('the host hotel question', () => {
+        it('stores the answer on the booking', async () => {
+            await expect(submit({ stayingAtHostHotel: 'undecided' })).rejects.toBeDefined()
+
+            expect((await onlyRegistration()).stayingAtHostHotel).toBe('undecided')
+        })
+
+        it.each(['', undefined])('refuses a booking with no answer (%s)', async (answer) => {
+            const result = await submit({ stayingAtHostHotel: answer })
+
+            expect(result).toMatchObject({ status: 400 })
+            expect(await db.select().from(registrations)).toHaveLength(0)
+        })
+    })
+
     /* A rejected form must not create half a booking. */
     it('writes nothing when the form fails validation', async () => {
         const result = await submit({ contactEmail: 'not-an-email' })
@@ -151,5 +169,58 @@ describe('POST /register?/register', () => {
 
         expect(await db.select().from(registrations)).toHaveLength(0)
         expect(mockCreateCheckout).not.toHaveBeenCalled()
+    })
+
+    /* A gift added on the way through. It is a row of its own rather than a column on the
+       registration, so all gift money is reported in one place — see the donations table. */
+    describe('a gift added to the registration', () => {
+        it('records a pending gift linked to the new registration', async () => {
+            await expect(submit({ donationCents: 5000 })).rejects.toBeDefined()
+
+            const registration = await onlyRegistration()
+            const [gift] = await db.select().from(donations)
+            expect(gift).toMatchObject({
+                registrationId: registration.id,
+                eventId,
+                amountCents: 5000,
+                status: 'pending',
+                donorName: 'Alice Patterson',
+                donorEmail: 'alice@example.com',
+                stripeSessionId: 'cs_test_new',
+            })
+        })
+
+        /* Charged at face value — NOT grossed up like a tier price, which is what the reunion must
+           net. The places beside it still are. */
+        it('adds a face-value line item and passes the gift id to the webhook', async () => {
+            await expect(submit({ donationCents: 5000 })).rejects.toBeDefined()
+
+            const [gift] = await db.select().from(donations)
+            const [params] = mockCreateCheckout.mock.calls[0]
+            expect(params.lineItems).toEqual([
+                { name: 'Alice Patterson (Adult)', priceCents: 16509 },
+                { name: 'Gift to the reunion', priceCents: 5000 },
+            ])
+            expect(params.donationId).toBe(gift.id)
+        })
+
+        it('creates no gift and no gift line item when the amount is zero', async () => {
+            await expect(submit({ donationCents: 0 })).rejects.toBeDefined()
+
+            expect(await db.select().from(donations)).toHaveLength(0)
+            const [params] = mockCreateCheckout.mock.calls[0]
+            expect(params.lineItems).toHaveLength(1)
+            expect(params.donationId).toBeUndefined()
+        })
+
+        /* Below the minimum is a rejected form, not a silently dropped gift: the registrant chose an
+           amount and has to be told it is too small. */
+        it('rejects a gift under the minimum and writes nothing', async () => {
+            const result = await submit({ donationCents: 100 })
+
+            expect(result).toMatchObject({ status: 400 })
+            expect(await db.select().from(registrations)).toHaveLength(0)
+            expect(await db.select().from(donations)).toHaveLength(0)
+        })
     })
 })

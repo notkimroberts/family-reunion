@@ -1,6 +1,7 @@
 import { eq } from 'drizzle-orm'
+import type { HotelStayAnswer } from '$lib/general/constants'
 import { db } from '$lib/server/db'
-import { partyMembers, registrations } from '$lib/server/db/schema'
+import { donations, partyMembers, registrations } from '$lib/server/db/schema'
 import { dbg } from '$lib/server/debug'
 import { createRegistrationCheckout } from '$lib/server/payments'
 import { resolveTierPricing } from '$lib/server/tiers'
@@ -27,11 +28,16 @@ export async function createPendingRegistration(params: {
     contactName: string
     contactEmail: string
     contactPhone?: string
+    /* Whether this party plans to stay at the host hotel, for the room block. Booking-level. */
+    stayingAtHostHotel?: HotelStayAnswer
     eventId: string
     /* The contact first, then their guests — the same shape createAdminRegistration takes. It used
        to be eleven `self*` parameters beside an `additionalMembers` array, which made the contact's
        own details a third spelling of MemberInput and meant the caller mapped them by hand. */
     members: MemberInput[]
+    /* An optional gift added to the same checkout, charged at exactly this amount — gifts are not
+       grossed up the way tier prices are. Zero and undefined both mean no gift. */
+    donationCents?: number
     successUrl: (token: string) => string
     cancelUrl: (token: string) => string
 }): Promise<{ registrationId: string; managementToken: string; checkoutUrl: string }> {
@@ -59,6 +65,7 @@ export async function createPendingRegistration(params: {
             contactName: params.contactName,
             contactEmail: params.contactEmail,
             contactPhone: params.contactPhone || null,
+            stayingAtHostHotel: params.stayingAtHostHotel ?? null,
             eventId: params.eventId,
             status: 'pending',
         })
@@ -86,10 +93,39 @@ export async function createPendingRegistration(params: {
         params.contactEmail,
     )
 
+    /* A gift is its own row from the start, pending like the registration, so an abandoned checkout
+       leaves the two consistent. The donor is the contact — the register form asks for no second
+       name — and the row carries registrationId, which is what tells the admin list this gift
+       arrived with a booking rather than on its own. */
+    const donationCents = params.donationCents ?? 0
+    let donationId: string | undefined
+    if (donationCents > 0) {
+        const [donation] = await db
+            .insert(donations)
+            .values({
+                eventId: params.eventId,
+                registrationId: registration.id,
+                donorName: params.contactName,
+                donorEmail: params.contactEmail,
+                amountCents: donationCents,
+                status: 'pending',
+            })
+            .returning({ id: donations.id })
+        donationId = donation.id
+        dbg.register('gift of %d added to registration %s', donationCents, registration.id)
+    }
+
     const { url: checkoutUrl, sessionId } = await createRegistrationCheckout({
-        lineItems: lineItems.map((item) => ({ name: item.name, priceCents: item.grossCents })),
+        lineItems: [
+            ...lineItems.map((item) => ({ name: item.name, priceCents: item.grossCents })),
+            /* Charged at face value, NOT grossed up: a gift is whatever the giver chose to give. */
+            ...(donationCents > 0
+                ? [{ name: 'Gift to the reunion', priceCents: donationCents }]
+                : []),
+        ],
         registrationId: registration.id,
         managementToken,
+        donationId,
         customerEmail: params.contactEmail,
         successUrl: () => params.successUrl(managementToken),
         cancelUrl: () => params.cancelUrl(managementToken),
@@ -99,6 +135,13 @@ export async function createPendingRegistration(params: {
         .update(registrations)
         .set({ stripeSessionId: sessionId })
         .where(eq(registrations.id, registration.id))
+
+    if (donationId) {
+        await db
+            .update(donations)
+            .set({ stripeSessionId: sessionId, updatedAt: new Date() })
+            .where(eq(donations.id, donationId))
+    }
 
     dbg.register('stripe session=%s created', sessionId)
     return { registrationId: registration.id, managementToken, checkoutUrl }

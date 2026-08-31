@@ -1,6 +1,6 @@
-import { desc, eq, and, count } from 'drizzle-orm'
+import { and, count, desc, eq } from 'drizzle-orm'
 import { db } from '$lib/server/db'
-import { reunionEvents, registrations, partyMembers } from '$lib/server/db/schema'
+import { partyMembers, registrations, reunionEvents } from '$lib/server/db/schema'
 import type { PageServerLoad } from './$types'
 
 /* Shows the open event's program, or the most recent past one once no event is open.

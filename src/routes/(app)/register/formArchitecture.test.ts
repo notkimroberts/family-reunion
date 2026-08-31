@@ -1,5 +1,5 @@
 import { readFileSync } from 'fs'
-import { describe, it, expect } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import { EMPTY_PERSON_DETAILS } from './EMPTY_PERSON_DETAILS'
 import { adminRegistrationSchema, registrationSchema } from './schema'
 
@@ -45,6 +45,7 @@ const BLANK_FORM = {
     contactPhone: '',
     self: { ...EMPTY_PERSON_DETAILS },
     members: [],
+    stayingAtHostHotel: '',
 }
 
 const COMPLETE_FORM = {
@@ -52,6 +53,8 @@ const COMPLETE_FORM = {
     contactFirstName: 'Alice',
     contactLastName: 'Patterson',
     contactEmail: 'alice@example.com',
+    /* Required on the public form: the room block is guesswork without it. */
+    stayingAtHostHotel: 'undecided',
     self: {
         ...EMPTY_PERSON_DETAILS,
         tierId: 'tier-adult',
@@ -174,6 +177,7 @@ describe('$form is the single source of truth', () => {
                 contactFirstName: 'Alice',
                 contactLastName: 'Patterson',
                 contactEmail: 'alice@example.com',
+                stayingAtHostHotel: 'no',
                 self: {
                     ...EMPTY_PERSON_DETAILS,
                     tierId: 'tier-adult',

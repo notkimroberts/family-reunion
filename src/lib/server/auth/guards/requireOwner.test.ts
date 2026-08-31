@@ -1,5 +1,5 @@
 import { isRedirect } from '@sveltejs/kit'
-import { describe, expect, it, vi, beforeEach } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const { mockEnv, mockReportError } = vi.hoisted(() => ({
     mockEnv: {} as { OWNER_EMAIL?: string },

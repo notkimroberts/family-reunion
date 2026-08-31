@@ -67,16 +67,16 @@ function handleSave() {
 <Card>
     <CardHeader class="pb-3">
         <CardTitle class="flex items-center gap-2 text-base">
-            <UserCircle class="h-5 w-5 text-muted-foreground" />
+            <UserCircle class="text-muted-foreground h-5 w-5" />
             Your Information
         </CardTitle>
     </CardHeader>
     <CardContent class="space-y-6">
         {#if saved}
             <div class="flex items-center gap-3">
-                <div class="flex-1 min-w-0">
-                    <p class="font-medium text-sm">{firstName} {lastName}</p>
-                    <p class="text-xs text-muted-foreground">
+                <div class="min-w-0 flex-1">
+                    <p class="text-sm font-medium">{firstName} {lastName}</p>
+                    <p class="text-muted-foreground text-xs">
                         {selectedTier?.label ?? ''}
                         {#if age !== undefined}
                             · Age {age}
@@ -86,7 +86,7 @@ function handleSave() {
                         {/if}
                     </p>
                 </div>
-                <span class="text-sm font-medium tabular-nums shrink-0"
+                <span class="shrink-0 text-sm font-medium tabular-nums"
                     >${formatPrice(selectedTier?.priceCents ?? 0)}</span>
                 <Button type="button" variant="outline" size="sm" onclick={() => (saved = false)}>
                     Edit
@@ -108,7 +108,7 @@ function handleSave() {
             {/if}
 
             <div class="space-y-4">
-                <p class="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                <p class="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
                     Contact Info
                 </p>
                 <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -125,13 +125,13 @@ function handleSave() {
                             autocomplete="email"
                             required />
                         {#if errors?.email}
-                            <p class="text-sm text-destructive">{errors.email}</p>
+                            <p class="text-destructive text-sm">{errors.email}</p>
                         {/if}
                     </div>
                     <div class="space-y-1.5">
                         <label for="contactPhone" class="text-sm font-medium">
                             Phone
-                            <span class="text-muted-foreground font-normal text-xs"
+                            <span class="text-muted-foreground text-xs font-normal"
                                 >(optional)</span>
                         </label>
                         <Input
@@ -143,7 +143,7 @@ function handleSave() {
                             placeholder="(555) 555-5555"
                             autocomplete="tel" />
                         {#if phone.trim() && !phoneValid}
-                            <p class="text-sm text-destructive">
+                            <p class="text-destructive text-sm">
                                 Please enter a valid phone number
                             </p>
                         {/if}
@@ -174,7 +174,7 @@ function handleSave() {
                             autocomplete="family-name"
                             required />
                         {#if errors?.name}
-                            <p class="text-sm text-destructive">{errors.name}</p>
+                            <p class="text-destructive text-sm">{errors.name}</p>
                         {/if}
                     </div>
                 </div>
@@ -185,7 +185,7 @@ function handleSave() {
                     <div class="space-y-1.5">
                         <label for="selfBirthDate" class="text-sm font-medium">
                             Birthday
-                            <span class="text-muted-foreground font-normal text-xs"
+                            <span class="text-muted-foreground text-xs font-normal"
                                 >(optional)</span>
                         </label>
                         <DatePicker
@@ -199,7 +199,7 @@ function handleSave() {
             <Separator />
 
             <div class="space-y-4">
-                <p class="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                <p class="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
                     Mailing Address
                 </p>
                 <AddressFields
@@ -215,7 +215,7 @@ function handleSave() {
             <Separator />
 
             <div class="space-y-4">
-                <p class="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                <p class="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
                     Registration Details
                 </p>
                 <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">

@@ -1,5 +1,5 @@
 import { browser } from '$app/environment'
-import { LIGHT_THEME, DARK_THEME, type Theme } from '$lib/general/constants'
+import { DARK_THEME, LIGHT_THEME, type Theme } from '$lib/general/constants'
 
 /* Reads localStorage then system preference; falls back to light on the server */
 function getInitialTheme(): Theme {

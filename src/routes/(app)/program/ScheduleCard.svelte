@@ -63,7 +63,7 @@ function isSelected(item: ScheduleItem) {
                 {#each scheduleByDay as { day, items }}
                     <div>
                         <p
-                            class="text-muted-foreground mb-3 text-xs font-semibold uppercase tracking-widest">
+                            class="text-muted-foreground mb-3 text-xs font-semibold tracking-widest uppercase">
                             {day}
                         </p>
                         <div class="space-y-1">
@@ -89,10 +89,10 @@ function isSelected(item: ScheduleItem) {
 
                                 {#if isSelected(item)}
                                     <div
-                                        class="md:hidden px-3 pb-3 pt-1"
+                                        class="px-3 pt-1 pb-3 md:hidden"
                                         transition:slide={{ duration: 200 }}
                                         use:scrollIntoView>
-                                        <div class="bg-primary/5 rounded-lg p-4 space-y-1.5">
+                                        <div class="bg-primary/5 space-y-1.5 rounded-lg p-4">
                                             <p class="font-semibold">{item.activity}</p>
                                             <div
                                                 class="text-muted-foreground flex items-center gap-1.5 text-sm">
@@ -114,12 +114,12 @@ function isSelected(item: ScheduleItem) {
             </div>
 
             <!-- Detail panel (desktop only) -->
-            <div class="hidden md:block p-6">
+            <div class="hidden p-6 md:block">
                 {#if selectedItem}
                     <div class="space-y-5">
                         <div>
                             <p
-                                class="text-muted-foreground mb-1 text-xs font-semibold uppercase tracking-widest">
+                                class="text-muted-foreground mb-1 text-xs font-semibold tracking-widest uppercase">
                                 {selectedItem.day}
                             </p>
                             <p class="text-2xl font-bold">{selectedItem.activity}</p>
@@ -136,7 +136,7 @@ function isSelected(item: ScheduleItem) {
                         {#if selectedDayItems.length > 1}
                             <div>
                                 <p
-                                    class="text-muted-foreground mb-2 text-xs font-semibold uppercase tracking-widest">
+                                    class="text-muted-foreground mb-2 text-xs font-semibold tracking-widest uppercase">
                                     {selectedItem.day} at a glance
                                 </p>
                                 <ol class="space-y-2">

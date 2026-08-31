@@ -8,7 +8,7 @@ let { label, class: className = '' }: { label: string; class?: string } = $props
 </script>
 
 <div class={cn('flex flex-col gap-0.5', className)}>
-    <span class="text-[9px] font-semibold uppercase tracking-widest text-neutral-500">
+    <span class="text-[9px] font-semibold tracking-widest text-neutral-500 uppercase">
         {label}
     </span>
     <div class="h-8.5 border-b border-neutral-500"></div>

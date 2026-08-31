@@ -1,157 +1,119 @@
 <script lang="ts">
 import { Info } from '@lucide/svelte'
-import { Separator } from '$lib/components/ui/separator'
 import { Tooltip, TooltipContent, TooltipTrigger } from '$lib/components/ui/tooltip'
-import { cn, formatPrice } from '$lib/utils'
-import type { RegistrationTotals } from './registrationTotals'
+import { cn, formatUsd } from '$lib/utils'
+import type { EventMoney } from './eventMoney'
 
-/* What the year adds up to, for the panel beside the list.
+/* What the reunion has, as one figure with its workings under it.
 
-   Two matched groups, paid-or-covered and not-paid, because a count whose qualifier is invisible
-   gets read as a bug. The arithmetic itself is in registrationTotals.ts and tested there; this file
-   only decides how the numbers are read, which is why it can be a component with no test. */
+   THE HEADLINE IS THE POINT. This panel used to print "In the bank" twice — once for registrations,
+   once for gifts — and leave the organiser to add them up; the first question anyone brings to this
+   screen is "how much money do we have", and it now has one answer. The rows beneath are the terms
+   of that sum, and getEventMoney's test pins them to it: registrations + gifts − fees − losses is
+   the figure above them, or the panel is lying about its own arithmetic.
+
+   Every row is conditional, so a new year is three lines rather than eight zeroes. The arithmetic
+   lives in eventMoney.ts and is tested there; this file only decides how it reads. */
 
 /* Matches the subheadings on the event settings page, so the two admin surfaces read as one design. */
 const SUBHEAD_CLASS = 'text-muted-foreground text-xs font-semibold tracking-wide uppercase'
+/* Money that came off the top, or has not arrived. */
+const AMBER_CLASS = 'text-amber-700 dark:text-amber-400'
 
-let { totals }: { totals: RegistrationTotals } = $props()
+let { money }: { money: EventMoney } = $props()
+
+/* Assembled from what is actually true, not printed unconditionally.
+
+   These were two paragraphs of prose sitting in the middle of a column of figures, which pushed the
+   order sheet off the fold. Behind an ⓘ they are still one tap away for the organiser who wonders
+   why the total is short — the same move the Comped line already makes. */
+let notes = $derived([
+    money.feesAreExact
+        ? 'Fees are as charged by Stripe.'
+        : 'Fees are estimated at 2.9% + 30¢ per payment. The exact figure is recorded as each one settles.',
+    ...(money.toDepositCents > 0
+        ? [
+              /* formatUsd, because a literal dollar sign written anywhere in a script block —
+                 code OR comment — is corrupted by `bun run format`. See formatUsd and the
+                 formatting note in CLAUDE.md. */
+              `Includes ${formatUsd(money.toDepositCents)} in cash or cheques. Those arrive in full, but only once deposited.`,
+          ]
+        : []),
+    ...(money.attachedGiftCount > 0
+        ? [
+              'A gift given with a registration shares that booking’s charge, so its fee is counted with the places.',
+          ]
+        : []),
+    ...(money.lostToRefundsCents > 0
+        ? ['Stripe keeps its fee when a booking is cancelled, so that money does not come back.']
+        : []),
+])
 </script>
 
-<!-- Two matched groups. The sub-heading carries the qualifier, so the row labels do not have to
-         repeat it and the two sets scan as a pair — which is the point: the numbers only make sense
-         against each other. Before this the qualifier was invisible and "Parties 4" beside eleven
-         bookings read as broken maths. -->
-<div class="flex flex-col gap-3">
-    <p class={SUBHEAD_CLASS}>Paid or covered</p>
+{#snippet term(label: string, amount: string, negative: boolean)}
     <div class="flex items-baseline justify-between gap-3">
-        <span class="text-muted-foreground text-sm">People</span>
-        <span class="text-2xl font-bold tabular-nums">{totals.attendingCount}</span>
-    </div>
-    <div class="flex items-baseline justify-between gap-3">
-        <span class="text-muted-foreground text-sm">Parties</span>
-        <span class="text-lg font-semibold tabular-nums">{totals.partyCount}</span>
-    </div>
-    <div class="flex items-baseline justify-between gap-3">
-        <span class="text-muted-foreground text-sm">Collected</span>
-        <span class="text-lg font-semibold tabular-nums">
-            ${formatPrice(totals.paidCents)}
+        <span class={cn('text-sm', negative ? AMBER_CLASS : 'text-muted-foreground')}>
+            {label}
         </span>
+        <span class={cn('text-sm tabular-nums', negative ? AMBER_CLASS : '')}>{amount}</span>
     </div>
+{/snippet}
 
-    <!-- What the registrants paid is not what the reunion gets to spend. Card money arrives
-             short by Stripe's cut; cash and cheques arrive whole. Only the last line is the
-             spendable number, so it is the one carrying the weight.
-
-             Shown when there is card money OR a cancelled card booking: a year whose only card
-             registration was refunded has no card income and still lost the fee on it. -->
-    {#if totals.cardPaidCents > 0 || totals.lostToRefundsCents > 0}
-        <div class="flex flex-col gap-1.5 pl-2">
-            <div class="flex items-baseline justify-between gap-3">
-                <span class="text-muted-foreground text-xs">By card</span>
-                <span class="text-muted-foreground text-xs tabular-nums">
-                    ${formatPrice(totals.cardPaidCents)}
-                </span>
-            </div>
-            {#if totals.offlinePaidCents > 0}
-                <div class="flex items-baseline justify-between gap-3">
-                    <span class="text-muted-foreground text-xs">Cash or cheque</span>
-                    <span class="text-muted-foreground text-xs tabular-nums">
-                        ${formatPrice(totals.offlinePaidCents)}
-                    </span>
-                </div>
-            {/if}
-            <div class="flex items-baseline justify-between gap-3">
-                <span class="text-xs text-amber-700 dark:text-amber-400">Stripe fees</span>
-                <span class="text-xs tabular-nums text-amber-700 dark:text-amber-400">
-                    −${formatPrice(totals.feeCents)}
-                </span>
-            </div>
-            <!-- Only when it has happened. A zero line here would invite the question every
-                     time, and the answer is usually "nobody cancelled". -->
-            {#if totals.lostToRefundsCents > 0}
-                <div class="flex items-baseline justify-between gap-3">
-                    <span class="text-xs text-amber-700 dark:text-amber-400">
-                        Lost to refunds
-                    </span>
-                    <span class="text-xs tabular-nums text-amber-700 dark:text-amber-400">
-                        −${formatPrice(totals.lostToRefundsCents)}
-                    </span>
-                </div>
-            {/if}
-        </div>
-
-        <div class="flex items-baseline justify-between gap-3">
-            <span class="text-sm font-medium">In the bank</span>
-            <span class="text-lg font-semibold tabular-nums">
-                ${formatPrice(totals.bankedCents)}
-            </span>
-        </div>
-        <!-- The wording tracks what the numbers actually are. Once every card payment has its
-                 fee recorded from Stripe's balance transaction, this stops saying "estimated" —
-                 claiming precision the figures do not have is the failure mode worth avoiding, and
-                 so is disclaiming precision they do have. -->
-        <p class="text-muted-foreground text-xs">
-            {#if totals.feesAreExact}
-                Fees as charged by Stripe.
-            {:else}
-                Fees estimated at 2.9% + 30¢ per card payment.
-            {/if}
-            Cash and cheques arrive in full, once deposited.
-            {#if totals.lostToRefundsCents > 0}
-                Stripe keeps its fee when a booking is cancelled, so that money does not come back.
-            {/if}
-        </p>
-    {/if}
-
-    <!-- Comped places are the reason People can exceed what Collected accounts for. They are
-             deliberately in none of the money above — nobody paid and nobody is going to — but leaving
-             that difference unnamed made a year with comped families read as money gone missing.
-
-             The explanation is behind the label rather than printed under it: this panel is a column
-             of figures an organiser scans, and three lines of prose in the middle of it pushed
-             "Not paid" off the screen to explain a number that is usually 0. -->
-    {#if totals.waivedPartyCount > 0}
-        <div class="flex items-center justify-between gap-3">
+<div class="flex flex-col gap-3">
+    <div class="flex items-center justify-between gap-2">
+        <p class={SUBHEAD_CLASS}>Money</p>
+        {#if money.hasActivity}
             <Tooltip>
                 <TooltipTrigger
-                    class="text-muted-foreground hover:text-foreground flex items-center gap-1.5 text-sm transition-colors">
-                    Comped
+                    class="text-muted-foreground hover:text-foreground transition-colors">
                     <Info class="size-3.5" />
+                    <span class="sr-only">How these figures are worked out</span>
                 </TooltipTrigger>
-                <TooltipContent class="max-w-xs">
-                    {totals.waivedPartyCount}
-                    {totals.waivedPartyCount === 1 ? 'party is' : 'parties are'} attending free, worth
-                    ${formatPrice(totals.waivedCents)}. Counted in People, and in no figure above —
-                    comped places bring in nothing.
+                <TooltipContent class="flex max-w-xs flex-col gap-2">
+                    {#each notes as note (note)}
+                        <p>{note}</p>
+                    {/each}
                 </TooltipContent>
             </Tooltip>
-            <span class="text-lg font-semibold tabular-nums">{totals.waivedPeopleCount}</span>
+        {/if}
+    </div>
+
+    {#if !money.hasActivity}
+        <p class="text-muted-foreground text-sm">No money in yet.</p>
+    {:else}
+        <div class="flex flex-col gap-0.5">
+            <span class="text-muted-foreground text-sm">In the bank</span>
+            <span class="text-3xl font-bold tabular-nums">
+                {formatUsd(money.bankedCents)}
+            </span>
         </div>
+
+        <div class="flex flex-col gap-1.5">
+            {#if money.registrationsCents > 0}
+                {@render term('Registrations', formatUsd(money.registrationsCents), false)}
+            {/if}
+            {#if money.giftCount > 0}
+                {@render term(`Gifts (${money.giftCount})`, formatUsd(money.giftsCents), false)}
+            {/if}
+            {#if money.feeCents > 0}
+                {@render term('Stripe fees', '−' + formatUsd(money.feeCents), true)}
+            {/if}
+            <!-- Only when it has happened. A zero line here would invite the question every time,
+                 and the answer is usually "nobody cancelled". -->
+            {#if money.lostToRefundsCents > 0}
+                {@render term('Lost to refunds', '−' + formatUsd(money.lostToRefundsCents), true)}
+            {/if}
+        </div>
+
+        <!-- Above the rule is money the reunion HAS; this is money it is owed, so it sits below one
+             and must never read as a term in the sum. -->
+        {#if money.outstandingCents > 0}
+            <div class="flex items-baseline justify-between gap-3 border-t pt-3">
+                <span class="text-sm font-medium">Outstanding</span>
+                <span class={cn('text-lg font-semibold tabular-nums', AMBER_CLASS)}>
+                    {formatUsd(money.outstandingCents)}
+                </span>
+            </div>
+        {/if}
     {/if}
-</div>
-
-<Separator />
-
-<div class="flex flex-col gap-3">
-    <p class={SUBHEAD_CLASS}>Not paid</p>
-    <div class="flex items-baseline justify-between gap-3">
-        <span class="text-muted-foreground text-sm">People</span>
-        <span class="text-2xl font-bold tabular-nums">{totals.pendingPeopleCount}</span>
-    </div>
-    <div class="flex items-baseline justify-between gap-3">
-        <span class="text-muted-foreground text-sm">Parties</span>
-        <span class="text-lg font-semibold tabular-nums">
-            {totals.pendingPartyCount}
-        </span>
-    </div>
-    <div class="flex items-baseline justify-between gap-3">
-        <span class="text-muted-foreground text-sm">Outstanding</span>
-        <span
-            class={cn(
-                'text-lg font-semibold tabular-nums',
-                totals.outstandingCents > 0 && 'text-amber-700 dark:text-amber-400',
-            )}>
-            ${formatPrice(totals.outstandingCents)}
-        </span>
-    </div>
 </div>

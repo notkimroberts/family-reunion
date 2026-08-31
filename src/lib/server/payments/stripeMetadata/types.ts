@@ -4,6 +4,16 @@ export type RegistrationSessionMetadata = {
     registrationId: string
     /* Plaintext management token. The DB stores only the hash; this is the channel that carries the plaintext to the webhook so the confirmation email can include a working management URL. */
     managementToken: string
+    /* Set when the registrant added a gift to the same checkout, so the webhook can mark that
+       donation paid off the one session. Optional: absent on every session created before
+       donations existed, and on any registration without a gift. */
+    donationId?: string
+}
+
+// Stripe session metadata for a standalone donation made at /donate
+export type DonationSessionMetadata = {
+    type: 'donation'
+    donationId: string
 }
 
 // Stripe session metadata for an add-member checkout; all numeric fields are stored as strings per Stripe's metadata spec
@@ -27,7 +37,8 @@ export type AddMemberSessionMetadata = {
 }
 
 // Discriminated union of all known Stripe session metadata shapes, keyed by `type`
-export type StripeSessionMetadata = RegistrationSessionMetadata | AddMemberSessionMetadata
+export type StripeSessionMetadata =
+    RegistrationSessionMetadata | AddMemberSessionMetadata | DonationSessionMetadata
 
 // Params for encodeAddMemberMetadata
 export type AddMemberMetadataParams = {

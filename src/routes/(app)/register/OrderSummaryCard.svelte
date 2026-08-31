@@ -70,22 +70,30 @@ let {
                 </div>
                 {#each members as member (member.name + member.tierId)}
                     <div class="flex items-center justify-between text-sm">
-                        <span class="truncate mr-2">{member.name}</span>
-                        <span class="tabular-nums shrink-0"
+                        <span class="mr-2 truncate">{member.name}</span>
+                        <span class="shrink-0 tabular-nums"
                             >${formatPrice(getTierPriceCents(member.tierId, tiers))}</span>
                     </div>
                 {/each}
             </div>
             <Separator />
             <div class="space-y-1 text-sm">
-                <div class="flex items-center justify-between text-muted-foreground">
+                <div class="text-muted-foreground flex items-center justify-between">
                     <span>Subtotal</span>
                     <span class="tabular-nums">${formatPrice(quote.subtotalCents)}</span>
                 </div>
                 {#if quote.feeCents > 0}
-                    <div class="flex items-center justify-between text-muted-foreground">
+                    <div class="text-muted-foreground flex items-center justify-between">
                         <span>Processing fee</span>
                         <span class="tabular-nums">${formatPrice(quote.feeCents)}</span>
+                    </div>
+                {/if}
+                <!-- A gift is listed with the money, not with the people: it buys no place, so it
+                     belongs below the party rather than as another row in it. -->
+                {#if quote.donationCents > 0}
+                    <div class="text-muted-foreground flex items-center justify-between">
+                        <span>Gift to the reunion</span>
+                        <span class="tabular-nums">${formatPrice(quote.donationCents)}</span>
                     </div>
                 {/if}
             </div>
@@ -114,7 +122,7 @@ let {
                 {/if}
             </Button>
             {#if submitFootnote}
-                <p class="text-xs text-muted-foreground text-center">{submitFootnote}</p>
+                <p class="text-muted-foreground text-center text-xs">{submitFootnote}</p>
             {/if}
         {:else}
             <!-- The prices the tier dropdown no longer carries. Without this the first sight of a
@@ -126,7 +134,7 @@ let {
                  because two price rows under an "Order Summary" heading read as a basket with
                  something already in it — one report of exactly that. Nothing here is chargeable
                  yet; nobody has been added. -->
-            <p class="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            <p class="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
                 Price per person
             </p>
             <div class="flex flex-col gap-2">
@@ -138,7 +146,7 @@ let {
                 {/each}
             </div>
             <Separator />
-            <p class="text-sm text-muted-foreground text-center">{placeholderText}</p>
+            <p class="text-muted-foreground text-center text-sm">{placeholderText}</p>
         {/if}
     </CardContent>
 </Card>

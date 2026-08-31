@@ -2,7 +2,7 @@ import * as Sentry from '@sentry/sveltekit'
 import { type Handle } from '@sveltejs/kit'
 import { sequence } from '@sveltejs/kit/hooks'
 import { svelteKitHandler } from 'better-auth/svelte-kit'
-import { dev, building } from '$app/environment'
+import { building, dev } from '$app/environment'
 import { auth } from '$lib/server/auth'
 import { dbg } from '$lib/server/debug'
 

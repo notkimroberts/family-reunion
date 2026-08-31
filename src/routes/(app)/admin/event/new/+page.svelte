@@ -26,7 +26,7 @@ let { data, form } = $props()
      everything after it. Sections on this grid stack only when their spans cannot share a row. -->
 <section class="col-span-12 flex flex-col gap-3">
     <nav aria-label="Breadcrumb" class="text-muted-foreground flex items-center gap-2 text-sm">
-        <a href="/admin" class="transition-colors hover:text-foreground">Reunions</a>
+        <a href="/admin" class="hover:text-foreground transition-colors">Reunions</a>
         <span aria-hidden="true">/</span>
         <span class="text-foreground">New</span>
     </nav>

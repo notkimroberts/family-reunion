@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { getAge, parseBirthDate, formatBirthDate } from './age'
+import { formatBirthDate, getAge, parseBirthDate } from './age'
 
 // Use noon local time to avoid UTC-midnight timezone boundary issues
 const FROZEN_DATE = new Date('2026-05-17T12:00:00')

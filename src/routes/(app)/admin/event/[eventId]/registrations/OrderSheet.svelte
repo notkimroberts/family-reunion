@@ -1,5 +1,7 @@
 <script lang="ts">
+import { HOST_HOTEL } from '$lib/general/constants'
 import type { PeopleSummary } from './peopleSummary'
+import type { RoomSummary } from './roomSummary'
 
 /* Shirt sizes per tier and the meal split — what an organiser reads down a phone to a supplier.
 
@@ -8,7 +10,11 @@ import type { PeopleSummary } from './peopleSummary'
 /* Matches the subheadings on the event settings page, so the two admin surfaces read as one design. */
 const SUBHEAD_CLASS = 'text-muted-foreground text-xs font-semibold tracking-wide uppercase'
 
-let { summary, attendingCount }: { summary: PeopleSummary; attendingCount: number } = $props()
+let {
+    summary,
+    attendingCount,
+    rooms,
+}: { summary: PeopleSummary; attendingCount: number; rooms: RoomSummary } = $props()
 </script>
 
 <!-- The order sheet, in the card rather than over the table: it is a summary of the year like the
@@ -64,7 +70,7 @@ let { summary, attendingCount }: { summary: PeopleSummary; attendingCount: numbe
                 <div class="flex items-baseline justify-between gap-3 pl-2">
                     <span class="text-sm text-amber-700 dark:text-amber-400"> Not answered </span>
                     <span
-                        class="text-sm font-semibold tabular-nums text-amber-700 dark:text-amber-400">
+                        class="text-sm font-semibold text-amber-700 tabular-nums dark:text-amber-400">
                         {summary.mealUnanswered}
                     </span>
                 </div>
@@ -72,5 +78,55 @@ let { summary, attendingCount }: { summary: PeopleSummary; attendingCount: numbe
         </div>
     {:else}
         <p class="text-muted-foreground text-sm">Nothing to order yet.</p>
+    {/if}
+
+    <!-- Rooms belong here rather than with the head counts: a block at the hotel is a supplier
+         order like shirts and meals, negotiated ahead on numbers this panel exists to read out.
+
+         Parties AND people, because a block is counted in rooms and a party of five is not one.
+         Hidden until somebody has answered — see RoomSummary.hasAnswers. -->
+    {#if HOST_HOTEL && rooms.hasAnswers}
+        <div class="flex flex-col gap-1.5">
+            <p class="text-muted-foreground text-sm">Rooms at {HOST_HOTEL.name}</p>
+            <div class="flex items-baseline justify-between gap-3 pl-2">
+                <span class="text-sm">Staying</span>
+                <span class="text-sm tabular-nums">
+                    <span class="font-semibold">{rooms.stayingParties}</span>
+                    {rooms.stayingParties === 1 ? 'party' : 'parties'} ·
+                    <span class="font-semibold">{rooms.stayingPeople}</span>
+                    {rooms.stayingPeople === 1 ? 'person' : 'people'}
+                </span>
+            </div>
+            <!-- Kept out of Staying on purpose: three certain and two maybes is a different block
+                 from five certain. -->
+            {#if rooms.undecidedParties > 0}
+                <div class="flex items-baseline justify-between gap-3 pl-2">
+                    <span class="text-sm text-amber-700 dark:text-amber-400">Not sure yet</span>
+                    <span class="text-sm text-amber-700 tabular-nums dark:text-amber-400">
+                        <span class="font-semibold">{rooms.undecidedParties}</span>
+                        {rooms.undecidedParties === 1 ? 'party' : 'parties'} ·
+                        <span class="font-semibold">{rooms.undecidedPeople}</span>
+                        {rooms.undecidedPeople === 1 ? 'person' : 'people'}
+                    </span>
+                </div>
+            {/if}
+            {#if rooms.elsewhereParties > 0}
+                <div class="flex items-baseline justify-between gap-3 pl-2">
+                    <span class="text-muted-foreground text-sm">Somewhere else</span>
+                    <span class="text-muted-foreground text-sm tabular-nums">
+                        {rooms.elsewhereParties}
+                        {rooms.elsewhereParties === 1 ? 'party' : 'parties'}
+                    </span>
+                </div>
+            {/if}
+            <!-- Families to ring, not a number to add: these bookings were taken before the
+                 question existed, so nobody has ever been asked. -->
+            {#if rooms.notAskedParties > 0}
+                <p class="pl-2 text-xs text-amber-700 dark:text-amber-400">
+                    {rooms.notAskedParties}
+                    {rooms.notAskedParties === 1 ? 'party was' : 'parties were'} never asked
+                </p>
+            {/if}
+        </div>
     {/if}
 </div>

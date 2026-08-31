@@ -56,7 +56,7 @@ async function handleSubmit(e: SubmitEvent) {
                     <div class="flex flex-col justify-center gap-6 px-10 py-12 lg:px-16">
                         <div>
                             <h1>Sign in to {APP_NAME}</h1>
-                            <p class="mt-1 text-sm text-muted-foreground">
+                            <p class="text-muted-foreground mt-1 text-sm">
                                 Admin access only. Family members don't need an account to register
                                 for the reunion.
                             </p>
@@ -83,7 +83,7 @@ async function handleSubmit(e: SubmitEvent) {
                                     required />
                             </div>
                             {#if error}
-                                <p class="text-sm text-destructive">{error}</p>
+                                <p class="text-destructive text-sm">{error}</p>
                             {/if}
                             <Button type="submit" class="w-full" disabled={loading}>
                                 {loading ? 'Signing in…' : 'Sign in'}

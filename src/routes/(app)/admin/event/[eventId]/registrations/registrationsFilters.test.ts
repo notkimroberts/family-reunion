@@ -1,5 +1,6 @@
-import { describe, it, expect } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import { filterBookings } from './filterBookings'
+import { filterDonations } from './filterDonations'
 import { filterPeople } from './filterPeople'
 import { lensFromUrl } from './registrationsViewUrl'
 import { urlForLens } from './urlForLens'
@@ -10,6 +11,7 @@ import { urlForLens } from './urlForLens'
 
 type Booking = Parameters<typeof filterBookings>[0][number]
 type Person = Parameters<typeof filterPeople>[0][number]
+type Donation = Parameters<typeof filterDonations>[0][number]
 
 const booking = (over: Partial<Booking>) =>
     ({
@@ -28,6 +30,21 @@ const booking = (over: Partial<Booking>) =>
 
 const person = (over: Partial<Person>) =>
     ({ id: 'p1', name: 'Bo Patterson', contactName: 'Alice Patterson', ...over }) as Person
+
+const donation = (over: Partial<Donation>) =>
+    ({
+        id: 'd1',
+        donorName: 'Ruth Patterson',
+        donorEmail: 'ruth@example.com',
+        message: null,
+        amountCents: 5000,
+        stripeFeeCents: null,
+        status: 'paid',
+        registrationId: null,
+        paidAt: null,
+        createdAt: new Date(),
+        ...over,
+    }) as Donation
 
 describe('filterBookings', () => {
     const rows = [
@@ -98,6 +115,41 @@ describe('filterPeople', () => {
     })
 })
 
+/* Gifts, narrowed by the search box only. No status chips: the chips name registration statuses,
+   and a gift's states are not those. */
+describe('filterDonations', () => {
+    const rows = [
+        donation({ id: 'd1', donorName: 'Ruth Patterson', donorEmail: 'ruth@example.com' }),
+        donation({
+            id: 'd2',
+            donorName: 'Wanda Trantow',
+            donorEmail: 'wanda@example.com',
+            status: 'pending',
+        }),
+    ]
+
+    it('matches the donor name, case-insensitively', () => {
+        expect(filterDonations(rows, { search: 'ruth' }).map((row) => row.id)).toEqual(['d1'])
+    })
+
+    it('matches the donor email', () => {
+        expect(filterDonations(rows, { search: 'wanda@' }).map((row) => row.id)).toEqual(['d2'])
+    })
+
+    /* A pending gift is an abandoned checkout, and an organiser reconciling against Stripe is
+       looking for exactly those — so the lens lists every status. */
+    it('keeps gifts of every status', () => {
+        expect(filterDonations(rows, { search: '' })).toHaveLength(2)
+    })
+
+    /* A common word in a dedication must not pull unrelated rows into a search for a name. */
+    it('does not search the message', () => {
+        const withMessage = [donation({ id: 'd3', message: 'In memory of Roxie' })]
+
+        expect(filterDonations(withMessage, { search: 'Roxie' })).toHaveLength(0)
+    })
+})
+
 describe('the lens in the URL', () => {
     it('defaults to bookings when the parameter is absent', () => {
         expect(lensFromUrl(new URL('http://x/admin/event/1/registrations'))).toBe('bookings')
@@ -106,6 +158,12 @@ describe('the lens in the URL', () => {
     it('reads people from the parameter', () => {
         expect(lensFromUrl(new URL('http://x/admin/event/1/registrations?view=people'))).toBe(
             'people',
+        )
+    })
+
+    it('reads donations from the parameter', () => {
+        expect(lensFromUrl(new URL('http://x/admin/event/1/registrations?view=donations'))).toBe(
+            'donations',
         )
     })
 
@@ -119,10 +177,14 @@ describe('the lens in the URL', () => {
     it('round-trips through urlForLens', () => {
         const start = new URL('http://x/admin/event/1/registrations')
         const people = urlForLens(start, 'people')
+        const gifts = urlForLens(start, 'donations')
 
         expect(lensFromUrl(people)).toBe('people')
+        expect(lensFromUrl(gifts)).toBe('donations')
         expect(lensFromUrl(urlForLens(people, 'bookings'))).toBe('bookings')
         expect(urlForLens(people, 'bookings').search).toBe('')
+        /* Switching between the two non-default lenses must replace the value, not append. */
+        expect(lensFromUrl(urlForLens(people, 'donations'))).toBe('donations')
     })
 
     it('leaves every other query parameter alone', () => {

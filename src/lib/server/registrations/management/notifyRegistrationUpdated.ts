@@ -1,5 +1,5 @@
-import { eq } from 'drizzle-orm'
 import { createHash } from 'node:crypto'
+import { eq } from 'drizzle-orm'
 import { db } from '$lib/server/db'
 import { registrations } from '$lib/server/db/schema'
 import { dbg } from '$lib/server/debug'

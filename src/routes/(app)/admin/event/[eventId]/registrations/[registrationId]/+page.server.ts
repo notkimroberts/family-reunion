@@ -23,7 +23,7 @@ import {
 import { reportError } from '$lib/server/reportError'
 import { getTiersForEvent } from '$lib/server/tiers'
 import { parseYesNo } from '$lib/utils'
-import type { PageServerLoad, Actions } from './$types'
+import type { Actions, PageServerLoad } from './$types'
 import type { RegistrationActionFeedback } from './registrationActionFeedback'
 import { adminEditRegistrationSchema } from './schema'
 
@@ -87,6 +87,8 @@ export const load: PageServerLoad = async (event) => {
             contactName: found.registration.contactName,
             contactEmail: found.registration.contactEmail,
             contactPhone: found.registration.contactPhone ?? '',
+            /* '' for a booking that predates the question — see the schema. */
+            stayingAtHostHotel: found.registration.stayingAtHostHotel ?? ('' as const),
             status:
                 found.registration.status === 'refunded' ? 'pending' : found.registration.status,
             members: [],
@@ -139,6 +141,7 @@ export const actions: Actions = {
                 contactName: form.data.contactName,
                 contactEmail: form.data.contactEmail,
                 contactPhone: form.data.contactPhone,
+                stayingAtHostHotel: form.data.stayingAtHostHotel || undefined,
             })
 
             if (contact.changed) {

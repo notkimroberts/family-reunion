@@ -1,5 +1,6 @@
 import { error } from '@sveltejs/kit'
 import { and, eq } from 'drizzle-orm'
+import type { HotelStayAnswer } from '$lib/general/constants'
 import { db } from '$lib/server/db'
 import { partyMembers, registrations } from '$lib/server/db/schema'
 import { dbg } from '$lib/server/debug'
@@ -21,6 +22,10 @@ export async function updateRegistrationContact(params: {
     contactName: string
     contactEmail: string
     contactPhone: string | undefined
+    /* The host-hotel answer. UNDEFINED MEANS LEAVE IT ALONE, which is how a booking taken before the
+       question existed keeps its null rather than being written as a guess: the admin form posts ''
+       for "no answer on file" and the caller maps that to undefined. */
+    stayingAtHostHotel?: HotelStayAnswer
 }): Promise<{ changed: boolean; emailChanged: boolean; previousEmail: string }> {
     const [existing] = await db
         .select({
@@ -28,6 +33,7 @@ export async function updateRegistrationContact(params: {
             contactName: registrations.contactName,
             contactEmail: registrations.contactEmail,
             contactPhone: registrations.contactPhone,
+            stayingAtHostHotel: registrations.stayingAtHostHotel,
         })
         .from(registrations)
         .where(eq(registrations.id, params.registrationId))
@@ -45,11 +51,16 @@ export async function updateRegistrationContact(params: {
     const contactEmail = params.contactEmail.trim().toLowerCase()
     const contactPhone = params.contactPhone?.trim() || null
 
+    /* Undefined leaves the stored value in place, so "not posted" and "posted as no answer" are not
+       the same thing. */
+    const stayingAtHostHotel = params.stayingAtHostHotel ?? existing.stayingAtHostHotel
+
     const emailChanged = contactEmail !== existing.contactEmail
     const changed =
         emailChanged ||
         contactName !== existing.contactName ||
-        contactPhone !== existing.contactPhone
+        contactPhone !== existing.contactPhone ||
+        stayingAtHostHotel !== existing.stayingAtHostHotel
 
     if (!changed) {
         return { changed: false, emailChanged: false, previousEmail: existing.contactEmail }
@@ -57,7 +68,7 @@ export async function updateRegistrationContact(params: {
 
     await db
         .update(registrations)
-        .set({ contactName, contactEmail, contactPhone, updatedAt: new Date() })
+        .set({ contactName, contactEmail, contactPhone, stayingAtHostHotel, updatedAt: new Date() })
         .where(eq(registrations.id, params.registrationId))
 
     /* The contact is also an attendee, and their name is stored on that row too — it has to be, since

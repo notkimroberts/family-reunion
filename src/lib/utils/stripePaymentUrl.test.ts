@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import { stripePaymentUrl } from './stripePaymentUrl'
 
 const INTENT = 'pi_3Abc123XyZ'

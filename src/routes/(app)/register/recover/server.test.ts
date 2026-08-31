@@ -1,6 +1,6 @@
 import { stringify } from 'devalue'
 import { eq } from 'drizzle-orm'
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { registrations } from '$lib/server/db/schema'
 import { resetTestDb } from '$lib/server/db/testing/resetTestDb'
 import { hashManagementToken } from '$lib/server/registrations/hashManagementToken'

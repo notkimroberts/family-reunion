@@ -91,6 +91,7 @@ Server logic lives under `src/lib/server/`, one domain per folder. Each exported
 | — checkout    | `registrations/checkout/`   | Pending registration, add-member checkout, admin direct creation, Stripe fulfillment              |
 | — management  | `registrations/management/` | Post-payment mutations: remove member, cancel, update member details, set status                  |
 | — queries     | `registrations/queries/`    | All registration reads                                                                            |
+| Donations     | `$lib/server/donations`     | Gifts: pending creation, webhook fulfilment, admin/public reads                                   |
 | Payments      | `$lib/server/payments`      | Stripe checkout creation, refunds, session retrieval; metadata encode/decode in `stripeMetadata/` |
 | Email         | `$lib/server/email`         | Template rendering in `templates/`; Resend delivery in `send/`                                    |
 | Auth          | `$lib/server/auth`          | Better Auth setup; guards in `guards/`                                                            |
@@ -130,25 +131,27 @@ Registration is **fully public — no sign-in required**. Anyone with a name + e
 
 The token is the only credential — no per-request auth check, which is exactly why the page it opens can only read. Email enumeration is avoided in `/register/recover` by always returning a generic success message.
 
+**The host-hotel question is booking-level, and its three answers are load-bearing.** `registrations.staying_at_host_hotel` (enum `hotel_stay`) records whether a party will stay at `HOST_HOTEL`, because the organisers hold a room block and the size of it is guesswork otherwise. It sits on `registrations` beside `contactEmail` rather than on `party_members` — a household books rooms together, and asking each attendee would produce a party of four with four contradictory answers (ADR 0008). Three answers, not two: the question is asked months ahead, and `undecided` means asked-and-unsure, which is what tells an organiser "N parties might". `getRoomSummary` reports staying, undecided and elsewhere apart for that reason, in **parties and people both** — a block is negotiated in rooms and a party of five is not one room. **NULL means never asked** and is a fourth thing again: every booking taken before the question existed has it, and reading those as maybes would inflate the block by the reunion's whole history, so they are reported as families to ring. `HOTEL_STAY_ANSWERS` is the single list the pgEnum, the zod schemas and the admin labels all come off. In the zod enums `''` is FIRST, and that order is load-bearing: superforms defaults an absent enum field to the first value, so with the answers first an omitted field arrived as `'yes'` and silently booked a room.
+
 **Every reunion datetime is reunion-local, and the lock date is shown rather than only enforced.** `REUNION_TIME_ZONE` (`America/Los_Angeles` — the reunion is in Oakland, not the family's Mississippi origins) is the zone an organiser's typed digits are read in and the zone every visitor is shown. Three utilities own it and nothing else may reimplement the rule: `parseReunionWallClock` (what a `datetime-local` posts → the instant it names, DST-correct via `@internationalized/date`), `toReunionWallClock` (the inverse, so re-saving an untouched settings form cannot drift the date), and `formatReunionDateTime` (display, `long` or `short`, always naming the zone). `new Date(digits)` reads the posted wall clock in the RUNTIME's zone — UTC on Railway — which stored a 9:00 AM deadline as 09:00 UTC and closed registration at 2:00 AM Pacific; that is the bug these exist to prevent, so do not parse a posted datetime any other way. The three `reunion_events` datetimes are `timestamptz` (migration `0016`) so the instant survives the server's zone; `registrations.paid_at` is still naive and has the same latent problem. `RegistrationDeadline` (`$lib/components`) states the deadline on the home page and the register hero, outside every event-state branch, and the home page swaps **Register Now** for a contact notice once it passes — via `isRegistrationClosed` (`$lib/general/registration`), the one predicate shared with `assertRegistrationEditable`. Pinning the zone is also what lets the line be server-rendered rather than appearing a beat after mount.
 
 Route groups:
 
 - `(auth)` — `/login` only, no nav, full-screen card layout. Admin sign-in only. `goto('/admin')` on success is the **only** entry point into the admin area anywhere in the app.
-- `(app)` — public paths are **only** `/` and `/register` (which covers `/register/manage` and `/register/recover`). Everything else in the group — `/program`, `/changelog`, `/admin/*` — redirects to `/login`. The allowlist is `isPublicPath()` in `$lib/server/auth/guards`; widen it there to reopen a page after the reunion. Contact is a section on `/` (`#contact`), not its own route.
+- `(app)` — public paths are **only** `/`, `/register` (which covers `/register/manage` and `/register/recover`) and `/donate` (which covers `/donate/thanks`). Everything else in the group — `/program`, `/changelog`, `/admin/*` — redirects to `/login`. The allowlist is `isPublicPath()` in `$lib/server/auth/guards`; widen it there to reopen a page after the reunion. Contact is a section on `/` (`#contact`), not its own route.
 
 #### Admin routes are event-scoped
 
 Everything an organiser does concerns one reunion, and the reunion is named in the path — see [ADR 0003](docs/adr/0003-event-scoped-admin-and-owner-only-setup.md).
 
-| Path                                                    | What it is                                                                                           |
-| ------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
-| `/admin`                                                | The landing page: one card per reunion, newest first, plus **Add new event** (owner-only, a link)    |
-| `/admin/event/new`                                      | Owner-only: create a reunion year. Title and year, both pre-filled from the newest one               |
-| `/admin/event/[eventId]/registrations`                  | The organiser's ONLY screen. Status panel beside the list, plus a Bookings / People lens in `?view=` |
-| `/admin/event/[eventId]/registrations/new`              | Paper entry. Tiers come from `params.eventId`, never `getOpenEvent()`                                |
-| `/admin/event/[eventId]/registrations/[registrationId]` | One registration. 404s if it does not belong to `eventId`                                            |
-| `/admin/event/[eventId]/settings`                       | Owner-only: event details, **status**, tiers, lock date, program                                     |
+| Path                                                    | What it is                                                                                                   |
+| ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `/admin`                                                | The landing page: one card per reunion, newest first, plus **Add new event** (owner-only, a link)            |
+| `/admin/event/new`                                      | Owner-only: create a reunion year. Title and year, both pre-filled from the newest one                       |
+| `/admin/event/[eventId]/registrations`                  | The organiser's ONLY screen. Status panel beside the list, plus a Bookings / People / Gifts lens in `?view=` |
+| `/admin/event/[eventId]/registrations/new`              | Paper entry. Tiers come from `params.eventId`, never `getOpenEvent()`                                        |
+| `/admin/event/[eventId]/registrations/[registrationId]` | One registration. 404s if it does not belong to `eventId`                                                    |
+| `/admin/event/[eventId]/settings`                       | Owner-only: event details, **status**, tiers, lock date, program                                             |
 
 - **There is no Setup area.** `/admin/setup`, `/admin/setup/events`, `/admin/users`, `/admin/storefront` and `/admin/photos` are all gone — see [ADR 0006](docs/adr/0006-setup-folded-into-the-event.md). What survived went where it belonged: creating a year is `/admin/event/new`, reached from the list; a year's status is on that year's settings page, beside its dates and tiers. Nothing replaced account management, because `admin:create` was always the only way to make an admin and the screen was read-only. Do not reintroduce a Setup landing page — it existed to hold five links, four of which no longer have destinations.
 - **Creating a year is a page, not a panel.** It was briefly a form that expanded in place above the year cards on `/admin`, whose result came back as `{ createdEventId }` for an `$effect` to `goto()` — a redirect written in three places, because an action that redirected would have stopped a `fail()` rendering on the list. `/admin/event/new` has neither problem: `fail()` renders on the create page and success is a plain `redirect(303, …)` to the new year's settings. Static segments outrank dynamic ones in SvelteKit, so `new` resolves ahead of `[eventId]` and is not covered by `[eventId]/+layout.server.ts`.
@@ -157,9 +160,11 @@ Everything an organiser does concerns one reunion, and the reunion is named in t
 - **There is no admin header.** Admin renders inside the ordinary app shell — the same `AppHeader` as every other page, which already carries the theme toggle and the account menu. An `AdminHeader` existed briefly and duplicated all three of those on every admin screen. What is genuinely admin-specific lives on the page: the reunion title, the year picker and the Event settings link are in the status card on the registrations list, beside the numbers they apply to.
 - The 12-column grid wrappers in `(app)/+layout.svelte` and `admin/+layout.svelte` stay: every admin section is `col-span-12` or `xl:col-span-8` and they are also the only source of vertical spacing between sections. `admin/+layout.svelte` now does nothing else.
 - **Getting back from settings**: the settings page has a breadcrumb (Reunions / year / Settings) and a "← Back to registrations" button. With no admin header, those are the only route back — do not remove them.
-- **Registrations and People are two lenses on one page** (`?view=`), not two routes — see [ADR 0004](docs/adr/0004-genealogy-out-of-scope-for-launch.md). Bookings is one row per party; People is one row per attendee, `paid` and `waived` only, which is what catering and shirt counts come off. The status filter chips appear on Bookings only: People is already filtered by the query, so a chip there could only remove rows without explaining why.
+- **Registrations, People and Gifts are three lenses on one page** (`?view=`), not three routes — see [ADR 0004](docs/adr/0004-genealogy-out-of-scope-for-launch.md). Bookings is one row per party; People is one row per attendee, `paid` and `waived` only, which is what catering and shirt counts come off; Gifts is one row per donation, every status, because a pending gift is an abandoned checkout an organiser reconciling against Stripe needs to see. The status filter chips appear on Bookings only: the other two are already narrowed by their own query or list a state the chips do not name, so a chip there could only remove rows without explaining why. `bookings` is the parameter-LESS default, so the two spellings of it cannot drift.
 
 - The event status banner is rendered once by `admin/event/[eventId]/+layout.svelte` for every child view. `open` renders **nothing** — `draft`, `closed` and `archived` each get a banner because all three mean nobody can register.
+
+- **The status panel answers one question per block, and the money block leads with one figure.** `MoneyPanel` renders money, `HeadcountPanel` renders people, `OrderSheet` renders what to buy — they were one component that interleaved all three, stacking head counts and amounts in identical rows so neither scanned. Worse, it printed **"In the bank" twice**, once for registrations and once for gifts, leaving the organiser to add them. `getEventMoney` is where the two are added, and the rows under the headline are the terms of that sum: `registrations + gifts − fees − lost to refunds === in the bank`, asserted in `eventMoney.test.ts` against the real producers. Adding a figure to either `getRegistrationTotals` or `getDonationTotals` means deciding which side of that identity it falls on. Method notes — estimated vs recorded fees, cheques still to deposit, a gift sharing a booking's charge — live in the ⓘ tooltip, never as prose between the figures; that mistake has now been made twice and fixed twice.
 
 > **The route lock covers page views only.** A SvelteKit layout `load` runs _after_ a form action, so `(app)/+layout.server.ts` cannot protect actions — those carry their own `requireAuth`/`requireAdmin` guards. Routes outside the `(app)` group are not covered at all, and must stay reachable: `/api/webhooks/stripe` (Stripe sends no session — blocking it breaks every payment), `/api/webhooks/resend` (same, and blocking it hides every bounce), `/api/registration/status`, `/api/auth/*`, and `/api/health`.
 >
@@ -202,6 +207,19 @@ Everything an organiser does concerns one reunion, and the reunion is named in t
 - Stripe session metadata is typed via `encodeRegistrationMetadata` / `encodeAddMemberMetadata` / `decodeSessionMetadata` in `$lib/server/payments/stripeMetadata` — never access `session.metadata` keys directly. `decodeSessionMetadata` fails closed (returns null) when required fields are missing
 - Refund flows pass a stable Stripe idempotency key (`cancel-registration-<id>-<intent>`) so retries cannot double-refund
 
+### Donations
+
+Gifts to the reunion, from `/donate` or added to a registration checkout. Presented amounts come from `DONATION_PRESET_CENTS`, bounded by `DONATION_MIN_CENTS` / `DONATION_MAX_CENTS` — all three in `$lib/general/constants`, and enforced by the zod schemas so the client and the server cannot disagree.
+
+- **One `donations` table serves both paths**, with a nullable `registration_id` naming the booking a gift arrived with. Folding a gift into `registrations` would mix money that buys a chair with money that does not, and the admin panel reports them apart on purpose.
+- **A gift is charged at face value — it is NOT grossed up.** A tier price is what the reunion must _net_, so the payer covers Stripe's cut; a gift is whatever the giver chose to give, and quoting $51.75 for a $50 gift reads as a mistake. `quotePartyTotal`'s `donationCents` option therefore adds to `totalCents` and skips `stripeFeeCents`, and stays out of `subtotalCents` so "Subtotal" remains the cost of the places.
+- **A gift given with a registration shares ONE charge and one balance transaction**, and that fee is recorded on the registration. `markDonationPaid` is called with no `feeCents` on that path, and `getDonationTotals` charges no fee against a gift with a `registrationId` — between them that is what stops Stripe's cut being deducted twice across the two admin figures. `donations.stripe_fee_cents` NULL means "not known, or accounted on the registration".
+- **A cancelled booking does NOT refund the gift — the reunion keeps it.** Someone dropping out has not asked for their gift back. But Stripe refunds **charges, not line items**, and a gift added during registration was a line item on the booking's own charge, so a full refund hands it back whether anyone meant it or not: keeping it requires refunding _less_ than the charge. `planRefunds` (`registrations/management/_planRefunds.ts`) decides that per intent — an intent carrying no gift is still refunded in full with `amount: undefined`, exactly as before, so every booking without a gift behaves identically; one carrying a gift is refunded the sum of the snapshotted member prices on it, which ARE the line items sent to Stripe. A charge that was the gift alone is skipped, because a zero refund is an error at Stripe. The cancellation email states the kept amount (`keptDonationCents`), or the donor waits for money that is not coming.
+- **`/donate` ignores the registration lock date**, unlike `createPendingRegistration`. The lock exists so catering counts can be finalised; a gift needs no chair. `eventId` is nullable for the same reason — a gift arriving between reunions is recorded, not refused, and the receipt falls back to "the family reunion".
+- Fulfilment mirrors the registration branch: one conditional `pending → paid` UPDATE, so a Stripe redelivery matches nothing and thanks nobody twice. The receipt carries `idempotencyKey: donation/<id>`; a gift given with a registration gets **no** receipt of its own, because the confirmation email names it.
+- The public "raised so far" figure (`getPublicDonationTotal`, home page and `/donate`) counts **paid** gifts only and reports the GROSS. A pending row is an abandoned checkout, and counting it would let anyone inflate the total by opening a checkout and walking away.
+- Admin-side it is read-only: a third lens on the registrations page (`?view=donations`), and gift money folded into the panel's single bank figure by `getEventMoney`. Nothing in the app refunds a gift — that is done in the Stripe dashboard, as it is for the money on a booking.
+
 ### Email
 
 - **Resend** for delivery, via `send()` in `$lib/server/email/send/_resend.ts`.
@@ -221,7 +239,7 @@ The app is a registration app. Genealogy went out of scope before launch ([ADR 0
 - **Cloudflare R2 went with the gallery.** `$lib/server/storage`, `@aws-sdk/client-s3`, `@aws-sdk/s3-request-presigner` and the five `R2_*` variables are all removed. Nothing in the app uploads a file any more. Anything still in the bucket is orphaned — `photos.r2_key` was the only pointer to it — so empty the bucket by hand if it matters, and delete the Railway variables.
 - `db:seed` no longer generates a family tree or photo rows. It still seeds events, tiers, registrations and party members, which is what `db:reseed` is for.
 - **The shop went too**, in `drizzle/0012_smart_hairball.sql`: `/shop`, `/admin/storefront`, the `StorefrontProduct` type and `reunion_events.external_shop_url` / `shop_products` / `shop_active`. It was a link to an external store plus a JSONB list of shirts — nothing was ever sold through this app, so no order or payment depended on it. Shirt sizes are still collected at registration and counted in the admin order sheet; that is the part that mattered.
-- **`PRIMARY_NAV_LINKS` and `SECONDARY_NAV_LINKS` are both gone**, and with them the "Family" and "Reunion" dropdowns in `AppHeader` and their sections in `MobileDrawer`. Between them they held only the gallery and the shop, so both arrays were already empty behind an `{#if …length}`. The nav is now logo · Contact · Register · theme · account. `MobileDrawer`'s `iconMap` went with them — nothing renders a link from a list any more.
+- **`PRIMARY_NAV_LINKS` and `SECONDARY_NAV_LINKS` are both gone**, and with them the "Family" and "Reunion" dropdowns in `AppHeader` and their sections in `MobileDrawer`. Between them they held only the gallery and the shop, so both arrays were already empty behind an `{#if …length}`. The nav is now logo · Donate · Register · theme · account, with Donate as an outline link left of the filled Register button so there is still exactly one primary call to action. `MobileDrawer`'s `iconMap` went with them — nothing renders a link from a list any more.
 - If any of them comes back, it comes back with its own ADR. Do not reintroduce `/family-tree`, `/gallery` or `/shop` by reflex because you found a dangling reference.
 
 ### Icons
@@ -364,6 +382,39 @@ The app is fully responsive with a `md:` (768px) breakpoint separating mobile an
 - Use `bun run format` whenever the format is not correct
 - Prefer running single tests, and not the whole test suite, for performance
 - **Tests**: run `bun run test` after any change to logic covered by tests; add or update co-located `.test.ts` files whenever new utility functions or server logic is added or modified. Tests live next to the source file (e.g. `price.test.ts` beside `price.ts`)
+
+#### Prettier plugin order, and the `$` corruption it caused
+
+`prettier-plugin-tailwindcss` **must be last** in `.prettierrc`'s `plugins` array — its own docs say
+so, because it wraps whatever printer the other plugins install. It was second for a long time, with
+the sort-imports plugin after it, and the result was that `bun run format` spliced formatted script
+blocks back into `.svelte` files through a plain `String.prototype.replace`. The replacement's
+special patterns then fired on the source itself:
+
+| In a `<script>` | Became                                        |
+| --------------- | --------------------------------------------- |
+| `$$`            | `$` — a price silently lost its symbol        |
+| `` $` ``        | the whole file _before_ the match, spliced in |
+| `$'`            | the whole file _after_ the match, spliced in  |
+| `$&`            | the matched text, spliced in                  |
+
+It shipped: `AdminCancelDialog` offered to refund "165.09" with no dollar sign. The last three broke
+files outright, and the Svelte parser reported it as
+`element_invalid_closing_tag: </script> attempted to close an element that was not open` — pointing
+at the closing tag and saying nothing about the cause.
+
+Fixed by moving `prettier-plugin-tailwindcss` last and swapping
+`@trivago/prettier-plugin-sort-imports` (unmaintained) for `@ianvs/prettier-plugin-sort-imports`.
+All four patterns now survive a format, in code and comments. **Do not reorder that plugins array.**
+If a currency symbol or a whole file is ever mangled again, check the order first, then search script
+blocks for ``\$[$&'`]``.
+
+`formatUsd(cents)` in `$lib/utils` stays regardless: one place owns the symbol, so components read
+`formatUsd(x)` instead of gluing `'$'` onto `formatPrice(x)` in a dozen files. `importOrder` keeps
+the same three groups it always had, with `<BUILTIN_MODULES>` and `<THIRD_PARTY_MODULES>` now named
+explicitly because @ianvs requires them, and `importOrderCaseSensitive: true` to preserve the
+existing ordering. @ianvs additionally sorts named specifiers and merges duplicate type imports from
+one module, which is what the one-time 162-file reformat was.
 
 #### `bun test` is not this project's test runner
 

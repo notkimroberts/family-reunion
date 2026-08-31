@@ -1,6 +1,7 @@
 import { count, desc, eq, sum } from 'drizzle-orm'
+import type { HotelStayAnswer } from '$lib/general/constants'
 import { db } from '$lib/server/db'
-import { partyMembers, registrations, registrationStatusEnum } from '$lib/server/db/schema'
+import { partyMembers, registrationStatusEnum, registrations } from '$lib/server/db/schema'
 
 export type RegistrationSummary = {
     id: string
@@ -22,6 +23,9 @@ export type RegistrationSummary = {
     /* When the money arrived, or null when that was never recorded — see the column comment. Not
        updatedAt, which any later edit bumps. */
     paidAt: Date | null
+    /* Whether this party plans to stay at the host hotel. Null means the booking predates the
+       question, which is NOT the same as 'undecided' — see the column comment and getRoomSummary. */
+    stayingAtHostHotel: HotelStayAnswer | null
     memberCount: number
     totalCents: number
     createdAt: Date
@@ -55,6 +59,7 @@ export async function getRegistrationsForEvent(eventId: string): Promise<Registr
             stripePaymentIntentId: registrations.stripePaymentIntentId,
             stripeFeeCents: registrations.stripeFeeCents,
             paidAt: registrations.paidAt,
+            stayingAtHostHotel: registrations.stayingAtHostHotel,
             createdAt: registrations.createdAt,
             memberCount: count(partyMembers.id),
             totalCents: sum(partyMembers.priceCents),

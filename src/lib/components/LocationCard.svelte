@@ -27,11 +27,11 @@ let directionsUrl = $derived(
             class="aspect-video w-full object-cover" />
     {:else}
         <!-- Flat placeholder until a photo is added; no gradient, matching the app's surfaces. -->
-        <div class="flex aspect-video w-full items-center justify-center border-b bg-muted">
+        <div class="bg-muted flex aspect-video w-full items-center justify-center border-b">
             {#if location.kind === 'hotel'}
-                <Hotel class="size-10 text-muted-foreground" />
+                <Hotel class="text-muted-foreground size-10" />
             {:else}
-                <MapPin class="size-10 text-muted-foreground" />
+                <MapPin class="text-muted-foreground size-10" />
             {/if}
         </div>
     {/if}

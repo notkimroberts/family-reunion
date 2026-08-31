@@ -20,12 +20,12 @@ let isAdmin = $derived(page.url.pathname.startsWith('/admin'))
 <!-- TooltipProvider wraps everything: bits-ui's Tooltip.Root throws without one as an ancestor, and it
      renders no markup of its own. -->
 <TooltipProvider>
-    <div class="min-h-screen flex flex-col">
+    <div class="flex min-h-screen flex-col">
         <AppHeader />
 
         <main
             class={cn(
-                'mx-auto w-full px-4 py-6 md:px-6 md:py-6 flex-1',
+                'mx-auto w-full flex-1 px-4 py-6 md:px-6 md:py-6',
                 isAdmin ? 'max-w-[110rem]' : 'max-w-6xl',
             )}>
             <div class="grid grid-cols-12 gap-y-8 md:gap-y-10">

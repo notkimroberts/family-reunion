@@ -1,5 +1,5 @@
 import { faker } from '@faker-js/faker'
-import { sql } from 'drizzle-orm'
+import { eq, sql } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/postgres-js'
 import postgres from 'postgres'
 import { dbg } from '../debug'
@@ -116,6 +116,7 @@ async function seed() {
     dbg.seed('Truncating all tables...')
     await db.execute(sql`
 		TRUNCATE TABLE
+			donations,
 			party_members,
 			registrations,
 			reunion_events
@@ -282,6 +283,56 @@ async function seed() {
                 })),
             )
         }
+    }
+
+    dbg.seed('Seeding gifts...')
+    /* A few standalone gifts per year, plus one attached to a booking, so the Gifts lens, the money
+       panel's gift block and the home page's "raised so far" line all have something to render
+       locally. One pending row on the open year: that is an abandoned checkout, which is the state
+       an organiser reconciling against Stripe most needs to recognise. */
+    for (const event of events) {
+        const eventRegistrations = await db
+            .select({ id: schema.registrations.id })
+            .from(schema.registrations)
+            .where(eq(schema.registrations.eventId, event.id))
+            .limit(1)
+
+        const gifts: (typeof schema.donations.$inferInsert)[] = Array.from(
+            { length: faker.number.int({ min: 2, max: 4 }) },
+            (_, index) => {
+                const donorName = faker.person.fullName()
+                const paid = !(event.status === 'open' && index === 0)
+                const amountCents = faker.helpers.arrayElement([2500, 5000, 10000, 25000])
+                return {
+                    eventId: event.id,
+                    donorName,
+                    donorEmail: faker.internet
+                        .email({ firstName: donorName.split(' ')[0] })
+                        .toLowerCase(),
+                    message: faker.datatype.boolean() ? 'In memory of William and Roxie' : null,
+                    amountCents,
+                    status: paid ? ('paid' as const) : ('pending' as const),
+                    /* Standalone gifts pay their own 2.9% + 30¢. */
+                    stripeFeeCents: paid ? Math.round(amountCents * 0.029) + 30 : null,
+                    stripeSessionId: `cs_test_${crypto.randomUUID().slice(0, 24)}`,
+                    paidAt: paid ? faker.date.recent({ days: 60 }) : null,
+                }
+            },
+        )
+
+        /* One gift that came in with a booking: no fee of its own, because it shared that charge. */
+        if (eventRegistrations.length > 0) {
+            gifts.push({
+                ...gifts[0],
+                registrationId: eventRegistrations[0].id,
+                stripeFeeCents: null,
+                stripeSessionId: `cs_test_${crypto.randomUUID().slice(0, 24)}`,
+                status: 'paid' as const,
+                paidAt: faker.date.recent({ days: 60 }),
+            })
+        }
+
+        await db.insert(schema.donations).values(gifts)
     }
 
     dbg.seed('Seed complete!')

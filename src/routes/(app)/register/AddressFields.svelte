@@ -40,7 +40,7 @@ let {
 <div class="space-y-1.5">
     <label for="{idPrefix}-line2" class="text-sm font-medium">
         Apt / suite
-        <span class="text-muted-foreground font-normal text-xs">(optional)</span>
+        <span class="text-muted-foreground text-xs font-normal">(optional)</span>
     </label>
     <Input
         id="{idPrefix}-line2"
@@ -94,7 +94,7 @@ let {
             autocomplete="postal-code"
             {required} />
         {#if addressZip.trim() && !isValidZip(addressZip)}
-            <p class="text-sm text-destructive">Please enter a valid ZIP code</p>
+            <p class="text-destructive text-sm">Please enter a valid ZIP code</p>
         {/if}
     </div>
 </div>

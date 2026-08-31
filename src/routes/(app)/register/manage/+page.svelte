@@ -69,16 +69,16 @@ $effect(() => {
 </svelte:head>
 
 {#if data.missingToken}
-    <section class="col-span-12 max-w-md mx-auto w-full">
+    <section class="col-span-12 mx-auto w-full max-w-md">
         <Card>
             <CardHeader>
                 <CardTitle class="flex items-center gap-2">
-                    <KeyRound class="h-5 w-5 text-muted-foreground" />
+                    <KeyRound class="text-muted-foreground h-5 w-5" />
                     Find your registration
                 </CardTitle>
             </CardHeader>
             <CardContent class="flex flex-col gap-4">
-                <p class="text-sm text-muted-foreground">
+                <p class="text-muted-foreground text-sm">
                     We couldn't find an active registration session in this browser. If you've
                     already registered, we can email a fresh management link to you.
                 </p>
@@ -90,13 +90,13 @@ $effect(() => {
         </Card>
     </section>
 {:else if awaitingStripe && !timedOut}
-    <section class="col-span-12 text-center py-12">
-        <LoaderCircle class="mx-auto mb-4 h-10 w-10 animate-spin text-primary" />
+    <section class="col-span-12 py-12 text-center">
+        <LoaderCircle class="text-primary mx-auto mb-4 h-10 w-10 animate-spin" />
         <p class="text-lg font-semibold">Processing Payment…</p>
         <p class="text-muted-foreground mt-1 text-sm">Hang tight, we're confirming your payment.</p>
     </section>
 {:else if awaitingStripe && timedOut}
-    <section class="col-span-12 text-center py-12">
+    <section class="col-span-12 py-12 text-center">
         <p class="text-lg font-semibold">Payment Is Processing</p>
         <p class="text-muted-foreground mt-2 text-sm">
             This is taking longer than expected. You'll receive a confirmation email once your
@@ -125,9 +125,9 @@ $effect(() => {
         <CheckCircle2 class="mx-auto mb-4 h-14 w-14 text-green-500" />
         <h1 class="text-2xl font-bold">You're registered!</h1>
         <p class="text-muted-foreground mt-2">
-            See you at <span class="font-medium text-foreground">{data.event.title}</span>!
+            See you at <span class="text-foreground font-medium">{data.event.title}</span>!
         </p>
-        <p class="text-sm text-muted-foreground mt-1">
+        <p class="text-muted-foreground mt-1 text-sm">
             Bookmark this page or keep the email — it's how you'll come back to your registration.
         </p>
     </section>

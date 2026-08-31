@@ -5,11 +5,14 @@ import { superForm } from 'sveltekit-superforms'
 import { zod4Client as zodClient } from 'sveltekit-superforms/adapters'
 import { Button } from '$lib/components/ui/button'
 import { Card, CardContent } from '$lib/components/ui/card'
+import { HOST_HOTEL } from '$lib/general/constants'
 import { quotePartyTotal } from '$lib/general/pricing'
 import { defaultAdultTierId } from '$lib/general/tiers'
 import { getTierPriceCents } from '$lib/utils'
+import DonationCard from '../../../../../register/DonationCard.svelte'
 import { EMPTY_PERSON_DETAILS } from '../../../../../register/EMPTY_PERSON_DETAILS'
 import FormErrorSummary from '../../../../../register/FormErrorSummary.svelte'
+import HostHotelStayCard from '../../../../../register/HostHotelStayCard.svelte'
 import OrderSummaryCard from '../../../../../register/OrderSummaryCard.svelte'
 import PartyMembersBuilder from '../../../../../register/PartyMembersBuilder.svelte'
 import YourInformationCard from '../../../../../register/YourInformationCard.svelte'
@@ -48,6 +51,7 @@ const { form, errors, message, submitting, enhance } = superForm(data.form, {
         $form.eventId = targetEventId
         $form.self = { ...self }
         $form.members = members.map((member) => ({ ...member }))
+        $form.donationCents = donationCents
     },
     /* handleReset clears state explicitly, so superforms must not also reset $form out from under
        the success banner, which reads the returned manage URL. */
@@ -73,6 +77,8 @@ const blankSelf = (): PersonDetails => ({
 
 let self = $state<PersonDetails>(blankSelf())
 let members = $state<FormMember[]>([])
+/* A gift that arrived with the paper form or the cheque. Cents, like the public form. */
+let donationCents = $state(0)
 let copied = $state(false)
 /* The confirmation and the form are mutually exclusive: a success replaces the form with the
    registrant's management link, and "Add another" swaps back. Derived as one value rather than two
@@ -105,7 +111,7 @@ let quote = $derived(
             ...(self.tierId ? [getTierPriceCents(self.tierId, tiers)] : []),
             ...members.map((member) => getTierPriceCents(member.tierId, tiers)),
         ],
-        { applyStripeFee: false },
+        { applyStripeFee: false, donationCents },
     ),
 )
 
@@ -127,8 +133,10 @@ function handleReset() {
     $form.contactEmail = ''
     $form.contactPhone = ''
     $form.status = 'paid'
+    $form.stayingAtHostHotel = HOST_HOTEL ? '' : 'undecided'
     self = blankSelf()
     members = []
+    donationCents = 0
     contactSaved = false
     copied = false
     addingAnother = true
@@ -148,7 +156,7 @@ async function handleCopy(url: string) {
     <div class="mb-6 flex flex-col gap-1">
         <a
             href="/admin/event/{data.event.id}/registrations"
-            class="text-sm text-muted-foreground hover:text-foreground">← Registrations</a>
+            class="text-muted-foreground hover:text-foreground text-sm">← Registrations</a>
         <h1>Add Paper Registration</h1>
         <p class="text-muted-foreground text-sm">
             Manually register someone who submitted on paper. The same details are required as the
@@ -176,10 +184,10 @@ async function handleCopy(url: string) {
 
             <!-- Shown even on success: the plaintext token exists only in this response. -->
             <div class="flex flex-col gap-2">
-                <span class="text-xs font-semibold uppercase tracking-wide">Management link</span>
+                <span class="text-xs font-semibold tracking-wide uppercase">Management link</span>
                 <div class="flex flex-wrap items-center gap-2">
                     <code
-                        class="min-w-0 flex-1 break-all rounded bg-background/60 px-2 py-1.5 text-xs">
+                        class="bg-background/60 min-w-0 flex-1 rounded px-2 py-1.5 text-xs break-all">
                         {confirmation.manageUrl}
                     </code>
                     <Button
@@ -210,7 +218,7 @@ async function handleCopy(url: string) {
                 <FormErrorSummary errors={$errors} message={$message} />
             </div>
 
-            <div class="grid grid-cols-1 lg:grid-cols-[1fr_minmax(0,22rem)] gap-6">
+            <div class="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_minmax(0,22rem)]">
                 <!-- Left: party builder -->
                 <div class="flex flex-col gap-4">
                     <YourInformationCard
@@ -232,6 +240,12 @@ async function handleCopy(url: string) {
                         {contactName}
                         {contactAddress}
                         error={$errors.members?._errors?.[0]} />
+
+                    <HostHotelStayCard
+                        bind:stayingAtHostHotel={$form.stayingAtHostHotel}
+                        error={$errors.stayingAtHostHotel?.[0]} />
+
+                    <DonationCard bind:donationCents error={$errors.donationCents?.[0]} />
                 </div>
 
                 <!-- Right: order summary (sticky on desktop) -->
@@ -251,7 +265,7 @@ async function handleCopy(url: string) {
                         showStatus
                         bind:status={$form.status} />
                     {#if $errors.status?.[0]}
-                        <p class="mt-2 text-sm text-destructive">{$errors.status[0]}</p>
+                        <p class="text-destructive mt-2 text-sm">{$errors.status[0]}</p>
                     {/if}
                 </div>
             </div>

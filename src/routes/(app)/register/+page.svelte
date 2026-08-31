@@ -9,8 +9,10 @@ import { quotePartyTotal } from '$lib/general/pricing'
 import { isRegistrationClosed } from '$lib/general/registration'
 import { defaultAdultTierId } from '$lib/general/tiers'
 import { formatDateRange, formatPrice, getTierPriceCents, isValidPhone, toE164 } from '$lib/utils'
+import DonationCard from './DonationCard.svelte'
 import { EMPTY_PERSON_DETAILS } from './EMPTY_PERSON_DETAILS'
 import FormErrorSummary from './FormErrorSummary.svelte'
+import HostHotelStayCard from './HostHotelStayCard.svelte'
 import OrderSummaryCard from './OrderSummaryCard.svelte'
 import PartyMembersBuilder from './PartyMembersBuilder.svelte'
 import YourInformationCard from './YourInformationCard.svelte'
@@ -47,6 +49,7 @@ const { form, errors, message, submitting, enhance } = superForm(data.form, {
     onSubmit: () => {
         $form.self = { ...self }
         $form.members = members.map((member) => ({ ...member }))
+        $form.donationCents = donationCents
     },
 })
 
@@ -57,6 +60,9 @@ let self = $state<PersonDetails>({
     tierId: defaultAdultTierId(data.tiers),
 })
 let members = $state<FormMember[]>([])
+/* Cents, and $state for the same reason `self` is: the picker binds it, and one sync into $form
+   happens in onSubmit. */
+let donationCents = $state(0)
 /* Mirrors YourInformationCard's internal Save state — the registrant must commit their own
    details before paying. UI state, so it stays out of $form. */
 let contactSaved = $state(false)
@@ -75,10 +81,13 @@ let contactAddress = $derived({
 /* One quote for the whole party, from the same module the server builds its Stripe line items
    against — so what the payer is shown and what the card is charged cannot disagree. */
 let quote = $derived(
-    quotePartyTotal([
-        ...(self.tierId ? [getTierPriceCents(self.tierId, tiers)] : []),
-        ...members.map((m) => getTierPriceCents(m.tierId, tiers)),
-    ]),
+    quotePartyTotal(
+        [
+            ...(self.tierId ? [getTierPriceCents(self.tierId, tiers)] : []),
+            ...members.map((m) => getTierPriceCents(m.tierId, tiers)),
+        ],
+        { donationCents },
+    ),
 )
 
 let canSubmit = $derived(
@@ -114,20 +123,20 @@ let isLocked = $derived(isRegistrationClosed(data.event?.registrationLockDate ??
 
 {#if !data.event}
     <div class="col-span-12">
-        <div class="rounded-xl border bg-card px-6 py-12 text-center">
-            <p class="text-4xl mb-3">😢</p>
+        <div class="bg-card rounded-xl border px-6 py-12 text-center">
+            <p class="mb-3 text-4xl">😢</p>
             <p class="text-lg font-semibold">No reunion events are open right now.</p>
-            <p class="text-muted-foreground text-sm mt-1">Check back soon!</p>
+            <p class="text-muted-foreground mt-1 text-sm">Check back soon!</p>
         </div>
     </div>
 {:else}
     <!-- Event hero banner -->
     <section class="col-span-12">
-        <div class="rounded-xl border bg-card shadow-xs">
+        <div class="bg-card rounded-xl border shadow-xs">
             <div class="flex flex-col items-center px-6 py-10 text-center md:px-10 md:py-14">
                 <span
-                    class="inline-flex items-center gap-1.5 rounded-full border bg-card px-3 py-1 text-[11px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
-                    <Sparkles class="h-3 w-3 text-primary" />
+                    class="bg-card text-muted-foreground inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[11px] font-medium tracking-[0.18em] uppercase">
+                    <Sparkles class="text-primary h-3 w-3" />
                     Family Reunion {data.event.year}
                 </span>
 
@@ -135,20 +144,20 @@ let isLocked = $derived(isRegistrationClosed(data.event?.registrationLockDate ??
                     {data.event.title}
                 </h1>
 
-                <div class="mt-4 h-px w-12 bg-primary/40"></div>
+                <div class="bg-primary/40 mt-4 h-px w-12"></div>
 
                 <div
-                    class="mt-5 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-sm text-muted-foreground">
+                    class="text-muted-foreground mt-5 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-sm">
                     {#if dateRange}
                         <span class="inline-flex items-center gap-1.5">
-                            <CalendarDays class="h-4 w-4 text-primary/70" />
+                            <CalendarDays class="text-primary/70 h-4 w-4" />
                             {dateRange}
                         </span>
                     {/if}
                     {#if data.event.metadata.venue?.name}
-                        <span class="hidden h-1 w-1 rounded-full bg-border md:inline-block"></span>
+                        <span class="bg-border hidden h-1 w-1 rounded-full md:inline-block"></span>
                         <span class="inline-flex items-center gap-1.5">
-                            <MapPin class="h-4 w-4 text-primary/70" />
+                            <MapPin class="text-primary/70 h-4 w-4" />
                             {data.event.metadata.venue.name}
                         </span>
                     {/if}
@@ -161,13 +170,13 @@ let isLocked = $derived(isRegistrationClosed(data.event?.registrationLockDate ??
 
     {#if isLocked}
         <section class="col-span-12">
-            <div class="rounded-xl border bg-card px-6 py-12 text-center">
+            <div class="bg-card rounded-xl border px-6 py-12 text-center">
                 <p class="text-lg font-semibold">Registration for this reunion has closed.</p>
-                <p class="text-muted-foreground text-sm mt-1">
+                <p class="text-muted-foreground mt-1 text-sm">
                     If you have already registered, you can still
                     <a class="underline" href="/register/recover">view your registration</a>.
                 </p>
-                <p class="text-muted-foreground text-sm mt-3">
+                <p class="text-muted-foreground mt-3 text-sm">
                     Need to register late? Contact
                     <a class="underline" href="mailto:{CONTACT_EMAIL}">{CONTACT_EMAIL}</a>
                     or call
@@ -181,7 +190,7 @@ let isLocked = $derived(isRegistrationClosed(data.event?.registrationLockDate ??
                 <FormErrorSummary errors={$errors} message={$message} />
             </div>
 
-            <div class="grid grid-cols-1 lg:grid-cols-[1fr_minmax(0,22rem)] gap-6">
+            <div class="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_minmax(0,22rem)]">
                 <!-- Left: party builder -->
                 <div class="flex flex-col gap-4">
                     <YourInformationCard
@@ -203,6 +212,12 @@ let isLocked = $derived(isRegistrationClosed(data.event?.registrationLockDate ??
                         {contactName}
                         {contactAddress}
                         error={$errors.members?._errors?.[0]} />
+
+                    <HostHotelStayCard
+                        bind:stayingAtHostHotel={$form.stayingAtHostHotel}
+                        error={$errors.stayingAtHostHotel?.[0]} />
+
+                    <DonationCard bind:donationCents error={$errors.donationCents?.[0]} />
                 </div>
 
                 <!-- Right: order summary (sticky on desktop) -->
@@ -218,11 +233,11 @@ let isLocked = $derived(isRegistrationClosed(data.event?.registrationLockDate ??
                         submitting={$submitting}
                         placeholderText="Fill in your details above and press Save to continue."
                         submitFootnote="You'll be redirected to a secure checkout." />
-                    <p class="text-xs text-muted-foreground text-center mt-3">
+                    <p class="text-muted-foreground mt-3 text-center text-xs">
                         Already registered? <a class="underline" href="/register/recover"
                             >Resend management link</a>
                     </p>
-                    <p class="text-xs text-muted-foreground text-center mt-1">
+                    <p class="text-muted-foreground mt-1 text-center text-xs">
                         Prefer paper? <a class="underline" href="/register/print"
                             >Print a registration form</a>
                     </p>

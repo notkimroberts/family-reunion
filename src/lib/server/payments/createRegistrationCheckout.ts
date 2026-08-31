@@ -15,7 +15,11 @@ export async function createRegistrationCheckout(
         customer_email: params.customerEmail,
         success_url: params.successUrl(),
         cancel_url: params.cancelUrl(),
-        metadata: encodeRegistrationMetadata(params.registrationId, params.managementToken),
+        metadata: encodeRegistrationMetadata(
+            params.registrationId,
+            params.managementToken,
+            params.donationId,
+        ),
     })
     dbg.stripe('created checkout session=%s for registration=%s', session.id, params.registrationId)
     return { url: session.url!, sessionId: session.id }

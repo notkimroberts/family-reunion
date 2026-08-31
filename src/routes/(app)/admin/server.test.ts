@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 /* /admin is the list of reunion years and nothing else — it has no actions at all since creating a year
    moved to /admin/event/new (whose own server.test.ts carries the guard and validation cases).

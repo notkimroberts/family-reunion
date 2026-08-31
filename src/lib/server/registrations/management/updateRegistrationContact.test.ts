@@ -1,5 +1,5 @@
 import { eq } from 'drizzle-orm'
-import { describe, it, expect, beforeEach } from 'vitest'
+import { beforeEach, describe, expect, it } from 'vitest'
 import { partyMembers, registrations } from '$lib/server/db/schema'
 import { resetTestDb } from '$lib/server/db/testing/resetTestDb'
 import { seedRegistration } from '$lib/server/testing/seedRegistration'

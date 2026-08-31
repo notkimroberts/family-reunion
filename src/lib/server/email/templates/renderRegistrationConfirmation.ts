@@ -81,6 +81,9 @@ export function renderRegistrationConfirmation(data: RegistrationConfirmationDat
             const detail = member.detail ? ` — ${member.detail}` : ''
             return `  - ${member.name} (${member.tierLabel})${detail}  $${formatPrice(member.priceCents)}`
         }),
+        ...(data.donationCents
+            ? [`  - Gift to the reunion  $${formatPrice(data.donationCents)}`]
+            : []),
         '',
         `${copy.totalLabel}: $${formatPrice(data.totalCents)}`,
         ...(copy.note ? ['', copy.note] : []),
@@ -129,8 +132,22 @@ export function renderRegistrationConfirmation(data: RegistrationConfirmationDat
         )
         .join('\n')
 
+    /* A gift is a row in the same table rather than a line after the total, because totalCents
+       INCLUDES it — the total has to be what the card was charged, and a figure that exceeds the
+       rows above it reads as an overcharge. */
+    const donationRow = data.donationCents
+        ? `  <tr>
+    <td style="padding:10px 0;border-bottom:1px solid ${border};font-family:${fontStack};font-size:15px;line-height:1.4;color:${textColor};">
+      Gift to the reunion
+      <span style="display:block;font-size:13px;color:${muted};">Thank you</span>
+    </td>
+    <td align="right" style="padding:10px 0;border-bottom:1px solid ${border};font-family:${fontStack};font-size:15px;line-height:1.4;color:${textColor};white-space:nowrap;">$${formatPrice(data.donationCents)}</td>
+  </tr>`
+        : ''
+
     const partyTable = `<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin:0 0 8px 0;">
 ${memberRows}
+${donationRow}
   <tr>
     <td style="padding:12px 0 0 0;font-family:${fontStack};font-size:15px;font-weight:700;color:${textColor};">${escapeHtml(copy.totalLabel)}</td>
     <td align="right" style="padding:12px 0 0 0;font-family:${fontStack};font-size:15px;font-weight:700;color:${textColor};white-space:nowrap;">$${formatPrice(data.totalCents)}</td>

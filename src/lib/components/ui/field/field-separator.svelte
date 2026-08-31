@@ -21,14 +21,14 @@ const hasContent = $derived(!!children)
     data-slot="field-separator"
     data-content={hasContent}
     class={cn(
-        '-my-2 h-5 text-sm group-data-[variant=outline]/field-group:-mb-2 relative',
+        'relative -my-2 h-5 text-sm group-data-[variant=outline]/field-group:-mb-2',
         className,
     )}
     {...restProps}>
     <Separator class="absolute inset-0 top-1/2" />
     {#if children}
         <span
-            class="text-muted-foreground px-2 bg-background relative mx-auto block w-fit"
+            class="text-muted-foreground bg-background relative mx-auto block w-fit px-2"
             data-slot="field-separator-content">
             {@render children()}
         </span>

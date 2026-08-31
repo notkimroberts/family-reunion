@@ -1,7 +1,7 @@
-import { eq } from 'drizzle-orm'
+import { and, eq } from 'drizzle-orm'
 import { sumMemberPrices } from '$lib/general/pricing'
 import { db } from '$lib/server/db'
-import { partyMembers, registrations, reunionEvents } from '$lib/server/db/schema'
+import { donations, partyMembers, registrations, reunionEvents } from '$lib/server/db/schema'
 import type { ConfirmationStatus, RegistrationConfirmationData } from '$lib/server/email'
 import { formatDateRange } from '$lib/utils'
 import { getAge } from '$lib/utils/age'
@@ -39,7 +39,7 @@ export async function getConfirmationEmailData(params: {
         return undefined
     }
 
-    const [[reunionEvent], members] = await Promise.all([
+    const [[reunionEvent], members, gifts] = await Promise.all([
         db
             .select({
                 title: reunionEvents.title,
@@ -62,6 +62,18 @@ export async function getConfirmationEmailData(params: {
             })
             .from(partyMembers)
             .where(eq(partyMembers.registrationId, params.registrationId)),
+        /* Gifts given with this booking. Refunded ones are excluded, so a confirmation re-sent
+           after a gift was reversed does not still bill for it. Summed rather than taking the
+           first: an admin can record a gift on a paper entry that already carries one. */
+        db
+            .select({ amountCents: donations.amountCents })
+            .from(donations)
+            .where(
+                and(
+                    eq(donations.registrationId, params.registrationId),
+                    eq(donations.status, 'paid'),
+                ),
+            ),
     ])
 
     if (!reunionEvent) {
@@ -71,6 +83,8 @@ export async function getConfirmationEmailData(params: {
     const eventDateRange = reunionEvent.startDate
         ? formatDateRange(reunionEvent.startDate, reunionEvent.endDate ?? reunionEvent.startDate)
         : undefined
+
+    const donationCents = gifts.reduce((sum, gift) => sum + gift.amountCents, 0)
 
     return {
         to: registration.contactEmail,
@@ -98,7 +112,10 @@ export async function getConfirmationEmailData(params: {
                     detail: extras.length > 0 ? extras.join(', ') : undefined,
                 }
             }),
-            totalCents: sumMemberPrices(members),
+            /* The party plus any gift: this figure has to be what the card was charged, and the
+               template prints the gift as its own row so the two agree. */
+            totalCents: sumMemberPrices(members) + donationCents,
+            donationCents: donationCents > 0 ? donationCents : undefined,
             manageUrl: params.manageUrl,
         },
     }

@@ -16,11 +16,28 @@ const DATE_CAPTION = 'text-[7px] uppercase tracking-widest text-neutral-400'
 import type { TierOption } from '../types'
 import PaperCheckbox from './PaperCheckbox.svelte'
 
+type Props = {
+    index: number
+    tiers: TierOption[]
+    /* Attendee 1 is the person who filled in section 1. */
+    isContact?: boolean
+}
+
 /* One attendee, written into a block rather than a table row. The table this replaced fitted five
    people on one page by giving each name 150px and each answer an unlabelled 22px cell — legible
    to read, unwritable to fill in with a pen. A block gives the name a 4in rule and every answer a
    labelled tick box, and the sheet is allowed to run to a second page. */
-let { index, tiers }: { index: number; tiers: TierOption[] } = $props()
+let { index, tiers, isContact = false }: Props = $props()
+
+/* The contact is attendee 1, and the block says so on its own name label rather than in a caption
+   line of its own: section 3 starts on a fresh page sized for exactly five blocks, and an extra
+   line in each would be the difference between five on a page and four.
+
+   It has to be said HERE and not only in the section heading. The contact writes their name in
+   section 1, so line 1 reads as the first GUEST unless something on the line contradicts that —
+   which is how a form that collects everyone's birth date looked like it collected everyone's but
+   theirs. */
+let nameLabel = $derived(isContact ? 'Full name — you, the person we contact' : 'Full name')
 </script>
 
 <!-- data-paper-attendee: the print rules in app.css re-assert break-inside-avoid against this
@@ -34,7 +51,7 @@ let { index, tiers }: { index: number; tiers: TierOption[] } = $props()
             {index}
         </span>
         <div class="flex flex-1 flex-col gap-0.5">
-            <span class={GROUP_LABEL}>Full name</span>
+            <span class={GROUP_LABEL}>{nameLabel}</span>
             <div class="h-8.5 border-b border-neutral-500"></div>
         </div>
         <div class="flex w-[1.9in] shrink-0 flex-col gap-0.5">

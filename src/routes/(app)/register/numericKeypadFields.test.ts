@@ -1,5 +1,5 @@
 import { readFileSync, readdirSync } from 'fs'
-import { describe, it, expect } from 'vitest'
+import { describe, expect, it } from 'vitest'
 
 /* A field that wants digits must ask for the digit keypad.
 

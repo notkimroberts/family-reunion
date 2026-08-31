@@ -1,5 +1,5 @@
 import { readFileSync } from 'fs'
-import { describe, it, expect } from 'vitest'
+import { describe, expect, it } from 'vitest'
 
 /* The confirmation banner and the entry form must never be on screen together.
 

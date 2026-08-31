@@ -6,7 +6,7 @@ import { sendRecoveryEmail } from '$lib/server/email'
 import { getRegistrationsByEmail } from '$lib/server/registrations'
 import { deliverManagementLink } from '$lib/server/registrations/deliverManagementLink'
 import { reportError } from '$lib/server/reportError'
-import type { PageServerLoad, Actions } from './$types'
+import type { Actions, PageServerLoad } from './$types'
 import { recoverSchema } from './schema'
 
 export const load: PageServerLoad = async () => {

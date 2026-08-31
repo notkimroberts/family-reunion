@@ -1,8 +1,8 @@
+import { mkdir, writeFile } from 'node:fs/promises'
+import { dirname } from 'node:path'
 import { PGlite } from '@electric-sql/pglite'
 import { drizzle } from 'drizzle-orm/pglite'
 import { migrate } from 'drizzle-orm/pglite/migrator'
-import { mkdir, writeFile } from 'node:fs/promises'
-import { dirname } from 'node:path'
 import * as schema from '../schema'
 import { TEST_DB_TEMPLATE_PATH } from './TEST_DB_TEMPLATE_PATH'
 

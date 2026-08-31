@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { APP_DOMAIN, APP_NAME, CONTACT_EMAIL } from '$lib/general/constants'
 
 /* The envelope, which had no test — which is how the From address could sit on `noreply@`

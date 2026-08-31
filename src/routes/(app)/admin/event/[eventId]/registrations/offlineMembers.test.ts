@@ -1,5 +1,5 @@
 import { readFileSync } from 'fs'
-import { describe, it, expect } from 'vitest'
+import { describe, expect, it } from 'vitest'
 
 /* Guards the defining property of admin add-member: it must never take a payment.
 

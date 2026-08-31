@@ -76,7 +76,7 @@ function detailLabel(detail: unknown): string {
 <Card>
     <CardHeader class="pb-3">
         <CardTitle class="flex items-center gap-2 text-base">
-            <History class="size-4 text-muted-foreground" />
+            <History class="text-muted-foreground size-4" />
             History
         </CardTitle>
     </CardHeader>
