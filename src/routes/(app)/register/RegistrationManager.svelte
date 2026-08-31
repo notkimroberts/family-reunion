@@ -47,12 +47,12 @@ let totalCents = $derived(sumMemberPrices(members))
 <!-- Success banner -->
 <div class="col-span-12">
     <div
-        class="rounded-xl border bg-card px-6 py-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        class="bg-card flex flex-col gap-3 rounded-xl border px-6 py-6 sm:flex-row sm:items-center sm:justify-between">
         <div class="flex items-start gap-3">
-            <CheckCircle2 class="h-6 w-6 text-green-500 mt-0.5 shrink-0" />
+            <CheckCircle2 class="mt-0.5 h-6 w-6 shrink-0 text-green-500" />
             <div>
                 <p class="font-semibold">{event.title}</p>
-                <p class="text-sm text-muted-foreground mt-0.5">
+                <p class="text-muted-foreground mt-0.5 text-sm">
                     {members.length}
                     {members.length === 1 ? 'person' : 'people'} registered ·
                     <span class="text-foreground font-medium">
@@ -63,7 +63,7 @@ let totalCents = $derived(sumMemberPrices(members))
         </div>
         <Badge
             variant={registration.status === 'paid' ? 'default' : 'secondary'}
-            class="self-start sm:self-auto capitalize">
+            class="self-start capitalize sm:self-auto">
             {registration.status}
         </Badge>
     </div>
@@ -81,21 +81,21 @@ let totalCents = $derived(sumMemberPrices(members))
                 {#each members as member (member.id)}
                     <div class="rounded-lg border px-4 py-3">
                         <p class="font-medium">{member.name}</p>
-                        <p class="text-muted-foreground text-sm mt-0.5">
+                        <p class="text-muted-foreground mt-0.5 text-sm">
                             {member.tierLabel}
                             {#if member.shirtSize}
                                 · {member.shirtSize}
                             {/if}
                             · Meal: {mealLabel(member.vegetarianMeal)}
                         </p>
-                        <p class="text-muted-foreground text-sm mt-0.5">
+                        <p class="text-muted-foreground mt-0.5 text-sm">
                             Born {formatPartialBirthDate(
                                 member.birthYear,
                                 member.birthMonth,
                                 member.birthDay,
                             ) ?? '—'}
                         </p>
-                        <p class="text-sm tabular-nums mt-0.5">
+                        <p class="mt-0.5 text-sm tabular-nums">
                             ${formatPrice(member.priceCents)}
                         </p>
                     </div>
@@ -103,7 +103,7 @@ let totalCents = $derived(sumMemberPrices(members))
             </div>
 
             <!-- Desktop table -->
-            <div class="hidden md:block overflow-x-auto">
+            <div class="hidden overflow-x-auto md:block">
                 <Table>
                     <TableHeader>
                         <TableRow>
@@ -151,7 +151,7 @@ let totalCents = $derived(sumMemberPrices(members))
 
 <!-- The only route to a change, now that none of them are self-service. -->
 <div class="col-span-12">
-    <p class="text-sm text-muted-foreground rounded-lg border bg-card px-4 py-3">
+    <p class="text-muted-foreground bg-card rounded-lg border px-4 py-3 text-sm">
         Need to add someone, correct a detail or cancel? Contact
         <a class="underline" href="mailto:{CONTACT_EMAIL}">{CONTACT_EMAIL}</a>
         or call

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 /* The fee lookup runs inside the Stripe webhook, where the payment is already captured and the
    registration must be marked paid regardless. So every failure mode has to come back as `undefined`

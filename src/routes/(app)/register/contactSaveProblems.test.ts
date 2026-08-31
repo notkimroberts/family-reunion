@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import { EMPTY_PERSON_DETAILS } from './EMPTY_PERSON_DETAILS'
 import { contactSaveProblems } from './contactSaveProblems'
 import type { PersonDetails } from './types'

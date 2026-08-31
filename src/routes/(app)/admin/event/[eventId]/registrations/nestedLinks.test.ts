@@ -1,5 +1,5 @@
 import { readFileSync, readdirSync } from 'fs'
-import { describe, it, expect } from 'vitest'
+import { describe, expect, it } from 'vitest'
 
 /* Pins the bug that took the whole registrations page down.
 

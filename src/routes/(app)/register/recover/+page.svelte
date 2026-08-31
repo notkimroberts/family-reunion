@@ -27,11 +27,11 @@ const { form, errors, enhance } = superForm(data.form, {
     <title>Recover Registration — {APP_NAME}</title>
 </svelte:head>
 
-<section class="col-span-12 max-w-md mx-auto w-full">
+<section class="col-span-12 mx-auto w-full max-w-md">
     <Card>
         <CardHeader>
             <CardTitle class="flex items-center gap-2">
-                <Mail class="h-5 w-5 text-muted-foreground" />
+                <Mail class="text-muted-foreground h-5 w-5" />
                 Resend management link
             </CardTitle>
         </CardHeader>
@@ -43,7 +43,7 @@ const { form, errors, enhance } = superForm(data.form, {
                 </p>
                 <Button variant="outline" href="/">Back to home</Button>
             {:else}
-                <p class="text-sm text-muted-foreground">
+                <p class="text-muted-foreground text-sm">
                     Enter the email you used to register and we'll re-send the link to manage your
                     party.
                 </p>
@@ -59,7 +59,7 @@ const { form, errors, enhance } = superForm(data.form, {
                             autocomplete="email"
                             required />
                         {#if $errors.email?.[0]}
-                            <p class="text-sm text-destructive">{$errors.email[0]}</p>
+                            <p class="text-destructive text-sm">{$errors.email[0]}</p>
                         {/if}
                     </div>
                     <Button type="submit" class="w-full">Send management link</Button>

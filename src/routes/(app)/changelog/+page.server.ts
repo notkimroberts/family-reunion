@@ -1,6 +1,6 @@
 import { readFileSync } from 'fs'
-import { marked } from 'marked'
 import { resolve } from 'path'
+import { marked } from 'marked'
 import type { PageServerLoad } from './$types'
 
 export const load: PageServerLoad = async () => {

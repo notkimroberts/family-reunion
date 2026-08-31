@@ -1,7 +1,7 @@
-import { describe, it, expect } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import {
-    isManagementTokenValid,
     MANAGEMENT_TOKEN_GRACE_PERIOD_MS,
+    isManagementTokenValid,
     type ManagementTokenColumns,
 } from './isManagementTokenValid'
 

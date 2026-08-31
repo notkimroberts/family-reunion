@@ -1,6 +1,6 @@
 import { and, asc, eq, inArray } from 'drizzle-orm'
 import { db } from '$lib/server/db'
-import { partyMembers, registrations, registrationStatusEnum } from '$lib/server/db/schema'
+import { partyMembers, registrationStatusEnum, registrations } from '$lib/server/db/schema'
 
 export type EventPerson = {
     id: string

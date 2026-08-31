@@ -1,5 +1,5 @@
 <script lang="ts">
-import { parseDate, today, getLocalTimeZone, type DateValue } from '@internationalized/date'
+import { getLocalTimeZone, parseDate, today, type DateValue } from '@internationalized/date'
 import { CalendarIcon } from '@lucide/svelte'
 import { Button } from '$lib/components/ui/button'
 import { Calendar } from '$lib/components/ui/calendar'
@@ -57,7 +57,7 @@ function handleSelect(date: DateValue | undefined) {
         {id}
         type="button"
         {disabled}
-        class="border-input bg-transparent ring-offset-background flex h-9 w-full items-center justify-start gap-2 rounded-md border px-3 py-1 text-sm shadow-xs transition-colors focus:outline-none focus:ring-1 disabled:cursor-not-allowed disabled:opacity-50 {!displayValue
+        class="border-input ring-offset-background flex h-9 w-full items-center justify-start gap-2 rounded-md border bg-transparent px-3 py-1 text-sm shadow-xs transition-colors focus:ring-1 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 {!displayValue
             ? 'text-muted-foreground'
             : ''}">
         <CalendarIcon class="h-4 w-4 shrink-0 opacity-50" />

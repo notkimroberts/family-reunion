@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import { isChildTierLabel } from './isChildTierLabel'
 
 /* The predicate gates one thing: the contact's own tier. It is a word match on a label the

@@ -148,10 +148,10 @@ function handleRemoveMember(index: number) {
     <div class="space-y-2">
         {#each members as member, i (i)}
             {#if i !== formTarget}
-                <div class="flex items-center gap-3 rounded-lg border bg-card px-4 py-3">
-                    <div class="flex-1 min-w-0">
-                        <p class="font-medium text-sm">{member.name}</p>
-                        <p class="text-xs text-muted-foreground">
+                <div class="bg-card flex items-center gap-3 rounded-lg border px-4 py-3">
+                    <div class="min-w-0 flex-1">
+                        <p class="text-sm font-medium">{member.name}</p>
+                        <p class="text-muted-foreground text-xs">
                             {getTierLabel(member.tierId, tiers)}
                             {#if member.birthDate}
                                 · Age {getMemberAge(member.birthDate)}
@@ -161,7 +161,7 @@ function handleRemoveMember(index: number) {
                             {/if}
                         </p>
                     </div>
-                    <span class="text-sm font-medium tabular-nums shrink-0"
+                    <span class="shrink-0 text-sm font-medium tabular-nums"
                         >${formatPrice(getTierPriceCents(member.tierId, tiers))}</span>
                     <Button
                         type="button"
@@ -174,7 +174,7 @@ function handleRemoveMember(index: number) {
                         type="button"
                         variant="ghost"
                         size="sm"
-                        class="h-7 w-7 p-0 text-muted-foreground hover:text-destructive shrink-0"
+                        class="text-muted-foreground hover:text-destructive h-7 w-7 shrink-0 p-0"
                         onclick={() => handleRemoveMember(i)}>
                         <Trash2 class="h-3.5 w-3.5" />
                         <span class="sr-only">Remove {member.name}</span>
@@ -186,7 +186,7 @@ function handleRemoveMember(index: number) {
 {/if}
 
 {#if error}
-    <p class="text-sm text-destructive">{error}</p>
+    <p class="text-destructive text-sm">{error}</p>
 {/if}
 
 {#if formTarget !== undefined}
@@ -237,7 +237,7 @@ function handleRemoveMember(index: number) {
                     <div class="space-y-1.5">
                         <label for="new-bday" class="text-sm font-medium">
                             Birthday
-                            <span class="text-muted-foreground font-normal text-xs"
+                            <span class="text-muted-foreground text-xs font-normal"
                                 >(optional)</span>
                         </label>
                         <DatePicker
@@ -251,7 +251,7 @@ function handleRemoveMember(index: number) {
             <Separator />
 
             <div class="space-y-4">
-                <p class="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                <p class="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
                     Additional Questions
                 </p>
                 <AdditionalQuestionsFields
@@ -263,14 +263,14 @@ function handleRemoveMember(index: number) {
             <Separator />
 
             <div class="space-y-4">
-                <p class="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                <p class="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
                     Mailing Address
                 </p>
                 <label class="flex items-center gap-2 text-sm">
                     <input
                         type="checkbox"
                         bind:checked={newSameAddress}
-                        class="h-4 w-4 rounded border-input" />
+                        class="border-input h-4 w-4 rounded" />
                     Same address as {contactName || 'you'}
                 </label>
                 {#if !newSameAddress}
@@ -304,7 +304,7 @@ function handleRemoveMember(index: number) {
         variant="outline"
         class="w-full border-dashed"
         onclick={() => (formTarget = 'new')}>
-        <Plus class="h-4 w-4 mr-2" />
+        <Plus class="mr-2 h-4 w-4" />
         Add another person
     </Button>
 {/if}

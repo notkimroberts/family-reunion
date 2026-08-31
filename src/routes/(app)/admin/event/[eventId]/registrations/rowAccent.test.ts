@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import { registrationStatusEnum } from '$lib/server/db/schema'
 import { getPaymentState, type PaymentState, type RegistrationStatus } from '$lib/utils'
 import { rowAccent } from './rowAccent'

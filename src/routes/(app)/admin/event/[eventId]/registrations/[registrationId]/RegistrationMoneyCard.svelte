@@ -36,7 +36,7 @@ const FEE_NOTE = {
     {#if money.wasCharged}
         <div class="flex items-baseline justify-between gap-3">
             <span class="text-amber-700 dark:text-amber-400">Stripe fee</span>
-            <span class="tabular-nums text-amber-700 dark:text-amber-400">
+            <span class="text-amber-700 tabular-nums dark:text-amber-400">
                 −${formatPrice(money.feeCents)}
             </span>
         </div>

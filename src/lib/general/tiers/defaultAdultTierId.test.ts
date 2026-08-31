@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import { defaultAdultTierId } from './defaultAdultTierId'
 
 const ADULT = { id: 'tier-adult', label: 'Adult' }

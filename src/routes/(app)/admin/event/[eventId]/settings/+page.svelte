@@ -59,11 +59,11 @@ const METADATA_EXAMPLE = `{
 
 <section class="col-span-12 flex flex-col gap-3 xl:col-span-8">
     <nav aria-label="Breadcrumb" class="text-muted-foreground flex items-center gap-2 text-sm">
-        <a href="/admin" class="transition-colors hover:text-foreground">Reunions</a>
+        <a href="/admin" class="hover:text-foreground transition-colors">Reunions</a>
         <span aria-hidden="true">/</span>
         <a
             href="/admin/event/{data.event.id}/registrations"
-            class="transition-colors hover:text-foreground">
+            class="hover:text-foreground transition-colors">
             {data.event.year}
         </a>
         <span aria-hidden="true">/</span>
@@ -103,7 +103,7 @@ const METADATA_EXAMPLE = `{
 
      Both fit the 8-column measure at half width: each holds one control and a sentence. The rest of the
      page stays full-measure because it holds forms with paired fields and a tier table. -->
-<section class="col-span-12 grid grid-cols-1 gap-6 xl:col-span-8 md:grid-cols-2">
+<section class="col-span-12 grid grid-cols-1 gap-6 md:grid-cols-2 xl:col-span-8">
     <Card>
         <CardHeader>
             <CardTitle class="flex items-center gap-2">

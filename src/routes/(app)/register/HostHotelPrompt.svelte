@@ -34,7 +34,7 @@ import { HOST_HOTEL } from '$lib/general/constants'
             <div class="flex flex-1 flex-col gap-3">
                 <div class="flex flex-col gap-1">
                     <p
-                        class="text-primary inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide">
+                        class="text-primary inline-flex items-center gap-1.5 text-xs font-semibold tracking-wide uppercase">
                         <BedDouble class="size-4 shrink-0" />
                         Next step
                     </p>

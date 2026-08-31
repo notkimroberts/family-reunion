@@ -1,5 +1,5 @@
 import { readFileSync } from 'fs'
-import { describe, it, expect } from 'vitest'
+import { describe, expect, it } from 'vitest'
 
 /* Pins /register/manage against the silent-failure pattern this project keeps producing, and
    against the mutations coming back.

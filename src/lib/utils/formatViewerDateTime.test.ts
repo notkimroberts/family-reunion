@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import { formatViewerDateTime } from './formatViewerDateTime'
 
 /* The admin history showed 4:06 AM for a change made at 9:06 PM Pacific: registration_audit.created_at

@@ -42,9 +42,9 @@ let documentTitle = $derived.by(() => {
 
 {#if !data.event}
     <div class="col-span-12">
-        <div class="rounded-xl border bg-card px-6 py-12 text-center">
+        <div class="bg-card rounded-xl border px-6 py-12 text-center">
             <p class="text-lg font-semibold">No reunion events are open right now.</p>
-            <p class="text-muted-foreground text-sm mt-1">
+            <p class="text-muted-foreground mt-1 text-sm">
                 There is nothing to print until a reunion is open for registration.
             </p>
         </div>
@@ -54,7 +54,7 @@ let documentTitle = $derived.by(() => {
         <div class="flex flex-wrap items-center justify-between gap-3 print:hidden">
             <div>
                 <h1>Printable registration form</h1>
-                <p class="text-muted-foreground text-sm mt-1">
+                <p class="text-muted-foreground mt-1 text-sm">
                     Two pages, sized to be filled in by hand. Print it and hand it to a committee
                     member — or save it as a PDF from the print dialog.
                 </p>
@@ -68,7 +68,7 @@ let documentTitle = $derived.by(() => {
         <!-- print:overflow-visible matters: overflow-x-auto is a scroll container, and a scroll
              container CLIPS in print rather than paginating, which took the edges off the sheet. -->
         <div
-            class="rounded-xl border shadow-xs overflow-x-auto print:overflow-visible print:border-0 print:shadow-none">
+            class="overflow-x-auto rounded-xl border shadow-xs print:overflow-visible print:border-0 print:shadow-none">
             <PaperRegistrationSheet
                 title={data.event.title}
                 year={data.event.year}

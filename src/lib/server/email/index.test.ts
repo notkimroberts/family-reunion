@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { sendRegistrationConfirmation, sendRecoveryEmail } from './index'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { sendRecoveryEmail, sendRegistrationConfirmation } from './index'
 
 const { mockEnv, mockAppEnv } = vi.hoisted(() => ({
     mockEnv: { RESEND_API_KEY: undefined as string | undefined, ADMIN_EMAIL: 'admin@example.com' },

@@ -1,8 +1,8 @@
+import { readFileSync } from 'fs'
 import { sentrySvelteKit } from '@sentry/sveltekit'
 import { sveltekit } from '@sveltejs/kit/vite'
 import tailwindcss from '@tailwindcss/vite'
 import Debug from 'debug'
-import { readFileSync } from 'fs'
 import { defineConfig, loadEnv } from 'vite'
 
 const pkg = JSON.parse(readFileSync('./package.json', 'utf-8'))

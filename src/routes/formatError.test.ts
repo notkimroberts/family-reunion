@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import { formatError } from './formatError'
 
 /* Guards the readout on the dev error page against the failure it already had twice.

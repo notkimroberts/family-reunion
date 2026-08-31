@@ -1,6 +1,6 @@
+import { readFile } from 'node:fs/promises'
 import { PGlite } from '@electric-sql/pglite'
 import { drizzle } from 'drizzle-orm/pglite'
-import { readFile } from 'node:fs/promises'
 import * as schema from '../schema'
 import { TEST_DB_TEMPLATE_PATH } from './TEST_DB_TEMPLATE_PATH'
 import { setTestDb } from './pgliteDb'

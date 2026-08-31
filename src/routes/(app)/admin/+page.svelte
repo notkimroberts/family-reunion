@@ -62,7 +62,7 @@ function dates(event: EventSummary): string | undefined {
 
 {#if data.events.length === 0}
     <section class="col-span-12 xl:col-span-6">
-        <div class="flex flex-col items-start gap-3 rounded-lg border border-dashed bg-card p-6">
+        <div class="bg-card flex flex-col items-start gap-3 rounded-lg border border-dashed p-6">
             <CalendarDays class="text-muted-foreground size-5" />
             <div class="flex flex-col gap-1">
                 <p class="font-medium">No reunions yet</p>
@@ -92,7 +92,7 @@ function dates(event: EventSummary): string | undefined {
                 <a
                     href="/admin/event/{event.id}/registrations"
                     class={cn(
-                        'group flex flex-col gap-4 rounded-xl border bg-card p-5 transition-colors hover:bg-muted/40',
+                        'group bg-card hover:bg-muted/40 flex flex-col gap-4 rounded-xl border p-5 transition-colors',
                         status.border,
                     )}>
                     <div class="flex items-start justify-between gap-3">
@@ -138,7 +138,7 @@ function dates(event: EventSummary): string | undefined {
                                     Outstanding
                                 </span>
                                 <span
-                                    class="text-sm font-semibold tabular-nums text-amber-700 dark:text-amber-400">
+                                    class="text-sm font-semibold text-amber-700 tabular-nums dark:text-amber-400">
                                     ${formatPrice(event.outstandingCents)}
                                 </span>
                             </div>

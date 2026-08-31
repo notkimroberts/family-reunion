@@ -151,7 +151,7 @@ async function handleCopyEmail() {
         <div class="flex flex-col gap-1">
             <a
                 href="/admin/event/{data.event.id}/registrations"
-                class="text-sm text-muted-foreground hover:text-foreground">← Registrations</a>
+                class="text-muted-foreground hover:text-foreground text-sm">← Registrations</a>
             <div class="flex flex-wrap items-center gap-3">
                 <h1>{data.registration.contactName}</h1>
                 <RegistrationStatusBadge status={data.registration.status} />

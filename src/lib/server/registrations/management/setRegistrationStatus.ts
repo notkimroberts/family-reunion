@@ -1,7 +1,7 @@
 import { error } from '@sveltejs/kit'
 import { eq } from 'drizzle-orm'
 import { db } from '$lib/server/db'
-import { registrations, registrationStatusEnum } from '$lib/server/db/schema'
+import { registrationStatusEnum, registrations } from '$lib/server/db/schema'
 import { dbg } from '$lib/server/debug'
 import { assertRegistrationMutable } from '../lifecycle'
 

@@ -6,7 +6,7 @@ import { eventStatusEnum, reunionEvents } from '$lib/server/db/schema'
 import { dbg } from '$lib/server/debug'
 import { createTier, deleteTier, getTiersForEvent, updateTier } from '$lib/server/tiers'
 import { parseReunionWallClock } from '$lib/utils'
-import type { PageServerLoad, Actions } from './$types'
+import type { Actions, PageServerLoad } from './$types'
 import { parseReunionMetadata } from './parseReunionMetadata'
 
 function parseFiniteFloat(raw: string): number | null {

@@ -1,3 +1,3 @@
-import type { ServerLoadEvent, RequestEvent } from '@sveltejs/kit'
+import type { RequestEvent, ServerLoadEvent } from '@sveltejs/kit'
 
 export type AuthEvent = ServerLoadEvent | RequestEvent

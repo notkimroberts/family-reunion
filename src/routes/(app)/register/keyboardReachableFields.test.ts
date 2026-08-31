@@ -1,5 +1,5 @@
 import { readFileSync, readdirSync } from 'fs'
-import { describe, it, expect } from 'vitest'
+import { describe, expect, it } from 'vitest'
 
 /* Every form field in the registration path must be reachable by Tab.
 

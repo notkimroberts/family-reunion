@@ -1,5 +1,5 @@
 <script lang="ts">
-import { CalendarDays, Compass, MapPin, Utensils, Users } from '@lucide/svelte'
+import { CalendarDays, Compass, MapPin, Users, Utensils } from '@lucide/svelte'
 import { StayConnected } from '$lib/components'
 import { Button } from '$lib/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card'
@@ -65,11 +65,11 @@ let hasThingsToDo = $derived(
     <section class="col-span-12">
         <div class="bg-primary text-primary-foreground rounded-2xl px-6 py-10 md:px-12 md:py-14">
             <p
-                class="text-primary-foreground/70 mb-3 text-sm font-semibold uppercase tracking-widest">
+                class="text-primary-foreground/70 mb-3 text-sm font-semibold tracking-widest uppercase">
                 {data.isPastProgram ? 'Past Reunion' : 'Patterson Family'}
             </p>
             <h1>{data.event.title}</h1>
-            <div class="mb-6 mt-5 flex flex-col gap-2">
+            <div class="mt-5 mb-6 flex flex-col gap-2">
                 {#if dateRange}
                     <div class="flex items-center gap-2">
                         <CalendarDays class="size-4 shrink-0 opacity-70" />
@@ -163,7 +163,7 @@ let hasThingsToDo = $derived(
                             {#if metadata?.menu?.length}
                                 <div>
                                     <p
-                                        class="text-muted-foreground mb-2 text-xs font-semibold uppercase tracking-widest">
+                                        class="text-muted-foreground mb-2 text-xs font-semibold tracking-widest uppercase">
                                         Menu
                                     </p>
                                     <div class="flex flex-wrap gap-2">
@@ -177,7 +177,7 @@ let hasThingsToDo = $derived(
                             {#if metadata?.drinks?.length}
                                 <div>
                                     <p
-                                        class="text-muted-foreground mb-2 text-xs font-semibold uppercase tracking-widest">
+                                        class="text-muted-foreground mb-2 text-xs font-semibold tracking-widest uppercase">
                                         Drinks
                                     </p>
                                     <div class="flex flex-wrap gap-2">

@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import { ADULT_SHIRT_SIZES } from './ADULT_SHIRT_SIZES'
 import { SHIRT_SIZES } from './SHIRT_SIZES'
 import { YOUTH_SHIRT_SIZES } from './YOUTH_SHIRT_SIZES'

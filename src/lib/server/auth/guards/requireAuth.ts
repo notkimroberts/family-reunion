@@ -1,5 +1,5 @@
 import { redirect } from '@sveltejs/kit'
-import type { ServerLoadEvent, RequestEvent } from '@sveltejs/kit'
+import type { RequestEvent, ServerLoadEvent } from '@sveltejs/kit'
 import { dbg } from '$lib/server/debug'
 
 type AuthEvent = ServerLoadEvent | RequestEvent

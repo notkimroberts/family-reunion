@@ -1,5 +1,5 @@
 import { db } from '$lib/server/db'
-import { registrations, registrationStatusEnum } from '$lib/server/db/schema'
+import { registrationStatusEnum, registrations } from '$lib/server/db/schema'
 import { hashManagementToken } from '../hashManagementToken'
 import { isManagementTokenValid } from '../isManagementTokenValid'
 import { managementTokenCandidate } from '../managementTokenCandidate'

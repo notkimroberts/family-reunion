@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
 /* Better Auth is constructed lazily against a real DB adapter, so this asserts the options
    object rather than booting the instance. */

@@ -1,4 +1,4 @@
-import { json, error } from '@sveltejs/kit'
+import { error, json } from '@sveltejs/kit'
 import { getRegistrationStatus } from '$lib/server/registrations'
 import type { RequestHandler } from './$types'
 
