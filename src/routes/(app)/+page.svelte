@@ -1,13 +1,19 @@
 <script lang="ts">
 import { HeartHandshake, Mail, MessageSquare } from '@lucide/svelte'
 import { onDestroy, onMount } from 'svelte'
-import { RegistrationDeadline, ReunionLocations, StayConnected } from '$lib/components'
+import {
+    DonationRaisedTotal,
+    RegistrationDeadline,
+    ReunionLocations,
+    StayConnected,
+} from '$lib/components'
 import { Button } from '$lib/components/ui/button'
 import { Card, CardContent } from '$lib/components/ui/card'
 import {
     APP_NAME,
     CONTACT_EMAIL,
     CONTACT_PHONE,
+    DONATION_LEDE,
     DONATION_PRESET_CENTS,
     FACEBOOK_GROUP_URL,
 } from '$lib/general/constants'
@@ -301,22 +307,16 @@ const FAMILY_STATS = [
 <section id="donate" class="col-span-12 mt-8 scroll-mt-24 md:mt-12">
     <div class="mx-auto mb-8 max-w-xl text-center">
         <h2>Support the Reunion</h2>
-        <p class="text-muted-foreground mt-2">
-            Gifts cover the venue, the food and the shirts — and keep the price of a place down for
-            everyone. You do not have to be attending to give.
-        </p>
+        <p class="text-muted-foreground mt-2">{DONATION_LEDE}</p>
     </div>
     <Card>
         <CardContent class="flex flex-col items-center gap-5 pt-6">
-            {#if data.raised.giftCount > 0}
-                <p class="text-sm">
-                    <span class="font-semibold tabular-nums">
-                        ${formatPrice(data.raised.totalCents)}
-                    </span>
-                    raised from {data.raised.giftCount}
-                    {data.raised.giftCount === 1 ? 'gift' : 'gifts'} so far.
-                </p>
-            {/if}
+            <DonationRaisedTotal
+                totalCents={data.raised.totalCents}
+                giftCount={data.raised.giftCount} />
+            <!-- LINKS, not the shared picker: this section must not post. The picker is a form
+                 control that carries an amount into a checkout, and there is no form here — the
+                 figure travels to /donate in ?amount= and the picker there receives it. -->
             <div class="grid w-full grid-cols-2 gap-2 sm:grid-cols-4">
                 {#each DONATION_PRESET_CENTS as cents (cents)}
                     <Button href="/donate?amount={cents}" variant="outline">
