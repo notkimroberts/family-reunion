@@ -1,11 +1,12 @@
-import { redirect, fail } from '@sveltejs/kit'
+import { fail, redirect } from '@sveltejs/kit'
 import { zod4 as zod } from 'sveltekit-superforms/adapters'
 import { defaults, superValidate } from 'sveltekit-superforms/server'
+import { HOST_HOTEL } from '$lib/general/constants'
 import { dbg } from '$lib/server/debug'
 import { createPendingRegistration, getOpenEvent } from '$lib/server/registrations'
 import { getTiersForEvent } from '$lib/server/tiers'
 import { splitFullName } from '$lib/utils'
-import type { PageServerLoad, Actions } from './$types'
+import type { Actions, PageServerLoad } from './$types'
 import { EMPTY_PERSON_DETAILS } from './EMPTY_PERSON_DETAILS'
 import { registrationSchema } from './schema'
 import { toRegistrationIntake } from './toRegistrationIntake'
@@ -33,6 +34,10 @@ export const load: PageServerLoad = async ({ locals }) => {
             contactPhone: '',
             self: { ...EMPTY_PERSON_DETAILS },
             members: [],
+            /* 'undecided' when there is no host hotel to ask about, since the card renders nothing
+               and the answer is still required. Otherwise blank, so nothing is pre-chosen. */
+            stayingAtHostHotel: HOST_HOTEL ? ('' as const) : ('undecided' as const),
+            donationCents: 0,
         },
         zod(registrationSchema),
     )
@@ -64,6 +69,7 @@ export const actions: Actions = {
         const { checkoutUrl } = await createPendingRegistration({
             ...intake,
             eventId: form.data.eventId,
+            donationCents: form.data.donationCents,
             successUrl: (token) => `${event.url.origin}/register/manage?token=${token}`,
             cancelUrl: (token) => `${event.url.origin}/register?cancelled=true&token=${token}`,
         })

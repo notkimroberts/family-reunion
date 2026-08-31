@@ -37,6 +37,7 @@ export function hasRegistrationEdits(edit: {
         /* Optional in the schema and '' from the loader, so the two spellings of "no phone" must not
            read as an edit. */
         (form.contactPhone ?? '') !== (initialForm.contactPhone ?? '') ||
+        form.stayingAtHostHotel !== initialForm.stayingAtHostHotel ||
         form.status !== initialForm.status ||
         JSON.stringify(rows) !== JSON.stringify(initialRows) ||
         removedCount > 0 ||

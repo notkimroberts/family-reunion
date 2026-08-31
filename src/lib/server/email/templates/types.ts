@@ -26,6 +26,10 @@ export type RegistrationConfirmationData = {
     status: ConfirmationStatus
     partyMembers: ConfirmationPartyMember[]
     totalCents: number
+    /* A gift added to the same checkout, if there was one. Named on the confirmation because it is
+       part of what the card was charged: a total that silently exceeds the party table reads as an
+       overcharge. Absent, not zero, when no gift was given. */
+    donationCents?: number
     manageUrl: string
     /* Set when an organiser changed an existing registration rather than a new one arriving. Swaps
        the heading and adds a lead saying so, but keeps the status money sentence below it — the
@@ -57,8 +61,19 @@ export type CancellationEmailData = {
     /* Sum of the party's snapshotted prices — what the registration was worth. Rendered only when
        money is actually going back, since "$0.00 refunded" reads as a failed refund. */
     totalCents: number
+    /* A gift the reunion is KEEPING. Someone cancelling their place has not asked for their gift
+       back, so the refund is the places only — and a donor who is not told that is a donor waiting
+       for money that is not coming. Zero or absent when there was no gift. */
+    keptDonationCents?: number
     refundRoute: RefundRoute
     /* Where to start again. A cancellation is often a change of plan rather than a decision never to
        come, and the management link is dead by this point. */
     registerUrl: string
+}
+
+// What a standalone donation receipt needs to say
+export type DonationReceiptData = {
+    donorName: string
+    eventTitle: string
+    amountCents: number
 }

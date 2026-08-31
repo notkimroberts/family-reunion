@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import { hasRegistrationEdits } from './hasRegistrationEdits'
 import type { MemberRow } from './memberRow'
 
@@ -32,6 +32,8 @@ const LOADED_FORM = {
     contactName: 'Alice Patterson',
     contactEmail: 'alice@example.com',
     contactPhone: '',
+    /* '' as the loader leaves it for a booking taken before the hotel question existed. */
+    stayingAtHostHotel: '' as const,
     status: 'pending' as const,
     /* Empty as the loader leaves them: `rows` is the editing surface, and onSubmit fills these in
        only at submit time. */
@@ -57,6 +59,9 @@ describe('hasRegistrationEdits', () => {
     it.each([
         ['contactName', { contactName: 'Alice Roberts' }],
         ['contactEmail', { contactEmail: 'alice@new.example.com' }],
+        /* Booking-level like the fields above it, and Save has to notice it on its own — an organiser
+           who only answers the hotel question has made a real edit. */
+        ['stayingAtHostHotel', { stayingAtHostHotel: 'yes' as const }],
         ['contactPhone', { contactPhone: '5105551234' }],
         ['status', { status: 'paid' as const }],
     ])('detects a changed %s', (_label, override) => {

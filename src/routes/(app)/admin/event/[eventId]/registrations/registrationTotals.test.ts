@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import type { RegistrationSummary } from '$lib/server/registrations'
 import { grossUpForStripe, stripeFeeOnChargeCents } from '$lib/utils/stripeFee'
 import { getRegistrationTotals } from './registrationTotals'
@@ -16,6 +16,8 @@ function reg(overrides: Partial<RegistrationSummary>): RegistrationSummary {
            supplied a real fee would make those vacuous. */
         stripeFeeCents: null,
         paidAt: new Date('2026-08-10T00:00:00Z'),
+        /* Irrelevant here — the room block is getRoomSummary's business. */
+        stayingAtHostHotel: null,
         memberCount: 1,
         totalCents: 16000,
         createdAt: new Date('2026-08-01T00:00:00Z'),

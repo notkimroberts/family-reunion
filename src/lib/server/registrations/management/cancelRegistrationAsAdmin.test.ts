@@ -1,6 +1,6 @@
 import { eq } from 'drizzle-orm'
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { registrations } from '$lib/server/db/schema'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { donations, registrations } from '$lib/server/db/schema'
 import { resetTestDb } from '$lib/server/db/testing/resetTestDb'
 import { seedRegistration } from '$lib/server/testing/seedRegistration'
 
@@ -195,5 +195,98 @@ describe('cancelRegistrationAsAdmin', () => {
         })
 
         expect(await statusOf(seeded.registrationId)).toBe('refunded')
+    })
+
+    /* A GIFT IS NOT REFUNDED WITH THE BOOKING — the reunion keeps it. But a gift added during
+       registration was a line item on the SAME charge, and Stripe refunds charges rather than line
+       items, so keeping it means refunding less than the charge. Leaving the donations row alone
+       would not have been enough: the money would have gone back regardless. */
+    describe('a gift given with the booking', () => {
+        async function seedWithGift(intentId: string | null) {
+            const seeded = await seedRegistration(db, {
+                members: [{ name: 'Wanda', priceCents: 16509, stripePaymentIntentId: 'pi_1' }],
+            })
+            const [gift] = await db
+                .insert(donations)
+                .values({
+                    eventId: seeded.eventId,
+                    registrationId: seeded.registrationId,
+                    donorName: 'Wanda Trantow',
+                    donorEmail: 'wanda@example.com',
+                    amountCents: 5000,
+                    status: 'paid',
+                    stripePaymentIntentId: intentId,
+                })
+                .returning({ id: donations.id })
+            return { ...seeded, giftId: gift.id }
+        }
+
+        async function giftStatus(giftId: string) {
+            const [row] = await db
+                .select({ status: donations.status })
+                .from(donations)
+                .where(eq(donations.id, giftId))
+            return row.status
+        }
+
+        /* THE case. A full refund here would return $215.09 — the place AND the gift. */
+        it('refunds the place only, leaving the gift with the reunion', async () => {
+            const seeded = await seedWithGift('pi_1')
+
+            await cancelRegistrationAsAdmin({
+                registrationId: seeded.registrationId,
+                eventId: seeded.eventId,
+                registerUrl: REGISTER_URL,
+            })
+
+            expect(mockRefund).toHaveBeenCalledWith(
+                'pi_1',
+                16509,
+                expect.stringContaining(seeded.registrationId),
+            )
+        })
+
+        it('leaves the gift paid', async () => {
+            const seeded = await seedWithGift('pi_1')
+
+            await cancelRegistrationAsAdmin({
+                registrationId: seeded.registrationId,
+                eventId: seeded.eventId,
+                registerUrl: REGISTER_URL,
+            })
+
+            expect(await giftStatus(seeded.giftId)).toBe('paid')
+        })
+
+        /* A donor who is not told is a donor waiting for money that is not coming. */
+        it('tells the registrant what was refunded and what was kept', async () => {
+            const seeded = await seedWithGift('pi_1')
+
+            await cancelRegistrationAsAdmin({
+                registrationId: seeded.registrationId,
+                eventId: seeded.eventId,
+                registerUrl: REGISTER_URL,
+            })
+
+            expect(mockSendCancellation.mock.calls[0][1]).toMatchObject({
+                totalCents: 16509,
+                keptDonationCents: 5000,
+            })
+        })
+
+        /* An offline gift recorded against a paper entry rode on no charge, so there is nothing for
+           a partial refund to protect and the card refund stays whole. */
+        it('refunds the charge in full when the gift rode on no payment intent', async () => {
+            const seeded = await seedWithGift(null)
+
+            await cancelRegistrationAsAdmin({
+                registrationId: seeded.registrationId,
+                eventId: seeded.eventId,
+                registerUrl: REGISTER_URL,
+            })
+
+            expect(mockRefund).toHaveBeenCalledWith('pi_1', undefined, expect.any(String))
+            expect(await giftStatus(seeded.giftId)).toBe('paid')
+        })
     })
 })

@@ -1,5 +1,10 @@
 import { z } from 'zod'
-import { US_STATES } from '$lib/general/constants'
+import {
+    DONATION_MAX_CENTS,
+    DONATION_MIN_CENTS,
+    HOTEL_STAY_ANSWERS,
+    US_STATES,
+} from '$lib/general/constants'
 import { isValidPhone, isValidZip } from '$lib/utils'
 
 /* No .transform() anywhere in here, deliberately. These schemas are used for client-side
@@ -56,6 +61,22 @@ export const memberSchema = personDetailsSchema.extend({
     name: z.string().trim().min(2, 'Please enter a name'),
 })
 
+/* The host-hotel question. Three answers rather than two — see HOTEL_STAY_ANSWERS — and '' is in the
+   type for the same reason it is in the yes/no answers: $form must be able to hold a freshly
+   rendered form where nothing has been chosen. `value.length > 0` rather than `value !== ''` for the
+   same TypeScript-predicate reason too.
+
+   '' IS FIRST, and that ordering is load-bearing: superforms defaults an absent enum field to the
+   FIRST value in the enum. With the answers first, a payload that omitted this field arrived as
+   'yes' — a room silently added to the block for a family who was never asked. Unanswered is the
+   only safe default, and it then fails this refine loudly instead. */
+const hotelStayRequired = z
+    .enum(['', ...HOTEL_STAY_ANSWERS])
+    .refine(
+        (value) => value.length > 0,
+        'Please say whether your party will stay at the host hotel',
+    )
+
 /* The registration form's complete shape. Every field the form collects lives here and nowhere
    else: the pages post $form as JSON (dataType: 'json'), so there are no hidden inputs mirroring
    state into the DOM. Two production bugs came from that mirroring — a field missing from $form
@@ -75,6 +96,23 @@ export const registrationSchema = z.object({
         .refine((val) => !val || isValidPhone(val), 'Please enter a valid phone number'),
     self: personDetailsSchema,
     members: z.array(memberSchema),
+    /* Booking-level, not per-person: a household books rooms together. */
+    stayingAtHostHotel: hotelStayRequired,
+    /* An optional gift on top of the party's places, in cents.
+
+       0 means none, which is why the floor is 0 here and DONATION_MIN_CENTS is applied only above
+       it: a gift of $2 is not worth a charge, but a registration with no gift is the normal case
+       and must not be an error. */
+    donationCents: z
+        .number()
+        .int()
+        .min(0)
+        .max(DONATION_MAX_CENTS, 'That gift is larger than this form accepts')
+        .refine(
+            (cents) => cents === 0 || cents >= DONATION_MIN_CENTS,
+            `A gift must be at least $${DONATION_MIN_CENTS / 100}`,
+        )
+        .default(0),
 })
 
 /* Admin paper entry validates identically to the public form — address, ZIP, state and both

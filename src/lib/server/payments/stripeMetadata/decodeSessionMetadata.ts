@@ -18,7 +18,16 @@ export function decodeSessionMetadata(
             type: 'registration',
             registrationId: raw.registrationId,
             managementToken: raw.managementToken,
+            /* Absent OR empty means no gift. Undefined rather than '', so the webhook's
+               `if (metadata.donationId)` cannot be handed a falsy id that reads as present. */
+            donationId: raw.donationId || undefined,
         }
+    }
+    if (raw.type === 'donation') {
+        if (!raw.donationId) {
+            return null
+        }
+        return { type: 'donation', donationId: raw.donationId }
     }
     if (raw.type === 'add_member') {
         if (

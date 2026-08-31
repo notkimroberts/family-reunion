@@ -1,8 +1,12 @@
 /* Paths in the (app) route group that anyone may view without signing in.
 
-   For launch this is only the registration funnel: '/' for the landing page, and '/register'
-   which covers the form, '/register/manage' and '/register/recover'. Everything else in the
-   group — program, changelog, admin — is admin-only.
+   For launch this is the registration funnel and the donation page: '/' for the landing page,
+   '/register' which covers the form, '/register/manage' and '/register/recover', and '/donate'
+   which covers '/donate/thanks'. Everything else in the group — program, changelog, admin — is
+   admin-only.
+
+   '/donate' is public for the same reason '/register' is, and stays reachable after the
+   registration lock date: a gift needs no chair, so nothing about it is bounded by the deadline.
 
    SCOPE, so this is not mistaken for a complete lock:
    - The (app) layout load calls this, so it gates page VIEWS. A SvelteKit layout load runs
@@ -15,7 +19,7 @@
      and /api/health (Railway's health check).
 
    To reopen a page after the reunion, add its prefix back here. */
-const PUBLIC_PATH_PREFIXES = ['/', '/register']
+const PUBLIC_PATH_PREFIXES = ['/', '/register', '/donate']
 
 export function isPublicPath(pathname: string): boolean {
     return PUBLIC_PATH_PREFIXES.some(

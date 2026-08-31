@@ -1,5 +1,5 @@
 <script lang="ts">
-import { Plus, Search, Settings, Users } from '@lucide/svelte'
+import { Gift, Plus, Search, Settings, Users } from '@lucide/svelte'
 import { SvelteMap } from 'svelte/reactivity'
 import { goto } from '$app/navigation'
 import { page } from '$app/state'
@@ -9,21 +9,27 @@ import { Input } from '$lib/components/ui/input'
 import { Separator } from '$lib/components/ui/separator'
 import * as Table from '$lib/components/ui/table'
 import { Tooltip, TooltipContent, TooltipTrigger } from '$lib/components/ui/tooltip'
+import { HOST_HOTEL } from '$lib/general/constants'
 import type { EventPerson } from '$lib/server/registrations'
 import { cn, formatPrice, formatViewerDateTime, type RegistrationStatus } from '$lib/utils'
 import { formatBirthDate } from '$lib/utils/age'
+import HeadcountPanel from './HeadcountPanel.svelte'
 import MoneyPanel from './MoneyPanel.svelte'
 import OrderSheet from './OrderSheet.svelte'
 import PaymentChannel from './PaymentChannel.svelte'
 import PaymentNote from './PaymentNote.svelte'
 import PersonFieldForm from './PersonFieldForm.svelte'
 import RegistrationStatusBadge from './RegistrationStatusBadge.svelte'
+import { getDonationTotals } from './donationTotals'
+import { getEventMoney } from './eventMoney'
 import { filterBookings } from './filterBookings'
+import { filterDonations } from './filterDonations'
 import { filterPeople } from './filterPeople'
 import { getPeopleSummary } from './peopleSummary'
 import { REGISTRATION_STATUS_STYLES } from './registrationStatusStyles'
 import { getRegistrationTotals } from './registrationTotals'
 import { lensFromUrl, type RegistrationsLens } from './registrationsViewUrl'
+import { getRoomSummary } from './roomSummary'
 import { rowAccent } from './rowAccent'
 import { urlForLens } from './urlForLens'
 
@@ -62,6 +68,27 @@ const YES_NO_VALUE = (value: boolean | null) => (value === null ? '' : value ? '
 
 /* Matches the subheadings on the event settings page, so the two admin surfaces read as one design. */
 const SUBHEAD_CLASS = 'text-muted-foreground text-xs font-semibold tracking-wide uppercase'
+
+/* The hotel answer in a table cell. Short, because it shares a row with five other columns — the
+   registrant sees the full sentences on the form instead.
+
+   'unasked' is not one of HOTEL_STAY_ANSWERS: it is the null column, meaning the booking predates the
+   question, and it must not read as "no" or as a maybe. */
+const HOTEL_STAY_LABELS = {
+    yes: 'Staying',
+    no: 'Elsewhere',
+    undecided: 'Not sure',
+    unasked: '—',
+}
+
+/* Gift states in the organiser's words. "Pending" on a gift means a checkout nobody finished, which
+   is not the same thing a pending BOOKING means — hence its own wording rather than the shared
+   registration status badge. */
+const DONATION_STATUS_LABELS = {
+    paid: 'Received',
+    pending: 'Not completed',
+    refunded: 'Refunded',
+}
 
 /* The details an organiser fills in from a phone call or a paper form, editable in place on the
    People lens. Declared once and rendered by both the table and the mobile cards — and the table's
@@ -104,10 +131,18 @@ const PERSON_FIELDS = [
 let { data } = $props()
 
 let totals = $derived(getRegistrationTotals(data.registrations))
+let donationTotals = $derived(getDonationTotals(data.donations))
+/* Registration money and gift money added into the one figure the panel leads with. See
+   eventMoney.ts — the rows it renders beneath that figure have to sum to it. */
+let money = $derived(getEventMoney(totals, donationTotals))
 /* The order sheet — shirt sizes per tier and the meal split. Derived from the same people the People
    lens lists, and only shown there. */
 let summary = $derived(getPeopleSummary(data.people))
-let showPeople = $derived(lensFromUrl(page.url) === 'people')
+/* The room block, off the bookings rather than the people: a household books rooms together. */
+let rooms = $derived(getRoomSummary(data.registrations))
+let lens = $derived(lensFromUrl(page.url))
+let showPeople = $derived(lens === 'people')
+let showDonations = $derived(lens === 'donations')
 
 let search = $state('')
 /* undefined is unfiltered. Holding the database's own value rather than a display label also retires the
@@ -125,6 +160,7 @@ function setView(next: RegistrationsLens) {
    none until it was extracted and every state had to be decided. */
 let visibleBookings = $derived(filterBookings(data.registrations, { search, status: statusFilter }))
 let visiblePeople = $derived(filterPeople(data.people, { search }))
+let visibleDonations = $derived(filterDonations(data.donations, { search }))
 
 /* Payment dates in the READER's timezone, filled in after mount.
 
@@ -134,11 +170,21 @@ let visiblePeople = $derived(filterPeople(data.people, { search }))
    UTC, so this is a wrong-date bug, not a wrong-clock one. Same shape and same reason as
    RegistrationHistory. */
 let paidLabels = new SvelteMap<string, string>()
+/* Gift dates, in the reader's zone, for exactly the reason above. */
+let giftLabels = new SvelteMap<string, string>()
 
 $effect(() => {
     for (const registration of data.registrations) {
         if (registration.paidAt) {
             paidLabels.set(registration.id, formatViewerDateTime(registration.paidAt))
+        }
+    }
+})
+
+$effect(() => {
+    for (const donation of data.donations) {
+        if (donation.paidAt) {
+            giftLabels.set(donation.id, formatViewerDateTime(donation.paidAt))
         }
     }
 })
@@ -150,7 +196,7 @@ $effect(() => {
 
 <section class="col-span-12 grid grid-cols-1 gap-6 lg:grid-cols-[20rem_1fr]">
     <!-- Stays on screen while you work the list, rather than being a dashboard you navigate away from. -->
-    <aside class="flex flex-col gap-4 self-start rounded-lg border bg-card p-4 lg:sticky lg:top-6">
+    <aside class="bg-card flex flex-col gap-4 self-start rounded-lg border p-4 lg:sticky lg:top-6">
         <!-- No year picker. Switching years is what /admin is for — it lists every reunion with its
              numbers on it, which is more use for choosing between them than a select showing only
              years. The picker also had to be hidden when there was one event, so it was a control that
@@ -186,11 +232,15 @@ $effect(() => {
 
         <Separator />
 
-        <MoneyPanel {totals} />
+        <MoneyPanel {money} />
 
         <Separator />
 
-        <OrderSheet {summary} attendingCount={totals.attendingCount} />
+        <HeadcountPanel {totals} />
+
+        <Separator />
+
+        <OrderSheet {summary} attendingCount={totals.attendingCount} {rooms} />
     </aside>
 
     <div class="flex min-w-0 flex-col gap-3">
@@ -198,14 +248,14 @@ $effect(() => {
             <!-- Leftmost, ahead of the search box and the chips, because the lens decides what those two
                  even mean. Two labelled halves rather than a switch: "Show people" as a switch leaves you
                  guessing what the off state shows. -->
-            <div class="flex gap-1 rounded-full bg-muted p-1">
+            <div class="bg-muted flex gap-1 rounded-full p-1">
                 <button
                     type="button"
                     onclick={() => setView('bookings')}
-                    aria-pressed={!showPeople}
+                    aria-pressed={lens === 'bookings'}
                     class={cn(
                         'rounded-full px-3 py-1 text-xs font-medium transition-colors',
-                        !showPeople
+                        lens === 'bookings'
                             ? 'bg-background text-foreground shadow-sm'
                             : 'text-muted-foreground',
                     )}>
@@ -224,6 +274,21 @@ $effect(() => {
                     <Users class="size-3.5" />
                     People
                 </button>
+                <!-- Gifts is a third lens rather than a page of its own, for the reason People is:
+                     it is the same year's money, read a different way. -->
+                <button
+                    type="button"
+                    onclick={() => setView('donations')}
+                    aria-pressed={showDonations}
+                    class={cn(
+                        'flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-colors',
+                        showDonations
+                            ? 'bg-background text-foreground shadow-sm'
+                            : 'text-muted-foreground',
+                    )}>
+                    <Gift class="size-3.5" />
+                    Gifts
+                </button>
             </div>
 
             <div class="relative min-w-48 flex-1">
@@ -231,11 +296,15 @@ $effect(() => {
                     class="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2" />
                 <Input
                     bind:value={search}
-                    placeholder={showPeople ? 'Search a person or party' : 'Search name or email'}
+                    placeholder={showDonations
+                        ? 'Search a donor'
+                        : showPeople
+                          ? 'Search a person or party'
+                          : 'Search name or email'}
                     class="pl-8" />
             </div>
 
-            {#if !showPeople}
+            {#if lens === 'bookings'}
                 <div class="flex flex-wrap gap-1.5">
                     {#each STATUS_FILTERS as status (status ?? 'all')}
                         {@const style = status ? REGISTRATION_STATUS_STYLES[status] : undefined}
@@ -249,11 +318,11 @@ $effect(() => {
                                 'inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-xs font-medium transition-all',
                                 /* Same border/background/text triple the row badge wears, so the chip and
                                    the rows it selects are visibly the same thing. */
-                                style?.class ?? 'text-muted-foreground border-transparent bg-muted',
+                                style?.class ?? 'text-muted-foreground bg-muted border-transparent',
                                 /* Selection is a ring, not a colour change — four buttons are already
                                    four colours, so there is no colour left to mean "chosen". */
                                 selected
-                                    ? 'ring-2 ring-ring ring-offset-1 ring-offset-background'
+                                    ? 'ring-ring ring-offset-background ring-2 ring-offset-1'
                                     : 'opacity-70 hover:opacity-100',
                             )}>
                             {#if Icon}
@@ -282,7 +351,105 @@ $effect(() => {
             </div>
         </div>
 
-        {#if showPeople}
+        {#if showDonations}
+            <p class="text-muted-foreground text-xs">
+                Every gift recorded for this year, including the checkouts nobody finished. {data
+                    .donations.length}
+                {data.donations.length === 1 ? 'gift' : 'gifts'}.
+            </p>
+
+            {#if data.donations.length === 0}
+                <p class="text-muted-foreground text-sm">No gifts for this year yet.</p>
+            {:else if visibleDonations.length === 0}
+                <p class="text-muted-foreground text-sm">Nothing matches that.</p>
+            {:else}
+                <AdminDataView>
+                    {#snippet mobileCards()}
+                        <div class="flex flex-col gap-3">
+                            {#each visibleDonations as donation (donation.id)}
+                                <div class="bg-card flex flex-col gap-2 rounded-lg border p-4">
+                                    <div class="flex items-start justify-between gap-2">
+                                        <div class="min-w-0">
+                                            <p class="truncate font-medium">{donation.donorName}</p>
+                                            <p
+                                                class="text-muted-foreground mt-0.5 truncate text-xs">
+                                                {donation.donorEmail}
+                                            </p>
+                                        </div>
+                                        <span class="font-semibold tabular-nums">
+                                            ${formatPrice(donation.amountCents)}
+                                        </span>
+                                    </div>
+                                    <p class="text-muted-foreground text-xs">
+                                        {DONATION_STATUS_LABELS[donation.status]}
+                                        {#if giftLabels.get(donation.id)}
+                                            · {giftLabels.get(donation.id)}
+                                        {/if}
+                                    </p>
+                                    {#if donation.message}
+                                        <p class="text-sm italic">“{donation.message}”</p>
+                                    {/if}
+                                    {#if donation.registrationId}
+                                        <a
+                                            href="/admin/event/{data.event
+                                                .id}/registrations/{donation.registrationId}"
+                                            class="text-muted-foreground hover:text-foreground text-xs">
+                                            Given with a registration →
+                                        </a>
+                                    {/if}
+                                </div>
+                            {/each}
+                        </div>
+                    {/snippet}
+
+                    {#snippet desktopTable()}
+                        <Table.Root>
+                            <Table.Header>
+                                <Table.Row>
+                                    <Table.Head>Donor</Table.Head>
+                                    <Table.Head>Status</Table.Head>
+                                    <Table.Head>Given</Table.Head>
+                                    <Table.Head>Message</Table.Head>
+                                    <Table.Head class="text-right">Amount</Table.Head>
+                                </Table.Row>
+                            </Table.Header>
+                            <Table.Body>
+                                {#each visibleDonations as donation (donation.id)}
+                                    <Table.Row>
+                                        <Table.Cell>
+                                            <p class="font-medium">{donation.donorName}</p>
+                                            <p class="text-muted-foreground text-xs">
+                                                {donation.donorEmail}
+                                            </p>
+                                        </Table.Cell>
+                                        <Table.Cell class="text-muted-foreground text-sm">
+                                            {DONATION_STATUS_LABELS[donation.status]}
+                                        </Table.Cell>
+                                        <Table.Cell class="text-muted-foreground text-sm">
+                                            {giftLabels.get(donation.id) ?? '—'}
+                                            {#if donation.registrationId}
+                                                <a
+                                                    href="/admin/event/{data.event
+                                                        .id}/registrations/{donation.registrationId}"
+                                                    class="block text-xs hover:underline">
+                                                    with a registration
+                                                </a>
+                                            {/if}
+                                        </Table.Cell>
+                                        <Table.Cell class="text-muted-foreground max-w-xs text-sm">
+                                            {donation.message ?? '—'}
+                                        </Table.Cell>
+                                        <Table.Cell class="text-right tabular-nums">
+                                            ${formatPrice(donation.amountCents)}
+                                        </Table.Cell>
+                                    </Table.Row>
+                                {/each}
+                            </Table.Body>
+                        </Table.Root>
+                    {/snippet}
+                </AdminDataView>
+            {/if}
+        {:else if showPeople}
             <p class="text-muted-foreground text-xs">
                 Everyone with a place — paid or covered. {data.people.length}
                 {data.people.length === 1 ? 'person' : 'people'}. Unpaid parties are in Bookings.
@@ -297,7 +464,7 @@ $effect(() => {
                     {#snippet mobileCards()}
                         <div class="flex flex-col gap-3">
                             {#each visiblePeople as person (person.id)}
-                                <div class="flex flex-col gap-3 rounded-lg border bg-card p-4">
+                                <div class="bg-card flex flex-col gap-3 rounded-lg border p-4">
                                     <div class="flex items-start justify-between gap-2">
                                         <div class="min-w-0">
                                             <p class="truncate font-medium">{person.name}</p>
@@ -332,7 +499,7 @@ $effect(() => {
                                     <a
                                         href="/admin/event/{data.event
                                             .id}/registrations/{person.registrationId}"
-                                        class="text-muted-foreground text-xs hover:text-foreground">
+                                        class="text-muted-foreground hover:text-foreground text-xs">
                                         Registered by {person.contactName} →
                                     </a>
                                 </div>
@@ -411,7 +578,7 @@ $effect(() => {
                                  carries the link instead, the same shape the People card uses. -->
                             <div
                                 class={cn(
-                                    'rounded-lg border bg-card p-4',
+                                    'bg-card rounded-lg border p-4',
                                     rowAccent(registration),
                                 )}>
                                 <div class="flex items-start justify-between gap-2">
@@ -439,6 +606,14 @@ $effect(() => {
                                     <span aria-hidden="true">·</span>
                                     <PaymentChannel
                                         stripeSessionId={registration.stripeSessionId} />
+                                    {#if HOST_HOTEL}
+                                        <span aria-hidden="true">·</span>
+                                        <span>
+                                            Hotel: {HOTEL_STAY_LABELS[
+                                                registration.stayingAtHostHotel ?? 'unasked'
+                                            ]}
+                                        </span>
+                                    {/if}
                                 </p>
                                 <div class="mt-1.5">
                                     <PaymentNote
@@ -468,6 +643,9 @@ $effect(() => {
                                 <Table.Head>Contact</Table.Head>
                                 <Table.Head>Status</Table.Head>
                                 <Table.Head>Came in via</Table.Head>
+                                {#if HOST_HOTEL}
+                                    <Table.Head>Hotel</Table.Head>
+                                {/if}
                                 <Table.Head class="text-right">Party</Table.Head>
                                 <Table.Head class="text-right">Total</Table.Head>
                                 <Table.Head></Table.Head>
@@ -495,6 +673,13 @@ $effect(() => {
                                         <PaymentChannel
                                             stripeSessionId={registration.stripeSessionId} />
                                     </Table.Cell>
+                                    {#if HOST_HOTEL}
+                                        <Table.Cell class="text-muted-foreground text-sm">
+                                            {HOTEL_STAY_LABELS[
+                                                registration.stayingAtHostHotel ?? 'unasked'
+                                            ]}
+                                        </Table.Cell>
+                                    {/if}
                                     <Table.Cell class="text-right tabular-nums">
                                         {registration.memberCount}
                                     </Table.Cell>

@@ -3,6 +3,7 @@ import type Stripe from 'stripe'
 import { db } from '$lib/server/db'
 import { partyMembers, registrations } from '$lib/server/db/schema'
 import { dbg } from '$lib/server/debug'
+import { fulfillDonation, markDonationPaid } from '$lib/server/donations'
 import { sendRegistrationConfirmation } from '$lib/server/email'
 import { decodeSessionMetadata, retrievePaymentFee } from '$lib/server/payments'
 import { reportError } from '$lib/server/reportError'
@@ -29,6 +30,13 @@ export async function fulfillCheckout(
     const metadata = decodeSessionMetadata(session.metadata)
     if (!metadata) {
         dbg.stripe('checkout.session.completed but no/invalid metadata')
+        return
+    }
+
+    /* A gift given on its own at /donate. Its whole fulfilment is the donation module's — nothing
+       here concerns a registration. */
+    if (metadata.type === 'donation') {
+        await fulfillDonation(metadata.donationId, paymentIntentId)
         return
     }
 
@@ -213,6 +221,25 @@ export async function fulfillCheckout(
             .set({ stripePaymentIntentId: paymentIntentId })
             .where(eq(partyMembers.registrationId, registrationId))
         dbg.stripe('backfilled payment_intent on party members for registration %s', registrationId)
+    }
+
+    /* A gift paid on the same checkout. Inside the branch that only a successful pending -> paid
+       transition reaches, so a redelivery cannot mark it twice.
+
+       No feeCents: this charge has ONE balance transaction, already recorded on the registration
+       above. Writing it here too would count Stripe's cut twice across the two admin figures.
+
+       No separate receipt either — the confirmation email names the gift. */
+    if (metadata.donationId) {
+        await markDonationPaid({
+            donationId: metadata.donationId,
+            stripePaymentIntentId: paymentIntentId,
+        })
+        dbg.stripe(
+            'marked donation %s paid with registration %s',
+            metadata.donationId,
+            registrationId,
+        )
     }
 
     /* Email outside the transaction — a transient email failure should not roll back payment.

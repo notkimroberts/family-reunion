@@ -62,13 +62,18 @@ describe('requireAdmin', () => {
 })
 
 describe('isPublicPath', () => {
-    /* Registration funnel — must stay reachable with no session. */
-    it.each(['/', '/register', '/register/manage', '/register/recover'])(
-        'allows %s',
-        (pathname) => {
-            expect(isPublicPath(pathname)).toBe(true)
-        },
-    )
+    /* Registration funnel and the donation page — must stay reachable with no session. /donate is
+       also the one public path that outlives the registration lock date. */
+    it.each([
+        '/',
+        '/register',
+        '/register/manage',
+        '/register/recover',
+        '/donate',
+        '/donate/thanks',
+    ])('allows %s', (pathname) => {
+        expect(isPublicPath(pathname)).toBe(true)
+    })
 
     /* Locked for launch: admin-only. The prefix list already fails these closed — pinned so a later
        "reopen a page after the reunion" edit to PUBLIC_PATH_PREFIXES cannot quietly widen to an admin
@@ -88,7 +93,7 @@ describe('isPublicPath', () => {
     })
 
     /* A public prefix must not leak to a path that merely starts with the same letters. */
-    it.each(['/registerfoo', '/registration', '/register-now'])(
+    it.each(['/registerfoo', '/registration', '/register-now', '/donations', '/donate-now'])(
         'does not treat %s as public',
         (pathname) => {
             expect(isPublicPath(pathname)).toBe(false)

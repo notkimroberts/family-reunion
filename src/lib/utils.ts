@@ -1,6 +1,7 @@
 export { getAge, getMemberAge, parseBirthDate, formatBirthDate } from './utils/age'
 export { getInitials } from './utils/initials'
 export { formatPrice } from './utils/price'
+export { formatUsd } from './utils/formatUsd'
 export { isValidPhone } from './utils/isValidPhone'
 export { isValidZip } from './utils/isValidZip'
 export { formatPhoneInput } from './utils/formatPhoneInput'

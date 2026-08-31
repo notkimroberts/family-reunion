@@ -4,10 +4,12 @@ import { sumMemberPrices } from '$lib/general/pricing'
 import { db } from '$lib/server/db'
 import { partyMembers, registrations, reunionEvents } from '$lib/server/db/schema'
 import { dbg } from '$lib/server/debug'
+import { getPaidGiftsForRegistration } from '$lib/server/donations'
 import { sendCancellationEmail, type RefundRoute } from '$lib/server/email'
 import { refundPaymentIntent, retrieveSessionPaymentIntent } from '$lib/server/payments'
 import { reportError } from '$lib/server/reportError'
 import { markRegistrationRefunded } from '../lifecycle'
+import { planRefunds } from './_planRefunds'
 
 /* Where the money goes back, read off the registration rather than guessed.
 
@@ -113,20 +115,28 @@ export async function _performCancellation(
     }
 
     const intents = Array.from(uniqueIntents)
+
+    /* What a full refund would hand back that nobody asked for. A gift is not refunded with the
+       booking — the reunion keeps it — but Stripe refunds CHARGES, not line items, so a gift given
+       during registration comes back with the party unless the refund is made partial. planRefunds
+       is what decides that; every intent carrying no gift is still refunded in full. */
+    const gifts = await getPaidGiftsForRegistration(registrationId)
+    const planned = planRefunds({ intentIds: intents, members, gifts })
+
     const results = await Promise.allSettled(
-        intents.map((intentId) =>
+        planned.map((refund) =>
             /* Per-intent idempotency key keyed on the cancellation: a Stripe redelivery or a
                double-click will not issue a second refund. */
             refundPaymentIntent(
-                intentId,
-                undefined,
-                `cancel-registration-${registrationId}-${intentId}`,
+                refund.intentId,
+                refund.amountCents,
+                `cancel-registration-${registrationId}-${refund.intentId}`,
             ),
         ),
     )
 
     const failed = results
-        .map((result, index) => ({ result, intentId: intents[index] }))
+        .map((result, index) => ({ result, intentId: planned[index].intentId }))
         .filter((entry) => entry.result.status === 'rejected')
 
     if (failed.length > 0) {
@@ -143,8 +153,12 @@ export async function _performCancellation(
         )
     }
 
-    for (const intentId of intents) {
-        dbg.register('full refund issued for payment_intent=%s', intentId)
+    for (const refund of planned) {
+        dbg.register(
+            '%s refund issued for payment_intent=%s',
+            refund.amountCents === undefined ? 'full' : 'partial',
+            refund.intentId,
+        )
     }
 
     await markRegistrationRefunded(registrationId)
@@ -165,6 +179,10 @@ export async function _performCancellation(
                 eventTitle: reunionEvent?.title ?? 'the reunion',
                 partyNames: members.map((member) => member.name),
                 totalCents: sumMemberPrices(members),
+                /* Named so the donor is not left waiting for money that is not coming: the refund
+                   is the places only, and their gift stays with the reunion. Only the gifts on a
+                   charge that was actually refunded — a paper entry refunds nothing here. */
+                keptDonationCents: gifts.reduce((sum, gift) => sum + gift.amountCents, 0),
                 refundRoute,
                 registerUrl,
             },

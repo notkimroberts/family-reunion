@@ -54,6 +54,15 @@ export function renderCancellationEmail(data: CancellationEmailData): {
     const { insetBackground, border, text: textColor, muted, fontStack } = emailThemeValue
     const amountLabel = data.refundRoute === 'by_hand' ? 'Amount to refund' : 'Refunded'
 
+    /* A kept gift is stated only where a refund is being talked about at all. On an unpaid or waived
+       cancellation there is no refund to distinguish it from, so the sentence would answer a
+       question nobody had. */
+    const keptGiftCents = copy.showsRefund ? (data.keptDonationCents ?? 0) : 0
+    const keptGiftLine =
+        keptGiftCents > 0
+            ? `Your gift of $${formatPrice(keptGiftCents)} is not included — gifts stay with the reunion, and we are grateful for it.`
+            : undefined
+
     /* ---- plain text ---- */
     const text = [
         `Hi ${data.name},`,
@@ -65,6 +74,7 @@ export function renderCancellationEmail(data: CancellationEmailData): {
         'Cancelled for:',
         ...data.partyNames.map((name) => `  - ${name}`),
         ...(copy.showsRefund ? ['', `${amountLabel}: $${formatPrice(data.totalCents)}`] : []),
+        ...(keptGiftLine ? ['', keptGiftLine] : []),
         ...(copy.note ? ['', copy.note] : []),
         '',
         'Changed your mind? You can register again here:',
@@ -109,12 +119,17 @@ ${amountRow}
         ? `<p style="margin:0 0 24px 0;font-family:${fontStack};font-size:14px;line-height:1.6;color:${muted};">${escapeHtml(copy.note)}</p>`
         : '<div style="height:16px;"></div>'
 
+    const keptGiftBlock = keptGiftLine
+        ? `<p style="margin:0 0 14px 0;font-family:${fontStack};font-size:14px;line-height:1.6;color:${muted};">${escapeHtml(keptGiftLine)}</p>`
+        : ''
+
     const bodyHtml = [
         paragraph(`Hi ${escapeHtml(data.name)},`),
         paragraph(escapeHtml(copy.lead)),
         eventBlock,
         sectionLabel('Cancelled for'),
         partyTable,
+        keptGiftBlock,
         noteBlock,
         primaryButton(data.registerUrl, 'Register again'),
         `<p style="margin:22px 0 0 0;padding-top:18px;border-top:1px solid ${border};font-family:${fontStack};font-size:13px;line-height:1.6;color:${muted};">Questions? Reply to this email, or contact us at <a href="mailto:${escapeHtml(CONTACT_EMAIL)}" style="color:${textColor};">${escapeHtml(CONTACT_EMAIL)}</a> or <a href="tel:${toE164(CONTACT_PHONE)}" style="color:${textColor};">${escapeHtml(CONTACT_PHONE)}</a>.</p>`,

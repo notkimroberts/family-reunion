@@ -4,6 +4,7 @@ import { env } from '$env/dynamic/private'
 import { requireAdmin } from '$lib/server/auth/guards'
 import { db } from '$lib/server/db'
 import { partyMembers, registrations } from '$lib/server/db/schema'
+import { getDonationsForEvent } from '$lib/server/donations'
 import {
     getEventPeople,
     getRegistrationsForEvent,
@@ -18,17 +19,20 @@ import type { Actions, PageServerLoad } from './$types'
 export const load: PageServerLoad = async (event) => {
     requireAdmin(event)
 
-    /* Both are loaded on every visit, not one per lens. The status panel's head count needs the
-       bookings, and toggling the lens has to be instant — a round trip to swap a table you are already
-       looking at reads as a page you broke. Two indexed queries on a few hundred rows. */
-    const [registrations, people] = await Promise.all([
+    /* All three are loaded on every visit, not one per lens. The status panel's head count needs the
+       bookings and its gift figures need the donations, and toggling the lens has to be instant — a
+       round trip to swap a table you are already looking at reads as a page you broke. Three indexed
+       queries on a few hundred rows. */
+    const [registrations, people, donations] = await Promise.all([
         getRegistrationsForEvent(event.params.eventId),
         getEventPeople(event.params.eventId),
+        getDonationsForEvent(event.params.eventId),
     ])
 
     return {
         registrations,
         people,
+        donations,
         /* Which Stripe dashboard a payment link should point at. Test and live PaymentIntent ids look
            alike, so the id cannot say — but the secret key can, and this is the only place that sees it.
            A test id under the live path shows "no such payment", which reads as a lost payment. */

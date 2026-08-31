@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import { toRegistrationIntake } from './toRegistrationIntake'
 
 /* The normalisation that both registration routes depend on and neither may own.
@@ -26,6 +26,7 @@ const FORM = {
     contactPhone: '5105550123',
     self: SELF,
     members: [],
+    stayingAtHostHotel: 'yes' as const,
 }
 
 describe('toRegistrationIntake', () => {
@@ -55,6 +56,20 @@ describe('toRegistrationIntake', () => {
         const intake = toRegistrationIntake({ ...FORM, contactEmail: '  Alice@Example.COM ' })
 
         expect(intake.contactEmail).toBe('alice@example.com')
+    })
+
+    /* '' cannot survive validation on the public form, but if it ever reaches here it must store
+       nothing rather than a guess: the column's null means NEVER ASKED. */
+    it('turns an unanswered hotel question into undefined rather than an empty string', () => {
+        expect(
+            toRegistrationIntake({ ...FORM, stayingAtHostHotel: '' }).stayingAtHostHotel,
+        ).toBeUndefined()
+    })
+
+    it('passes the hotel answer through untouched', () => {
+        expect(
+            toRegistrationIntake({ ...FORM, stayingAtHostHotel: 'undecided' }).stayingAtHostHotel,
+        ).toBe('undecided')
     })
 
     it('turns an empty phone into undefined rather than an empty string', () => {

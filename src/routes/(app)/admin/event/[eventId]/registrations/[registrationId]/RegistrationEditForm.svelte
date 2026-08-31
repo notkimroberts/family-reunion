@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/car
 import { Input } from '$lib/components/ui/input'
 import { NativeSelect } from '$lib/components/ui/native-select'
 import { Separator } from '$lib/components/ui/separator'
+import { HOST_HOTEL } from '$lib/general/constants'
 import type { RegistrationMember } from '$lib/server/registrations'
 import { formatBirthDate } from '$lib/utils/age'
 import FormErrorSummary from '../../../../../register/FormErrorSummary.svelte'
@@ -207,6 +208,24 @@ function handleRestore(memberId: string) {
                     <label for="editContactPhone" class="text-sm font-medium">Phone</label>
                     <Input id="editContactPhone" type="tel" bind:value={$form.contactPhone} />
                 </div>
+                <!-- Booking-level, so it sits with the contact rather than on any attendee row. The
+                     blank is SELECTABLE here, unlike the public form: a booking taken before the
+                     question existed has no answer, and saving must be able to leave it that way. -->
+                {#if HOST_HOTEL}
+                    <div class="flex flex-col gap-1.5">
+                        <label for="editStayingAtHostHotel" class="text-sm font-medium">
+                            Staying at {HOST_HOTEL.name}?
+                        </label>
+                        <NativeSelect
+                            id="editStayingAtHostHotel"
+                            bind:value={$form.stayingAtHostHotel}>
+                            <option value="">Not answered</option>
+                            <option value="yes">Staying there</option>
+                            <option value="no">Somewhere else</option>
+                            <option value="undecided">Not sure yet</option>
+                        </NativeSelect>
+                    </div>
+                {/if}
             </div>
 
             {#if contactIndex >= 0}

@@ -1,5 +1,5 @@
 <script lang="ts">
-import { ClipboardPen, LayoutDashboard, LogOut, Menu } from '@lucide/svelte'
+import { ClipboardPen, HeartHandshake, LayoutDashboard, LogOut, Menu } from '@lucide/svelte'
 import { page } from '$app/state'
 import { authClient } from '$lib/auth-client'
 import { Avatar, AvatarFallback } from '$lib/components/ui/avatar'
@@ -10,7 +10,7 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from '$lib/components/ui/dropdown-menu'
-import { APP_NAME, REGISTER_NAV_LINK } from '$lib/general/constants'
+import { APP_NAME, DONATE_NAV_LINK, REGISTER_NAV_LINK } from '$lib/general/constants'
 import { getInitials } from '$lib/utils'
 import MobileDrawer from './MobileDrawer.svelte'
 import ThemeToggle from './ThemeToggle.svelte'
@@ -32,24 +32,33 @@ function handleSignOut() {
 let mobileMenuOpen = $state(false)
 </script>
 
-<header class="sticky top-0 z-30 bg-background/90 backdrop-blur-md border-b print:hidden">
+<header class="bg-background/90 sticky top-0 z-30 border-b backdrop-blur-md print:hidden">
     <!-- Desktop: logo left, nav right -->
-    <div class="hidden md:flex items-center h-20 mx-auto max-w-6xl px-6 gap-4 justify-between">
-        <a href="/" class="flex items-center gap-3 shrink-0 group">
+    <div class="mx-auto hidden h-20 max-w-6xl items-center justify-between gap-4 px-6 md:flex">
+        <a href="/" class="group flex shrink-0 items-center gap-3">
             <img
                 src="/will_and_roxie_favicon_64.png"
                 alt={APP_NAME}
-                class="w-10 h-10 rounded-full object-cover ring-2 ring-primary ring-offset-2 ring-offset-background transition-all duration-300 group-hover:ring-4 group-hover:shadow-lg group-hover:shadow-primary/30 group-hover:scale-105" />
+                class="ring-primary ring-offset-background group-hover:shadow-primary/30 h-10 w-10 rounded-full object-cover ring-2 ring-offset-2 transition-all duration-300 group-hover:scale-105 group-hover:shadow-lg group-hover:ring-4" />
             <span
-                class="text-sm font-semibold tracking-wide text-foreground/80 transition-colors group-hover:text-foreground">
+                class="text-foreground/80 group-hover:text-foreground text-sm font-semibold tracking-wide transition-colors">
                 {APP_NAME}
             </span>
         </a>
 
         <nav class="flex items-center gap-0.5">
+            <!-- Outline, and left of Register: giving is a real path through the site, but the one
+                 thing most visitors are here to do is book a place, so only that is filled. -->
+            <a
+                href={DONATE_NAV_LINK.href}
+                class="hover:bg-muted flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors">
+                <HeartHandshake class="text-primary h-3.5 w-3.5" />
+                {DONATE_NAV_LINK.label}
+            </a>
+
             <a
                 href={REGISTER_NAV_LINK.href}
-                class="flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/90">
+                class="bg-primary text-primary-foreground hover:bg-primary/90 flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors">
                 <ClipboardPen class="h-3.5 w-3.5" />
                 {REGISTER_NAV_LINK.label}
             </a>
@@ -63,9 +72,9 @@ let mobileMenuOpen = $state(false)
                      signed in as, which a bare avatar cannot. -->
                 <DropdownMenu>
                     <DropdownMenuTrigger
-                        class="rounded-full ring-offset-background transition-shadow hover:ring-2 hover:ring-primary/40 hover:ring-offset-2 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none"
+                        class="ring-offset-background hover:ring-primary/40 focus-visible:ring-ring rounded-full transition-shadow hover:ring-2 hover:ring-offset-2 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
                         aria-label="Account menu">
-                        <Avatar class="w-8 h-8">
+                        <Avatar class="h-8 w-8">
                             <AvatarFallback
                                 class="bg-primary text-primary-foreground text-xs font-bold">
                                 {getInitials(user.name)}
@@ -104,20 +113,20 @@ let mobileMenuOpen = $state(false)
     <!-- Mobile: logo left, theme + hamburger right. The toggle sits in the bar rather than inside the
          drawer, because "everyone can see it" and "it is two taps down behind a menu" are not the same
          thing. Account controls stay in the drawer — there is no room for them here. -->
-    <div class="flex md:hidden items-center h-16 px-4 justify-between">
-        <a href="/" class="flex items-center gap-2.5 shrink-0">
+    <div class="flex h-16 items-center justify-between px-4 md:hidden">
+        <a href="/" class="flex shrink-0 items-center gap-2.5">
             <img
                 src="/will_and_roxie_favicon_64.png"
                 alt={APP_NAME}
-                class="w-9 h-9 rounded-full object-cover" />
-            <span class="text-sm font-semibold text-foreground/80">{APP_NAME}</span>
+                class="h-9 w-9 rounded-full object-cover" />
+            <span class="text-foreground/80 text-sm font-semibold">{APP_NAME}</span>
         </a>
         <div class="flex items-center gap-1">
             <ThemeToggle size="sm" />
             <button
                 onclick={() => (mobileMenuOpen = true)}
                 aria-label="Open menu"
-                class="p-2 rounded-lg hover:bg-muted transition-colors">
+                class="hover:bg-muted rounded-lg p-2 transition-colors">
                 <Menu class="h-5 w-5" />
             </button>
         </div>

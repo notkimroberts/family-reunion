@@ -1,12 +1,18 @@
 <script lang="ts">
-import { Mail, MessageSquare } from '@lucide/svelte'
-import { onMount, onDestroy } from 'svelte'
-import { StayConnected, ReunionLocations, RegistrationDeadline } from '$lib/components'
+import { HeartHandshake, Mail, MessageSquare } from '@lucide/svelte'
+import { onDestroy, onMount } from 'svelte'
+import { RegistrationDeadline, ReunionLocations, StayConnected } from '$lib/components'
 import { Button } from '$lib/components/ui/button'
 import { Card, CardContent } from '$lib/components/ui/card'
-import { APP_NAME, CONTACT_EMAIL, CONTACT_PHONE, FACEBOOK_GROUP_URL } from '$lib/general/constants'
+import {
+    APP_NAME,
+    CONTACT_EMAIL,
+    CONTACT_PHONE,
+    DONATION_PRESET_CENTS,
+    FACEBOOK_GROUP_URL,
+} from '$lib/general/constants'
 import { isRegistrationClosed } from '$lib/general/registration'
-import { toE164 } from '$lib/utils'
+import { formatPrice, toE164 } from '$lib/utils'
 
 let { data } = $props()
 
@@ -129,19 +135,19 @@ const FAMILY_STATS = [
 <!-- Hero -->
 {#if !data.event}
     <section class="col-span-12">
-        <div class="rounded-xl border bg-card px-6 py-12 text-center">
-            <p class="text-4xl mb-3">😢</p>
+        <div class="bg-card rounded-xl border px-6 py-12 text-center">
+            <p class="mb-3 text-4xl">😢</p>
             <p class="text-lg font-semibold">No reunion events are open right now.</p>
-            <p class="text-muted-foreground text-sm mt-1">Check back soon!</p>
+            <p class="text-muted-foreground mt-1 text-sm">Check back soon!</p>
         </div>
     </section>
 {:else}
     <section class="col-span-12">
-        <div class="rounded-xl border bg-card p-4 md:p-6">
+        <div class="bg-card rounded-xl border p-4 md:p-6">
             <div class="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,22rem)_1fr] lg:items-center">
                 <!-- Framed portraits -->
                 <div class="grid grid-cols-2 gap-3">
-                    <div class="flex flex-col gap-2 rounded-md bg-background p-3 shadow-sm">
+                    <div class="bg-background flex flex-col gap-2 rounded-md p-3 shadow-sm">
                         <img
                             src="/will_portrait.png"
                             alt="Will Patterson"
@@ -151,7 +157,7 @@ const FAMILY_STATS = [
                             <p class="text-muted-foreground text-xs">b. 1869</p>
                         </div>
                     </div>
-                    <div class="flex flex-col gap-2 rounded-md bg-background p-3 shadow-sm">
+                    <div class="bg-background flex flex-col gap-2 rounded-md p-3 shadow-sm">
                         <img
                             src="/roxie_portrait.png"
                             alt="Roxie Patterson"
@@ -204,6 +210,12 @@ const FAMILY_STATS = [
                                         the reunion organisers.
                                     {/if}
                                 </p>
+                                <!-- Gifts outlive the lock date — see isPublicPath — and this
+                                     branch is exactly where someone who cannot get a place lands. -->
+                                <Button href="/donate" variant="outline" size="lg">
+                                    <HeartHandshake class="size-4" />
+                                    Donate instead
+                                </Button>
                             {:else}
                                 <Button
                                     href="/register"
@@ -257,7 +269,7 @@ const FAMILY_STATS = [
      full-width card, which is the right place for it. Cards holding a two-column grid of short items
      do not need it. -->
 <section class="col-span-12 mt-8 md:mt-12">
-    <div class="text-center max-w-xl mx-auto mb-8">
+    <div class="mx-auto mb-8 max-w-xl text-center">
         <h2>Venue &amp; Where to Stay</h2>
         <p class="text-muted-foreground mt-2">
             Both are in Uptown Oakland, a short walk from each other.
@@ -270,7 +282,7 @@ const FAMILY_STATS = [
 
 <!-- Stay Connected -->
 <section class="col-span-12 mt-8 md:mt-12">
-    <div class="text-center max-w-xl mx-auto mb-8">
+    <div class="mx-auto mb-8 max-w-xl text-center">
         <h2>Stay Connected</h2>
         <p class="text-muted-foreground mt-2">
             Join the family online between now and the reunion.
@@ -281,9 +293,48 @@ const FAMILY_STATS = [
     </div>
 </section>
 
+<!-- Support the Reunion.
+
+     Between Stay Connected and Get in Touch on purpose: after the two sections that ask for nothing,
+     and before the one that answers questions. The preset buttons carry their figure to /donate in
+     ?amount=, so a visitor who has already chosen does not choose twice. -->
+<section id="donate" class="col-span-12 mt-8 scroll-mt-24 md:mt-12">
+    <div class="mx-auto mb-8 max-w-xl text-center">
+        <h2>Support the Reunion</h2>
+        <p class="text-muted-foreground mt-2">
+            Gifts cover the venue, the food and the shirts — and keep the price of a place down for
+            everyone. You do not have to be attending to give.
+        </p>
+    </div>
+    <Card>
+        <CardContent class="flex flex-col items-center gap-5 pt-6">
+            {#if data.raised.giftCount > 0}
+                <p class="text-sm">
+                    <span class="font-semibold tabular-nums">
+                        ${formatPrice(data.raised.totalCents)}
+                    </span>
+                    raised from {data.raised.giftCount}
+                    {data.raised.giftCount === 1 ? 'gift' : 'gifts'} so far.
+                </p>
+            {/if}
+            <div class="grid w-full grid-cols-2 gap-2 sm:grid-cols-4">
+                {#each DONATION_PRESET_CENTS as cents (cents)}
+                    <Button href="/donate?amount={cents}" variant="outline">
+                        ${formatPrice(cents)}
+                    </Button>
+                {/each}
+            </div>
+            <Button href="/donate" size="lg" class="w-full sm:w-fit">
+                <HeartHandshake class="size-4" />
+                Donate
+            </Button>
+        </CardContent>
+    </Card>
+</section>
+
 <!-- Get in Touch -->
 <section id="contact" class="col-span-12 mt-8 scroll-mt-24 md:mt-12">
-    <div class="text-center max-w-xl mx-auto mb-8">
+    <div class="mx-auto mb-8 max-w-xl text-center">
         <h2>Get in Touch</h2>
         <p class="text-muted-foreground mt-2">
             Have a question about the reunion? Reach the organizers directly below.
@@ -293,13 +344,13 @@ const FAMILY_STATS = [
         <CardContent class="pt-6">
             <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 {#if contactEmail}
-                    <a href="mailto:{contactEmail}" class="flex items-center gap-3 group">
+                    <a href="mailto:{contactEmail}" class="group flex items-center gap-3">
                         <div
-                            class="rounded-md bg-primary/10 p-2 text-primary shrink-0 group-hover:bg-primary/20 transition-colors">
+                            class="bg-primary/10 text-primary group-hover:bg-primary/20 shrink-0 rounded-md p-2 transition-colors">
                             <Mail class="h-4 w-4" />
                         </div>
                         <div>
-                            <p class="text-xs text-muted-foreground">Email</p>
+                            <p class="text-muted-foreground text-xs">Email</p>
                             <p class="text-sm font-medium group-hover:underline">
                                 {contactEmail}
                             </p>
@@ -307,13 +358,13 @@ const FAMILY_STATS = [
                     </a>
                 {/if}
                 {#if contactPhone}
-                    <a href="sms:{toE164(contactPhone)}" class="flex items-center gap-3 group">
+                    <a href="sms:{toE164(contactPhone)}" class="group flex items-center gap-3">
                         <div
-                            class="rounded-md bg-primary/10 p-2 text-primary shrink-0 group-hover:bg-primary/20 transition-colors">
+                            class="bg-primary/10 text-primary group-hover:bg-primary/20 shrink-0 rounded-md p-2 transition-colors">
                             <MessageSquare class="h-4 w-4" />
                         </div>
                         <div>
-                            <p class="text-xs text-muted-foreground">Text</p>
+                            <p class="text-muted-foreground text-xs">Text</p>
                             <p class="text-sm font-medium group-hover:underline">
                                 {contactPhone}
                             </p>
@@ -327,7 +378,7 @@ const FAMILY_STATS = [
 
 <!-- Family Story -->
 <section class="col-span-12 mt-8 mb-8 md:mt-12">
-    <div class="rounded-xl border bg-card px-6 py-10 md:px-10 md:py-14">
+    <div class="bg-card rounded-xl border px-6 py-10 md:px-10 md:py-14">
         <div class="mx-auto max-w-3xl">
             <h2>Our Family Story</h2>
 
@@ -344,7 +395,7 @@ const FAMILY_STATS = [
                 {/each}
             </div>
 
-            <div class="mt-6 space-y-4 text-muted-foreground">
+            <div class="text-muted-foreground mt-6 space-y-4">
                 <p>
                     Our family's story begins with Nelly, a young African woman brought to the Port
                     of New Orleans aboard the brig <em>Planter</em> on February 18, 1819, when she was

@@ -6,10 +6,10 @@ import type { RegistrationsLens } from './registrationsViewUrl'
    the default cannot both exist in the wild and disagree with lensFromUrl. */
 export function urlForLens(current: URL, lens: RegistrationsLens): URL {
     const next = new URL(current)
-    if (lens === 'people') {
-        next.searchParams.set('view', 'people')
-    } else {
+    if (lens === 'bookings') {
         next.searchParams.delete('view')
+    } else {
+        next.searchParams.set('view', lens)
     }
     return next
 }

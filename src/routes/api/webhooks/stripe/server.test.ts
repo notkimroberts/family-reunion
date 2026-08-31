@@ -1,7 +1,8 @@
 import { eq } from 'drizzle-orm'
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { partyMembers, registrations } from '$lib/server/db/schema'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { donations, partyMembers, registrations } from '$lib/server/db/schema'
 import { resetTestDb } from '$lib/server/db/testing/resetTestDb'
+import { seedEvent } from '$lib/server/testing/seedEvent'
 import { seedRegistration } from '$lib/server/testing/seedRegistration'
 
 /* The Stripe webhook, against a real Postgres.
@@ -28,7 +29,10 @@ const { mockConstructEvent, mockPaymentIntentRetrieve } = vi.hoisted(() => ({
     mockConstructEvent: vi.fn(),
     mockPaymentIntentRetrieve: vi.fn(),
 }))
-const { mockSendEmail } = vi.hoisted(() => ({ mockSendEmail: vi.fn() }))
+const { mockSendEmail, mockSendReceipt } = vi.hoisted(() => ({
+    mockSendEmail: vi.fn(),
+    mockSendReceipt: vi.fn(),
+}))
 const { mockDbgStripe } = vi.hoisted(() => ({ mockDbgStripe: vi.fn() }))
 const { mockReportError } = vi.hoisted(() => ({ mockReportError: vi.fn() }))
 
@@ -50,7 +54,10 @@ vi.mock('stripe', () => {
 
 vi.mock('$lib/server/debug', () => ({ dbg: { stripe: mockDbgStripe, register: vi.fn() } }))
 vi.mock('$lib/server/reportError', () => ({ reportError: mockReportError }))
-vi.mock('$lib/server/email', () => ({ sendRegistrationConfirmation: mockSendEmail }))
+vi.mock('$lib/server/email', () => ({
+    sendRegistrationConfirmation: mockSendEmail,
+    sendDonationReceipt: mockSendReceipt,
+}))
 
 const { POST } = await import('./+server')
 
@@ -110,6 +117,31 @@ async function registrationRow(id: string) {
     return row
 }
 
+function donationSession(donationId: string, extra: Record<string, unknown> = {}) {
+    return { id: 'cs_test_donation', metadata: { type: 'donation', donationId }, ...extra }
+}
+
+async function seedDonation(
+    values: Partial<typeof donations.$inferInsert> & { eventId?: string } = {},
+) {
+    const [row] = await db
+        .insert(donations)
+        .values({
+            donorName: 'Ruth Patterson',
+            donorEmail: 'ruth@example.com',
+            amountCents: 5000,
+            status: 'pending',
+            ...values,
+        })
+        .returning({ id: donations.id })
+    return row.id
+}
+
+async function donationRow(id: string) {
+    const [row] = await db.select().from(donations).where(eq(donations.id, id))
+    return row
+}
+
 async function membersOf(registrationId: string) {
     return db.select().from(partyMembers).where(eq(partyMembers.registrationId, registrationId))
 }
@@ -118,6 +150,7 @@ describe('POST /api/webhooks/stripe', () => {
     beforeEach(async () => {
         vi.clearAllMocks()
         mockSendEmail.mockResolvedValue(undefined)
+        mockSendReceipt.mockResolvedValue(undefined)
         /* 509 cents — what Stripe takes on the $165.09 an adult place is grossed up to. */
         mockPaymentIntentRetrieve.mockResolvedValue({
             latest_charge: { balance_transaction: { fee: 509 } },
@@ -426,6 +459,204 @@ describe('POST /api/webhooks/stripe', () => {
                 stripePaymentIntentId: null,
                 stripeCheckoutSessionId: 'cs_test_addmember_1',
             })
+        })
+    })
+
+    /* Gifts. Same idempotency shape as the registration branch — a conditional pending -> paid
+       UPDATE — so the interesting assertions are about what a REDELIVERY does not do. */
+    describe('donation', () => {
+        it('marks the gift paid, records the fee and thanks the donor', async () => {
+            const eventId = await seedEvent(db, { title: 'Patterson Family Reunion 2027' })
+            const donationId = await seedDonation({ eventId })
+
+            const res = await deliver(donationSession(donationId, { payment_intent: 'pi_gift' }))
+
+            expect(res.status).toBe(200)
+            const row = await donationRow(donationId)
+            expect(row.status).toBe('paid')
+            expect(row.paidAt).toBeInstanceOf(Date)
+            expect(row.stripeFeeCents).toBe(509)
+            expect(mockSendReceipt).toHaveBeenCalledWith(
+                'ruth@example.com',
+                {
+                    donorName: 'Ruth Patterson',
+                    eventTitle: 'Patterson Family Reunion 2027',
+                    amountCents: 5000,
+                },
+                `donation/${donationId}`,
+            )
+        })
+
+        /* THE idempotency guarantee for gifts: a redelivery must not thank the same donor twice. */
+        it('sends exactly one receipt when Stripe redelivers', async () => {
+            const donationId = await seedDonation()
+            const session = donationSession(donationId, { payment_intent: 'pi_gift' })
+
+            await deliver(session)
+            await deliver(session)
+
+            expect(mockSendReceipt).toHaveBeenCalledTimes(1)
+        })
+
+        /* A gift can arrive with no reunion open — eventId is nullable — and the receipt still has
+           to render, so the template is handed a fallback rather than an empty title. */
+        it('still thanks a donor whose gift is attached to no reunion', async () => {
+            const donationId = await seedDonation()
+
+            await deliver(donationSession(donationId))
+
+            expect(mockSendReceipt).toHaveBeenCalledWith(
+                'ruth@example.com',
+                expect.objectContaining({ eventTitle: 'the family reunion' }),
+                `donation/${donationId}`,
+            )
+        })
+
+        it('reports a failed receipt rather than swallowing it', async () => {
+            const donationId = await seedDonation()
+            mockSendReceipt.mockRejectedValue(new Error('Resend unavailable'))
+
+            const res = await deliver(donationSession(donationId))
+
+            expect(res.status).toBe(200)
+            expect((await donationRow(donationId)).status).toBe('paid')
+            expect(mockReportError).toHaveBeenCalledWith(
+                expect.stringContaining('donation receipt failed'),
+                expect.any(Error),
+                { donationId },
+            )
+        })
+
+        it('ignores a donation webhook for a row that no longer exists', async () => {
+            const res = await deliver(donationSession('00000000-0000-0000-0000-000000000000'))
+
+            expect(res.status).toBe(200)
+            expect(mockSendReceipt).not.toHaveBeenCalled()
+        })
+    })
+
+    /* A gift added to a registration checkout: one session, one charge, two rows to settle. */
+    describe('a gift given with a registration', () => {
+        it('marks the gift paid alongside the registration', async () => {
+            const seeded = await seedRegistration(db, { status: 'pending' })
+            const donationId = await seedDonation({
+                eventId: seeded.eventId,
+                registrationId: seeded.registrationId,
+                amountCents: 2500,
+            })
+
+            await deliver(
+                registrationSession(seeded.registrationId, {
+                    payment_intent: 'pi_1',
+                    metadata: {
+                        type: 'registration',
+                        registrationId: seeded.registrationId,
+                        managementToken: 'plaintext-tok',
+                        donationId,
+                    },
+                }),
+            )
+
+            expect((await donationRow(donationId)).status).toBe('paid')
+        })
+
+        /* THE double-count guard for gifts. The session has ONE balance transaction, already
+           recorded on the registration; writing it on the gift as well would deduct Stripe's cut
+           twice across the two admin figures. */
+        it('leaves the fee on the registration and not on the gift', async () => {
+            const seeded = await seedRegistration(db, { status: 'pending' })
+            const donationId = await seedDonation({
+                eventId: seeded.eventId,
+                registrationId: seeded.registrationId,
+            })
+
+            await deliver(
+                registrationSession(seeded.registrationId, {
+                    payment_intent: 'pi_1',
+                    metadata: {
+                        type: 'registration',
+                        registrationId: seeded.registrationId,
+                        managementToken: 'plaintext-tok',
+                        donationId,
+                    },
+                }),
+            )
+
+            expect((await registrationRow(seeded.registrationId)).stripeFeeCents).toBe(509)
+            expect((await donationRow(donationId)).stripeFeeCents).toBeNull()
+        })
+
+        /* The confirmation is the only message this registrant gets, so the gift has to be named in
+           it — and the total has to be what the card was charged, or it reads as an overcharge. */
+        it('names the gift in the confirmation and includes it in the total', async () => {
+            const seeded = await seedRegistration(db, {
+                status: 'pending',
+                members: [{ name: 'Alice', priceCents: 5000 }],
+            })
+            const donationId = await seedDonation({
+                eventId: seeded.eventId,
+                registrationId: seeded.registrationId,
+                amountCents: 2500,
+            })
+
+            await deliver(
+                registrationSession(seeded.registrationId, {
+                    metadata: {
+                        type: 'registration',
+                        registrationId: seeded.registrationId,
+                        managementToken: 'plaintext-tok',
+                        donationId,
+                    },
+                }),
+            )
+
+            expect(mockSendEmail).toHaveBeenCalledWith(
+                'alice@example.com',
+                expect.objectContaining({ donationCents: 2500, totalCents: 7500 }),
+                `confirm/${seeded.registrationId}`,
+            )
+        })
+
+        /* A registration without a gift must not grow a donation line from nowhere. */
+        it('says nothing about a gift when there was none', async () => {
+            const seeded = await seedRegistration(db, {
+                status: 'pending',
+                members: [{ name: 'Alice', priceCents: 5000 }],
+            })
+
+            await deliver(registrationSession(seeded.registrationId))
+
+            expect(mockSendEmail).toHaveBeenCalledWith(
+                'alice@example.com',
+                expect.objectContaining({ donationCents: undefined, totalCents: 5000 }),
+                `confirm/${seeded.registrationId}`,
+            )
+        })
+
+        /* The gift is marked inside the branch only a successful transition reaches, so a
+           redelivery cannot re-stamp its paidAt. */
+        it('does not re-stamp the gift when Stripe redelivers', async () => {
+            const seeded = await seedRegistration(db, { status: 'pending' })
+            const donationId = await seedDonation({
+                eventId: seeded.eventId,
+                registrationId: seeded.registrationId,
+            })
+            const session = registrationSession(seeded.registrationId, {
+                metadata: {
+                    type: 'registration',
+                    registrationId: seeded.registrationId,
+                    managementToken: 'plaintext-tok',
+                    donationId,
+                },
+            })
+
+            await deliver(session)
+            const firstPaidAt = (await donationRow(donationId)).paidAt
+            await deliver(session)
+
+            expect((await donationRow(donationId)).paidAt).toEqual(firstPaidAt)
+            /* And no gift receipt: the confirmation email names the gift instead. */
+            expect(mockSendReceipt).not.toHaveBeenCalled()
         })
     })
 })

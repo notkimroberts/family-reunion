@@ -1,12 +1,19 @@
+import type { HotelStayAnswer } from '$lib/general/constants'
 import type { MemberInput } from '$lib/server/registrations'
 import { parseYesNo } from '$lib/utils'
-import type { PersonDetailsData, MemberData } from './schema'
+import type { MemberData, PersonDetailsData } from './schema'
 import { toMemberInputs } from './toMemberInputs'
 
 export type RegistrationIntake = {
     contactName: string
     contactEmail: string
     contactPhone: string | undefined
+    /* Booking-level, like the contact fields beside it — a household books rooms together.
+
+       Undefined, not '', when there is no answer: both create paths read undefined as "store
+       nothing", which keeps the column's null meaning NEVER ASKED. Validation makes '' unreachable
+       on the public form, so this is the belt to that braces. */
+    stayingAtHostHotel: HotelStayAnswer | undefined
     /* The contact first, then their guests. Both create paths flag index 0 as the contact. */
     members: MemberInput[]
 }
@@ -30,6 +37,9 @@ export function toRegistrationIntake(form: {
     contactPhone: string
     self: PersonDetailsData
     members: MemberData[]
+    /* The form's own type, which still admits '' — the schema's .refine rules it out at runtime but
+       does not narrow the type. */
+    stayingAtHostHotel: HotelStayAnswer | ''
 }): RegistrationIntake {
     const contactName = `${form.contactFirstName.trim()} ${form.contactLastName.trim()}`.trim()
 
@@ -37,6 +47,7 @@ export function toRegistrationIntake(form: {
         contactName,
         contactEmail: form.contactEmail.trim().toLowerCase(),
         contactPhone: form.contactPhone || undefined,
+        stayingAtHostHotel: form.stayingAtHostHotel || undefined,
         members: [
             /* The contact is an attendee too — the form makes them pick their own tier. */
             {

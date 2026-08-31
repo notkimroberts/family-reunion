@@ -10,7 +10,7 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from '$lib/components/ui/alert-dialog'
-import { formatPrice, type PaymentState } from '$lib/utils'
+import { formatUsd, type PaymentState } from '$lib/utils'
 
 /* Confirming a cancellation an organiser is making on someone else's behalf.
 
@@ -45,7 +45,10 @@ let {
     open: boolean
 } = $props()
 
-let consequence = $derived(CONSEQUENCE[paymentState](`${formatPrice(totalCents)}`))
+/* formatUsd carries the currency symbol, because a dollar sign written in a script block is
+   corrupted by `bun run format` — which is how this dialog came to offer to refund "165.09".
+   See formatUsd and the formatting note in CLAUDE.md. */
+let consequence = $derived(CONSEQUENCE[paymentState](formatUsd(totalCents)))
 </script>
 
 <AlertDialog bind:open>

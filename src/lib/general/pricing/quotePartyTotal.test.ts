@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import { grossUpForStripe } from '$lib/utils/stripeFee'
 import { quotePartyTotal } from './quotePartyTotal'
 
@@ -40,7 +40,36 @@ describe('quotePartyTotal', () => {
 
     /* An empty form — no tier picked yet — must read as zero, not NaN. */
     it('is zero for an empty party', () => {
-        expect(quotePartyTotal([])).toEqual({ subtotalCents: 0, feeCents: 0, totalCents: 0 })
+        expect(quotePartyTotal([])).toEqual({
+            subtotalCents: 0,
+            feeCents: 0,
+            donationCents: 0,
+            totalCents: 0,
+        })
+    })
+
+    /* A gift is charged at face value: tier prices are grossed up because they are what the reunion
+       must NET, but a gift is whatever the giver chose to give. */
+    it('adds a gift to the total without charging a fee on it', () => {
+        const withoutGift = quotePartyTotal([16000])
+        const withGift = quotePartyTotal([16000], { donationCents: 5000 })
+
+        expect(withGift.feeCents).toBe(withoutGift.feeCents)
+        expect(withGift.totalCents).toBe(withoutGift.totalCents + 5000)
+    })
+
+    /* Subtotal stays the cost of the PLACES. A gift folded into it would make "Subtotal" and
+       "Processing fee" describe two different amounts of money. */
+    it('keeps the gift out of the subtotal', () => {
+        expect(quotePartyTotal([16000], { donationCents: 5000 }).subtotalCents).toBe(16000)
+    })
+
+    /* Paper entry with a gift: no processing fee anywhere, and the gift still lands on the total. */
+    it('adds a gift to an offline party total', () => {
+        const quote = quotePartyTotal([16000], { applyStripeFee: false, donationCents: 2500 })
+
+        expect(quote.feeCents).toBe(0)
+        expect(quote.totalCents).toBe(18500)
     })
 
     /* A comped place is 0, and grossUpForStripe returns 0 rather than the bare 30¢ for it. */

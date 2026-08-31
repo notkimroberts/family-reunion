@@ -1,8 +1,9 @@
-import { describe, it, expect } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import {
-    encodeRegistrationMetadata,
-    encodeAddMemberMetadata,
     decodeSessionMetadata,
+    encodeAddMemberMetadata,
+    encodeDonationMetadata,
+    encodeRegistrationMetadata,
 } from './stripeMetadata'
 
 describe('encodeRegistrationMetadata / decode round-trip', () => {
@@ -13,7 +14,49 @@ describe('encodeRegistrationMetadata / decode round-trip', () => {
             type: 'registration',
             registrationId: 'reg-123',
             managementToken: 'plaintext-token',
+            donationId: undefined,
         })
+    })
+
+    /* A gift shares the registration's checkout, so its id rides in the same metadata. */
+    it('carries a gift id when one was added to the checkout', () => {
+        const encoded = encodeRegistrationMetadata('reg-123', 'plaintext-token', 'gift-1')
+
+        expect(encoded.donationId).toBe('gift-1')
+        expect(decodeSessionMetadata(encoded)).toMatchObject({ donationId: 'gift-1' })
+    })
+
+    /* Omitted rather than sent as '', so the two spellings of "no gift" cannot disagree. Every
+       session created before gifts existed decodes the same way. */
+    it('omits the key entirely when there is no gift', () => {
+        expect('donationId' in encodeRegistrationMetadata('reg-123', 'tok')).toBe(false)
+    })
+
+    it('reads an empty donationId as no gift', () => {
+        expect(
+            decodeSessionMetadata({
+                type: 'registration',
+                registrationId: 'reg-123',
+                managementToken: 'tok',
+                donationId: '',
+            }),
+        ).toMatchObject({ donationId: undefined })
+    })
+})
+
+describe('encodeDonationMetadata / decode round-trip', () => {
+    it('encodes and decodes a standalone gift session', () => {
+        expect(decodeSessionMetadata(encodeDonationMetadata('gift-1'))).toEqual({
+            type: 'donation',
+            donationId: 'gift-1',
+        })
+    })
+
+    /* Fail closed. A donation session with no id names no row, and defaulting it would mark an
+       arbitrary gift paid. */
+    it('returns null for a donation session with no id', () => {
+        expect(decodeSessionMetadata({ type: 'donation' })).toBeNull()
+        expect(decodeSessionMetadata({ type: 'donation', donationId: '' })).toBeNull()
     })
 })
 

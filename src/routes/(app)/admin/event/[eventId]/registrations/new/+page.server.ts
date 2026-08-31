@@ -1,6 +1,7 @@
 import { fail } from '@sveltejs/kit'
 import { zod4 as zod } from 'sveltekit-superforms/adapters'
 import { defaults, superValidate } from 'sveltekit-superforms/server'
+import { HOST_HOTEL } from '$lib/general/constants'
 import { requireAdmin } from '$lib/server/auth/guards'
 import { dbg } from '$lib/server/debug'
 import { sendRegistrationConfirmation } from '$lib/server/email'
@@ -10,7 +11,7 @@ import { getTiersForEvent } from '$lib/server/tiers'
 import { EMPTY_PERSON_DETAILS } from '../../../../../register/EMPTY_PERSON_DETAILS'
 import { adminRegistrationSchema } from '../../../../../register/schema'
 import { toRegistrationIntake } from '../../../../../register/toRegistrationIntake'
-import type { PageServerLoad, Actions } from './$types'
+import type { Actions, PageServerLoad } from './$types'
 
 export const load: PageServerLoad = async (event) => {
     requireAdmin(event)
@@ -33,6 +34,8 @@ export const load: PageServerLoad = async (event) => {
             contactPhone: '',
             self: { ...EMPTY_PERSON_DETAILS },
             members: [],
+            stayingAtHostHotel: HOST_HOTEL ? ('' as const) : ('undecided' as const),
+            donationCents: 0,
             status: 'paid' as const,
         },
         zod(adminRegistrationSchema),
@@ -60,6 +63,7 @@ export const actions: Actions = {
         const { registrationId, managementToken } = await createAdminRegistration({
             ...intake,
             eventId: form.data.eventId,
+            donationCents: form.data.donationCents,
             status: form.data.status,
         })
 

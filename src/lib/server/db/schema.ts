@@ -1,17 +1,18 @@
 import { sql } from 'drizzle-orm'
 import {
-    pgTable,
-    uuid,
-    text,
     boolean,
-    timestamp,
+    check,
+    index,
     integer,
     jsonb,
     pgEnum,
+    pgTable,
+    text,
+    timestamp,
     uniqueIndex,
-    index,
-    check,
+    uuid,
 } from 'drizzle-orm/pg-core'
+import { HOTEL_STAY_ANSWERS } from '$lib/general/constants'
 import type { ReunionMetadata } from '$lib/general/reunionMetadata'
 
 export const eventStatusEnum = pgEnum('event_status', ['draft', 'open', 'closed', 'archived'])
@@ -21,6 +22,10 @@ export const registrationStatusEnum = pgEnum('registration_status', [
     'refunded',
     'waived',
 ])
+
+/* Values from HOTEL_STAY_ANSWERS, so the column, the form's zod schema and the admin summary cannot
+   drift apart. See that constant for why there are three and not two. */
+export const hotelStayEnum = pgEnum('hotel_stay', HOTEL_STAY_ANSWERS)
 
 /* Better Auth tables */
 export const user = pgTable('user', {
@@ -152,6 +157,15 @@ export const registrations = pgTable(
         contactName: text('contact_name').notNull(),
         contactEmail: text('contact_email').notNull(),
         contactPhone: text('contact_phone'),
+        /* Whether this party plans to stay at the host hotel, for the room block.
+
+           A booking-level answer, not a per-attendee one: a household books rooms together, so this
+           belongs beside contactEmail rather than on party_members — see ADR 0008.
+
+           NULL means NEVER ASKED, and is distinct from 'undecided', which means asked and genuinely
+           unsure. Every registration taken before the question existed is NULL, and the admin room
+           count must not read those as maybes. */
+        stayingAtHostHotel: hotelStayEnum('staying_at_host_hotel'),
         eventId: uuid('event_id')
             .notNull()
             .references(() => reunionEvents.id),
@@ -260,6 +274,54 @@ export const partyMembers = pgTable(
             'party_members_birth_date_prefix',
             sql`(${t.birthDay} IS NULL OR ${t.birthMonth} IS NOT NULL) AND (${t.birthMonth} IS NULL OR ${t.birthYear} IS NOT NULL)`,
         ),
+    ],
+)
+
+export const donationStatusEnum = pgEnum('donation_status', ['pending', 'paid', 'refunded'])
+
+/* Gifts to the reunion, from both places one can be given: added to a registration checkout, or
+   made on its own at /donate.
+
+   ONE TABLE for both, so "what did the reunion take in gifts" has a single answer. A gift given
+   during registration is still a gift — folding it into registrations.total would mix money that
+   buys a chair with money that does not, and the two are reported separately on purpose.
+
+   Amounts here are NOT grossed up, unlike tier prices. A tier price is what the reunion must net,
+   so the payer is charged more; a gift is whatever the donor chose to give, and charging $51.75
+   for a $50 gift reads as a mistake. The fee comes off it, and the admin panel says so. */
+export const donations = pgTable(
+    'donations',
+    {
+        id: uuid('id').primaryKey().defaultRandom(),
+        /* Nullable: nothing stops a gift arriving while no reunion is open. */
+        eventId: uuid('event_id').references(() => reunionEvents.id),
+        /* Set only for a gift added during registration. On delete set null rather than cascade —
+           the money reached the bank and must stay reported even if the booking is removed. */
+        registrationId: uuid('registration_id').references(() => registrations.id, {
+            onDelete: 'set null',
+        }),
+        donorName: text('donor_name').notNull(),
+        donorEmail: text('donor_email').notNull(),
+        message: text('message'),
+        amountCents: integer('amount_cents').notNull(),
+        /* What Stripe actually took, from the charge's balance transaction.
+
+           NULL means not known — and for a gift made DURING registration it means the fee is
+           accounted on the registration instead: both line items share one charge and therefore one
+           balance transaction, so counting it here as well would double-count it. */
+        stripeFeeCents: integer('stripe_fee_cents'),
+        stripeSessionId: text('stripe_session_id').unique(),
+        stripePaymentIntentId: text('stripe_payment_intent_id'),
+        status: donationStatusEnum('status').notNull().default('pending'),
+        /* withTimezone, like the reunion_events datetimes: this date is shown to an organiser, so it
+           has to survive the server's zone. */
+        paidAt: timestamp('paid_at', { withTimezone: true }),
+        createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+        updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+    },
+    (t) => [
+        index('donations_event_id_idx').on(t.eventId),
+        index('donations_status_idx').on(t.status),
     ],
 )
 

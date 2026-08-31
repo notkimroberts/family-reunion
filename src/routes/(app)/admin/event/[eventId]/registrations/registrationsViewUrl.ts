@@ -1,4 +1,4 @@
-export type RegistrationsLens = 'bookings' | 'people'
+export type RegistrationsLens = 'bookings' | 'people' | 'donations'
 
 /* The lens lives in the URL so it survives a reload and a trip into a registration and back.
 
@@ -8,5 +8,12 @@ export type RegistrationsLens = 'bookings' | 'people'
    Local to this route and meaningless anywhere else — unlike the ?eventId filter it replaced, which
    meant "the open event" to one page and "all years" to another. */
 export function lensFromUrl(url: URL): RegistrationsLens {
-    return url.searchParams.get('view') === 'people' ? 'people' : 'bookings'
+    const view = url.searchParams.get('view')
+    if (view === 'people') {
+        return 'people'
+    }
+    if (view === 'donations') {
+        return 'donations'
+    }
+    return 'bookings'
 }

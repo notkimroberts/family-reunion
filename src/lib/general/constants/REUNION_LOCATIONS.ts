@@ -24,7 +24,7 @@ export const REUNION_LOCATIONS: ReunionLocation[] = [
         kind: 'hotel',
         badge: 'Host Hotel',
         name: 'Kissel Uptown Oakland',
-        tagline: 'Our recommended stay, a short walk from the venue in Uptown Oakland.',
+        tagline: 'Our recommended stay, half a block from the venue in Uptown Oakland.',
         websiteUrl: 'https://www.kisseloakland.com',
         instagramUrl: 'https://www.instagram.com/kisseluptownoakland/',
         imageUrl: '/kissel-uptown-oakland.jpg',

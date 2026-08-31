@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { HOTEL_STAY_ANSWERS } from '$lib/general/constants'
 import { memberSchema } from '../../../../../register/schema'
 
 /* One member's editable fields.
@@ -35,6 +36,10 @@ export const adminEditRegistrationSchema = z.object({
     contactName: z.string().trim().min(2, 'Please enter a contact name'),
     contactEmail: z.email('Please enter a valid email'),
     contactPhone: z.string().optional(),
+    /* Admits '' — unlike the public form, where it is required. A booking taken before the question
+       existed has no answer, and an organiser correcting an email must not be forced to invent one on
+       the family's behalf. Saving '' leaves the column alone rather than writing a guess. */
+    stayingAtHostHotel: z.enum(['', ...HOTEL_STAY_ANSWERS]),
     status: z.enum(['pending', 'paid', 'waived'], 'Please choose a status'),
     members: z.array(adminEditMemberSchema),
     /* People staged for addition during this sitting.
