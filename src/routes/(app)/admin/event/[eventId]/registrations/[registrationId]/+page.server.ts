@@ -337,10 +337,10 @@ export const actions: Actions = {
 
     /* Cancels the whole registration on the registrant's behalf, refunding whatever Stripe took.
 
-       The gap this closes: a paper registration could not be cancelled at all. setRegistrationStatus
-       refuses 'refunded' in both directions on purpose, and cancelRegistration needs the management
-       token, which is only ever stored as a hash — so the only route was to email the family their own
-       link and ask them to do it themselves, for someone who had just rung up to say they cannot come.
+       The ONLY way to cancel anything. Registrants used to cancel their own booking from
+       /register/manage on nothing but the management link; that went, along with add- and
+       remove-member, so every refund now happens here. setRegistrationStatus refuses 'refunded' in
+       both directions on purpose, so this action is the whole route.
 
        Guarded by requireAdmin like every action here, and cancelRegistrationAsAdmin re-checks the
        event pairing at the write itself, because this one is irreversible. */

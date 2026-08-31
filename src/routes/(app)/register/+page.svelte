@@ -3,8 +3,11 @@ import { CalendarDays, MapPin, Sparkles } from '@lucide/svelte'
 import * as Sentry from '@sentry/sveltekit'
 import { superForm } from 'sveltekit-superforms'
 import { zod4Client as zodClient } from 'sveltekit-superforms/adapters'
+import { RegistrationDeadline } from '$lib/components'
 import { APP_NAME, CONTACT_EMAIL, CONTACT_PHONE } from '$lib/general/constants'
 import { quotePartyTotal } from '$lib/general/pricing'
+import { isRegistrationClosed } from '$lib/general/registration'
+import { defaultAdultTierId } from '$lib/general/tiers'
 import { formatDateRange, formatPrice, getTierPriceCents, isValidPhone, toE164 } from '$lib/utils'
 import { EMPTY_PERSON_DETAILS } from './EMPTY_PERSON_DETAILS'
 import FormErrorSummary from './FormErrorSummary.svelte'
@@ -49,7 +52,10 @@ const { form, errors, message, submitting, enhance } = superForm(data.form, {
 
 const tiers = data.tiers
 
-let self = $state<PersonDetails>({ ...EMPTY_PERSON_DETAILS })
+let self = $state<PersonDetails>({
+    ...EMPTY_PERSON_DETAILS,
+    tierId: defaultAdultTierId(data.tiers),
+})
 let members = $state<FormMember[]>([])
 /* Mirrors YourInformationCard's internal Save state — the registrant must commit their own
    details before paying. UI state, so it stays out of $form. */
@@ -96,12 +102,10 @@ let dateRange = $derived(
         : '',
 )
 
-/* Same check the server applies in createPendingRegistration. Without it the form renders,
-   accepts a full party, and only fails with a 403 at submit — after the registrant has done
-   all the work. Mirrors RegistrationManager's isLocked. */
-let isLocked = $derived(
-    !!data.event?.registrationLockDate && new Date(data.event.registrationLockDate) < new Date(),
-)
+/* Same predicate the server applies in createPendingRegistration. Without it the form renders,
+   accepts a full party, and only fails with a 403 at submit — after the registrant has done all the
+   work. */
+let isLocked = $derived(isRegistrationClosed(data.event?.registrationLockDate ?? null))
 </script>
 
 <svelte:head>
@@ -149,6 +153,8 @@ let isLocked = $derived(
                         </span>
                     {/if}
                 </div>
+
+                <RegistrationDeadline lockDate={data.event.registrationLockDate} class="mt-5" />
             </div>
         </div>
     </section>
@@ -159,7 +165,7 @@ let isLocked = $derived(
                 <p class="text-lg font-semibold">Registration for this reunion has closed.</p>
                 <p class="text-muted-foreground text-sm mt-1">
                     If you have already registered, you can still
-                    <a class="underline" href="/register/recover">manage your registration</a>.
+                    <a class="underline" href="/register/recover">view your registration</a>.
                 </p>
                 <p class="text-muted-foreground text-sm mt-3">
                     Need to register late? Contact
@@ -215,6 +221,10 @@ let isLocked = $derived(
                     <p class="text-xs text-muted-foreground text-center mt-3">
                         Already registered? <a class="underline" href="/register/recover"
                             >Resend management link</a>
+                    </p>
+                    <p class="text-xs text-muted-foreground text-center mt-1">
+                        Prefer paper? <a class="underline" href="/register/print"
+                            >Print a registration form</a>
                     </p>
                 </div>
             </div>

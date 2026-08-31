@@ -1,4 +1,4 @@
-import { CONTACT_EMAIL, CONTACT_PHONE } from '$lib/general/constants'
+import { CONTACT_EMAIL, CONTACT_PHONE, HOST_HOTEL } from '$lib/general/constants'
 import { formatPrice, toE164 } from '$lib/utils'
 import { emailLayout } from './_emailLayout'
 import { emailThemeValue } from './_emailThemeValue'
@@ -85,8 +85,14 @@ export function renderRegistrationConfirmation(data: RegistrationConfirmationDat
         `${copy.totalLabel}: $${formatPrice(data.totalCents)}`,
         ...(copy.note ? ['', copy.note] : []),
         '',
-        'Manage your registration — add members, edit details, or cancel:',
+        'View your registration at any time:',
         data.manageUrl,
+        /* Rooms are the part of a reunion that runs out, and this app cannot book them — so the
+           confirmation, which is the message people keep, is where the prompt belongs. Skipped
+           entirely when no host hotel is listed. */
+        ...(HOST_HOTEL
+            ? ['', `Somewhere to stay: ${HOST_HOTEL.name} — ${HOST_HOTEL.websiteUrl}`]
+            : []),
         '',
         `Questions? ${CONTACT_EMAIL} or ${CONTACT_PHONE}`,
         '',
@@ -152,6 +158,12 @@ ${memberRows}
 </table>`
             : ''
 
+    /* Both colours set on the cell, like every other block here: dark-mode auto-inversion otherwise
+       leaves this one unreadable. */
+    const hotelBlock = HOST_HOTEL
+        ? `<p style="margin:22px 0 0 0;padding-top:18px;border-top:1px solid ${border};font-family:${fontStack};font-size:14px;line-height:1.6;color:${textColor};background-color:transparent;"><strong>Somewhere to stay.</strong> ${escapeHtml(HOST_HOTEL.tagline)} Book directly with <a href="${escapeHtml(HOST_HOTEL.websiteUrl)}" style="color:${textColor};">${escapeHtml(HOST_HOTEL.name)}</a>.</p>`
+        : ''
+
     const bodyHtml = [
         paragraph(`Hi ${escapeHtml(data.name)},`),
         ...(data.isUpdate ? [paragraph(escapeHtml(updateLead))] : []),
@@ -161,10 +173,11 @@ ${memberRows}
         sectionLabel('Your party'),
         partyTable,
         noteBlock,
-        primaryButton(data.manageUrl, 'Manage your registration'),
+        primaryButton(data.manageUrl, 'View your registration'),
         /* The bare URL is repeated because some clients strip or fail to linkify buttons,
            and the manage link is the registrant's only credential. */
         `<p style="margin:16px 0 0 0;font-family:${fontStack};font-size:12px;line-height:1.6;color:${muted};text-align:center;word-break:break-all;">Or paste this link into your browser:<br>${escapeHtml(data.manageUrl)}</p>`,
+        hotelBlock,
         `<p style="margin:22px 0 0 0;padding-top:18px;border-top:1px solid ${border};font-family:${fontStack};font-size:13px;line-height:1.6;color:${muted};">Questions? Reply to this email, or contact us at <a href="mailto:${escapeHtml(CONTACT_EMAIL)}" style="color:${textColor};">${escapeHtml(CONTACT_EMAIL)}</a> or <a href="tel:${toE164(CONTACT_PHONE)}" style="color:${textColor};">${escapeHtml(CONTACT_PHONE)}</a>.</p>`,
     ].join('\n')
 

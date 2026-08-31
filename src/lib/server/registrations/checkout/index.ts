@@ -1,5 +1,4 @@
 export type { MemberInput } from './MemberInput'
 export { createPendingRegistration } from './createPendingRegistration'
-export { addMember } from './addMember'
 export { createAdminRegistration } from './createAdminRegistration'
 export { fulfillCheckout } from './fulfillCheckout'

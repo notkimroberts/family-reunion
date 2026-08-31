@@ -11,6 +11,15 @@ vi.mock('$lib/general/constants', () => ({
     APP_DOMAIN: 'example.com',
     CONTACT_EMAIL: 'organiser@example.com',
     CONTACT_PHONE: '+1 555 0100',
+    HOST_HOTEL: {
+        kind: 'hotel',
+        badge: 'Host Hotel',
+        name: 'Kissel Uptown Oakland',
+        tagline: 'A short walk from the venue.',
+        websiteUrl: 'https://example.com/hotel',
+        mapQuery: 'Kissel Uptown Oakland',
+        details: [],
+    },
 }))
 
 describe('renderRecoveryEmail', () => {
@@ -64,6 +73,17 @@ describe('renderRegistrationConfirmation', () => {
         const { text, html } = renderRegistrationConfirmation(data)
         expect(text).toContain('Hi Alice,')
         expect(html).toContain('Hi Alice,')
+    })
+
+    /* Rooms sell out and this app cannot book them, so the confirmation — the message people keep —
+       has to point at the host hotel. In BOTH bodies: a text-only client that lost the prompt would
+       leave that reader thinking accommodation was handled. */
+    it('points the registrant at the host hotel', () => {
+        const { text, html } = renderRegistrationConfirmation(data)
+        expect(text).toContain('Kissel Uptown Oakland')
+        expect(text).toContain('https://example.com/hotel')
+        expect(html).toContain('Kissel Uptown Oakland')
+        expect(html).toContain('href="https://example.com/hotel"')
     })
 
     it('lists every party member with tier and price in both bodies', () => {

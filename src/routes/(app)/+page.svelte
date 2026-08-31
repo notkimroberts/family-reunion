@@ -1,10 +1,11 @@
 <script lang="ts">
 import { Mail, MessageSquare } from '@lucide/svelte'
 import { onMount, onDestroy } from 'svelte'
-import { StayConnected, ReunionLocations } from '$lib/components'
+import { StayConnected, ReunionLocations, RegistrationDeadline } from '$lib/components'
 import { Button } from '$lib/components/ui/button'
 import { Card, CardContent } from '$lib/components/ui/card'
 import { APP_NAME, CONTACT_EMAIL, CONTACT_PHONE, FACEBOOK_GROUP_URL } from '$lib/general/constants'
+import { isRegistrationClosed } from '$lib/general/registration'
 import { toE164 } from '$lib/utils'
 
 let { data } = $props()
@@ -106,6 +107,13 @@ let dateRange = $derived.by(() => {
 
 let totalMonths = $derived(countdown.years * 12 + countdown.months)
 
+/* Once the lock date passes the Register button leads to a form that refuses; say so here instead.
+   Same predicate the server enforces with — and passed `now`, the countdown's clock, so the button
+   and the deadline pill beside it cannot disagree by a tick. */
+let registrationClosed = $derived(
+    isRegistrationClosed(data.event?.registrationLockDate ?? null, now),
+)
+
 const FAMILY_STATS = [
     { value: '1819', label: 'Nelly arrives at the Port of New Orleans' },
     { value: '1890', label: 'William & Roxie Married' },
@@ -182,13 +190,30 @@ const FAMILY_STATS = [
 
                         <div
                             class="mt-2 flex flex-col items-center gap-3 sm:flex-row sm:justify-center lg:justify-start">
-                            <Button
-                                href="/register"
-                                size="lg"
-                                class="px-14 py-7 text-lg transition-transform duration-150 hover:scale-[1.03]">
-                                Register Now
-                            </Button>
+                            {#if registrationClosed}
+                                <p class="text-sm">
+                                    Registration is closed. To ask about a late place, contact
+                                    {#if contactEmail}
+                                        <a class="underline" href="mailto:{contactEmail}"
+                                            >{contactEmail}</a>
+                                        or call
+                                        <a class="underline" href="sms:{toE164(contactPhone)}"
+                                            >{contactPhone}</a
+                                        >.
+                                    {:else}
+                                        the reunion organisers.
+                                    {/if}
+                                </p>
+                            {:else}
+                                <Button
+                                    href="/register"
+                                    size="lg"
+                                    class="animate-register-pulse px-14 py-7 text-lg transition-transform duration-150 hover:scale-[1.03]">
+                                    Register Now
+                                </Button>
+                            {/if}
                         </div>
+
                         {#if data.registrantCount > 0}
                             <p class="text-muted-foreground text-sm">
                                 Join {data.registrantCount}
@@ -207,14 +232,101 @@ const FAMILY_STATS = [
                     {:else}
                         <p class="text-muted-foreground">Stay tuned for the next reunion!</p>
                     {/if}
+
+                    <!-- Outside the eventState branches on purpose: the deadline is the one date a
+                         visitor has to act on, so it is stated whatever the reunion's phase — before
+                         it, during it, and after, where it explains why registration has stopped. -->
+                    <RegistrationDeadline
+                        lockDate={data.event.registrationLockDate}
+                        class="self-center lg:self-start" />
                 </div>
             </div>
         </div>
     </section>
 {/if}
 
-<!-- Family Story -->
+<!-- Venue & Hotel.
+
+     No max-w on the card grids in this section or the two below it. Every section here is col-span-12,
+     so they were already the same width — but Venue, Stay Connected and Get in Touch each constrained
+     their cards further, to 64rem, 48rem and 42rem, against a page container of 72rem. Four different
+     card widths down one page, none of them deliberate.
+
+     The reading measure that motivated those is already handled: main is max-w-6xl for public pages,
+     and the one block of long body copy — Our Family Story — keeps its own max-w-3xl INSIDE a
+     full-width card, which is the right place for it. Cards holding a two-column grid of short items
+     do not need it. -->
 <section class="col-span-12 mt-8 md:mt-12">
+    <div class="text-center max-w-xl mx-auto mb-8">
+        <h2>Venue &amp; Where to Stay</h2>
+        <p class="text-muted-foreground mt-2">
+            Both are in Uptown Oakland, a short walk from each other.
+        </p>
+    </div>
+    <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+        <ReunionLocations />
+    </div>
+</section>
+
+<!-- Stay Connected -->
+<section class="col-span-12 mt-8 md:mt-12">
+    <div class="text-center max-w-xl mx-auto mb-8">
+        <h2>Stay Connected</h2>
+        <p class="text-muted-foreground mt-2">
+            Join the family online between now and the reunion.
+        </p>
+    </div>
+    <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+        <StayConnected />
+    </div>
+</section>
+
+<!-- Get in Touch -->
+<section id="contact" class="col-span-12 mt-8 scroll-mt-24 md:mt-12">
+    <div class="text-center max-w-xl mx-auto mb-8">
+        <h2>Get in Touch</h2>
+        <p class="text-muted-foreground mt-2">
+            Have a question about the reunion? Reach the organizers directly below.
+        </p>
+    </div>
+    <Card>
+        <CardContent class="pt-6">
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                {#if contactEmail}
+                    <a href="mailto:{contactEmail}" class="flex items-center gap-3 group">
+                        <div
+                            class="rounded-md bg-primary/10 p-2 text-primary shrink-0 group-hover:bg-primary/20 transition-colors">
+                            <Mail class="h-4 w-4" />
+                        </div>
+                        <div>
+                            <p class="text-xs text-muted-foreground">Email</p>
+                            <p class="text-sm font-medium group-hover:underline">
+                                {contactEmail}
+                            </p>
+                        </div>
+                    </a>
+                {/if}
+                {#if contactPhone}
+                    <a href="sms:{toE164(contactPhone)}" class="flex items-center gap-3 group">
+                        <div
+                            class="rounded-md bg-primary/10 p-2 text-primary shrink-0 group-hover:bg-primary/20 transition-colors">
+                            <MessageSquare class="h-4 w-4" />
+                        </div>
+                        <div>
+                            <p class="text-xs text-muted-foreground">Text</p>
+                            <p class="text-sm font-medium group-hover:underline">
+                                {contactPhone}
+                            </p>
+                        </div>
+                    </a>
+                {/if}
+            </div>
+        </CardContent>
+    </Card>
+</section>
+
+<!-- Family Story -->
+<section class="col-span-12 mt-8 mb-8 md:mt-12">
     <div class="rounded-xl border bg-card px-6 py-10 md:px-10 md:py-14">
         <div class="mx-auto max-w-3xl">
             <h2>Our Family Story</h2>
@@ -265,84 +377,4 @@ const FAMILY_STATS = [
             </div>
         </div>
     </div>
-</section>
-
-<!-- Venue & Hotel.
-
-     No max-w on the card grids in this section or the two below it. Every section here is col-span-12,
-     so they were already the same width — but Venue, Stay Connected and Get in Touch each constrained
-     their cards further, to 64rem, 48rem and 42rem, against a page container of 72rem. Four different
-     card widths down one page, none of them deliberate.
-
-     The reading measure that motivated those is already handled: main is max-w-6xl for public pages,
-     and the one block of long body copy — Our Family Story — keeps its own max-w-3xl INSIDE a
-     full-width card, which is the right place for it. Cards holding a two-column grid of short items
-     do not need it. -->
-<section class="col-span-12 mt-8 md:mt-12">
-    <div class="text-center max-w-xl mx-auto mb-8">
-        <h2>Venue &amp; Where to Stay</h2>
-        <p class="text-muted-foreground mt-2">
-            Both are in Uptown Oakland, a short walk from each other.
-        </p>
-    </div>
-    <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
-        <ReunionLocations />
-    </div>
-</section>
-
-<!-- Stay Connected -->
-<section class="col-span-12 mt-8 md:mt-12">
-    <div class="text-center max-w-xl mx-auto mb-8">
-        <h2>Stay Connected</h2>
-        <p class="text-muted-foreground mt-2">
-            Join the family online between now and the reunion.
-        </p>
-    </div>
-    <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
-        <StayConnected />
-    </div>
-</section>
-
-<!-- Get in Touch -->
-<section id="contact" class="col-span-12 mt-8 mb-8 scroll-mt-24 md:mt-12">
-    <div class="text-center max-w-xl mx-auto mb-8">
-        <h2>Get in Touch</h2>
-        <p class="text-muted-foreground mt-2">
-            Have a question about the reunion? Reach the organizers directly below.
-        </p>
-    </div>
-    <Card>
-        <CardContent class="pt-6">
-            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                {#if contactEmail}
-                    <a href="mailto:{contactEmail}" class="flex items-center gap-3 group">
-                        <div
-                            class="rounded-md bg-primary/10 p-2 text-primary shrink-0 group-hover:bg-primary/20 transition-colors">
-                            <Mail class="h-4 w-4" />
-                        </div>
-                        <div>
-                            <p class="text-xs text-muted-foreground">Email</p>
-                            <p class="text-sm font-medium group-hover:underline">
-                                {contactEmail}
-                            </p>
-                        </div>
-                    </a>
-                {/if}
-                {#if contactPhone}
-                    <a href="sms:{toE164(contactPhone)}" class="flex items-center gap-3 group">
-                        <div
-                            class="rounded-md bg-primary/10 p-2 text-primary shrink-0 group-hover:bg-primary/20 transition-colors">
-                            <MessageSquare class="h-4 w-4" />
-                        </div>
-                        <div>
-                            <p class="text-xs text-muted-foreground">Text</p>
-                            <p class="text-sm font-medium group-hover:underline">
-                                {contactPhone}
-                            </p>
-                        </div>
-                    </a>
-                {/if}
-            </div>
-        </CardContent>
-    </Card>
 </section>

@@ -32,6 +32,10 @@ export async function fulfillCheckout(
         return
     }
 
+    /* NOTHING CREATES an add_member session any more — self-service add-a-member was removed with the
+       rest of the registrant's mutations, and createAddMemberCheckout went with it. This branch stays
+       for sessions Stripe may still redeliver: one created before the removal, or one abandoned then
+       completed. Deleting it would drop a real payment on the floor. */
     if (metadata.type === 'add_member') {
         const { registrationId, memberName, memberTierLabel, memberBirthDate, memberShirtSize } =
             metadata

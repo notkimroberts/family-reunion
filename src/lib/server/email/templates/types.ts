@@ -45,7 +45,7 @@ export type RegistrationConfirmationData = {
    pending registration never paid, and a waived place never had anything to return.
 
    Derived from the registration itself rather than passed in by a caller's guess — see
-   cancelRegistration. */
+   cancelRegistrationAsAdmin. */
 export type RefundRoute = 'stripe' | 'by_hand' | 'nothing_paid' | 'waived'
 
 export type CancellationEmailData = {

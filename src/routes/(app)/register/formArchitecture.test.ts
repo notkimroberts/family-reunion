@@ -148,26 +148,6 @@ describe('$form is the single source of truth', () => {
         ).toBe(true)
     })
 
-    /* An admin added a member and the page showed nothing — no alert, no updated party, no history —
-       so it read as "adding a member doesn't work". The member had in fact been created. The form's
-       enhance callback applied the result only when it was a redirect, which is the registrant's Stripe
-       path; the admin action returns success and the registrant's own validation failure returns
-       fail(400), and both were dropped on the floor.
-
-       Gating an enhance callback on the result type means silently ignoring the types you did not think
-       of, so the guard is that it is not gated at all.
-
-       Comments are stripped before matching: the component explains this bug in prose, and a raw match
-       cannot tell an explanation from the code it warns about. */
-    it('AddMemberForm applies every action result, not just redirects', () => {
-        const source = readFileSync('src/routes/(app)/register/AddMemberForm.svelte', 'utf8')
-            .replace(/\/\*[\s\S]*?\*\//g, '')
-            .replace(/\/\/.*$/gm, '')
-
-        expect(source, 'enhance must not branch on the result type').not.toMatch(/result\.type/)
-        expect(source).toMatch(/await update\(\)/)
-    })
-
     /* Collapsing the contact card unmounts its inputs. Under the old DOM-mirroring architecture
        that silently dropped contactEmail from the POST and crashed the page; the card needed
        hidden fallbacks to compensate. Posting $form as JSON makes mounting irrelevant, so those

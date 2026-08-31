@@ -77,6 +77,57 @@
             height: 0;
         }
     }
+
+    /* One ring easing outward from the Register call to action. Ring only — the button itself does
+       not move or fade, so the text stays readable and the target stays where a finger is aiming.
+       Slow and low-contrast on purpose: this is a nudge on a family homepage, not a countdown
+       banner.
+
+       transform and opacity ONLY, on a pseudo-element. Animating box-shadow instead repaints the
+       button on every frame for as long as the home page is open; these two are compositor-only, so
+       the main thread does nothing per frame. */
+    @keyframes register-pulse {
+        0% {
+            transform: scale(1);
+            opacity: 0.45;
+        }
+        70% {
+            transform: scale(1.16);
+            opacity: 0;
+        }
+        100% {
+            transform: scale(1.16);
+            opacity: 0;
+        }
+    }
+}
+
+/* Applied to the Register button. A class rather than Tailwind's arbitrary-animation syntax because
+   it pairs the animation with its reduced-motion opt-out, which must travel with it — a ring
+   repeating every three seconds forever is exactly what that setting is for.
+
+   The ring is a pseudo-element behind the button rather than a shadow on it, so the animated
+   properties stay off the main thread. pointer-events:none keeps it out of the way of the click. */
+.animate-register-pulse {
+    position: relative;
+}
+
+.animate-register-pulse::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background-color: var(--primary);
+    pointer-events: none;
+    z-index: -1;
+    animation: register-pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .animate-register-pulse::after {
+        animation: none;
+        content: none;
+    }
 }
 
 @theme inline {
@@ -232,5 +283,68 @@
 
     * {
         border-color: var(--border);
+    }
+}
+
+/* Printing. The only page meant for paper is /register/print, whose sheet sets its own black-on-white
+   colours so it does not depend on the theme tokens — but the shell around it still has to get out of
+   the way: header and footer are marked print:hidden, and the layout's centring, padding and grid gap
+   would otherwise eat a third of the sheet. print-color-adjust keeps the table's header shading, which
+   browsers drop by default. */
+@media print {
+    @page {
+        size: letter portrait;
+        /* 14mm clears the non-printable edge every consumer printer reserves. At 12mm the header's
+           top corners came out trimmed. */
+        margin: 14mm;
+    }
+
+    html,
+    body {
+        background: #fff;
+    }
+
+    main {
+        max-width: none !important;
+        padding: 0 !important;
+    }
+
+    main > div {
+        display: block !important;
+    }
+
+    * {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
+    /* The paper sheet is built out of nested flex containers, which is right on screen and wrong on
+       paper: Chrome does not honour break-inside-avoid on a FLEX ITEM, so an attendee block could be
+       sliced across the page boundary however it was marked. Block layout is what makes the browser
+       respect the break rules, and margins stand in for the `gap` that block layout drops. */
+    [data-paper-sheet],
+    [data-paper-sheet] > section {
+        display: block;
+    }
+
+    [data-paper-sheet] > * + * {
+        margin-top: 0.16in;
+    }
+
+    [data-paper-sheet] > section > * + * {
+        margin-top: 0.06in;
+    }
+
+    /* Only the sheet and its sections flatten. The grids INSIDE a section — the two-up name fields,
+       the city/state/ZIP row — must stay grids, and an attendee block must stay a flex container; a
+       block-level flex container honours break-inside-avoid perfectly well. It is being a flex ITEM
+       that made the rule inert. */
+    [data-paper-attendee] {
+        break-inside: avoid;
+        page-break-inside: avoid;
+    }
+
+    [data-paper-attendee] + [data-paper-attendee] {
+        margin-top: 0.09in;
     }
 }

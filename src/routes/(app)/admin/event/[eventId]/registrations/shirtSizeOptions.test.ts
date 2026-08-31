@@ -16,12 +16,12 @@ describe('shirtSizeOptions', () => {
     /* The case the function exists for. A youth size, or anything from a list that has since changed,
        must stay visible and selectable. */
     it('keeps a value that is not on the list', () => {
-        expect(shirtSizeOptions('YM')).toContain('YM')
+        expect(shirtSizeOptions('4XL')).toContain('4XL')
     })
 
     it('puts the unrecognised value last, where the order sheet also sorts it', () => {
-        const options = shirtSizeOptions('YM')
-        expect(options[options.length - 1]).toBe('YM')
+        const options = shirtSizeOptions('4XL')
+        expect(options[options.length - 1]).toBe('4XL')
         expect(options.slice(0, -1)).toEqual([...SHIRT_SIZES])
     })
 
@@ -41,7 +41,7 @@ describe('shirtSizeOptions', () => {
     })
 
     it('never returns fewer options than the canonical list', () => {
-        for (const value of ['', 'M', 'YM', 'toddler 2T', '   ']) {
+        for (const value of ['', 'M', '4XL', 'toddler 2T', '   ']) {
             expect(shirtSizeOptions(value).length).toBeGreaterThanOrEqual(SHIRT_SIZES.length)
         }
     })

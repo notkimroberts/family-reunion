@@ -1,12 +1,11 @@
 <script lang="ts">
 import { CheckCircle2, KeyRound, LoaderCircle } from '@lucide/svelte'
-import { onMount } from 'svelte'
-import { toast } from 'svelte-sonner'
 import { Alert, AlertDescription, AlertTitle } from '$lib/components/ui/alert'
 import { Button } from '$lib/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card'
 import { APP_NAME, CONTACT_EMAIL, CONTACT_PHONE } from '$lib/general/constants'
 import { toE164 } from '$lib/utils'
+import HostHotelPrompt from '../HostHotelPrompt.svelte'
 import RegistrationManager from '../RegistrationManager.svelte'
 
 const POLL_INTERVAL_MS = 2000
@@ -36,12 +35,6 @@ let awaitingStripe = $derived(
 let paymentOwed = $derived(
     !data.missingToken && status === 'pending' && data.registration.stripeSessionId === null,
 )
-
-onMount(() => {
-    if (!data.missingToken && data.memberAdded) {
-        toast.success('Member added successfully!')
-    }
-})
 
 $effect(() => {
     if (!awaitingStripe) {
@@ -135,8 +128,7 @@ $effect(() => {
             See you at <span class="font-medium text-foreground">{data.event.title}</span>!
         </p>
         <p class="text-sm text-muted-foreground mt-1">
-            Bookmark this page or keep the email — it's how you'll come back to manage your
-            registration.
+            Bookmark this page or keep the email — it's how you'll come back to your registration.
         </p>
     </section>
 
@@ -158,10 +150,13 @@ $effect(() => {
         </section>
     {/if}
 
+    <!-- Below the outstanding-payment alert on purpose: an unpaid place outranks a hotel booking. -->
+    <section class="col-span-12">
+        <HostHotelPrompt />
+    </section>
+
     <RegistrationManager
-        token={data.token}
         registration={data.registration}
         members={data.members}
-        event={data.event}
-        tiers={data.tiers} />
+        event={data.event} />
 {/if}
