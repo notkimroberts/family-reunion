@@ -3,12 +3,12 @@ import { HeartHandshake, LoaderCircle } from '@lucide/svelte'
 import { superForm } from 'sveltekit-superforms'
 import { zod4Client as zodClient } from 'sveltekit-superforms/adapters'
 import { page } from '$app/state'
-import { DonationAmountPicker } from '$lib/components'
+import { DonationAmountPicker, DonationRaisedTotal } from '$lib/components'
 import { Button } from '$lib/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card'
 import { Input } from '$lib/components/ui/input'
 import { Textarea } from '$lib/components/ui/textarea'
-import { APP_NAME } from '$lib/general/constants'
+import { APP_NAME, DONATION_LEDE } from '$lib/general/constants'
 import { formatPrice } from '$lib/utils'
 import { donationSchema } from './schema'
 
@@ -39,16 +39,10 @@ let heading = $derived(data.event ? `Support ${data.event.title}` : 'Support the
             Donate
         </span>
         <h1 class="text-3xl font-bold tracking-tight md:text-4xl">{heading}</h1>
-        <p class="text-muted-foreground max-w-prose text-sm">
-            Gifts cover the venue, the food and the shirts, and keep the price of a place down for
-            everyone. You do not have to be attending to give.
-        </p>
-        {#if data.raised.giftCount > 0}
-            <p class="text-sm font-medium">
-                ${formatPrice(data.raised.totalCents)} raised from {data.raised.giftCount}
-                {data.raised.giftCount === 1 ? 'gift' : 'gifts'} so far.
-            </p>
-        {/if}
+        <p class="text-muted-foreground max-w-prose text-sm">{DONATION_LEDE}</p>
+        <DonationRaisedTotal
+            totalCents={data.raised.totalCents}
+            giftCount={data.raised.giftCount} />
     </div>
 
     {#if cancelled}
