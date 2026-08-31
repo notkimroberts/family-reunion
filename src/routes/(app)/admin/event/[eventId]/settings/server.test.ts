@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { reunionEvents } from '$lib/server/db/schema'
 import { resetTestDb } from '$lib/server/db/testing/resetTestDb'
 import { seedEvent } from '$lib/server/testing/seedEvent'
+import { parseReunionWallClock } from '$lib/utils'
 
 /* The settings page writes the event in four separate actions, and this file exists to keep them
    separate.
@@ -98,8 +99,10 @@ describe('settings ?/update_dates', () => {
 
         const row = await eventRow()
         expect(row.metadata).toEqual(PROGRAM)
-        expect(row.startDate).toEqual(new Date('2027-08-01T16:00'))
-        expect(row.endDate).toEqual(new Date('2027-08-03T12:00'))
+        /* The reunion's zone, not the runner's. Posted digits are wall-clock, and reading them any
+           other way is the 4-AM-deadline bug parseReunionWallClock exists to stop. */
+        expect(row.startDate).toEqual(parseReunionWallClock('2027-08-01T16:00'))
+        expect(row.endDate).toEqual(parseReunionWallClock('2027-08-03T12:00'))
     })
 
     it('leaves the lock date untouched', async () => {
@@ -141,8 +144,8 @@ describe('settings ?/update_dates', () => {
         )
 
         expect(await eventRow()).toMatchObject({
-            startDate: new Date('2027-07-23T16:00'),
-            endDate: new Date('2027-07-23T16:00'),
+            startDate: parseReunionWallClock('2027-07-23T16:00'),
+            endDate: parseReunionWallClock('2027-07-23T16:00'),
         })
     })
 })
@@ -221,7 +224,7 @@ describe('settings ?/update_lock_date', () => {
         await actions.update_lock_date(requestWith({ registrationLockDate: '2027-09-01T09:00' }))
 
         expect(await eventRow()).toMatchObject({
-            registrationLockDate: new Date('2027-09-01T09:00'),
+            registrationLockDate: parseReunionWallClock('2027-09-01T09:00'),
             metadata: PROGRAM,
             startDate: new Date('2027-07-23T16:00'),
         })

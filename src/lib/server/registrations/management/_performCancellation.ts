@@ -30,17 +30,17 @@ function getRefundRoute(registration: {
 /* Refunds, marks 'refunded', and emails the registrant — the whole cancellation, minus the question of
    who is allowed to ask for it.
 
-   Shared by the registrant's own cancel (token-gated, cancelRegistration) and the organiser's
-   (admin-guarded, cancelRegistrationAsAdmin). Extracted because the two differ ONLY in how the caller
-   is authorised: the refund rules, the loud failure, the status write and the email are identical, and
-   an organiser cancelling a card payment must refund it exactly as the registrant's own cancel does.
-   Duplicating this would have been the second copy of the refund logic to drift.
+   Cancelling is now organiser-only, through cancelRegistrationAsAdmin. This was extracted when the
+   registrant could also cancel their own booking with nothing but the management link — the two paths
+   differed ONLY in how the caller was authorised — and it stays a separate function because that is
+   still the right seam: the refund rules, the loud failure, the status write and the email are the
+   cancellation, and who may ask for it is not.
 
    A FAILED REFUND ABORTS THE CANCELLATION. This used to swallow refund errors and mark the
    registration 'refunded' regardless, which meant the admin list, the registrant's own page and the
    confirmation copy all reported that the money had gone back when it had not — the worst available
-   outcome, because nothing anywhere disagreed. removeMember already had the right contract: leave the
-   state alone, raise a 502, let them retry. Retrying is safe because every refund carries a stable
+   outcome, because nothing anywhere disagreed. The contract instead: leave the state alone, raise a
+   502, let them retry. Retrying is safe because every refund carries a stable
    per-intent idempotency key, so Stripe returns the original refund rather than issuing a second.
 
    A partial failure across several intents does leave money returned on a registration that is still

@@ -32,7 +32,7 @@ function handleSignOut() {
 let mobileMenuOpen = $state(false)
 </script>
 
-<header class="sticky top-0 z-30 bg-background/90 backdrop-blur-md border-b">
+<header class="sticky top-0 z-30 bg-background/90 backdrop-blur-md border-b print:hidden">
     <!-- Desktop: logo left, nav right -->
     <div class="hidden md:flex items-center h-20 mx-auto max-w-6xl px-6 gap-4 justify-between">
         <a href="/" class="flex items-center gap-3 shrink-0 group">

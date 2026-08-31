@@ -145,7 +145,9 @@ describe('POST /register?/register', () => {
             .set({ registrationLockDate: new Date('2020-01-01') })
             .where(eq(reunionEvents.id, eventId))
 
-        await expect(submit()).rejects.toBeDefined()
+        /* 403 specifically, not merely "it threw": the lock date is now advertised on the home page
+           and the register form, so the refusal behind those notices has to be the lock itself. */
+        await expect(submit()).rejects.toMatchObject({ status: 403 })
 
         expect(await db.select().from(registrations)).toHaveLength(0)
         expect(mockCreateCheckout).not.toHaveBeenCalled()

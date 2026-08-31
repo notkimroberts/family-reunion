@@ -73,14 +73,26 @@ describe('getPeopleSummary', () => {
         ])
     })
 
+    /* Youth shirts are a different garment, not a smaller adult one, so the sheet lists them as
+       their own run at the top of the tier rather than interleaved with XS. */
+    it('lists youth sizes ahead of adult sizes', () => {
+        const summary = getPeopleSummary(
+            ['M', 'YXL', 'XS', 'YS'].map((shirtSize, index) =>
+                person({ id: `p${index}`, shirtSize }),
+            ),
+        )
+
+        expect(summary.shirtsByTier[0].sizes.map((s) => s.size)).toEqual(['YS', 'YXL', 'XS', 'M'])
+    })
+
     /* A size from before the list settled must still be visible — it is a real garment somebody needs. */
     it('keeps an unrecognised size, sorted to the end', () => {
         const summary = getPeopleSummary([
-            person({ id: 'a', shirtSize: 'YM' }),
+            person({ id: 'a', shirtSize: '4XL' }),
             person({ id: 'b', shirtSize: 'M' }),
         ])
 
-        expect(summary.shirtsByTier[0].sizes.map((s) => s.size)).toEqual(['M', 'YM'])
+        expect(summary.shirtsByTier[0].sizes.map((s) => s.size)).toEqual(['M', '4XL'])
     })
 
     /* A missing size is a person to go back to, not a size to guess, so it is never folded into a count. */

@@ -221,7 +221,7 @@ function handleSave() {
                 <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     <div class="space-y-1.5">
                         <label for="selfTier" class="text-sm font-medium">
-                            Tier <span class="text-destructive">*</span>
+                            Registration Tier <span class="text-destructive">*</span>
                         </label>
                         <!-- Adult tiers only. The person booking the party pays for it. -->
                         <TierSelect id="selfTier" bind:tierId={info.tierId} tiers={contactTiers} />

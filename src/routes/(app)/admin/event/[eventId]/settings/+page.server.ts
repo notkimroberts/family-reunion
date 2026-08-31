@@ -5,6 +5,7 @@ import { db } from '$lib/server/db'
 import { eventStatusEnum, reunionEvents } from '$lib/server/db/schema'
 import { dbg } from '$lib/server/debug'
 import { createTier, deleteTier, getTiersForEvent, updateTier } from '$lib/server/tiers'
+import { parseReunionWallClock } from '$lib/utils'
 import type { PageServerLoad, Actions } from './$types'
 import { parseReunionMetadata } from './parseReunionMetadata'
 
@@ -18,7 +19,10 @@ function parseFiniteFloat(raw: string): number | null {
    Blank means "clear this date" and is a legitimate save. Anything unparseable is refused, which is a
    change: update_event used to leave a bad value as null and write it, so a typo in Start CLEARED the
    start date and reported success. The countdown on the home page keys off that column, so the failure
-   was silent and off-screen. */
+   was silent and off-screen.
+
+   Read in the REUNION's zone, not the server's — see parseReunionWallClock for why `new Date(digits)`
+   was wrong here. */
 function parseOptionalDate(
     raw: FormDataEntryValue | null,
 ): { date: Date | null } | { error: string } {
@@ -26,8 +30,8 @@ function parseOptionalDate(
     if (!trimmed) {
         return { date: null }
     }
-    const parsed = new Date(trimmed)
-    if (Number.isNaN(parsed.getTime())) {
+    const parsed = parseReunionWallClock(trimmed)
+    if (!parsed) {
         return { error: `"${trimmed}" is not a date we can read.` }
     }
     return { date: parsed }
@@ -154,8 +158,9 @@ export const actions: Actions = {
 
         let registrationLockDate: Date | null = null
         if (raw) {
-            const d = new Date(raw)
-            if (Number.isNaN(d.getTime())) {
+            /* Reunion-local, like the start and end dates above. */
+            const d = parseReunionWallClock(raw)
+            if (!d) {
                 return fail(400, { error: 'Invalid lock date' })
             }
             registrationLockDate = d

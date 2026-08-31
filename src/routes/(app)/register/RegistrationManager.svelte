@@ -1,7 +1,17 @@
+<script module lang="ts">
+/* null is "never recorded" — rows predate the question — and is deliberately not shown as
+   "Standard": catering counts the vegetarians, so an unanswered row must read as unanswered. */
+const mealLabel = (vegetarianMeal: boolean | null) => {
+    if (vegetarianMeal === null) {
+        return '—'
+    }
+    return vegetarianMeal ? 'Vegetarian' : 'Standard'
+}
+</script>
+
 <script lang="ts">
 import { CheckCircle2 } from '@lucide/svelte'
 import { Badge } from '$lib/components/ui/badge'
-import { Button } from '$lib/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card'
 import { Separator } from '$lib/components/ui/separator'
 import {
@@ -12,68 +22,26 @@ import {
     TableHeader,
     TableRow,
 } from '$lib/components/ui/table'
+import { CONTACT_EMAIL, CONTACT_PHONE } from '$lib/general/constants'
 import { sumMemberPrices } from '$lib/general/pricing'
-import { formatPrice } from '$lib/utils'
+import { formatPrice, toE164 } from '$lib/utils'
 import { formatPartialBirthDate } from '$lib/utils/age'
-import AddMemberForm from './AddMemberForm.svelte'
-import CancelRegistrationDialog from './CancelRegistrationDialog.svelte'
-import EditMemberDialog from './EditMemberDialog.svelte'
-import RemoveMemberDialog from './RemoveMemberDialog.svelte'
-import type { EventDetails, PartyMember, RegistrationDetails, TierOption } from './types'
+import type { EventDetails, PartyMember, RegistrationDetails } from './types'
 
+/* READ ONLY: the registrant's record of their own party, with no control that posts. Editing, adding,
+   removing and cancelling are organiser actions now — see manageReflectsServerState.test.ts, which
+   pins that and says why it matters. */
 let {
-    token,
     registration,
-    members: initialMembers,
+    members,
     event,
-    tiers,
 }: {
-    token: string
     registration: RegistrationDetails
     members: PartyMember[]
     event: EventDetails
-    tiers: TierOption[]
 } = $props()
 
-let members = $derived(initialMembers)
 let totalCents = $derived(sumMemberPrices(members))
-/* Removing the only member is not a removal — removeMember refunds them, finds nothing left and marks
-   the whole registration 'refunded' (removeMember.ts:80). That is cancelling, so it is offered as
-   Cancel Registration, which says what it does and asks twice. */
-let canRemoveMembers = $derived(members.length > 1)
-/* addMember rejects any status other than paid/waived (addMember.ts:34), so offering the
-   button on a payment-outstanding registration would hand the registrant a 409. They can
-   still edit details and cancel — only paying to add someone is unavailable until the
-   organisers record their payment. */
-let canAddMembers = $derived(registration.status === 'paid' || registration.status === 'waived')
-let isLocked = $derived(
-    event.registrationLockDate !== null && new Date(event.registrationLockDate) < new Date(),
-)
-let showAddForm = $state(false)
-let editingMember = $state<PartyMember | null>(null)
-let editDialogOpen = $state(false)
-/* Bumped on every Edit click, and the dialog is keyed on it, so each click gets a FRESH dialog.
-
-   EditMemberDialog seeds its fields into $state once at mount. Keyed on the member id — as it was —
-   a second Edit on the same person did not remount it, so the fields still held whatever was typed
-   the previous time, including edits abandoned with Cancel. Reopening a row then offered values that
-   were never saved, with Save enabled, one click after the same page had failed to show a save that
-   HAD happened. */
-let editSession = $state(0)
-let removingMember = $state<PartyMember | null>(null)
-let removeDialogOpen = $state(false)
-let cancelDialogOpen = $state(false)
-
-function handleEditClick(member: PartyMember) {
-    editingMember = member
-    editSession += 1
-    editDialogOpen = true
-}
-
-function handleRemoveClick(member: PartyMember) {
-    removingMember = member
-    removeDialogOpen = true
-}
 </script>
 
 <!-- Success banner -->
@@ -112,41 +80,24 @@ function handleRemoveClick(member: PartyMember) {
             <div class="space-y-3 md:hidden">
                 {#each members as member (member.id)}
                     <div class="rounded-lg border px-4 py-3">
-                        <div class="flex items-start justify-between gap-2">
-                            <div class="min-w-0">
-                                <p class="font-medium">{member.name}</p>
-                                <p class="text-muted-foreground text-sm mt-0.5">
-                                    {member.tierLabel}
-                                    {#if member.shirtSize}
-                                        · {member.shirtSize}
-                                    {/if}
-                                </p>
-                                <p class="text-muted-foreground text-sm mt-0.5">
-                                    Born {formatPartialBirthDate(
-                                        member.birthYear,
-                                        member.birthMonth,
-                                        member.birthDay,
-                                    ) ?? '—'}
-                                </p>
-                                <p class="text-sm tabular-nums mt-0.5">
-                                    ${formatPrice(member.priceCents)}
-                                </p>
-                            </div>
-                            <div class="flex gap-2 shrink-0">
-                                <Button
-                                    size="sm"
-                                    variant="outline"
-                                    disabled={isLocked}
-                                    onclick={() => handleEditClick(member)}>Edit</Button>
-                                {#if canRemoveMembers}
-                                    <Button
-                                        size="sm"
-                                        variant="destructive"
-                                        disabled={isLocked}
-                                        onclick={() => handleRemoveClick(member)}>Remove</Button>
-                                {/if}
-                            </div>
-                        </div>
+                        <p class="font-medium">{member.name}</p>
+                        <p class="text-muted-foreground text-sm mt-0.5">
+                            {member.tierLabel}
+                            {#if member.shirtSize}
+                                · {member.shirtSize}
+                            {/if}
+                            · Meal: {mealLabel(member.vegetarianMeal)}
+                        </p>
+                        <p class="text-muted-foreground text-sm mt-0.5">
+                            Born {formatPartialBirthDate(
+                                member.birthYear,
+                                member.birthMonth,
+                                member.birthDay,
+                            ) ?? '—'}
+                        </p>
+                        <p class="text-sm tabular-nums mt-0.5">
+                            ${formatPrice(member.priceCents)}
+                        </p>
                     </div>
                 {/each}
             </div>
@@ -158,10 +109,10 @@ function handleRemoveClick(member: PartyMember) {
                         <TableRow>
                             <TableHead>Name</TableHead>
                             <TableHead>Birthday</TableHead>
-                            <TableHead>Tier</TableHead>
+                            <TableHead>Registration Tier</TableHead>
                             <TableHead>T-Shirt</TableHead>
+                            <TableHead>Meal</TableHead>
                             <TableHead>Price</TableHead>
-                            <TableHead></TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -177,25 +128,9 @@ function handleRemoveClick(member: PartyMember) {
                                 </TableCell>
                                 <TableCell>{member.tierLabel}</TableCell>
                                 <TableCell>{member.shirtSize || '—'}</TableCell>
+                                <TableCell>{mealLabel(member.vegetarianMeal)}</TableCell>
                                 <TableCell class="tabular-nums"
                                     >${formatPrice(member.priceCents)}</TableCell>
-                                <TableCell>
-                                    <div class="flex gap-2 justify-end">
-                                        <Button
-                                            size="sm"
-                                            variant="outline"
-                                            disabled={isLocked}
-                                            onclick={() => handleEditClick(member)}>Edit</Button>
-                                        {#if canRemoveMembers}
-                                            <Button
-                                                size="sm"
-                                                variant="destructive"
-                                                disabled={isLocked}
-                                                onclick={() => handleRemoveClick(member)}
-                                                >Remove</Button>
-                                        {/if}
-                                    </div>
-                                </TableCell>
                             </TableRow>
                         {/each}
                     </TableBody>
@@ -214,49 +149,13 @@ function handleRemoveClick(member: PartyMember) {
     </Card>
 </div>
 
-<!-- Actions -->
-{#if isLocked}
-    <div class="col-span-12">
-        <p class="text-sm text-muted-foreground rounded-lg border bg-card px-4 py-3">
-            Registration changes are closed for this event.
-        </p>
-    </div>
-{:else if showAddForm}
-    <div class="col-span-12">
-        <AddMemberForm
-            {token}
-            registrationId={registration.id}
-            {tiers}
-            onCancel={() => (showAddForm = false)} />
-    </div>
-{:else}
-    <div class="col-span-12 flex flex-wrap gap-3 justify-between">
-        {#if canAddMembers}
-            <Button onclick={() => (showAddForm = true)}>Add a Member</Button>
-        {:else}
-            <p class="text-sm text-muted-foreground self-center">
-                Adding members is available once your payment is recorded.
-            </p>
-        {/if}
-        <Button
-            variant="outline"
-            class="text-destructive border-destructive hover:bg-destructive/10"
-            onclick={() => (cancelDialogOpen = true)}>
-            Cancel Registration
-        </Button>
-    </div>
-{/if}
-
-{#if editingMember}
-    {#key editSession}
-        <EditMemberDialog {token} member={editingMember} bind:open={editDialogOpen} />
-    {/key}
-{/if}
-
-{#if removingMember}
-    {#key removingMember.id}
-        <RemoveMemberDialog {token} member={removingMember} bind:open={removeDialogOpen} />
-    {/key}
-{/if}
-
-<CancelRegistrationDialog {token} registrationId={registration.id} bind:open={cancelDialogOpen} />
+<!-- The only route to a change, now that none of them are self-service. -->
+<div class="col-span-12">
+    <p class="text-sm text-muted-foreground rounded-lg border bg-card px-4 py-3">
+        Need to add someone, correct a detail or cancel? Contact
+        <a class="underline" href="mailto:{CONTACT_EMAIL}">{CONTACT_EMAIL}</a>
+        or call
+        <a class="underline" href="sms:{toE164(CONTACT_PHONE)}">{CONTACT_PHONE}</a>
+        and the reunion organisers will take care of it.
+    </p>
+</div>

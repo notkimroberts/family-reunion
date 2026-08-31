@@ -87,8 +87,16 @@ export const reunionEvents = pgTable(
         year: integer('year').notNull(),
         title: text('title').notNull(),
         status: eventStatusEnum('status').notNull().default('draft'),
-        startDate: timestamp('start_date'),
-        endDate: timestamp('end_date'),
+        /* withTimezone, like registration_audit.created_at, because the time of day is shown to people
+           and must survive the server's zone.
+
+           As plain `timestamp` these held an instant only by coincidence: postgres.js writes a Date as
+           its UTC digits and parses the naive value back with `new Date(...)`, which reads it in the
+           PROCESS's zone — exact on Railway, hours out on a developer's laptop. Any NEW column whose
+           time of day is displayed wants withTimezone for the same reason. Still outstanding on
+           registrations.paid_at, which the admin list renders. */
+        startDate: timestamp('start_date', { withTimezone: true }),
+        endDate: timestamp('end_date', { withTimezone: true }),
         /* Everything /program displays: venue, menu, drinks, sites, activities, schedule.
 
            This was six jsonb columns. None of them was ever a predicate — nothing filtered, ordered,
@@ -100,7 +108,7 @@ export const reunionEvents = pgTable(
            `event.metadata?.venue?.name`. The shape lives in $lib/general/reunionMetadata and the
            settings editor validates against it before writing — that is the only writer. */
         metadata: jsonb('metadata').$type<ReunionMetadata>().notNull().default({}),
-        registrationLockDate: timestamp('registration_lock_date'),
+        registrationLockDate: timestamp('registration_lock_date', { withTimezone: true }),
         createdAt: timestamp('created_at').notNull().defaultNow(),
         updatedAt: timestamp('updated_at').notNull().defaultNow(),
     },
@@ -290,7 +298,7 @@ export const registrationAudit = pgTable(
         actorName: text('actor_name'),
         action: registrationAuditActionEnum('action').notNull(),
         detail: jsonb('detail'),
-        /* withTimezone, unlike the other tables here — this is the only column whose time of day is
+        /* withTimezone, like the reunion_events datetimes — this is a column whose time of day is
            ever shown to anyone. A plain `timestamp` is stored without an offset while holding a UTC
            instant, so postgres.js parses it as server-local and the offset is silently lost: the
            history rendered 4:06 AM for a change made at 9:06 PM Pacific. timestamptz makes the value

@@ -6,6 +6,7 @@ import { zod4Client as zodClient } from 'sveltekit-superforms/adapters'
 import { Button } from '$lib/components/ui/button'
 import { Card, CardContent } from '$lib/components/ui/card'
 import { quotePartyTotal } from '$lib/general/pricing'
+import { defaultAdultTierId } from '$lib/general/tiers'
 import { getTierPriceCents } from '$lib/utils'
 import { EMPTY_PERSON_DETAILS } from '../../../../../register/EMPTY_PERSON_DETAILS'
 import FormErrorSummary from '../../../../../register/FormErrorSummary.svelte'
@@ -62,7 +63,15 @@ let targetEventId = $derived(data.event.id)
 
 const tiers = $derived(data.tiers)
 
-let self = $state<PersonDetails>({ ...EMPTY_PERSON_DETAILS })
+/* The contact is an adult by rule, so their tier starts on the first adult one rather than on the
+   blank prompt. A function, not a constant: handleReset needs a fresh object, and sharing one would
+   let an edit to the previous registrant's details leak into the next form. */
+const blankSelf = (): PersonDetails => ({
+    ...EMPTY_PERSON_DETAILS,
+    tierId: defaultAdultTierId(data.tiers),
+})
+
+let self = $state<PersonDetails>(blankSelf())
 let members = $state<FormMember[]>([])
 let copied = $state(false)
 /* The confirmation and the form are mutually exclusive: a success replaces the form with the
@@ -118,7 +127,7 @@ function handleReset() {
     $form.contactEmail = ''
     $form.contactPhone = ''
     $form.status = 'paid'
-    self = { ...EMPTY_PERSON_DETAILS }
+    self = blankSelf()
     members = []
     contactSaved = false
     copied = false

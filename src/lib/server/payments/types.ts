@@ -21,23 +21,3 @@ export type RegistrationCheckoutResult = {
     url: string
     sessionId: string
 }
-
-// Params for createAddMemberCheckout
-export type AddMemberCheckoutParams = {
-    name: string
-    tierLabel: string
-    priceCents: number
-    registrationId: string
-    memberTierId: string
-    memberBirthDate?: string
-    memberShirtSize?: string
-    memberAddressLine1?: string
-    memberAddressLine2?: string
-    memberAddressCity?: string
-    memberAddressState?: string
-    memberAddressZip?: string
-    memberVegetarianMeal?: boolean
-    memberAttendedReunion2025?: boolean
-    successUrl: string
-    cancelUrl: string
-}

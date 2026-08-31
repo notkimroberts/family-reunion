@@ -122,7 +122,7 @@ async function seed() {
 		CASCADE
 	`)
 
-    const ADULT_PRICE_CENTS = 16000
+    const ADULT_PRICE_CENTS = 16500
     const CHILD_PRICE_CENTS = 10000
 
     dbg.seed('Seeding reunion events...')
@@ -155,8 +155,16 @@ async function seed() {
                 year: 2027,
                 title: 'Patterson Family Reunion',
                 status: 'open' as const,
-                startDate: new Date('2027-07-23T16:00:00'),
-                endDate: new Date('2027-07-25T12:00:00'),
+                /* Explicit -07:00 (Pacific Daylight Time, which July is in) rather than bare digits:
+                   `new Date('2027-07-23T16:00:00')` is read in the SEEDING machine's zone, so the same
+                   seed produced a different instant on every laptop. */
+                startDate: new Date('2027-07-23T16:00:00-07:00'),
+                endDate: new Date('2027-07-25T12:00:00-07:00'),
+                /* A month before the doors open. Seeded because the open event had no lock date at
+                   all, so RegistrationDeadline — which renders nothing without one — was invisible in
+                   every local run, and the closed-registration branches of the home page and the
+                   register form could only be reached by editing the row by hand. */
+                registrationLockDate: new Date('2027-06-23T09:00:00-07:00'),
                 metadata: {
                     venue: {
                         name: 'OakStop',
