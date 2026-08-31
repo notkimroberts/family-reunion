@@ -345,7 +345,7 @@ $effect(() => {
                             <Table.Header>
                                 <Table.Row>
                                     <Table.Head>Person</Table.Head>
-                                    <Table.Head>Tier</Table.Head>
+                                    <Table.Head>Registration Tier</Table.Head>
                                     <!-- Off PERSON_FIELDS, so a column cannot end up labelling the
                                          wrong control. -->
                                     {#each PERSON_FIELDS as field (field.field)}

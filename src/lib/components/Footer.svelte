@@ -6,7 +6,7 @@ const year = new Date().getFullYear()
 const githubUrl = 'https://github.com/notkimroberts/family-reunion'
 </script>
 
-<footer class="text-muted-foreground/50 px-4 py-6 text-center text-xs">
+<footer class="text-muted-foreground/50 px-4 py-6 text-center text-xs print:hidden">
     <div class="flex flex-col items-center gap-3">
         <div class="flex items-center gap-4">
             <a

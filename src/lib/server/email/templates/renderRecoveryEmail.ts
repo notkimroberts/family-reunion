@@ -18,11 +18,11 @@ export function renderRecoveryEmail(data: { eventTitle: string; manageUrl: strin
     const text = [
         'Hi,',
         '',
-        `Here is your link to manage your registration for ${data.eventTitle}:`,
+        `Here is your link to view your registration for ${data.eventTitle}:`,
         '',
         data.manageUrl,
         '',
-        'Use it to view your party, add or edit members, or cancel your registration.',
+        'Use it to view your party and what was paid. To add someone, correct a detail or cancel, contact the reunion organisers.',
         '',
         'This replaces any earlier management link for this registration — older links no longer work.',
         '',
@@ -34,20 +34,22 @@ export function renderRecoveryEmail(data: { eventTitle: string; manageUrl: strin
 
     const bodyHtml = [
         paragraph(
-            `Here is your link to manage your registration for <strong>${escapeHtml(data.eventTitle)}</strong>.`,
+            `Here is your link to view your registration for <strong>${escapeHtml(data.eventTitle)}</strong>.`,
         ),
-        paragraph('Use it to view your party, add or edit members, or cancel your registration.'),
+        paragraph(
+            'Use it to view your party and what was paid. To add someone, correct a detail or cancel, contact the reunion organisers.',
+        ),
         '<div style="height:8px;"></div>',
-        primaryButton(data.manageUrl, 'Manage your registration'),
+        primaryButton(data.manageUrl, 'View your registration'),
         `<p style="margin:16px 0 0 0;font-family:${fontStack};font-size:12px;line-height:1.6;color:${muted};text-align:center;word-break:break-all;">Or paste this link into your browser:<br>${escapeHtml(data.manageUrl)}</p>`,
         `<p style="margin:22px 0 0 0;padding-top:18px;border-top:1px solid ${border};font-family:${fontStack};font-size:13px;line-height:1.6;color:${muted};">This replaces any earlier management link for this registration — older links no longer work. Questions? <a href="mailto:${escapeHtml(CONTACT_EMAIL)}" style="color:${textColor};">${escapeHtml(CONTACT_EMAIL)}</a> or <a href="tel:${toE164(CONTACT_PHONE)}" style="color:${textColor};">${escapeHtml(CONTACT_PHONE)}</a>.</p>`,
     ].join('\n')
 
     return {
-        subject: `Manage your ${data.eventTitle} registration`,
+        subject: `Your ${data.eventTitle} registration link`,
         text,
         html: emailLayout({
-            preheader: `Your management link for ${data.eventTitle}.`,
+            preheader: `Your registration link for ${data.eventTitle}.`,
             heading: 'Your registration link',
             bodyHtml,
         }),

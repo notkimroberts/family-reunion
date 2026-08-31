@@ -88,36 +88,6 @@ export const adminRegistrationSchema = registrationSchema.extend({
     status: z.enum(['paid', 'pending', 'waived'], 'Please choose a payment status'),
 })
 
-/* Add-member is a separate, small form posted as form-encoded fields, so it keeps a flat shape. */
-export const addMemberSchema = personDetailsSchema.extend({
-    token: z.string().min(1),
-    registrationId: z.string().min(1),
-    name: z.string().trim().min(2, 'Please enter a name'),
-})
-
-export const updateMemberSchema = z.object({
-    token: z.string().min(1),
-    memberId: z.string().min(1),
-    birthDate: z.string().optional(),
-    /* Required, so a registrant editing their own party cannot save a member without a size — the same
-       standard the registration form now holds. Deliberately NOT the ''-clears convention the field
-       below keeps: '' would mean "remove this person's size", and a size is no longer removable. */
-    shirtSize: z.string().min(1, 'Please choose a T-shirt size'),
-    /* Raw 'yes'/'no'/'' string, same undefined-preserve/''-clear convention as shirtSize —
-       see updateMemberDetails.ts. Not a yes/no zod enum since '' (clear) must stay valid. */
-    vegetarianMeal: z.string().optional(),
-})
-
-export const removeMemberSchema = z.object({
-    token: z.string().min(1),
-    memberId: z.string().min(1),
-})
-
-export const cancelRegistrationSchema = z.object({
-    token: z.string().min(1),
-    registrationId: z.string().min(1),
-})
-
 export type PersonDetailsData = z.infer<typeof personDetailsSchema>
 export type RegistrationFormData = z.infer<typeof registrationSchema>
 export type AdminRegistrationFormData = z.infer<typeof adminRegistrationSchema>
@@ -127,5 +97,3 @@ export type MemberData = z.infer<typeof memberSchema>
    ''. This is the distinction that lets $form be the single source of truth: the store carries
    the in-progress shape, and validation is what turns it into the output shape. */
 export type MemberInputData = z.input<typeof memberSchema>
-export type AddMemberData = z.infer<typeof addMemberSchema>
-export type UpdateMemberData = z.infer<typeof updateMemberSchema>

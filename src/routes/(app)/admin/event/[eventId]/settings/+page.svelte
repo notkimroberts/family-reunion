@@ -11,7 +11,7 @@ import { Input } from '$lib/components/ui/input'
 import { Separator } from '$lib/components/ui/separator'
 import { Textarea } from '$lib/components/ui/textarea'
 import { EVENT_STATUS_ORDER, EVENT_STATUS_STYLES } from '$lib/general/constants/EVENT_STATUS_STYLES'
-import { cn, formatPrice } from '$lib/utils'
+import { cn, formatPrice, toReunionWallClock } from '$lib/utils'
 
 /* Setup's event editor: set once a year, then left alone. Quiet on purpose.
 
@@ -51,16 +51,6 @@ const METADATA_EXAMPLE = `{
 /* Labels, icons and colours come from EVENT_STATUS_STYLES, shared with the /admin year cards so the
    same status cannot look like two different things on two screens. EVENT_STATUS_ORDER is the life of a
    year — draft, open, closed, archived — rather than the enum's order. */
-
-/* datetime-local wants exactly "YYYY-MM-DDTHH:mm". toISOString gives UTC, which is what the server
-   reads the posted value back as on Railway — see the note in DateTimeField about why the echo under
-   the box is formatted the same way. */
-function toDateTimeLocal(value: Date | string | null): string {
-    if (!value) {
-        return ''
-    }
-    return new Date(value).toISOString().slice(0, 16)
-}
 </script>
 
 <svelte:head>
@@ -182,7 +172,7 @@ function toDateTimeLocal(value: Date | string | null): string {
                     id="registrationLockDate"
                     name="registrationLockDate"
                     label="Lock date"
-                    value={toDateTimeLocal(data.event.registrationLockDate)}
+                    value={toReunionWallClock(data.event.registrationLockDate)}
                     emptyNote="No lock — registrants can edit right up to the reunion." />
                 <Button type="submit" size="sm" variant="secondary">Save lock date</Button>
             </form>
@@ -213,13 +203,13 @@ function toDateTimeLocal(value: Date | string | null): string {
                         id="startDate"
                         name="startDate"
                         label="Start"
-                        value={toDateTimeLocal(data.event.startDate)}
+                        value={toReunionWallClock(data.event.startDate)}
                         emptyNote="Not set — the home page shows no countdown." />
                     <DateTimeField
                         id="endDate"
                         name="endDate"
                         label="End"
-                        value={toDateTimeLocal(data.event.endDate)}
+                        value={toReunionWallClock(data.event.endDate)}
                         emptyNote="Not set — the reunion reads as a single day." />
                 </div>
                 <div>

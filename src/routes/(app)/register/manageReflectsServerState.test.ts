@@ -1,30 +1,11 @@
 import { readFileSync } from 'fs'
 import { describe, it, expect } from 'vitest'
 
-/* Pins /register/manage against the silent-failure pattern this project keeps producing: an action
-   succeeds, the database is correct, and the page goes on rendering what it loaded beforehand.
+/* Pins /register/manage against the silent-failure pattern this project keeps producing, and
+   against the mutations coming back.
 
-   Two distinct mechanisms below, both of which reached a browser:
-
-   - a use:enhance callback that never calls update(), so nothing re-renders (the dialogs);
-   - a mount-time $state copy of load data that never re-reads it (the status).
-
-   On the first: returning a callback from use:enhance REPLACES SvelteKit's default handler, and the
-   default is what runs applyAction + invalidateAll. Omit update() and the action still succeeds — the
-   write lands, the dialog closes, and the page keeps rendering the data it loaded before the edit. To
-   the registrant, saving a birthday, shirt size or meal answer did nothing until they refreshed by
-   hand, and nothing on screen suggested they should.
-
-   Nothing else catches either one. The types are satisfied, the actions' own tests pass, and the
-   mutation is genuinely persisted — the defect is only visible in a browser, one interaction later.
-
-   Comments are stripped before matching, because these components explain the traps in prose and a
-   raw match cannot tell an explanation from the code it warns about. */
-
-const DIALOGS = [
-    { name: 'EditMemberDialog', path: 'src/routes/(app)/register/EditMemberDialog.svelte' },
-    { name: 'RemoveMemberDialog', path: 'src/routes/(app)/register/RemoveMemberDialog.svelte' },
-]
+   Comments are stripped before matching, because these files explain the traps in prose and a raw
+   match cannot tell an explanation from the code it warns about. */
 
 function code(path: string): string {
     return readFileSync(path, 'utf8')
@@ -33,45 +14,34 @@ function code(path: string): string {
         .replace(/\/\/.*$/gm, '')
 }
 
-describe('manage dialogs re-render after a successful action', () => {
-    /* The guards below are source matches against a path, so a component that moves would take them
-       with it silently. Prove each file really is an enhanced form first. */
-    it.each(DIALOGS)('$name posts through use:enhance', ({ path }) => {
-        expect(code(path)).toMatch(/use:enhance/)
+/* The page is a record, not a control panel. Adding, removing, editing and cancelling are all
+   organiser actions now — the registrant's management link buys a view of their own party.
+
+   Worth pinning rather than trusting to review: the deleted actions were reachable with nothing but
+   the link, and two of them issued Stripe refunds. Reintroducing a form here is not a UI regression,
+   it is self-service money movement. */
+describe('the manage page cannot mutate anything', () => {
+    it('RegistrationManager posts nothing', () => {
+        const source = code('src/routes/(app)/register/RegistrationManager.svelte')
+        expect(source).not.toMatch(/method="POST"/i)
+        expect(source).not.toMatch(/use:enhance/)
     })
 
-    it.each(DIALOGS)('$name awaits update() so the party table re-renders', ({ path }) => {
-        expect(code(path)).toMatch(/await update\(/)
-    })
-
-    /* Closing the dialog is not the same as applying the result. This was the whole bug in
-       EditMemberDialog: it set open = false on success and returned. */
-    it.each(DIALOGS)('$name does not close without applying the result', ({ path }) => {
-        const source = code(path)
-        const closesDialog = /open = false/.test(source)
-        if (closesDialog) {
-            expect(source).toMatch(/await update\(/)
-        }
-    })
-
-    /* The edit form binds every field to local $state, so form.reset() would return the DOM inputs
-       to their HTML defaults while the state kept the new values — the two would disagree the next
-       time the dialog opened. */
-    it('EditMemberDialog does not reset the form it just posted', () => {
-        expect(code('src/routes/(app)/register/EditMemberDialog.svelte')).toMatch(
-            /update\(\{ reset: false \}\)/,
+    it('the manage route exports no actions', () => {
+        expect(code('src/routes/(app)/register/manage/+page.server.ts')).not.toMatch(
+            /export const actions/,
         )
     })
 })
 
 /* The other half of the same complaint, by a different mechanism.
 
-   Cancelling a registration redirects back to /register/manage, and the load DOES re-run: enhance
-   passes a redirect to applyAction, which calls _goto with invalidateAll. But the page held the
-   status in a mount-time `$state(untrack(() => data.registration.status))` copy and never read `data`
-   again, so the 'refunded' branch could not render. The confirmation dialog stayed on screen over a
-   page still saying "You're registered!", and only a hard refresh — a fresh mount, hence a fresh
-   copy — told the truth.
+   The registrant no longer cancels — an organiser does, from the admin — but the page must still
+   show it, and the load returning 'refunded' is the only way it can. The page held the status in a
+   mount-time `$state(untrack(() => data.registration.status))` copy and never read `data` again, so
+   the 'refunded' branch could not render. The page kept saying "You're registered!" over a booking
+   that had been refunded, and only a hard refresh — a fresh mount, hence a fresh copy — told the
+   truth.
 
    A copy like that is invisible to every other check: it type-checks, the action's own tests pass,
    and the database is correct. Only a browser shows it, one interaction in. */

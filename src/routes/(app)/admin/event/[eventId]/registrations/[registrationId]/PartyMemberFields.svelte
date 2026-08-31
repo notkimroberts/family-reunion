@@ -43,7 +43,7 @@ let {
         {/if}
         <div class="flex flex-col gap-1.5">
             <label for="tier-{row.memberId}" class="text-sm font-medium">
-                Tier <span class="text-destructive">*</span>
+                Registration Tier <span class="text-destructive">*</span>
             </label>
             {#if isPaid}
                 <Input

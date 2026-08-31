@@ -1,0 +1,1 @@
+export { isRegistrationClosed } from './isRegistrationClosed'

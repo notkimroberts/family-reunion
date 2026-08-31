@@ -222,7 +222,7 @@ function handleRemoveMember(index: number) {
                 <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
                     <div class="space-y-1.5">
                         <label for="new-tier" class="text-sm font-medium">
-                            Tier <span class="text-destructive">*</span>
+                            Registration Tier <span class="text-destructive">*</span>
                         </label>
                         <TierSelect id="new-tier" bind:tierId={newTierId} {tiers} />
                     </div>

@@ -1,16 +1,8 @@
 export type { MemberInput } from './checkout'
-export {
-    createPendingRegistration,
-    addMember,
-    createAdminRegistration,
-    fulfillCheckout,
-} from './checkout'
+export { createPendingRegistration, createAdminRegistration, fulfillCheckout } from './checkout'
 
 export {
-    removeMember,
-    cancelRegistration,
     cancelRegistrationAsAdmin,
-    updateMemberDetails,
     addAdminMember,
     setRegistrationStatus,
     reissueManagementLink,

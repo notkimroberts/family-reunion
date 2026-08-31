@@ -300,7 +300,7 @@ async function handleCopyEmail() {
                             <Table.Header>
                                 <Table.Row>
                                     <Table.Head>Name</Table.Head>
-                                    <Table.Head>Tier</Table.Head>
+                                    <Table.Head>Registration Tier</Table.Head>
                                     <Table.Head>Born</Table.Head>
                                     <Table.Head>Shirt</Table.Head>
                                     <Table.Head>Payment</Table.Head>

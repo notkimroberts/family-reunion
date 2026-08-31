@@ -7,15 +7,16 @@ import { assertRegistrationMutable, touchRegistration } from '../lifecycle'
 
 /* Removes a party member who was never charged.
 
-   REFUSES ON A PAID REGISTRATION, and this is the important part. removeMember (the token-gated one)
-   issues a partial refund before deleting, keyed on the member id so a retry cannot double-refund.
-   Deleting the row here without that would drop the attendee while keeping their money — the
-   registration total would no longer match what Stripe holds, and nobody would be told. Refunds stay
-   on the path that actually issues them.
+   REFUSES ON A PAID REGISTRATION, and this is the important part. Deleting the row would drop the
+   attendee while keeping their money: the registration total would no longer match what Stripe holds,
+   and nobody would be told. Nothing in the app now issues a PARTIAL refund — the token-gated
+   removeMember that did was deleted with the rest of self-service — so the error names the route that
+   does exist: cancel, which refunds in full, then re-enter the party. Do not relax this into a
+   silent delete; give it back a real refund first.
 
    Note that partyMembers.stripePaymentIntentId is NOT a safe test for "was this charged": it is null
-   for an abandoned checkout and removeMember itself falls back to looking the intent up from the
-   registration's session. The registration status is the reliable signal, so that is what gates this.
+   for an abandoned checkout. The registration status is the reliable signal, so that is what gates
+   this.
 
    Also refuses to empty a party: a registration with no members is a row nothing can be done with,
    and it silently disappears from any member-joined report. Cancelling is the operation for that,
@@ -43,7 +44,7 @@ export async function removeAdminMember(params: {
     if (member.registrationStatus === 'paid') {
         throw error(
             409,
-            'This registration is paid. Removing someone owes them a refund — use the registrant’s management link so the money actually goes back.',
+            'This registration is paid. Removing someone owes them a refund, and nothing here issues one — cancel the registration, which refunds it in full, and re-enter the party without them.',
         )
     }
 

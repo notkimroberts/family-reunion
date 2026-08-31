@@ -1,4 +1,5 @@
 import { CircleCheck, CircleSlash, Eye, TriangleAlert } from '@lucide/svelte'
+import { WARNING_SURFACE_CLASS } from './WARNING_SURFACE_CLASS'
 import type { EventStatus } from './eventStatuses'
 
 /* One vocabulary for a reunion year's status: label, icon, colour.
@@ -57,7 +58,7 @@ export const EVENT_STATUS_STYLES = {
         headline: 'Registration closed',
         note: 'Nobody new can register. Existing registrations stay editable until the lock date.',
         icon: TriangleAlert,
-        class: 'border-amber-300 bg-amber-50 text-amber-900 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200',
+        class: WARNING_SURFACE_CLASS,
         tone: 'text-amber-700 dark:text-amber-400',
         border: 'border-amber-300 dark:border-amber-800',
     },

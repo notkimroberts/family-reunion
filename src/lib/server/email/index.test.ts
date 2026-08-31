@@ -31,6 +31,10 @@ vi.mock('$lib/general/constants', () => ({
     EMAIL_FROM_ADDRESS: 'reunion@example.com',
     CONTACT_EMAIL: 'organiser@example.com',
     CONTACT_PHONE: '+1 555 0100',
+    /* Undefined on purpose, and the only place that branch is covered: a year with no host hotel
+       listed must still send a confirmation, without an empty "Somewhere to stay" block. The
+       template test next door mocks a hotel and asserts the prompt appears. */
+    HOST_HOTEL: undefined,
 }))
 vi.mock('$lib/server/debug', () => ({ dbg: { email: vi.fn() } }))
 
