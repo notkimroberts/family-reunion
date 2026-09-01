@@ -15,6 +15,7 @@
         "db:seed": "bun src/lib/server/db/seed.ts",
         "db:reseed": "bun src/lib/server/db/seed.ts --reseed",
         "admin:create": "bun scripts/createAdmin.ts",
+        "admin:reset-password": "bun scripts/resetAdminPassword.ts",
         "format": "prettier --write .",
         "lint": "prettier --check . && eslint .",
         "prepare": "husky",
