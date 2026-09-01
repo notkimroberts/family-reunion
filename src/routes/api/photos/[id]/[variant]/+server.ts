@@ -1,4 +1,5 @@
 import { error } from '@sveltejs/kit'
+import { isUuid } from '$lib/general/ids'
 import { getPhotoKey, getServablePhotoKey, type PhotoVariant } from '$lib/server/photos'
 import { getObjectBody } from '$lib/server/storage'
 import type { RequestHandler } from './$types'
@@ -28,7 +29,9 @@ const VARIANTS: PhotoVariant[] = ['display', 'thumb']
    has. */
 export const GET: RequestHandler = async ({ params, url, locals, request }) => {
     const variant = params.variant as PhotoVariant
-    if (!VARIANTS.includes(variant)) {
+    /* Both shape checks before any query: Postgres errors on a malformed uuid rather than returning
+       nothing, which would turn a mistyped URL into a 500. */
+    if (!VARIANTS.includes(variant) || !isUuid(params.id)) {
         error(404, 'Not found')
     }
 
