@@ -7,9 +7,10 @@
         <link rel="icon" type="image/png" href="/will_and_roxie_favicon_32.png" sizes="32x32" />
         <link rel="icon" type="image/png" href="/will_and_roxie_favicon_64.png" sizes="64x64" />
         <!-- The portrait, at the 180px iOS actually asks for. This pointed at
-             /will_and_roxie_favicon.png, which does not exist — so iOS fell back to its own guess,
-             /apple-touch-icon.png, and a saved bookmark showed the generic pixel tree instead of
-             Will and Roxie. -->
+             /will_and_roxie_favicon.png, which does not exist — and iOS answers a broken
+             apple-touch-icon by guessing /apple-touch-icon.png, which held a generic pixel tree, so a
+             saved bookmark showed a tree instead of Will and Roxie. That file and the other unreferenced
+             tree icons are now deleted, so there is nothing left to guess at either. -->
         <link rel="apple-touch-icon" sizes="180x180" href="/will_and_roxie_touch_180.png" />
         <meta name="apple-mobile-web-app-title" content="Pattersons" />
         <link rel="manifest" href="/site.webmanifest" />
