@@ -57,10 +57,13 @@ export async function buildRenditions(input: Uint8Array): Promise<Renditions> {
         return { body: new Uint8Array(data), width: info.width, height: info.height }
     }
 
-    const [display, thumb] = await Promise.all([
-        render(PHOTO_DISPLAY_EDGE),
-        render(PHOTO_THUMB_EDGE),
-    ])
+    /* SEQUENTIAL, not Promise.all. libvips holds the whole decoded bitmap in memory — a 30 MP
+       image is ~90 MB raw — so rendering both sizes at once doubles the peak on a container that
+       otherwise idles at ~150 MB. The cost of running them one after the other is a few hundred
+       milliseconds per upload; the cost of the parallel version is an OOM, which is an outage
+       rather than a slow request. */
+    const display = await render(PHOTO_DISPLAY_EDGE)
+    const thumb = await render(PHOTO_THUMB_EDGE)
 
     return { display, thumb }
 }

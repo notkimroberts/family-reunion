@@ -82,6 +82,22 @@ describe('buildRenditions', () => {
         await expect(buildRenditions(notAnImage)).rejects.toThrow()
     })
 
+    it('refuses an image above the pixel cap before decoding it', async () => {
+        /* PHOTO_MAX_PIXELS is a MEMORY bound — libvips holds the decoded bitmap, so this is what
+           stands between one enormous upload and an OOM on a container that idles at ~150 MB. A
+           thin 40 MP strip is cheap to construct and cheap to reject, which is the point: the
+           check reads metadata and throws before any pixels are decoded. */
+        const huge = new Uint8Array(
+            await sharp({
+                create: { width: 40_000, height: 1_000, channels: 3, background: '#111' },
+            })
+                .jpeg()
+                .toBuffer(),
+        )
+
+        await expect(buildRenditions(huge)).rejects.toThrow('Image is too large')
+    })
+
     it('re-encodes as JPEG whatever went in, so a polyglot cannot survive', async () => {
         const png = new Uint8Array(
             await sharp({
