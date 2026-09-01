@@ -1,5 +1,5 @@
 <script lang="ts">
-import { ClipboardPen, HeartHandshake, LayoutDashboard, LogOut, Menu } from '@lucide/svelte'
+import { ClipboardPen, HeartHandshake, Images, LayoutDashboard, LogOut, Menu } from '@lucide/svelte'
 import { page } from '$app/state'
 import { authClient } from '$lib/auth-client'
 import { Avatar, AvatarFallback } from '$lib/components/ui/avatar'
@@ -10,7 +10,12 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from '$lib/components/ui/dropdown-menu'
-import { APP_NAME, DONATE_NAV_LINK, REGISTER_NAV_LINK } from '$lib/general/constants'
+import {
+    APP_NAME,
+    DONATE_NAV_LINK,
+    PHOTOS_NAV_LINK,
+    REGISTER_NAV_LINK,
+} from '$lib/general/constants'
 import { getInitials } from '$lib/utils'
 import MobileDrawer from './MobileDrawer.svelte'
 import ThemeToggle from './ThemeToggle.svelte'
@@ -47,6 +52,15 @@ let mobileMenuOpen = $state(false)
         </a>
 
         <nav class="flex items-center gap-0.5">
+            <!-- Plain text, left of both buttons: browsing the gallery is not a call to action and
+                 must not compete with the two that are. -->
+            <a
+                href={PHOTOS_NAV_LINK.href}
+                class="text-muted-foreground hover:text-foreground flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors">
+                <Images class="h-3.5 w-3.5" />
+                {PHOTOS_NAV_LINK.label}
+            </a>
+
             <!-- Outline, and left of Register: giving is a real path through the site, but the one
                  thing most visitors are here to do is book a place, so only that is filled. -->
             <a

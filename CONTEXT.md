@@ -2,7 +2,9 @@
 
 A full-stack app for one job: taking registrations and money for a family reunion. Two sub-domains share the codebase — identity (the organisers who administer it) and events (the reunion, its prices, and who is coming) — each with its own model of a "person."
 
-> An earlier version of this app also carried a genealogy tree, a photo gallery and a storefront. All three are deleted, tables included — see [ADR 0004](docs/adr/0004-genealogy-out-of-scope-for-launch.md) and [ADR 0005](docs/adr/0005-drop-genealogy-and-gallery-tables.md). **Family member**, **relationship** and **photo** are no longer terms in this domain. Do not reintroduce them by reflex on finding a dangling reference.
+> An earlier version of this app also carried a genealogy tree and a storefront. Both are deleted, tables included — see [ADR 0004](docs/adr/0004-genealogy-out-of-scope-for-launch.md) and [ADR 0005](docs/adr/0005-drop-genealogy-and-gallery-tables.md). **Family member** and **relationship** are no longer terms in this domain. Do not reintroduce them by reflex on finding a dangling reference.
+>
+> The photo gallery was deleted alongside them and has since returned — see [ADR 0009](docs/adr/0009-photos-return-with-a-moderated-gallery.md). **Photo** is a term again; the two it sat beside are not.
 
 ## Language
 
@@ -52,6 +54,34 @@ _Avoid_: party member, attendee, user
 **Guest member**:
 An additional attendee added by the **registrant** during or after registration. Stored in `party_members` alongside the registrant. Has no link to a **user**, and needs none — a guest has no email and no account.
 _Avoid_: guest (too vague), party member, attendee
+
+### Photos
+
+**Photo**:
+One image in the family gallery, contributed by anyone or imported from the archive. Has a moderation
+status — `pending` → `approved` or `rejected` — and **only an approved photo is served to the public**,
+enforced both in the gallery query and again per request in the byte proxy. Not linked to a **party
+member**, a **registrant** or a **user**: upload carries no credential, so the app cannot honestly
+claim to know who sent one. Optionally linked to a **reunion event**; the 290 archive photos are
+linked to none, which is why the column is nullable. See [ADR 0009](docs/adr/0009-photos-return-with-a-moderated-gallery.md).
+_Avoid_: image, picture, upload, gallery item
+
+**Rendition**:
+A derived, EXIF-stripped, web-sized copy of a **photo** — `display` at 1600px and `thumb` at 400px, both
+JPEG. The renditions are the ONLY thing retained; the uploaded bytes are decoded, re-encoded and
+discarded. Their bucket keys on the photo row are the only pointers to the objects in storage.
+_Avoid_: thumbnail (that is one of the two), original, variant
+
+**Moderation queue**:
+The **photos** awaiting a decision, shown to organisers as the `?view=photos` lens on the registrations
+page. Deliberately not scoped to the reunion event in the URL: archive photos have no event, and a
+queue filtered by year would hide the rows most needing a decision.
+_Avoid_: pending photos, review queue, inbox
+
+**Contributor**:
+Whoever uploaded a **photo**. Anonymous by construction — `contributorName` is an optional, untrusted
+free-text courtesy field, not an identity. Not a **user**, not a **registrant**.
+_Avoid_: uploader, submitter, photographer
 
 ### Two person models — why they're separate
 

@@ -394,3 +394,53 @@ export const registrationAudit = pgTable(
     },
     (t) => [index('registration_audit_registration_id_idx').on(t.registrationId)],
 )
+
+export const photoStatusEnum = pgEnum('photo_status', ['pending', 'approved', 'rejected'])
+
+/* Contributed images in the family gallery. See ADR 0009, which amends ADR 0005 — this table and
+   the storage layer beneath it were deleted three days before they were reinstated, so the reasons
+   are worth having to hand.
+
+   NOTHING HERE IS PUBLIC UNTIL status = 'approved'. Upload carries no credential at all, so the
+   moderation gate is the whole of the protection: it is the only thing between a stranger and the
+   family's website. Every public read filters on the status, and the byte proxy re-checks it rather
+   than trusting the caller to have come from a filtered list.
+
+   No uploader identity. There is no link to a party member, a registrant or a user, and none is
+   wanted: an anonymous endpoint cannot honestly claim to know who posted. contributorName is a
+   free-text courtesy field, untrusted like any other, and is escaped on render.
+
+   The keys are the ONLY pointers to the objects in the bucket, exactly as photos.r2_key was before
+   ADR 0005 dropped it and orphaned a bucket. Delete the row and the objects go with it, in that
+   order, or the same thing happens again. */
+export const photos = pgTable(
+    'photos',
+    {
+        id: uuid('id').primaryKey().defaultRandom(),
+        /* Nullable, mirroring donations.event_id and for the same shape of reason: the 290 recovered
+           archive photos predate every row in reunion_events, and a photo contributed between
+           reunions is recorded rather than refused. */
+        eventId: uuid('event_id').references(() => reunionEvents.id, { onDelete: 'set null' }),
+        status: photoStatusEnum('status').notNull().default('pending'),
+        /* Bucket keys for the two renditions. The upload itself is never stored. */
+        displayKey: text('display_key').notNull(),
+        thumbKey: text('thumb_key').notNull(),
+        /* Dimensions of the display rendition, so the grid can reserve space and not reflow as
+           images arrive. */
+        width: integer('width').notNull(),
+        height: integer('height').notNull(),
+        caption: text('caption'),
+        contributorName: text('contributor_name'),
+        /* Where a photo came from, for imports only — 'archive:<filepicker-handle>' for the 290
+           recovered from the family's previous website. Unique, so re-running the importer skips
+           what it already brought in and a batch that dies half way can simply be re-run. NULL for
+           everything contributed through the site, which has no external identity to record. */
+        sourceKey: text('source_key').unique(),
+        /* When the photograph was taken, where it is known — lets the archive be browsed by year
+           without inventing a reunion_events row for 2014. */
+        takenYear: integer('taken_year'),
+        createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+        updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+    },
+    (t) => [index('photos_status_idx').on(t.status), index('photos_event_id_idx').on(t.eventId)],
+)

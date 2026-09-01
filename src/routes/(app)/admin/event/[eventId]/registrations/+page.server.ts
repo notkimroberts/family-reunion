@@ -5,6 +5,7 @@ import { requireAdmin } from '$lib/server/auth/guards'
 import { db } from '$lib/server/db'
 import { partyMembers, registrations } from '$lib/server/db/schema'
 import { getDonationsForEvent } from '$lib/server/donations'
+import { deletePhoto, getPhotosForModeration, setPhotoStatus } from '$lib/server/photos'
 import {
     getEventPeople,
     getRegistrationsForEvent,
@@ -14,8 +15,14 @@ import {
 import { parseYesNo } from '$lib/utils'
 import type { Actions, PageServerLoad } from './$types'
 
-/* Two lenses on one event, chosen by ?view=. Bookings is the default because chasing money is the
-   recurring job; people is what you print, cater and check names against on the day. */
+/* Four lenses on one event, chosen by ?view=. Bookings is the default because chasing money is the
+   recurring job; people is what you print, cater and check names against on the day; gifts is the
+   same year's money read a different way; photos is the moderation queue.
+
+   Photos is the odd one and deliberately so: it is NOT scoped to params.eventId. Contributed photos
+   carry a nullable event_id (mirroring donations) and the recovered archive has none at all, so a
+   queue filtered by year would silently hide the very rows most in need of a decision. There is
+   only ever one queue, and it hangs off whichever year the organiser happens to be looking at. */
 export const load: PageServerLoad = async (event) => {
     requireAdmin(event)
 
@@ -23,16 +30,18 @@ export const load: PageServerLoad = async (event) => {
        bookings and its gift figures need the donations, and toggling the lens has to be instant — a
        round trip to swap a table you are already looking at reads as a page you broke. Three indexed
        queries on a few hundred rows. */
-    const [registrations, people, donations] = await Promise.all([
+    const [registrations, people, donations, pendingPhotos] = await Promise.all([
         getRegistrationsForEvent(event.params.eventId),
         getEventPeople(event.params.eventId),
         getDonationsForEvent(event.params.eventId),
+        getPhotosForModeration(),
     ])
 
     return {
         registrations,
         people,
         donations,
+        pendingPhotos,
         /* Which Stripe dashboard a payment link should point at. Test and live PaymentIntent ids look
            alike, so the id cannot say — but the secret key can, and this is the only place that sees it.
            A test id under the live path shows "no such payment", which reads as a lost payment. */
@@ -108,5 +117,39 @@ export const actions: Actions = {
         }
 
         return { personSaved: true }
+    },
+
+    /* Publishes a contributed photo, or refuses it.
+
+       requireAdmin here and not merely on the load: a SvelteKit layout load runs AFTER a form
+       action, so the route lock cannot protect this. It is the whole of the moderation gate — the
+       upload endpoint carries no credential and writes every row 'pending', so this action is the
+       only thing in the app that can make a photo publicly visible.
+
+       Not written to registration_audit. That table records changes to someone else's REGISTRATION
+       and its action enum says so; widening it for a photo would make "audit entry" mean two
+       things. If photo moderation needs a history, it gets its own. */
+    moderate_photo: async (event) => {
+        requireAdmin(event)
+
+        const data = await event.request.formData()
+        const photoId = String(data.get('photoId') ?? '').trim()
+        const decision = String(data.get('decision') ?? '')
+
+        if (!photoId) {
+            return fail(400, { photoError: 'Missing photo' })
+        }
+
+        if (decision === 'approve' || decision === 'reject') {
+            await setPhotoStatus(photoId, decision === 'approve' ? 'approved' : 'rejected')
+            return { photoModerated: decision }
+        }
+
+        if (decision === 'delete') {
+            await deletePhoto(photoId)
+            return { photoModerated: 'deleted' }
+        }
+
+        return fail(400, { photoError: 'Unknown decision' })
     },
 }

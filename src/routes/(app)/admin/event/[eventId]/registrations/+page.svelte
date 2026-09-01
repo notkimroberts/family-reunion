@@ -1,5 +1,5 @@
 <script lang="ts">
-import { ClipboardCheck, Gift, Plus, Search, Settings, Users } from '@lucide/svelte'
+import { ClipboardCheck, Gift, Images, Plus, Search, Settings, Users } from '@lucide/svelte'
 import { SvelteMap } from 'svelte/reactivity'
 import { goto } from '$app/navigation'
 import { page } from '$app/state'
@@ -25,6 +25,7 @@ import OrderSheet from './OrderSheet.svelte'
 import PaymentChannel from './PaymentChannel.svelte'
 import PaymentNote from './PaymentNote.svelte'
 import PersonFieldForm from './PersonFieldForm.svelte'
+import PhotoQueue from './PhotoQueue.svelte'
 import RegistrationStatusBadge from './RegistrationStatusBadge.svelte'
 import { getDonationTotals } from './donationTotals'
 import { getEventMoney } from './eventMoney'
@@ -153,6 +154,7 @@ let arrivedCount = $derived(data.people.filter((person) => person.checkedInAt !=
 let lens = $derived(lensFromUrl(page.url))
 let showPeople = $derived(lens === 'people')
 let showDonations = $derived(lens === 'donations')
+let showPhotos = $derived(lens === 'photos')
 
 let search = $state('')
 /* undefined is unfiltered. Holding the database's own value rather than a display label also retires the
@@ -308,6 +310,27 @@ $effect(() => {
                     <Gift class="size-3.5" />
                     Gifts
                 </button>
+                <!-- Photos is the moderation queue, not a year's photos: contributed rows carry a
+                     nullable event_id and the recovered archive has none, so there is one queue. -->
+                <button
+                    type="button"
+                    onclick={() => setView('photos')}
+                    aria-pressed={showPhotos}
+                    class={cn(
+                        'flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-colors',
+                        showPhotos
+                            ? 'bg-background text-foreground shadow-sm'
+                            : 'text-muted-foreground',
+                    )}>
+                    <Images class="size-3.5" />
+                    Photos
+                    {#if data.pendingPhotos.length > 0}
+                        <span
+                            class="bg-primary text-primary-foreground rounded-full px-1.5 text-[10px] leading-4">
+                            {data.pendingPhotos.length}
+                        </span>
+                    {/if}
+                </button>
             </div>
 
             <div class="relative min-w-48 flex-1">
@@ -370,7 +393,13 @@ $effect(() => {
             </div>
         </div>
 
-        {#if showDonations}
+        {#if showPhotos}
+            <p class="text-muted-foreground text-xs">
+                Photos contributed by the family, waiting on a decision. Nothing here is publicly
+                visible until it is approved.
+            </p>
+            <PhotoQueue photos={data.pendingPhotos} />
+        {:else if showDonations}
             <p class="text-muted-foreground text-xs">
                 Every gift recorded for this year, including the checkouts nobody finished. {data
                     .donations.length}
