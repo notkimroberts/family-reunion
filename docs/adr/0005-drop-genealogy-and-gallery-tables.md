@@ -1,8 +1,11 @@
 # ADR 0005 — Drop the genealogy, gallery and storefront tables
 
-**Status:** Accepted
+**Status:** Accepted; the gallery half amended by [ADR 0009](./0009-photos-return-with-a-moderated-gallery.md)
 **Date:** 2026-08-29
 **Amends:** [ADR 0004](./0004-genealogy-out-of-scope-for-launch.md)
+**Amended by:** [ADR 0009](./0009-photos-return-with-a-moderated-gallery.md) — photos and object
+storage returned on 2026-09-01, once 290 photographs were recovered from the family's previous site
+and there was no longer a launch to protect. The genealogy and storefront decisions here still stand.
 
 ## Context
 

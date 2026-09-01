@@ -1,10 +1,15 @@
 <script lang="ts">
-import { ClipboardPen, HeartHandshake, Home, LayoutDashboard, LogOut } from '@lucide/svelte'
+import { ClipboardPen, HeartHandshake, Home, Images, LayoutDashboard, LogOut } from '@lucide/svelte'
 import { page } from '$app/state'
 import { authClient } from '$lib/auth-client'
 import { Avatar, AvatarFallback } from '$lib/components/ui/avatar'
 import { Sheet, SheetContent } from '$lib/components/ui/sheet'
-import { APP_NAME, DONATE_NAV_LINK, REGISTER_NAV_LINK } from '$lib/general/constants'
+import {
+    APP_NAME,
+    DONATE_NAV_LINK,
+    PHOTOS_NAV_LINK,
+    REGISTER_NAV_LINK,
+} from '$lib/general/constants'
 import { getInitials } from '$lib/utils'
 
 type Props = {
@@ -48,6 +53,13 @@ const linkClass = (active: boolean) =>
             <a href="/" onclick={onClose} class={linkClass(isActive('/'))}>
                 <Home class="h-4 w-4" />
                 Home
+            </a>
+            <a
+                href={PHOTOS_NAV_LINK.href}
+                onclick={onClose}
+                class={linkClass(isActive(PHOTOS_NAV_LINK.href))}>
+                <Images class="h-4 w-4" />
+                {PHOTOS_NAV_LINK.label}
             </a>
             <a
                 href={DONATE_NAV_LINK.href}

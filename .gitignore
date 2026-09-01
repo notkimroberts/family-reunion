@@ -9,3 +9,9 @@ static/uploads
 
 # Sentry Config File
 .env.sentry-build-plugin
+
+# Recovered photo archive — cold storage, 1.2GB. Only renditions reach the app.
+# LEADING SLASH IS LOAD-BEARING: an unanchored `photos/` also matches src/lib/server/photos,
+# src/routes/(app)/photos and src/routes/api/photos, and silently drops them from every commit.
+/photos-orig/
+/photos/

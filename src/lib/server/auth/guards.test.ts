@@ -62,8 +62,10 @@ describe('requireAdmin', () => {
 })
 
 describe('isPublicPath', () => {
-    /* Registration funnel and the donation page — must stay reachable with no session. /donate is
-       also the one public path that outlives the registration lock date. */
+    /* Registration funnel, the donation page and the gallery — must stay reachable with no session.
+       /donate is also the one public path that outlives the registration lock date, and /photos
+       covers both the grid and the credential-free upload form; nothing uploaded there is served
+       until an organiser approves it. */
     it.each([
         '/',
         '/register',
@@ -71,6 +73,8 @@ describe('isPublicPath', () => {
         '/register/recover',
         '/donate',
         '/donate/thanks',
+        '/photos',
+        '/photos/contribute',
     ])('allows %s', (pathname) => {
         expect(isPublicPath(pathname)).toBe(true)
     })
@@ -93,10 +97,15 @@ describe('isPublicPath', () => {
     })
 
     /* A public prefix must not leak to a path that merely starts with the same letters. */
-    it.each(['/registerfoo', '/registration', '/register-now', '/donations', '/donate-now'])(
-        'does not treat %s as public',
-        (pathname) => {
-            expect(isPublicPath(pathname)).toBe(false)
-        },
-    )
+    it.each([
+        '/registerfoo',
+        '/registration',
+        '/register-now',
+        '/donations',
+        '/donate-now',
+        '/photosphere',
+        '/photos-admin',
+    ])('does not treat %s as public', (pathname) => {
+        expect(isPublicPath(pathname)).toBe(false)
+    })
 })
