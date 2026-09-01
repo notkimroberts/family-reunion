@@ -29,7 +29,25 @@ export default defineConfig(
         files: ['**/*.svelte', '**/*.svelte.ts', '**/*.svelte.js'],
         languageOptions: {
             parserOptions: {
-                projectService: true,
+                /* NO `projectService: true` HERE, deliberately — it cost 42 of the 45 seconds.
+
+                   It builds a TypeScript program so rules can ask for type information, and it did
+                   that for all 231 Svelte files at ~183ms each, against ~12ms for a .ts file.
+                   Removing it took `bun run lint` from 45s to 3.4s.
+
+                   Nothing was using it. Of the 61 rules this config enables, ZERO declare
+                   `requiresTypeChecking` — `ts.configs.recommended` is the syntactic set, not
+                   `recommendedTypeChecked`. Verified rather than assumed: the whole repo reports
+                   byte-identical findings with and without it, and an injected violation is caught
+                   the same way either way.
+
+                   Type errors are not lost; `bun run check` runs svelte-check over the same files
+                   and is the thing that actually type-checks the project.
+
+                   PUT IT BACK if you ever enable a type-aware rule — anything from
+                   `ts.configs.recommendedTypeChecked`, or a svelte rule whose docs say it needs
+                   type information. Without it those rules go quiet rather than erroring, which is
+                   the failure mode worth knowing about. */
                 extraFileExtensions: ['.svelte'],
                 parser: ts.parser,
                 svelteConfig,
