@@ -237,10 +237,6 @@ let isLocked = $derived(isRegistrationClosed(data.event?.registrationLockDate ??
                         Already registered? <a class="underline" href="/register/recover"
                             >Resend management link</a>
                     </p>
-                    <p class="text-muted-foreground mt-1 text-center text-xs">
-                        Prefer paper? <a class="underline" href="/register/print"
-                            >Print a registration form</a>
-                    </p>
                 </div>
             </div>
         </form>
