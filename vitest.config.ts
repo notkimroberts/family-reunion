@@ -4,8 +4,9 @@ import { defineConfig } from 'vitest/config'
 export default defineConfig({
     test: {
         environment: 'node',
-        /* Migrates an empty PGLite once and dumps it; every test restores that dump in ~145ms
-           instead of re-running 16 migrations. See db/testing/globalSetup.ts. */
+        /* Migrates an empty PGLite once and dumps it; the first resetTestDb in each test file
+           restores that dump, and every later one truncates instead. See db/testing/resetTestDb.ts
+           for why truncating rather than restoring per test, and what it does not undo. */
         globalSetup: ['./src/lib/server/db/testing/globalSetup.ts'],
     },
     resolve: {
