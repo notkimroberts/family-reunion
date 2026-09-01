@@ -109,6 +109,10 @@ the rows most needing a decision.
   `photos.r2_key` was before. `deletePhoto` removes the objects **first**, then the row. Deleting rows
   by any other route orphans bytes nothing can enumerate — which is what happened to the R2 bucket.
 - `sharp` adds a native binary to the build. It must build in the Railway image.
+- The bucket is `family-reunion-photos` in `sjc`, Tigris-backed at `https://t3.storageapi.dev`. Its
+  S3 name is suffixed (`family-reunion-photos-ceh2kq`) and is NOT `RAILWAY_BUCKET_NAME`; the service
+  reads it through a reference variable so a rotated key needs no change here. Path-style addressing
+  is confirmed working by a put/get/delete round-trip against the live bucket.
 - The recovered originals stay **out of the repo** (`photos-orig/` is gitignored). They are cold
   archive; the app only ever needs the renditions.
 - **Six of the original 296 could not be recovered.** They returned HTTP 400 on the live site too, so
