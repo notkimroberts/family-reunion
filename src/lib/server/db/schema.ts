@@ -60,6 +60,12 @@ export const account = pgTable('account', {
     id: text('id').primaryKey(),
     accountId: text('account_id').notNull(),
     providerId: text('provider_id').notNull(),
+    /* Required by better-auth >= 1.7. sign-in/email matches the credential account on
+       `issuer === 'local:credential'` AND `accountId === user.id`, so a missing column makes every
+       account invisible: the endpoint takes its "no credential account" branch and answers
+       "Invalid email or password" for a correct one. Providers with no issuer of their own get the
+       synthetic `local:<providerId>` (`createLocalAccountIssuer`); OAuth gets `local:oauth:<id>`. */
+    issuer: text('issuer').notNull(),
     userId: text('user_id')
         .notNull()
         .references(() => user.id, { onDelete: 'cascade' }),

@@ -26,6 +26,7 @@ async function seedCredentialAccount() {
         id: 'account-1',
         accountId: userId,
         providerId: 'credential',
+        issuer: 'local:credential',
         userId,
         password: await hashPassword(OLD_PASSWORD),
     })
