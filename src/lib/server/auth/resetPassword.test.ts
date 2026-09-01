@@ -49,7 +49,7 @@ describe('resetPassword', () => {
     it('writes a hash the new password verifies against', async () => {
         await seedCredentialAccount()
 
-        const result = await resetPassword(EMAIL, NEW_PASSWORD)
+        const result = await resetPassword(db, EMAIL, NEW_PASSWORD)
 
         expect(result.ok).toBe(true)
         expect(await verifyPassword({ hash: await storedHash(), password: NEW_PASSWORD })).toBe(
@@ -64,7 +64,7 @@ describe('resetPassword', () => {
             true,
         )
 
-        await resetPassword(EMAIL, NEW_PASSWORD)
+        await resetPassword(db, EMAIL, NEW_PASSWORD)
 
         expect(await verifyPassword({ hash: await storedHash(), password: OLD_PASSWORD })).toBe(
             false,
@@ -88,7 +88,7 @@ describe('resetPassword', () => {
             },
         ])
 
-        const result = await resetPassword(EMAIL, NEW_PASSWORD)
+        const result = await resetPassword(db, EMAIL, NEW_PASSWORD)
 
         expect(result).toMatchObject({ ok: true, sessionsRevoked: 2 })
         expect(await db.select().from(session)).toHaveLength(0)
@@ -98,7 +98,7 @@ describe('resetPassword', () => {
         await seedCredentialAccount()
         const before = await storedHash()
 
-        const result = await resetPassword('nobody@example.com', NEW_PASSWORD)
+        const result = await resetPassword(db, 'nobody@example.com', NEW_PASSWORD)
 
         expect(result).toEqual({ ok: false, reason: 'no-account' })
         expect(await storedHash()).toBe(before)
@@ -108,7 +108,7 @@ describe('resetPassword', () => {
         await seedCredentialAccount()
         const before = await storedHash()
 
-        const result = await resetPassword(EMAIL, 'short')
+        const result = await resetPassword(db, EMAIL, 'short')
 
         expect(result).toEqual({ ok: false, reason: 'too-short' })
         expect(await storedHash()).toBe(before)
@@ -117,7 +117,7 @@ describe('resetPassword', () => {
     it('keeps the role, so a reset cannot quietly demote an admin', async () => {
         await seedCredentialAccount()
 
-        const result = await resetPassword(EMAIL, NEW_PASSWORD)
+        const result = await resetPassword(db, EMAIL, NEW_PASSWORD)
 
         expect(result).toMatchObject({ role: 'admin' })
         const [row] = await db.select({ role: user.role }).from(user)

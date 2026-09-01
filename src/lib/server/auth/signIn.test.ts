@@ -57,7 +57,7 @@ describe('email + password sign-in', () => {
     it('signs in with the new password after a reset', async () => {
         const email = 'reset@example.com'
         await createAdminAccount(email)
-        const reset = await resetPassword(email, NEW_PASSWORD)
+        const reset = await resetPassword(db, email, NEW_PASSWORD)
         expect(reset.ok).toBe(true)
 
         const result = await auth.api.signInEmail({ body: { email, password: NEW_PASSWORD } })
@@ -68,7 +68,7 @@ describe('email + password sign-in', () => {
     it('refuses the old password after a reset', async () => {
         const email = 'stale@example.com'
         await createAdminAccount(email)
-        await resetPassword(email, NEW_PASSWORD)
+        await resetPassword(db, email, NEW_PASSWORD)
 
         await expect(
             auth.api.signInEmail({ body: { email, password: OLD_PASSWORD } }),
