@@ -119,6 +119,8 @@ Server logic lives under `src/lib/server/`, one domain per folder. Each exported
 
 `bun run admin:create <email> <password> [name]` creates a Better Auth user and sets `role='admin'` on the user row. Reads `DATABASE_URL` from the environment.
 
+`bun run admin:reset-password <email> <new-password>` resets an EXISTING account. `admin:create` cannot do this — it calls `signUpEmail`, which fails outright on a duplicate, so it bootstraps but cannot recover, and there is no reset email and no account-management screen. The logic lives in `$lib/server/auth/resetPassword` and is tested; the script only supplies the client. Two things it does deliberately: it hashes with Better Auth's **own** `hashPassword` and verifies the result before writing, because the stored format is Better Auth's to define and a hand-rolled hash is silently unverifiable at sign-in (it presents as a wrong password); and it **revokes every session**, because Better Auth leaves them alive across a password change and a reset prompted by someone else knowing the old password would otherwise achieve nothing.
+
 It is the **only** way to create an admin: there is no account-management screen at all, so run this for every account, not just the first. Set `OWNER_EMAIL` to the address you pass here, or event settings stay open to every admin.
 
 ### Registration Flow
