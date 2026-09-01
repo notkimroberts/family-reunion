@@ -119,3 +119,26 @@ the rows most needing a decision.
   they were already broken before any of this. Not a gap to chase.
 - The rate limiter is in-process, so it resets on deploy and does not coordinate across replicas. With
   one container that is honest; a second replica doubles the effective limit.
+
+## Addendum, same day — sharing, downloads and caching
+
+Three additions once the archive was in, none of which change the moderation model.
+
+**Every photo gets a URL** (`/photos/[id]`) with Open Graph tags. The grid's lightbox was client
+state, so nothing was shareable — the point of a family gallery is that someone sends a link.
+
+**Downloads** are `?download` on the existing proxy plus a streamed per-year zip. Both serve the
+1600px rendition; originals were considered and rejected, because a "download all" that is 1.2 GB
+instead of 54 MB is not something anyone taps on a phone, and 1600px is fine on screen and for a
+6x4 print.
+
+**ETag and 304.** The original `private, max-age=300` alone meant a full-grid browse re-downloaded
+~4.4 MB of thumbnails every five minutes — most of what this feature would ever cost in egress.
+Renditions are immutable per key, so the etag is permanent and only permission changes. The 304 is
+therefore evaluated AFTER the status check: a client holding a valid etag for a rejected photo gets 404. That ordering is the whole correctness of it and is pinned by a test that fails when the
+short-circuit is moved earlier.
+
+**The archive turned out to be one year.** All 290 recovered photographs carry 2025 EXIF dates (268
+of them; 22 have no date). The old site was one reunion's photos, not a multi-year archive.
+`taken_year` was backfilled to 2025 for every row with `source_key like 'archive:%'`, and is
+captured from EXIF at upload from now on.
