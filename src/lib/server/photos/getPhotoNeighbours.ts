@@ -1,6 +1,7 @@
 import { and, asc, desc, eq, sql } from 'drizzle-orm'
 import { db } from '$lib/server/db'
 import { photos } from '$lib/server/db/schema'
+import { photoCursorAfter, photoCursorBefore } from './_photoCursor'
 
 export type PhotoNeighbours = {
     previousId: string | undefined
@@ -43,28 +44,28 @@ export async function getPhotoNeighbours(
         return undefined
     }
 
-    const cursor = sql`(${photos.createdAt}, ${photos.id})`
-    const here = sql`(${current.createdAt}::timestamptz, ${current.id}::uuid)`
+    const older = photoCursorBefore(current.createdAt, current.id)
+    const newer = photoCursorAfter(current.createdAt, current.id)
 
     /* "Next" is further down the grid, i.e. older; "previous" is newer. */
     const [next] = await db
         .select({ id: photos.id })
         .from(photos)
-        .where(scope(sql`${cursor} < ${here}`))
+        .where(scope(older))
         .orderBy(desc(photos.createdAt), desc(photos.id))
         .limit(1)
 
     const [previous] = await db
         .select({ id: photos.id })
         .from(photos)
-        .where(scope(sql`${cursor} > ${here}`))
+        .where(scope(newer))
         .orderBy(asc(photos.createdAt), asc(photos.id))
         .limit(1)
 
-    const [{ newer }] = await db
-        .select({ newer: sql<number>`count(*)::int` })
+    const [{ newerCount }] = await db
+        .select({ newerCount: sql<number>`count(*)::int` })
         .from(photos)
-        .where(scope(sql`${cursor} > ${here}`))
+        .where(scope(newer))
 
     const [{ total }] = await db
         .select({ total: sql<number>`count(*)::int` })
@@ -74,7 +75,7 @@ export async function getPhotoNeighbours(
     return {
         previousId: previous?.id,
         nextId: next?.id,
-        position: newer + 1,
+        position: newerCount + 1,
         total,
     }
 }
