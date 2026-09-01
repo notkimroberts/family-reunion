@@ -27,6 +27,9 @@ const { getServablePhotoKey } = await import('./getServablePhotoKey')
 const { getPhotoKey } = await import('./getPhotoKey')
 const { setPhotoStatus } = await import('./setPhotoStatus')
 const { deletePhoto } = await import('./deletePhoto')
+const { getApprovedPhoto } = await import('./getApprovedPhoto')
+const { getPhotoYears } = await import('./getPhotoYears')
+const { getApprovedPhotoKeysForYear } = await import('./getApprovedPhotoKeysForYear')
 
 let db: Awaited<ReturnType<typeof resetTestDb>>
 
@@ -151,5 +154,68 @@ describe('deletePhoto', () => {
     it('is a no-op for an id that is already gone, so it can be retried', async () => {
         await expect(deletePhoto('00000000-0000-0000-0000-000000000000')).resolves.toBeUndefined()
         expect(deleteObjects).not.toHaveBeenCalled()
+    })
+})
+
+describe('the single-photo page query', () => {
+    it('returns an approved photo', async () => {
+        const id = await createPhoto({ bytes: await samplePhoto(), caption: 'The picnic' })
+        await setPhotoStatus(id, 'approved')
+
+        expect(await getApprovedPhoto(id)).toMatchObject({ id, caption: 'The picnic' })
+    })
+
+    it('hides pending and rejected alike, so a URL cannot confirm one existed', async () => {
+        const id = await createPhoto({ bytes: await samplePhoto() })
+
+        expect(await getApprovedPhoto(id)).toBeUndefined()
+
+        await setPhotoStatus(id, 'rejected')
+        expect(await getApprovedPhoto(id)).toBeUndefined()
+
+        expect(await getApprovedPhoto('00000000-0000-0000-0000-000000000000')).toBeUndefined()
+    })
+})
+
+describe('years', () => {
+    it('counts only approved photos, newest year first', async () => {
+        const a = await createPhoto({ bytes: await samplePhoto(), takenYear: 2025 })
+        const b = await createPhoto({ bytes: await samplePhoto(), takenYear: 2025 })
+        const c = await createPhoto({ bytes: await samplePhoto(), takenYear: 2027 })
+        const pending = await createPhoto({ bytes: await samplePhoto(), takenYear: 2025 })
+        for (const id of [a, b, c]) {
+            await setPhotoStatus(id, 'approved')
+        }
+
+        expect(await getPhotoYears()).toEqual([
+            { year: 2027, photoCount: 1 },
+            { year: 2025, photoCount: 2 },
+        ])
+        expect(pending).toBeDefined()
+    })
+
+    it('omits photos with no year rather than inventing one', async () => {
+        const dated = await createPhoto({ bytes: await samplePhoto(), takenYear: 2025 })
+        const undated = await createPhoto({ bytes: await samplePhoto() })
+        await setPhotoStatus(dated, 'approved')
+        await setPhotoStatus(undated, 'approved')
+
+        expect(await getPhotoYears()).toEqual([{ year: 2025, photoCount: 1 }])
+        /* Still browsable in the full grid, just not in a year bucket. */
+        expect(await getApprovedPhotos()).toHaveLength(2)
+    })
+
+    it("gives the zip only that year's approved photos", async () => {
+        const wanted = await createPhoto({ bytes: await samplePhoto(), takenYear: 2025 })
+        const otherYear = await createPhoto({ bytes: await samplePhoto(), takenYear: 2027 })
+        const notApproved = await createPhoto({ bytes: await samplePhoto(), takenYear: 2025 })
+        await setPhotoStatus(wanted, 'approved')
+        await setPhotoStatus(otherYear, 'approved')
+
+        const keys = await getApprovedPhotoKeysForYear(2025)
+
+        expect(keys).toHaveLength(1)
+        expect(keys[0].id).toBe(wanted)
+        expect(keys.map((k) => k.id)).not.toContain(notApproved)
     })
 })

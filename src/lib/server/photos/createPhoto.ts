@@ -21,7 +21,7 @@ export type CreatePhotoInput = {
    objects, which cost pennies and are invisible; the reverse order leaves a row pointing at bytes
    that do not exist, which renders a broken gallery to the public. */
 export async function createPhoto(input: CreatePhotoInput): Promise<string> {
-    const { display, thumb } = await buildRenditions(input.bytes)
+    const { display, thumb, takenYear } = await buildRenditions(input.bytes)
 
     const id = randomUUID()
     const displayKey = `photos/${id}/display.jpg`
@@ -42,7 +42,9 @@ export async function createPhoto(input: CreatePhotoInput): Promise<string> {
         height: display.height,
         caption: input.caption?.trim() || undefined,
         contributorName: input.contributorName?.trim() || undefined,
-        takenYear: input.takenYear,
+        /* An explicit year wins — the archive importer knows better than a stripped file does.
+           Otherwise take what the camera wrote. */
+        takenYear: input.takenYear ?? takenYear,
     })
 
     dbg.upload('stored photo %s (%dx%d)', id, display.width, display.height)

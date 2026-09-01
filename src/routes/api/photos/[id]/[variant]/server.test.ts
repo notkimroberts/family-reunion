@@ -10,9 +10,14 @@ import { resetTestDb } from '$lib/server/db/testing/resetTestDb'
    key lookups will resolve. */
 
 const getObjectBody = vi.fn(async () => ({
-    body: new ReadableStream(),
+    body: new ReadableStream({
+        start(controller) {
+            controller.close()
+        },
+    }),
     contentType: 'image/jpeg',
     contentLength: 1234,
+    etag: '"abc123"',
 }))
 
 vi.mock('$lib/server/storage', () => ({
@@ -34,9 +39,20 @@ async function samplePhoto(): Promise<Uint8Array> {
     return new Uint8Array(buffer)
 }
 
-function request(id: string, variant: string, user?: { role: string }) {
+function request(
+    id: string,
+    variant: string,
+    user?: { role: string },
+    options: { search?: string; ifNoneMatch?: string } = {},
+) {
+    const headers = new Headers()
+    if (options.ifNoneMatch) {
+        headers.set('if-none-match', options.ifNoneMatch)
+    }
     return GET({
         params: { id, variant },
+        url: new URL(`http://localhost/api/photos/${id}/${variant}${options.search ?? ''}`),
+        request: new Request('http://localhost', { headers }),
         locals: { user },
         setHeaders: () => {},
     } as unknown as Parameters<typeof GET>[0])
@@ -103,5 +119,49 @@ describe('GET /api/photos/[id]/[variant]', () => {
 
     it('404s an id that does not exist', async () => {
         expect(await statusOf(request('00000000-0000-0000-0000-000000000000', 'display'))).toBe(404)
+    })
+})
+
+describe('caching and download', () => {
+    it('answers 304 when the client already holds the etag', async () => {
+        const id = await createPhoto({ bytes: await samplePhoto() })
+        await setPhotoStatus(id, 'approved')
+
+        const response = await request(id, 'display', undefined, { ifNoneMatch: '"abc123"' })
+
+        expect(response.status).toBe(304)
+    })
+
+    it('does NOT 304 a photo that has since been rejected — it 404s', async () => {
+        const id = await createPhoto({ bytes: await samplePhoto() })
+        await setPhotoStatus(id, 'approved')
+        await setPhotoStatus(id, 'rejected')
+
+        /* The permission check runs before the etag comparison. A browser holding a good etag for a
+           rejected photo must be told the photo is gone, not that its copy is still valid. */
+        expect(await statusOf(request(id, 'display', undefined, { ifNoneMatch: '"abc123"' }))).toBe(
+            404,
+        )
+    })
+
+    it('keeps the cache private and short, so no shared proxy outlives a rejection', async () => {
+        const id = await createPhoto({ bytes: await samplePhoto() })
+        await setPhotoStatus(id, 'approved')
+
+        const response = await request(id, 'display')
+
+        expect(response.headers.get('cache-control')).toBe('private, max-age=300')
+        expect(response.headers.get('etag')).toBe('"abc123"')
+    })
+
+    it('sets an attachment disposition only when ?download is asked for', async () => {
+        const id = await createPhoto({ bytes: await samplePhoto() })
+        await setPhotoStatus(id, 'approved')
+
+        const inline = await request(id, 'display')
+        expect(inline.headers.get('content-disposition')).toBeNull()
+
+        const download = await request(id, 'display', undefined, { search: '?download' })
+        expect(download.headers.get('content-disposition')).toContain('attachment')
     })
 })

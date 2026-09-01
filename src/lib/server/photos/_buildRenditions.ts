@@ -15,6 +15,29 @@ export type Rendition = {
 export type Renditions = {
     display: Rendition
     thumb: Rendition
+    /* Read from EXIF DateTimeOriginal BEFORE the metadata is discarded, which is the only chance to
+       have it — the renditions carry no EXIF by design. undefined when the camera wrote none, which
+       is common for anything that has been through a messaging app. */
+    takenYear: number | undefined
+}
+
+/* EXIF dates are 'YYYY:MM:DD HH:MM:SS'. Pulled with a regex rather than a parser because the year is
+   all that is wanted and the alternative is a dependency for four digits. */
+const EXIF_DATE = /(19|20)\d{2}:\d{2}:\d{2} \d{2}:\d{2}:\d{2}/
+
+function readTakenYear(exif: Buffer | undefined): number | undefined {
+    if (!exif) {
+        return undefined
+    }
+    const match = exif.toString('latin1').match(EXIF_DATE)
+    if (!match) {
+        return undefined
+    }
+    const year = Number.parseInt(match[0].slice(0, 4), 10)
+    /* A camera with a dead clock reports 1970 or 2001; a year in the future is nonsense. Both are
+       worse than admitting the year is unknown. */
+    const thisYear = new Date().getUTCFullYear()
+    return year >= 1900 && year <= thisYear ? year : undefined
 }
 
 /* Turns arbitrary uploaded bytes into two safe, web-sized JPEGs, or throws.
@@ -65,5 +88,5 @@ export async function buildRenditions(input: Uint8Array): Promise<Renditions> {
     const display = await render(PHOTO_DISPLAY_EDGE)
     const thumb = await render(PHOTO_THUMB_EDGE)
 
-    return { display, thumb }
+    return { display, thumb, takenYear: readTakenYear(metadata.exif) }
 }
