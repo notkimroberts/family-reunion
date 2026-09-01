@@ -453,12 +453,16 @@ one module, which is what the one-time 162-file reformat was.
 ```ts
 let db: Awaited<ReturnType<typeof resetTestDb>>
 beforeEach(async () => {
-    db = await resetTestDb() // fresh, fully migrated, ~145ms
+    db = await resetTestDb() // emptied, fully migrated, ~7ms
 })
 const seeded = await seedRegistration(db, { members: [...] })
 ```
 
-- `globalSetup` migrates an empty database **from the real `drizzle/` SQL** once per run and dumps it; `resetTestDb()` restores that dump per test. A migration that would fail on deploy fails here first.
+- `globalSetup` migrates an empty database **from the real `drizzle/` SQL** once per run and dumps it. A migration that would fail on deploy fails here first.
+- **`resetTestDb()` restores that dump once per test FILE and `TRUNCATE`s between tests.** It used to rebuild a PGlite from the 4.7 MB template on every `beforeEach`, documented here as costing about the same as truncating. Measured, it does not: a restore is ~161ms and truncating all eleven public tables is ~7ms, and with 294 database-touching tests that was essentially the whole suite. Each restore also left the previous instance open — every live PGlite holds ~200 MB — so a worker climbed past 6 GB and the contention inflated a 161ms restore to ~660ms in a full run. Fixing both took the suite from **19.5s to 6.5s** and DB tests from 669ms to 127ms each.
+- **The truncate list is read from `pg_tables`, never hardcoded.** A migration that adds a table has to be picked up automatically, or rows start surviving between tests and surface as flakiness somewhere unrelated. Only `public` is touched — drizzle's migration tracker lives in its own `drizzle` schema and must survive.
+- **The one thing truncate does not undo is DDL.** Nothing in the suite issues any; a test that creates, alters or drops something must restore the template itself rather than assume `resetTestDb` cleaned up after it.
+- **Do not wire this into `setupFiles`.** Closing the instance per file via a setup hook was tried and reverted twice over: it imports PGlite into all 89 files (33s of CPU, two thirds of which never touch the database), and because the alias makes `$lib/server/db` and `./pgliteDb` the same module, it breaks the four suites that `vi.mock` that path or `$lib/general/constants`. Vitest isolates per file, so the process holding the instance exits with the file.
 - `seedRegistration` returns the **plaintext** management token, which nothing else can — only the hash is stored — so the token gate is exercised rather than mocked.
 - Assert on **rows**, not on calls. Stripe and Resend stay mocked (`$lib/server/payments`, `$lib/server/email`): those are genuinely external. The database is not.
 - **Posting a form in a test is not posting JSON.** The registration forms run `superForm` with `dataType: 'json'`, so the browser sends `FormData` carrying one `__superform_json` field of **devalue-encoded** data. A test that sends a JSON body instead gets `posted: false`, a blank `data`, and a 400 that looks like a schema bug. Build it the real way — `formData.append('__superform_json', stringify(body))` with `stringify` from `devalue` — see `register/server.test.ts`.
