@@ -1,6 +1,6 @@
 import { hashPassword, verifyPassword } from 'better-auth/crypto'
 import { and, eq } from 'drizzle-orm'
-import { db } from '$lib/server/db'
+import type { ReunionDb } from '$lib/server/db/ReunionDb'
 import { account, session, user } from '$lib/server/db/schema'
 
 /* Better Auth's own minimum. Enforced here too, or a reset "succeeds" and sign-in then refuses the
@@ -26,8 +26,17 @@ export type ResetPasswordResult =
    is wrong for a RESET: if the reason for resetting is that somebody else knows the old password,
    leaving their session signed in defeats the point.
 
-   The password lives on the `account` row with providerId 'credential'; the `user` row holds none. */
-export async function resetPassword(email: string, password: string): Promise<ResetPasswordResult> {
+   The password lives on the `account` row with providerId 'credential'; the `user` row holds none.
+
+   The database is a parameter rather than the `db` singleton because the caller that matters is
+   admin:reset-password, a standalone script with no $env/dynamic/private to build one from. That is
+   the whole reason this logic was duplicated into the script before, where it could drift from the
+   tested copy. */
+export async function resetPassword(
+    db: ReunionDb,
+    email: string,
+    password: string,
+): Promise<ResetPasswordResult> {
     if (password.length < MIN_PASSWORD_LENGTH) {
         return { ok: false, reason: 'too-short' }
     }
