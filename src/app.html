@@ -6,7 +6,11 @@
         <!-- https://realfavicongenerator.net -->
         <link rel="icon" type="image/png" href="/will_and_roxie_favicon_32.png" sizes="32x32" />
         <link rel="icon" type="image/png" href="/will_and_roxie_favicon_64.png" sizes="64x64" />
-        <link rel="apple-touch-icon" href="/will_and_roxie_favicon.png" />
+        <!-- The portrait, at the 180px iOS actually asks for. This pointed at
+             /will_and_roxie_favicon.png, which does not exist — so iOS fell back to its own guess,
+             /apple-touch-icon.png, and a saved bookmark showed the generic pixel tree instead of
+             Will and Roxie. -->
+        <link rel="apple-touch-icon" sizes="180x180" href="/will_and_roxie_touch_180.png" />
         <meta name="apple-mobile-web-app-title" content="Pattersons" />
         <link rel="manifest" href="/site.webmanifest" />
         %sveltekit.head%

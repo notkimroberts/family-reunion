@@ -1,5 +1,5 @@
+import { matchesSearch } from '$lib/general/search'
 import type { EventPerson } from '$lib/server/registrations'
-import { matchesSearch } from './_matchesSearch'
 
 /* The People lens: one row per attendee, narrowed by the search box only.
 

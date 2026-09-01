@@ -18,6 +18,11 @@ export type EventPerson = {
     contactName: string
     contactEmail: string
     status: (typeof registrationStatusEnum.enumValues)[number]
+    /* When they arrived, recorded from the check-in page. NULL means not arrived. */
+    checkedInAt: Date | null
+    checkedInBy: string | null
+    /* When they were handed their shirt. NULL means not yet — its own fact, not a detail of arriving. */
+    shirtGivenAt: Date | null
 }
 
 /* One row per PERSON rather than per booking — the same event, seen through a different lens.
@@ -48,6 +53,9 @@ export async function getEventPeople(eventId: string): Promise<EventPerson[]> {
             contactName: registrations.contactName,
             contactEmail: registrations.contactEmail,
             status: registrations.status,
+            checkedInAt: partyMembers.checkedInAt,
+            checkedInBy: partyMembers.checkedInBy,
+            shirtGivenAt: partyMembers.shirtGivenAt,
         })
         .from(partyMembers)
         .innerJoin(registrations, eq(partyMembers.registrationId, registrations.id))

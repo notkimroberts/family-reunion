@@ -260,6 +260,31 @@ export const partyMembers = pgTable(
            is that person, so their name has one editable field and one writer rather than two copies
            quietly disagreeing. See updateRegistrationContact. */
         isContact: boolean('is_contact').notNull().default(false),
+        /* When this attendee arrived at the reunion, recorded from the door by an organiser.
+
+           A TIMESTAMP, not a boolean: "who was here by 11am" and "who arrived after the food ran
+           out" are answerable from an instant and unrecoverable from a flag. NULL means not arrived,
+           and the check-in tick toggles between the two so a mis-tapped name is as cheap to correct
+           as it was to make.
+
+           timestamptz, unlike registrations.paid_at, which is still naive and has the latent bug this
+           avoids: Railway runs UTC and the reunion is Pacific, so a naive column stores a wall clock
+           nobody can place afterwards. Display goes through formatReunionDateTime. */
+        checkedInAt: timestamp('checked_in_at', { withTimezone: true }),
+        /* Which admin recorded the arrival. No FK to `user`: the attendee row must outlive the
+           account, and this answers "who ticked my aunt in when she never came" without one. */
+        checkedInBy: text('checked_in_by'),
+        /* When this attendee was handed their shirt, also from the door.
+
+           A SEPARATE fact from arriving, not a detail of it. The two come apart in both directions on
+           the day: shirts run out or a box is late, so somebody arrives with no shirt to give them; and
+           a size that was never recorded is a person who is here and has to be caught later. Folding it
+           into checkedInAt would make "who still needs a shirt" unanswerable, which is the whole reason
+           to record it.
+
+           No `_by` column, unlike the arrival. Attendance is checked against catering and gets argued
+           about; nobody is ever going to ask which greeter handed over a t-shirt. */
+        shirtGivenAt: timestamp('shirt_given_at', { withTimezone: true }),
         createdAt: timestamp('created_at').notNull().defaultNow(),
     },
     (t) => [

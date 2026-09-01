@@ -1,5 +1,5 @@
 <script lang="ts">
-import { Gift, Plus, Search, Settings, Users } from '@lucide/svelte'
+import { ClipboardCheck, Gift, Plus, Search, Settings, Users } from '@lucide/svelte'
 import { SvelteMap } from 'svelte/reactivity'
 import { goto } from '$app/navigation'
 import { page } from '$app/state'
@@ -11,7 +11,13 @@ import * as Table from '$lib/components/ui/table'
 import { Tooltip, TooltipContent, TooltipTrigger } from '$lib/components/ui/tooltip'
 import { HOST_HOTEL } from '$lib/general/constants'
 import type { EventPerson } from '$lib/server/registrations'
-import { cn, formatPrice, formatViewerDateTime, type RegistrationStatus } from '$lib/utils'
+import {
+    cn,
+    formatPrice,
+    formatReunionDateTime,
+    formatViewerDateTime,
+    type RegistrationStatus,
+} from '$lib/utils'
 import { formatBirthDate } from '$lib/utils/age'
 import HeadcountPanel from './HeadcountPanel.svelte'
 import MoneyPanel from './MoneyPanel.svelte'
@@ -140,6 +146,10 @@ let money = $derived(getEventMoney(totals, donationTotals))
 let summary = $derived(getPeopleSummary(data.people))
 /* The room block, off the bookings rather than the people: a household books rooms together. */
 let rooms = $derived(getRoomSummary(data.registrations))
+/* How many of those people are actually here, off the same rows the People lens lists. Counted here
+   rather than in getRegistrationTotals: that derives from bookings, and its figures are pinned by the
+   money identity — an arrival belongs to neither side of it. */
+let arrivedCount = $derived(data.people.filter((person) => person.checkedInAt !== null).length)
 let lens = $derived(lensFromUrl(page.url))
 let showPeople = $derived(lens === 'people')
 let showDonations = $derived(lens === 'donations')
@@ -236,7 +246,16 @@ $effect(() => {
 
         <Separator />
 
-        <HeadcountPanel {totals} />
+        <!-- The way to the door. A full-width button rather than the icon Settings uses: on the day this
+             is the most-used link in the admin area, and it is found on a phone in a hall. -->
+        <Button href="/admin/event/{data.event.id}/checkin" variant="outline" class="w-full">
+            <ClipboardCheck class="size-4" />
+            Check in arrivals
+        </Button>
+
+        <Separator />
+
+        <HeadcountPanel {totals} {arrivedCount} />
 
         <Separator />
 
@@ -496,6 +515,15 @@ $effect(() => {
                                         {/each}
                                     </div>
 
+                                    {#if person.checkedInAt}
+                                        <p class="text-muted-foreground text-xs">
+                                            Arrived {formatReunionDateTime(
+                                                person.checkedInAt,
+                                                'time',
+                                            )}
+                                        </p>
+                                    {/if}
+
                                     <a
                                         href="/admin/event/{data.event
                                             .id}/registrations/{person.registrationId}"
@@ -518,6 +546,7 @@ $effect(() => {
                                     {#each PERSON_FIELDS as field (field.field)}
                                         <Table.Head>{field.label}</Table.Head>
                                     {/each}
+                                    <Table.Head>Arrived</Table.Head>
                                     <Table.Head>Registered by</Table.Head>
                                 </Table.Row>
                             </Table.Header>
@@ -542,6 +571,14 @@ $effect(() => {
                                                     value={field.value(person)} />
                                             </Table.Cell>
                                         {/each}
+                                        <!-- Read-only here. The tick belongs at the door, on the
+                                             check-in page; this column is so an organiser reconciling
+                                             the day can see it beside the shirt and meal answers. -->
+                                        <Table.Cell class="text-muted-foreground text-sm">
+                                            {person.checkedInAt
+                                                ? formatReunionDateTime(person.checkedInAt, 'time')
+                                                : '—'}
+                                        </Table.Cell>
                                         <Table.Cell>
                                             <a
                                                 href="/admin/event/{data.event

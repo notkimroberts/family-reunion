@@ -1,6 +1,6 @@
+import { matchesSearch } from '$lib/general/search'
 import type { RegistrationSummary } from '$lib/server/registrations'
 import type { RegistrationStatus } from '$lib/utils'
-import { matchesSearch } from './_matchesSearch'
 
 /* The Bookings lens: one row per party, narrowed by the status chips and the search box.
 

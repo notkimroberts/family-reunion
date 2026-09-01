@@ -19,7 +19,7 @@ const SUBHEAD_CLASS = 'text-muted-foreground text-xs font-semibold tracking-wide
 
 const partyLabel = (count: number) => `${count} ${count === 1 ? 'party' : 'parties'}`
 
-let { totals }: { totals: RegistrationTotals } = $props()
+let { totals, arrivedCount }: { totals: RegistrationTotals; arrivedCount: number } = $props()
 </script>
 
 <div class="flex flex-col gap-3">
@@ -32,6 +32,22 @@ let { totals }: { totals: RegistrationTotals } = $props()
         </div>
         <span class="text-2xl font-bold tabular-nums">{totals.attendingCount}</span>
     </div>
+
+    <!-- Arrivals, from the check-in page. Hidden until the first tick: before the day it is "0 of 148
+         arrived" on every visit, which is noise on a panel an organiser reads all year. NOT part of
+         RegistrationTotals — that type derives from bookings and its output is pinned by the money
+         identity in eventMoney.test.ts, and arriving is not money. -->
+    {#if arrivedCount > 0}
+        <div class="flex items-baseline justify-between gap-3">
+            <div class="flex flex-col">
+                <span class="text-sm">Arrived</span>
+                <span class="text-muted-foreground text-xs">checked in at the door</span>
+            </div>
+            <span class="text-lg font-semibold tabular-nums">
+                {arrivedCount}
+            </span>
+        </div>
+    {/if}
 
     <!-- Shown even at zero, unlike the money rows: "Not paid 0" is the answer to a question an
          organiser is actively asking, and its absence would read as a missing section. -->

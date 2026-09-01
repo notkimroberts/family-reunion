@@ -1,0 +1,1 @@
+ALTER TABLE "party_members" ADD COLUMN "shirt_given_at" timestamp with time zone;

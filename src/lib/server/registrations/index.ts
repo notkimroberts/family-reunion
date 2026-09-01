@@ -11,6 +11,8 @@ export {
     removeAdminMember,
     recordRegistrationAudit,
     notifyRegistrationUpdated,
+    setMemberCheckedIn,
+    setShirtGiven,
 } from './management'
 export type { AdminSettableStatus, RegistrationAuditAction } from './management'
 
@@ -22,6 +24,7 @@ export type { RegistrationMember } from './queries'
 export type { RegistrationSummary } from './queries'
 export type { EventPerson } from './queries'
 export type { EventSummary } from './queries'
+export type { UnlistedAttendee } from './queries'
 export {
     getConfirmationEmailData,
     getEventPeople,
@@ -33,4 +36,5 @@ export {
     getRegistrationWithEvent,
     getRegistrationMembers,
     getRegistrationStatus,
+    searchEventAttendees,
 } from './queries'

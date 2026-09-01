@@ -9,3 +9,4 @@ export { getRegistrationsForEvent, type RegistrationSummary } from './getRegistr
 export { getRegistrationWithEvent } from './getRegistrationWithEvent'
 export { getRegistrationMembers } from './getRegistrationMembers'
 export { getRegistrationStatus } from './getRegistrationStatus'
+export { searchEventAttendees, type UnlistedAttendee } from './searchEventAttendees'

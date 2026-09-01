@@ -19,6 +19,9 @@ function person(overrides: Partial<EventPerson>): EventPerson {
         contactName: 'Alice Patterson',
         contactEmail: 'alice@example.com',
         status: 'paid',
+        checkedInAt: null,
+        checkedInBy: null,
+        shirtGivenAt: null,
         ...overrides,
     }
 }

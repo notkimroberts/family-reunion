@@ -26,17 +26,25 @@ import { REUNION_TIME_ZONE } from '$lib/general/constants'
    side effect of importing the $lib/utils barrel, which is imported by the email templates — and two
    email suites that mock $lib/general/constants without that key died on it. Deferring also keeps the
    module tree-shakeable. */
-const SHARED_OPTIONS = {
-    day: 'numeric',
-    year: 'numeric',
+const CLOCK_OPTIONS = {
     hour: 'numeric',
     minute: '2-digit',
     timeZoneName: 'short',
 } as const
 
+const DATE_OPTIONS = {
+    day: 'numeric',
+    year: 'numeric',
+    ...CLOCK_OPTIONS,
+} as const
+
+/* `time` carries no date at all, for a list of things that all happened today: an arrival ticked at the
+   door reads "9:41 AM PDT", and repeating the reunion's own date on every row of that list says nothing.
+   Still zone-named, for the same reason the other two are. */
 const WIDTHS = {
-    long: { weekday: 'long', month: 'long' },
-    short: { weekday: 'short', month: 'short' },
+    long: { weekday: 'long', month: 'long', ...DATE_OPTIONS },
+    short: { weekday: 'short', month: 'short', ...DATE_OPTIONS },
+    time: CLOCK_OPTIONS,
 } as const
 
 type ReunionDateStyle = keyof typeof WIDTHS
@@ -48,7 +56,6 @@ function getFormatter(style: ReunionDateStyle): Intl.DateTimeFormat {
     if (!formatter) {
         formatter = new Intl.DateTimeFormat('en-US', {
             ...WIDTHS[style],
-            ...SHARED_OPTIONS,
             timeZone: REUNION_TIME_ZONE,
         })
         formatters.set(style, formatter)
