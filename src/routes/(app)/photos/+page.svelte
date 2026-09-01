@@ -4,17 +4,16 @@ import { page } from '$app/state'
 import { Button } from '$lib/components/ui/button'
 import { cn } from '$lib/utils'
 import type { PageData } from './$types'
+import { parsePhotoYear } from './parsePhotoYear'
 
 type Props = { data: PageData }
 let { data }: Props = $props()
 
 /* The filter lives in the URL so a year is shareable and survives the back button out of a photo,
    the same reasoning as the admin lens. Absent means all years. */
-let selectedYear = $derived.by(() => {
-    const raw = page.url.searchParams.get('year')
-    const parsed = Number.parseInt(raw ?? '', 10)
-    return Number.isInteger(parsed) ? parsed : undefined
-})
+let selectedYear = $derived(parsePhotoYear(page.url))
+/* Carried into every photo link so the arrows on the next page walk this same filtered set. */
+let suffix = $derived(selectedYear ? `?year=${selectedYear}` : '')
 
 let visible = $derived(
     selectedYear ? data.photos.filter((photo) => photo.takenYear === selectedYear) : data.photos,
@@ -113,7 +112,7 @@ function yearHref(year: number | undefined) {
                     <!-- A real link, not a lightbox: every photo has a shareable URL, and this is
                          what makes it reachable and crawlable. -->
                     <a
-                        href="/photos/{photo.id}"
+                        href="/photos/{photo.id}{suffix}"
                         class="focus-visible:ring-ring bg-muted block overflow-hidden rounded-lg focus-visible:ring-2 focus-visible:outline-none">
                         <img
                             src="/api/photos/{photo.id}/thumb"

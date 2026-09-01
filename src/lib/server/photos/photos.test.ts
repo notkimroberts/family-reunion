@@ -2,6 +2,7 @@ import sharp from 'sharp'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { photos } from '$lib/server/db/schema'
 import { resetTestDb } from '$lib/server/db/testing/resetTestDb'
+import { seedEvent } from '$lib/server/testing/seedEvent'
 
 /* The bucket is genuinely external, like Stripe and Resend, so it is mocked. The database is not:
    these assert on rows, and on which rows each query returns.
@@ -30,6 +31,8 @@ const { deletePhoto } = await import('./deletePhoto')
 const { getApprovedPhoto } = await import('./getApprovedPhoto')
 const { getPhotoYears } = await import('./getPhotoYears')
 const { getApprovedPhotoKeysForYear } = await import('./getApprovedPhotoKeysForYear')
+const { getPhotoNeighbours } = await import('./getPhotoNeighbours')
+const { getEventPhotos } = await import('./getEventPhotos')
 
 let db: Awaited<ReturnType<typeof resetTestDb>>
 
@@ -40,6 +43,11 @@ async function samplePhoto(): Promise<Uint8Array> {
         .jpeg()
         .toBuffer()
     return new Uint8Array(buffer)
+}
+
+/* seedEvent returns the id itself, not a row. */
+async function seedEventId(): Promise<string> {
+    return seedEvent(db, {})
 }
 
 beforeEach(async () => {
@@ -217,5 +225,98 @@ describe('years', () => {
         expect(keys).toHaveLength(1)
         expect(keys[0].id).toBe(wanted)
         expect(keys.map((k) => k.id)).not.toContain(notApproved)
+    })
+})
+
+describe('arrow navigation', () => {
+    /* Built oldest-first so the grid order (newest first) is the reverse of insertion, which is
+       what makes an off-by-one or a reversed comparison visible rather than accidentally correct. */
+    async function threeApproved(year?: number) {
+        const ids: string[] = []
+        for (let i = 0; i < 3; i += 1) {
+            const id = await createPhoto({ bytes: await samplePhoto(), takenYear: year })
+            await setPhotoStatus(id, 'approved')
+            ids.push(id)
+        }
+        return { oldest: ids[0], middle: ids[1], newest: ids[2] }
+    }
+
+    it('walks the same order the grid renders', async () => {
+        const { oldest, middle, newest } = await threeApproved()
+
+        const gallery = await getApprovedPhotos()
+        expect(gallery.map((p) => p.id)).toEqual([newest, middle, oldest])
+
+        const at = await getPhotoNeighbours(middle)
+        expect(at?.previousId).toBe(newest)
+        expect(at?.nextId).toBe(oldest)
+        expect(at?.position).toBe(2)
+        expect(at?.total).toBe(3)
+    })
+
+    it('does not wrap around at either end', async () => {
+        const { oldest, newest } = await threeApproved()
+
+        expect((await getPhotoNeighbours(newest))?.previousId).toBeUndefined()
+        expect((await getPhotoNeighbours(newest))?.position).toBe(1)
+        expect((await getPhotoNeighbours(oldest))?.nextId).toBeUndefined()
+        expect((await getPhotoNeighbours(oldest))?.position).toBe(3)
+    })
+
+    it('stays inside the year when one is given', async () => {
+        const only2025 = await createPhoto({ bytes: await samplePhoto(), takenYear: 2025 })
+        const other = await createPhoto({ bytes: await samplePhoto(), takenYear: 2027 })
+        await setPhotoStatus(only2025, 'approved')
+        await setPhotoStatus(other, 'approved')
+
+        const scoped = await getPhotoNeighbours(only2025, 2025)
+
+        expect(scoped?.total).toBe(1)
+        expect(scoped?.nextId).toBeUndefined()
+        expect(scoped?.previousId).toBeUndefined()
+        /* Unscoped, the 2027 photo IS a neighbour — proving the filter is what excluded it. */
+        expect((await getPhotoNeighbours(only2025))?.total).toBe(2)
+    })
+
+    it('skips photos that are not approved', async () => {
+        const first = await createPhoto({ bytes: await samplePhoto() })
+        await createPhoto({ bytes: await samplePhoto() })
+        const third = await createPhoto({ bytes: await samplePhoto() })
+        await setPhotoStatus(first, 'approved')
+        await setPhotoStatus(third, 'approved')
+
+        expect((await getPhotoNeighbours(third))?.nextId).toBe(first)
+        expect((await getPhotoNeighbours(third))?.total).toBe(2)
+    })
+
+    it('is undefined for a photo nobody may see', async () => {
+        const pending = await createPhoto({ bytes: await samplePhoto() })
+
+        expect(await getPhotoNeighbours(pending)).toBeUndefined()
+    })
+})
+
+describe('the admin published list', () => {
+    it('shows approved photos for the event, which the moderation queue never does', async () => {
+        const eventId = await seedEventId()
+        const published = await createPhoto({ bytes: await samplePhoto(), eventId })
+        await setPhotoStatus(published, 'approved')
+
+        /* The bug this exists to stop: 290 live photos beside "nothing waiting". */
+        expect(await getPhotosForModeration()).toHaveLength(0)
+        expect(await getEventPhotos(eventId)).toHaveLength(1)
+    })
+
+    it('excludes other years and anything not approved', async () => {
+        const eventId = await seedEventId()
+        const mine = await createPhoto({ bytes: await samplePhoto(), eventId })
+        await setPhotoStatus(mine, 'approved')
+        await createPhoto({ bytes: await samplePhoto(), eventId })
+        const unattached = await createPhoto({ bytes: await samplePhoto() })
+        await setPhotoStatus(unattached, 'approved')
+
+        const listed = await getEventPhotos(eventId)
+
+        expect(listed.map((p) => p.id)).toEqual([mine])
     })
 })

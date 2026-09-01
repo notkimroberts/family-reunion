@@ -26,6 +26,7 @@ import PaymentChannel from './PaymentChannel.svelte'
 import PaymentNote from './PaymentNote.svelte'
 import PersonFieldForm from './PersonFieldForm.svelte'
 import PhotoQueue from './PhotoQueue.svelte'
+import PublishedPhotos from './PublishedPhotos.svelte'
 import RegistrationStatusBadge from './RegistrationStatusBadge.svelte'
 import { getDonationTotals } from './donationTotals'
 import { getEventMoney } from './eventMoney'
@@ -399,6 +400,10 @@ $effect(() => {
                 visible until it is approved.
             </p>
             <PhotoQueue photos={data.pendingPhotos} />
+
+            {#if data.eventPhotos.length > 0}
+                <PublishedPhotos photos={data.eventPhotos} />
+            {/if}
         {:else if showDonations}
             <p class="text-muted-foreground text-xs">
                 Every gift recorded for this year, including the checkouts nobody finished. {data

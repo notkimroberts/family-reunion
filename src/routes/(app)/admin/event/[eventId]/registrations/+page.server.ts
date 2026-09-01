@@ -5,7 +5,12 @@ import { requireAdmin } from '$lib/server/auth/guards'
 import { db } from '$lib/server/db'
 import { partyMembers, registrations } from '$lib/server/db/schema'
 import { getDonationsForEvent } from '$lib/server/donations'
-import { deletePhoto, getPhotosForModeration, setPhotoStatus } from '$lib/server/photos'
+import {
+    deletePhoto,
+    getEventPhotos,
+    getPhotosForModeration,
+    setPhotoStatus,
+} from '$lib/server/photos'
 import {
     getEventPeople,
     getRegistrationsForEvent,
@@ -30,11 +35,12 @@ export const load: PageServerLoad = async (event) => {
        bookings and its gift figures need the donations, and toggling the lens has to be instant — a
        round trip to swap a table you are already looking at reads as a page you broke. Three indexed
        queries on a few hundred rows. */
-    const [registrations, people, donations, pendingPhotos] = await Promise.all([
+    const [registrations, people, donations, pendingPhotos, eventPhotos] = await Promise.all([
         getRegistrationsForEvent(event.params.eventId),
         getEventPeople(event.params.eventId),
         getDonationsForEvent(event.params.eventId),
         getPhotosForModeration(),
+        getEventPhotos(event.params.eventId),
     ])
 
     return {
@@ -42,6 +48,7 @@ export const load: PageServerLoad = async (event) => {
         people,
         donations,
         pendingPhotos,
+        eventPhotos,
         /* Which Stripe dashboard a payment link should point at. Test and live PaymentIntent ids look
            alike, so the id cannot say — but the secret key can, and this is the only place that sees it.
            A test id under the live path shows "no such payment", which reads as a lost payment. */

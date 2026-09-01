@@ -1,4 +1,4 @@
-import { desc, eq } from 'drizzle-orm'
+import { and, desc, eq } from 'drizzle-orm'
 import { db } from '$lib/server/db'
 import { photos } from '$lib/server/db/schema'
 
@@ -12,12 +12,17 @@ export type GalleryPhoto = {
     createdAt: Date
 }
 
-/* The public gallery, newest first.
+/* The public gallery, newest first, optionally one year only.
+
+   Ordered on the TUPLE (createdAt, id), not createdAt alone. Two photos uploaded in the same
+   millisecond would otherwise have no defined order between them, and getPhotoNeighbours walks the
+   same sequence to work out prev/next — if the two orderings disagree, arrow navigation silently
+   skips a photo or loops between two. A total order in both places is what stops that.
 
    Filters on 'approved' and returns no bucket keys: the browser addresses a photo by its id through
    the byte proxy, which re-checks the status. Leaking a key would not itself expose anything, the
    bucket being private, but there is no reason for one to leave the server. */
-export async function getApprovedPhotos(): Promise<GalleryPhoto[]> {
+export async function getApprovedPhotos(year?: number): Promise<GalleryPhoto[]> {
     return db
         .select({
             id: photos.id,
@@ -29,6 +34,10 @@ export async function getApprovedPhotos(): Promise<GalleryPhoto[]> {
             createdAt: photos.createdAt,
         })
         .from(photos)
-        .where(eq(photos.status, 'approved'))
-        .orderBy(desc(photos.createdAt))
+        .where(
+            year === undefined
+                ? eq(photos.status, 'approved')
+                : and(eq(photos.status, 'approved'), eq(photos.takenYear, year)),
+        )
+        .orderBy(desc(photos.createdAt), desc(photos.id))
 }
