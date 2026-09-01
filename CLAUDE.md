@@ -405,6 +405,7 @@ The app is fully responsive with a `md:` (768px) breakpoint separating mobile an
 # Workflow
 
 - Be sure to run `bun run check` when you're done making a series of code changes
+- **`eslint.config.ts` deliberately does NOT set `projectService` on the Svelte block.** It built a TypeScript program for all 231 Svelte files at ~183ms each and was 42 of the 45 seconds `bun run lint` used to take; removing it took the command to 6.4s. Nothing used it — of the 61 rules this config enables, zero declare `requiresTypeChecking`, since `ts.configs.recommended` is the syntactic set rather than `recommendedTypeChecked`. Verified, not assumed: identical findings across the repo with and without. Type errors are `bun run check`'s job, and svelte-check still catches them. **Put it back if you enable a type-aware rule** — without it such rules go quiet rather than erroring.
 - Use `bun run format` whenever the format is not correct
 - Prefer running single tests, and not the whole test suite, for performance
 - **Tests**: run `bun run test` after any change to logic covered by tests; add or update co-located `.test.ts` files whenever new utility functions or server logic is added or modified. Tests live next to the source file (e.g. `price.test.ts` beside `price.ts`)
