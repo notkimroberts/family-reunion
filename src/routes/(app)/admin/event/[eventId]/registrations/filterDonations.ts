@@ -1,5 +1,5 @@
+import { matchesSearch } from '$lib/general/search'
 import type { DonationSummary } from '$lib/server/donations'
-import { matchesSearch } from './_matchesSearch'
 
 /* The Gifts lens: one row per donation, narrowed by the search box only.
 
