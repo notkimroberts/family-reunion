@@ -92,9 +92,18 @@ export function renderRegistrationConfirmation(data: RegistrationConfirmationDat
         data.manageUrl,
         /* Rooms are the part of a reunion that runs out, and this app cannot book them — so the
            confirmation, which is the message people keep, is where the prompt belongs. Skipped
-           entirely when no host hotel is listed. */
+           entirely when no host hotel is listed.
+
+           The GROUP BOOKING link where there is one: the hotel's own site quotes rack rates and
+           knows nothing about the reunion's block. */
         ...(HOST_HOTEL
-            ? ['', `Somewhere to stay: ${HOST_HOTEL.name} — ${HOST_HOTEL.websiteUrl}`]
+            ? [
+                  '',
+                  `Somewhere to stay: ${HOST_HOTEL.name} — ${HOST_HOTEL.bookingUrl ?? HOST_HOTEL.websiteUrl}`,
+                  ...(HOST_HOTEL.bookingDeadline
+                      ? [`Our room block rate holds until ${HOST_HOTEL.bookingDeadline}.`]
+                      : []),
+              ]
             : []),
         '',
         `Questions? ${CONTACT_EMAIL} or ${CONTACT_PHONE}`,
@@ -176,9 +185,13 @@ ${donationRow}
             : ''
 
     /* Both colours set on the cell, like every other block here: dark-mode auto-inversion otherwise
-       leaves this one unreadable. */
+       leaves this one unreadable. Links the GROUP BOOKING url where there is one — the hotel's own
+       site quotes rack rates and knows nothing about the reunion's block. */
+    const hotelDeadlineSentence = HOST_HOTEL?.bookingDeadline
+        ? ` Our block rate holds until ${escapeHtml(HOST_HOTEL.bookingDeadline)}.`
+        : ''
     const hotelBlock = HOST_HOTEL
-        ? `<p style="margin:22px 0 0 0;padding-top:18px;border-top:1px solid ${border};font-family:${fontStack};font-size:14px;line-height:1.6;color:${textColor};background-color:transparent;"><strong>Somewhere to stay.</strong> ${escapeHtml(HOST_HOTEL.tagline)} Book directly with <a href="${escapeHtml(HOST_HOTEL.websiteUrl)}" style="color:${textColor};">${escapeHtml(HOST_HOTEL.name)}</a>.</p>`
+        ? `<p style="margin:22px 0 0 0;padding-top:18px;border-top:1px solid ${border};font-family:${fontStack};font-size:14px;line-height:1.6;color:${textColor};background-color:transparent;"><strong>Somewhere to stay.</strong> ${escapeHtml(HOST_HOTEL.tagline)} Book directly with <a href="${escapeHtml(HOST_HOTEL.bookingUrl ?? HOST_HOTEL.websiteUrl)}" style="color:${textColor};">${escapeHtml(HOST_HOTEL.name)}</a>.${hotelDeadlineSentence}</p>`
         : ''
 
     const bodyHtml = [

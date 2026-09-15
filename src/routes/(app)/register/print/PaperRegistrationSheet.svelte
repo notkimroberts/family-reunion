@@ -120,8 +120,13 @@ let {
                 <PaperCheckbox label="Not sure yet" />
             </div>
             <p class={NOTE}>
-                {HOST_HOTEL.name} is half a block from the reunion. Your answer tells us how many rooms
-                to secure, so please tick a box even if you are not certain.
+                {HOST_HOTEL.name} is half a block from the reunion. Your answer tells us how much of the
+                block to hold, so please tick a box even if you are not certain.
+                {#if HOST_HOTEL.bookingUrl}
+                    <!-- Printed as text, not linked: a paper form is typed from, not clicked. -->
+                    Book our room block at {HOST_HOTEL.bookingUrl}{#if HOST_HOTEL.bookingDeadline}
+                        — the rate holds until {HOST_HOTEL.bookingDeadline}{/if}.
+                {/if}
             </p>
         </section>
     {/if}

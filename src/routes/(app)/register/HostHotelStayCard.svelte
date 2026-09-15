@@ -60,8 +60,8 @@ let {
             </div>
             <p class="text-muted-foreground text-sm">
                 {HOST_HOTEL.name} is <strong class="text-foreground">half a block</strong> from the reunion.
-                Your answer tells us how many rooms to secure, so please answer even if you are not certain
-                — "not sure yet" is genuinely useful.
+                Your answer tells us how much of the block to hold, so please answer even if you are not
+                certain — "not sure yet" is genuinely useful.
             </p>
         </CardContent>
     </Card>

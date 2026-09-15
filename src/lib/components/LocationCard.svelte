@@ -56,7 +56,7 @@ let directionsUrl = $derived(
             <p class="text-muted-foreground text-sm">{location.tagline}</p>
         </div>
 
-        {#if location.details.length > 0}
+        {#if location.details.length > 0 || location.bookingDeadline}
             <dl class="flex flex-col gap-2 text-sm">
                 {#each location.details as detail (detail.label)}
                     <div class="flex flex-col gap-0.5 sm:flex-row sm:gap-2">
@@ -64,6 +64,13 @@ let directionsUrl = $derived(
                         <dd class="font-medium">{detail.value}</dd>
                     </div>
                 {/each}
+                <!-- Last, directly under the rates: the price and its expiry are one fact. -->
+                {#if location.bookingDeadline}
+                    <div class="flex flex-col gap-0.5 sm:flex-row sm:gap-2">
+                        <dt class="text-muted-foreground shrink-0 sm:w-28">Rate holds until</dt>
+                        <dd class="font-medium">{location.bookingDeadline}</dd>
+                    </div>
+                {/if}
             </dl>
         {/if}
 
@@ -77,24 +84,35 @@ let directionsUrl = $derived(
         </div>
 
         <!-- mt-auto keeps the buttons aligned across cards of differing content height. -->
-        <div class="mt-auto flex flex-col gap-2 sm:flex-row">
-            <Button
-                href={location.websiteUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                class="sm:flex-1">
-                Visit website
-                <ExternalLink class="size-4" />
-            </Button>
-            <Button
-                href={directionsUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                variant="outline"
-                class="sm:flex-1">
-                Directions
-                <Navigation class="size-4" />
-            </Button>
+        <div class="mt-auto flex flex-col gap-2">
+            <!-- A row of its own, not a third sibling below: three buttons on one row overflow at
+                 375px. Booking is the only primary action, so the website button is demoted. -->
+            {#if location.bookingUrl}
+                <Button href={location.bookingUrl} target="_blank" rel="noopener noreferrer">
+                    Book the room block
+                    <ExternalLink class="size-4" />
+                </Button>
+            {/if}
+            <div class="flex flex-col gap-2 sm:flex-row">
+                <Button
+                    href={location.websiteUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    variant={location.bookingUrl ? 'outline' : 'default'}
+                    class="sm:flex-1">
+                    Visit website
+                    <ExternalLink class="size-4" />
+                </Button>
+                <Button
+                    href={directionsUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    variant="outline"
+                    class="sm:flex-1">
+                    Directions
+                    <Navigation class="size-4" />
+                </Button>
+            </div>
         </div>
     </CardContent>
 </Card>

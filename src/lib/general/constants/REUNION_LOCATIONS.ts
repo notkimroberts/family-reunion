@@ -26,9 +26,14 @@ export const REUNION_LOCATIONS: ReunionLocation[] = [
         name: 'Kissel Uptown Oakland',
         tagline: 'Our recommended stay, half a block from the venue in Uptown Oakland.',
         websiteUrl: 'https://www.kisseloakland.com',
+        bookingUrl: 'https://www.hyatt.com/events/en-US/group-booking/OAKUB/G-PAT1',
+        bookingDeadline: 'June 20, 2027',
         instagramUrl: 'https://www.instagram.com/kisseluptownoakland/',
         imageUrl: '/kissel-uptown-oakland.jpg',
         mapQuery: 'Kissel Uptown Oakland, Oakland, CA',
-        details: [],
+        details: [
+            { label: 'King', value: '$189 / night' },
+            { label: 'Double queen', value: '$239 / night' },
+        ],
     },
 ]
