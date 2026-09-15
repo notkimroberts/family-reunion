@@ -10,6 +10,10 @@ import { HOST_HOTEL } from '$lib/general/constants'
    the party table.
 
    Renders nothing when no host hotel is listed; see HOST_HOTEL. */
+
+/* The group booking link where a block is held, the hotel's own site otherwise: the latter quotes
+   rack rates and knows nothing about the reunion's block. */
+const bookingHref = HOST_HOTEL ? (HOST_HOTEL.bookingUrl ?? HOST_HOTEL.websiteUrl) : ''
 </script>
 
 {#if HOST_HOTEL}
@@ -40,12 +44,18 @@ import { HOST_HOTEL } from '$lib/general/constants'
                     </p>
                     <p class="text-lg font-semibold">Book your room at {HOST_HOTEL.name}</p>
                     <p class="text-muted-foreground text-sm">
-                        {HOST_HOTEL.tagline} Booked directly with the hotel, not through this site.
+                        {HOST_HOTEL.tagline} Booked with the hotel, not through this site — the link opens
+                        our family's room block.
+                        {#if HOST_HOTEL.bookingDeadline}
+                            <strong class="text-foreground">
+                                Our block rate holds until {HOST_HOTEL.bookingDeadline}.
+                            </strong>
+                        {/if}
                     </p>
                 </div>
 
                 <Button
-                    href={HOST_HOTEL.websiteUrl}
+                    href={bookingHref}
                     target="_blank"
                     rel="noopener noreferrer"
                     size="lg"

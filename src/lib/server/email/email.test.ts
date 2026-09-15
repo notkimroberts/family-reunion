@@ -17,6 +17,8 @@ vi.mock('$lib/general/constants', () => ({
         name: 'Kissel Uptown Oakland',
         tagline: 'A short walk from the venue.',
         websiteUrl: 'https://example.com/hotel',
+        bookingUrl: 'https://example.com/book',
+        bookingDeadline: 'June 1, 2030',
         mapQuery: 'Kissel Uptown Oakland',
         details: [],
     },
@@ -77,13 +79,23 @@ describe('renderRegistrationConfirmation', () => {
 
     /* Rooms sell out and this app cannot book them, so the confirmation — the message people keep —
        has to point at the host hotel. In BOTH bodies: a text-only client that lost the prompt would
-       leave that reader thinking accommodation was handled. */
-    it('points the registrant at the host hotel', () => {
+       leave that reader thinking accommodation was handled.
+
+       The GROUP BOOKING link, not the hotel's own site: the latter quotes rack rates and knows
+       nothing about the reunion's block, so a registrant who follows it books outside it. */
+    it('points the registrant at the host hotel room block', () => {
         const { text, html } = renderRegistrationConfirmation(data)
         expect(text).toContain('Kissel Uptown Oakland')
-        expect(text).toContain('https://example.com/hotel')
+        expect(text).toContain('https://example.com/book')
         expect(html).toContain('Kissel Uptown Oakland')
-        expect(html).toContain('href="https://example.com/hotel"')
+        expect(html).toContain('href="https://example.com/book"')
+    })
+
+    /* The cutoff is the reason to act on the prompt rather than file it. */
+    it('states the date the block rate expires in both bodies', () => {
+        const { text, html } = renderRegistrationConfirmation(data)
+        expect(text).toContain('June 1, 2030')
+        expect(html).toContain('June 1, 2030')
     })
 
     it('lists every party member with tier and price in both bodies', () => {
