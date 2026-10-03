@@ -1,6 +1,7 @@
 import { S3Client } from '@aws-sdk/client-s3'
 import { env } from '$env/dynamic/private'
 import { dbg } from '$lib/server/debug'
+import { bucketHttpOptionsValue } from './_bucketHttpOptionsValue'
 
 let _client: S3Client | undefined
 let _bucket: string | undefined
@@ -39,6 +40,8 @@ export function getBucketClient(): { client: S3Client; bucket: string } {
             },
             /* Railway's buckets, like R2 and MinIO, address by path rather than by virtual host. */
             forcePathStyle: true,
+            /* Timeouts, so a stalled connection is destroyed rather than held — see the options. */
+            requestHandler: bucketHttpOptionsValue,
         })
         _bucket = BUCKET_NAME
     }

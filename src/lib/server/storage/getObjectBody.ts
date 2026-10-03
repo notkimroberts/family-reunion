@@ -17,11 +17,20 @@ export type StoredObject = {
 
    The etag comes back so the proxy can answer 304. Renditions are immutable — a key is derived
    from a fresh uuid and never overwritten — so the etag is a permanent identifier for those bytes;
-   only the PERMISSION to serve them can change. */
-export async function getObjectBody(key: string): Promise<StoredObject | undefined> {
+   only the PERMISSION to serve them can change.
+
+   signal is the incoming request's: when the browser gives up, the bucket request is cancelled too,
+   whether it is in flight or still waiting for a socket. Without it an abandoned page of thumbnails
+   stays queued for sockets nobody will read from. */
+export async function getObjectBody(
+    key: string,
+    signal?: AbortSignal,
+): Promise<StoredObject | undefined> {
     const { client, bucket } = getBucketClient()
     try {
-        const result = await client.send(new GetObjectCommand({ Bucket: bucket, Key: key }))
+        const result = await client.send(new GetObjectCommand({ Bucket: bucket, Key: key }), {
+            abortSignal: signal,
+        })
         if (!result.Body) {
             return undefined
         }
