@@ -1,9 +1,13 @@
+import type { ParkingOption } from './ParkingOption'
+
 /* A place attendees need to find: the reunion venue or the host hotel. */
 export type ReunionLocation = {
     kind: 'venue' | 'hotel'
     /* Short label shown above the name, e.g. 'Host Hotel'. */
     badge: string
     name: string
+    /* Street address as printed on the card. Undefined until confirmed. */
+    address?: string
     tagline: string
     websiteUrl: string
     /* Where a room in the reunion's block is actually booked, when a block is held. Distinct from
@@ -17,6 +21,9 @@ export type ReunionLocation = {
     imageUrl?: string
     /* Business name Google Maps can geocode — drives both the embed and the directions link. */
     mapQuery: string
-    /* Confirmed practical facts only (phone, check-in, parking, group rate). */
+    /* Confirmed practical facts only (phone, check-in, group rate). */
     details: { label: string; value: string }[]
+    /* Where to park, the location's own option first — the confirmation email quotes only that one.
+       Undefined or empty hides the parking section everywhere. */
+    parking?: ParkingOption[]
 }
