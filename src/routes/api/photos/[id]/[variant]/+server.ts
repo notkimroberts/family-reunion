@@ -44,7 +44,7 @@ export const GET: RequestHandler = async ({ params, url, locals, request }) => {
         error(404, 'Not found')
     }
 
-    const object = await getObjectBody(key)
+    const object = await getObjectBody(key, request.signal)
     if (!object) {
         error(404, 'Not found')
     }

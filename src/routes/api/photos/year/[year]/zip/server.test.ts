@@ -1,4 +1,4 @@
-import { Readable } from 'node:stream'
+import { PassThrough, Readable } from 'node:stream'
 import sharp from 'sharp'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { resetTestDb } from '$lib/server/db/testing/resetTestDb'
@@ -9,13 +9,16 @@ import { resetTestDb } from '$lib/server/db/testing/resetTestDb'
    finished being written, so "does anything actually come out of the stream, and is it a zip"
    is not obvious from reading it. */
 
-const getObjectStream = vi.fn(async () => Readable.from([Buffer.from('fake-jpeg-bytes')]))
+const getObjectStream = vi.fn(
+    async (_key: string, _signal?: AbortSignal): Promise<Readable | undefined> =>
+        Readable.from([Buffer.from('fake-jpeg-bytes')]),
+)
 
 vi.mock('$lib/server/storage', () => ({
     putObject: vi.fn(async () => {}),
     deleteObjects: vi.fn(async () => {}),
     getObjectBody: vi.fn(),
-    getObjectStream: () => getObjectStream(),
+    getObjectStream: (key: string, signal?: AbortSignal) => getObjectStream(key, signal),
 }))
 
 const { GET } = await import('./+server')
@@ -31,9 +34,14 @@ async function samplePhoto(): Promise<Uint8Array> {
     return new Uint8Array(buffer)
 }
 
-async function zip(year: string) {
-    return GET({ params: { year } } as unknown as Parameters<typeof GET>[0])
+async function zip(year: string, signal?: AbortSignal) {
+    return GET({
+        params: { year },
+        request: new Request('http://localhost', { signal }),
+    } as unknown as Parameters<typeof GET>[0])
 }
+
+const tick = () => new Promise((resolve) => setTimeout(resolve, 50))
 
 async function statusOf(result: ReturnType<typeof GET>): Promise<number> {
     try {
@@ -95,6 +103,53 @@ describe('GET /api/photos/year/[year]/zip', () => {
     it('404s a year that is not a year', async () => {
         expect(await statusOf(zip('banana'))).toBe(404)
         expect(await statusOf(zip('12'))).toBe(404)
+    })
+
+    /* One bucket stream open at a time. Appending every photo up front opened a GetObject per photo
+       at once, so a single download held the whole socket pool and the gallery could not load. */
+    it('fetches the next photo only after the previous one is in the archive', async () => {
+        await approvedPhoto(2025)
+        await approvedPhoto(2025)
+        const first = new PassThrough()
+        getObjectStream.mockImplementationOnce(async () => first)
+
+        const response = await zip('2025')
+        const drained = response.arrayBuffer()
+        await tick()
+
+        expect(getObjectStream).toHaveBeenCalledTimes(1)
+
+        first.end(Buffer.from('fake-jpeg-bytes'))
+        await drained
+
+        expect(getObjectStream).toHaveBeenCalledTimes(2)
+    })
+
+    /* A cancelled download must let go of the stream it was copying, not leave it unread on a
+       pooled socket, and must not fetch anything more. */
+    it('stops fetching and destroys the open stream when the download is cancelled', async () => {
+        await approvedPhoto(2025)
+        await approvedPhoto(2025)
+        const first = new PassThrough()
+        getObjectStream.mockImplementationOnce(async () => first)
+        const controller = new AbortController()
+
+        await zip('2025', controller.signal)
+        await tick()
+        controller.abort()
+        await tick()
+
+        expect(first.destroyed).toBe(true)
+        expect(getObjectStream).toHaveBeenCalledTimes(1)
+    })
+
+    it('hands the request signal to every bucket fetch', async () => {
+        await approvedPhoto(2025)
+        const controller = new AbortController()
+
+        await (await zip('2025', controller.signal)).arrayBuffer()
+
+        expect(getObjectStream).toHaveBeenCalledWith(expect.any(String), expect.any(AbortSignal))
     })
 
     it('excludes photos that are not approved', async () => {
