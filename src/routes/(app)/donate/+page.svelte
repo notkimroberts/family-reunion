@@ -1,5 +1,6 @@
 <script lang="ts">
 import { HeartHandshake, LoaderCircle } from '@lucide/svelte'
+import * as Sentry from '@sentry/sveltekit'
 import { superForm } from 'sveltekit-superforms'
 import { zod4Client as zodClient } from 'sveltekit-superforms/adapters'
 import { page } from '$app/state'
@@ -9,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/car
 import { Input } from '$lib/components/ui/input'
 import { Textarea } from '$lib/components/ui/textarea'
 import { APP_NAME, DONATION_LEDE } from '$lib/general/constants'
-import { formatPrice } from '$lib/utils'
+import { checkoutErrorMessage, formatPrice } from '$lib/utils'
 import { donationSchema } from './schema'
 
 let { data } = $props()
@@ -17,9 +18,18 @@ let { data } = $props()
 /* dataType 'form', not 'json': every field here is a real input, so the ordinary FormData post is
    enough. The registration form needs 'json' because it carries nested objects and an array that
    no DOM field mirrors — this one has neither. */
-const { form, errors, submitting, enhance } = superForm(data.form, {
+const { form, errors, message, submitting, enhance } = superForm(data.form, {
     validators: zodClient(donationSchema),
     dataType: 'form',
+    /* A Stripe or network failure lands here, and superforms' default shows nothing — the button
+       just stops spinning. Say so, and that nothing was charged. */
+    onError: ({ result }) => {
+        $message = checkoutErrorMessage(result.status)
+        Sentry.captureException(
+            new Error(`donation submit failed: ${result.error?.message ?? 'unknown'}`),
+            { tags: { source: 'superforms-onError' }, extra: { status: result.status } },
+        )
+    },
 })
 
 let cancelled = $derived(page.url.searchParams.get('cancelled') === 'true')
@@ -119,6 +129,9 @@ let heading = $derived(data.event ? `Support ${data.event.title}` : 'Support the
                         Continue to checkout
                     {/if}
                 </Button>
+                {#if $message}
+                    <p role="alert" class="text-destructive text-center text-sm">{$message}</p>
+                {/if}
                 <p class="text-muted-foreground text-center text-xs">
                     You'll be redirected to a secure checkout. A gift to a family reunion is not
                     tax-deductible.

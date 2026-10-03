@@ -36,10 +36,14 @@ let calendarDate = $derived.by((): DateValue | undefined => {
 
 let displayValue = $derived(
     calendarDate
-        ? calendarDate.toDate('UTC').toLocaleDateString('en-US', {
+        ? /* timeZone 'UTC' to match toDate('UTC'): without it the instant is shown in the viewer's
+             zone, and midnight UTC is the previous evening anywhere in the Americas — pick March 15,
+             see "March 14". */
+          calendarDate.toDate('UTC').toLocaleDateString('en-US', {
               year: 'numeric',
               month: 'long',
               day: 'numeric',
+              timeZone: 'UTC',
           })
         : undefined,
 )

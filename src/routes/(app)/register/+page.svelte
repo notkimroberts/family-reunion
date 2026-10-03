@@ -1,14 +1,24 @@
 <script lang="ts">
 import { CalendarDays, MapPin, Sparkles } from '@lucide/svelte'
 import * as Sentry from '@sentry/sveltekit'
+import { onMount } from 'svelte'
 import { superForm } from 'sveltekit-superforms'
 import { zod4Client as zodClient } from 'sveltekit-superforms/adapters'
+import { replaceState } from '$app/navigation'
+import { page } from '$app/state'
 import { RegistrationDeadline } from '$lib/components'
 import { APP_NAME, CONTACT_EMAIL, CONTACT_PHONE } from '$lib/general/constants'
 import { quotePartyTotal } from '$lib/general/pricing'
 import { isRegistrationClosed } from '$lib/general/registration'
 import { defaultAdultTierId } from '$lib/general/tiers'
-import { formatDateRange, formatPrice, getTierPriceCents, isValidPhone, toE164 } from '$lib/utils'
+import {
+    checkoutErrorMessage,
+    formatDateRange,
+    formatPrice,
+    getTierPriceCents,
+    isValidPhone,
+    toE164,
+} from '$lib/utils'
 import DonationCard from './DonationCard.svelte'
 import { EMPTY_PERSON_DETAILS } from './EMPTY_PERSON_DETAILS'
 import FormErrorSummary from './FormErrorSummary.svelte'
@@ -16,9 +26,15 @@ import HostHotelStayCard from './HostHotelStayCard.svelte'
 import OrderSummaryCard from './OrderSummaryCard.svelte'
 import PartyMembersBuilder from './PartyMembersBuilder.svelte'
 import YourInformationCard from './YourInformationCard.svelte'
+import { contactSaveProblems } from './contactSaveProblems'
 import { isContactComplete } from './isContactComplete'
-import { registrationSchema } from './schema'
+import { saveRegistrationDraft } from './saveRegistrationDraft'
+import { registrationSchema, type RegistrationFormData } from './schema'
+import { takeRegistrationDraft } from './takeRegistrationDraft'
 import type { FormMember, PersonDetails } from './types'
+
+/* The lock date passing while the form was open — see assertRegistrationEditable. */
+const FORBIDDEN = 403
 
 let { data } = $props()
 
@@ -39,12 +55,25 @@ const { form, errors, message, submitting, enhance } = superForm(data.form, {
     dataType: 'json',
     /* Superforms swallows a failed submit into $errors and, for a transport/server error, into
        onError. Neither was surfaced, so every failure looked like an inert button. FormErrorSummary
-       shows the validation half; this reports the rest. */
+       shows the validation half; this shows the rest beside the Pay button, and reports it — except
+       a 403, which is the lock date passing while the form was open: expected, not a fault. */
     onError: ({ result }) => {
-        Sentry.captureException(
-            new Error(`public registration submit failed: ${result.error?.message ?? 'unknown'}`),
-            { tags: { source: 'superforms-onError' }, extra: { status: result.status } },
-        )
+        $message = checkoutErrorMessage(result.status)
+        if (result.status !== FORBIDDEN) {
+            Sentry.captureException(
+                new Error(
+                    `public registration submit failed: ${result.error?.message ?? 'unknown'}`,
+                ),
+                { tags: { source: 'superforms-onError' }, extra: { status: result.status } },
+            )
+        }
+    },
+    /* The redirect is to Stripe, so the server accepted this exact $form. Kept for the trip back if
+       the registrant cancels there. onResult rather than onSubmit, which runs before validation. */
+    onResult: ({ result }) => {
+        if (result.type === 'redirect') {
+            saveRegistrationDraft($form)
+        }
     },
     onSubmit: () => {
         $form.self = { ...self }
@@ -54,6 +83,13 @@ const { form, errors, message, submitting, enhance } = superForm(data.form, {
 })
 
 const tiers = data.tiers
+
+/* Read once: replaceState below strips it from the address bar, and the notice should stay up. */
+const cancelled = page.url.searchParams.get('cancelled') === 'true'
+let restoredDraft = $state(false)
+/* DonationAmountPicker seeds its custom-amount field from its value once, on mount — after a
+   restore the gift would be in the total but not in the picker. Re-keying remounts it. */
+let draftGeneration = $state(0)
 
 let self = $state<PersonDetails>({
     ...EMPTY_PERSON_DETAILS,
@@ -110,6 +146,47 @@ let dateRange = $derived(
           )
         : '',
 )
+
+/* Puts back what the registrant entered before they backed out of Stripe. contactSaved is
+   recomputed with the same check the Save button runs, rather than assumed. */
+function restoreDraft(draft: RegistrationFormData) {
+    self = { ...draft.self }
+    members = draft.members.map((member) => ({ ...member }))
+    donationCents = draft.donationCents
+    $form.contactFirstName = draft.contactFirstName
+    $form.contactLastName = draft.contactLastName
+    $form.contactEmail = draft.contactEmail
+    $form.contactPhone = draft.contactPhone
+    $form.stayingAtHostHotel = draft.stayingAtHostHotel
+    contactSaved =
+        contactSaveProblems({
+            firstName: draft.contactFirstName,
+            lastName: draft.contactLastName,
+            email: draft.contactEmail,
+            phone: draft.contactPhone,
+            details: self,
+        }).length === 0
+    restoredDraft = true
+    draftGeneration += 1
+}
+
+/* In onMount, not a $state initialiser: sessionStorage exists only in the browser, and restoring
+   during render would hydrate a filled form over a blank server one. The draft is taken on EVERY
+   visit, so it never outlives the next one; it is applied only after a cancel. (/register/manage
+   clears it on a successful checkout.) replaceState is deferred a tick because it throws before the
+   router has started. */
+onMount(() => {
+    const draft = takeRegistrationDraft({
+        eventId: data.event?.id ?? '',
+        tierIds: tiers.map((tier) => tier.id),
+    })
+    if (cancelled && draft) {
+        restoreDraft(draft)
+    }
+    if (cancelled) {
+        setTimeout(() => replaceState(page.url.pathname, page.state), 0)
+    }
+})
 
 /* Same predicate the server applies in createPendingRegistration. Without it the form renders,
    accepts a full party, and only fails with a 403 at submit — after the registrant has done all the
@@ -179,15 +256,23 @@ let isLocked = $derived(isRegistrationClosed(data.event?.registrationLockDate ??
                 <p class="text-muted-foreground mt-3 text-sm">
                     Need to register late? Contact
                     <a class="underline" href="mailto:{CONTACT_EMAIL}">{CONTACT_EMAIL}</a>
-                    or call
+                    or text
                     <a class="underline" href="sms:{toE164(CONTACT_PHONE)}">{CONTACT_PHONE}</a>.
                 </p>
             </div>
         </section>
     {:else}
+        {#if cancelled}
+            <div role="status" class="bg-card col-span-12 rounded-md border px-4 py-3 text-sm">
+                Checkout cancelled — nothing was charged.
+                {#if restoredDraft}
+                    We kept what you entered.
+                {/if}
+            </div>
+        {/if}
         <form method="POST" action="?/register" use:enhance class="col-span-12">
             <div class="mb-4">
-                <FormErrorSummary errors={$errors} message={$message} />
+                <FormErrorSummary errors={$errors} />
             </div>
 
             <div class="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_minmax(0,22rem)]">
@@ -217,7 +302,9 @@ let isLocked = $derived(isRegistrationClosed(data.event?.registrationLockDate ??
                         bind:stayingAtHostHotel={$form.stayingAtHostHotel}
                         error={$errors.stayingAtHostHotel?.[0]} />
 
-                    <DonationCard bind:donationCents error={$errors.donationCents?.[0]} />
+                    {#key draftGeneration}
+                        <DonationCard bind:donationCents error={$errors.donationCents?.[0]} />
+                    {/key}
                 </div>
 
                 <!-- Right: order summary (sticky on desktop) -->
@@ -232,7 +319,8 @@ let isLocked = $derived(isRegistrationClosed(data.event?.registrationLockDate ??
                         submitLabel={`Pay $${formatPrice(quote.totalCents)} & Register`}
                         submitting={$submitting}
                         placeholderText="Fill in your details above and press Save to continue."
-                        submitFootnote="You'll be redirected to a secure checkout." />
+                        submitFootnote="You'll be redirected to a secure checkout."
+                        submitError={$message} />
                     <p class="text-muted-foreground mt-3 text-center text-xs">
                         Already registered? <a class="underline" href="/register/recover"
                             >Resend management link</a>

@@ -18,7 +18,7 @@ import {
     FACEBOOK_GROUP_URL,
 } from '$lib/general/constants'
 import { isRegistrationClosed } from '$lib/general/registration'
-import { formatPrice, toE164 } from '$lib/utils'
+import { formatDateRange, formatPrice, toE164 } from '$lib/utils'
 
 let { data } = $props()
 
@@ -101,21 +101,15 @@ let countdown = $derived.by(() => {
     return { years, months: remainingMonths, days, hours: 0, withinOneDay: false }
 })
 
-let dateRange = $derived.by(() => {
-    if (!data.event?.startDate) {
-        return ''
-    }
-    const start = new Date(data.event.startDate).toLocaleDateString('en-US', {
-        month: 'long',
-        day: 'numeric',
-    })
-    const end = new Date(data.event.endDate ?? data.event.startDate).toLocaleDateString('en-US', {
-        month: 'long',
-        day: 'numeric',
-        year: 'numeric',
-    })
-    return `${start} – ${end}`
-})
+/* formatDateRange pins the reunion's zone, so the server and the browser print the same day. */
+let dateRange = $derived(
+    data.event?.startDate
+        ? formatDateRange(
+              new Date(data.event.startDate),
+              new Date(data.event.endDate ?? data.event.startDate),
+          )
+        : '',
+)
 
 let totalMonths = $derived(countdown.years * 12 + countdown.months)
 
@@ -208,12 +202,12 @@ const FAMILY_STATS = [
                                     {#if contactEmail}
                                         <a class="underline" href="mailto:{contactEmail}"
                                             >{contactEmail}</a>
-                                        or call
+                                        or text
                                         <a class="underline" href="sms:{toE164(contactPhone)}"
                                             >{contactPhone}</a
                                         >.
                                     {:else}
-                                        the reunion organisers.
+                                        the reunion organizers.
                                     {/if}
                                 </p>
                                 <!-- Gifts outlive the lock date — see isPublicPath — and this
@@ -274,7 +268,8 @@ const FAMILY_STATS = [
      and the one block of long body copy — Our Family Story — keeps its own max-w-3xl INSIDE a
      full-width card, which is the right place for it. Cards holding a two-column grid of short items
      do not need it. -->
-<section class="col-span-12 mt-8 md:mt-12">
+<!-- id="venue" is linked from the confirmation email's parking line. -->
+<section id="venue" class="col-span-12 mt-8 scroll-mt-20 md:mt-12">
     <div class="mx-auto mb-8 max-w-xl text-center">
         <h2>Venue &amp; Where to Stay</h2>
         <p class="text-muted-foreground mt-2">
