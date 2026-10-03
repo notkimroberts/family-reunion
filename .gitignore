@@ -15,3 +15,6 @@ static/uploads
 # src/routes/(app)/photos and src/routes/api/photos, and silently drops them from every commit.
 /photos-orig/
 /photos/
+
+# Rendered email previews from `bun run email:preview` — regenerated on demand, never committed.
+/email-previews/

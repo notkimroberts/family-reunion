@@ -25,6 +25,7 @@ export async function getConfirmationEmailData(params: {
             contactName: registrations.contactName,
             contactEmail: registrations.contactEmail,
             status: registrations.status,
+            stripePaymentIntentId: registrations.stripePaymentIntentId,
         })
         .from(registrations)
         .where(eq(registrations.id, params.registrationId))
@@ -95,15 +96,18 @@ export async function getConfirmationEmailData(params: {
             venueName: reunionEvent.metadata.venue?.name,
             venueAddress: reunionEvent.metadata.venue?.address,
             status: registration.status satisfies ConfirmationStatus,
+            /* Written only by the webhook's pending → paid transition. Paper entries and an
+               organiser's status change never set it, so it is the one reliable sign of a card. */
+            paidByCard: registration.stripePaymentIntentId !== null,
             partyMembers: members.map((member) => {
                 const extras: string[] = []
                 if (member.birthYear) {
                     extras.push(
-                        `age ${getAge(member.birthYear, member.birthMonth, member.birthDay)}`,
+                        `Age ${getAge(member.birthYear, member.birthMonth, member.birthDay)}`,
                     )
                 }
                 if (member.shirtSize) {
-                    extras.push(`shirt ${member.shirtSize}`)
+                    extras.push(`Shirt ${member.shirtSize}`)
                 }
                 return {
                     name: member.name,

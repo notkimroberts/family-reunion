@@ -5,7 +5,10 @@ import type { CancellationEmailData, RefundRoute } from './types'
 const BASE: CancellationEmailData = {
     name: 'Alice Patterson',
     eventTitle: 'Patterson Family Reunion 2027',
-    partyNames: ['Alice Patterson', 'Marcus Patterson'],
+    partyMembers: [
+        { name: 'Alice Patterson', tierLabel: 'Adult', priceCents: 17030 },
+        { name: 'Marcus Patterson', tierLabel: 'Child', priceCents: 15988 },
+    ],
     totalCents: 33018,
     refundRoute: 'stripe',
     registerUrl: 'https://example.com/register',
@@ -30,11 +33,33 @@ describe('renderCancellationEmail', () => {
 
     it.each(ALL_ROUTES)('names everyone who was cancelled, for %s', (refundRoute) => {
         const { text, html } = render({ refundRoute })
-        for (const name of BASE.partyNames) {
+        for (const { name } of BASE.partyMembers) {
             expect(text).toContain(name)
             expect(html).toContain(name)
         }
     })
+
+    /* Where money goes back, each place shows what it cost, so the total can be checked line by
+       line against the confirmation the family already has. */
+    it.each(ROUTES_WITH_MONEY)('itemises each refunded place for %s', (refundRoute) => {
+        const { text, html } = render({ refundRoute })
+        for (const body of [text, html]) {
+            expect(body).toContain('$170.30')
+            expect(body).toContain('$159.88')
+        }
+        expect(text).toContain('- Marcus Patterson (Child)  $159.88')
+    })
+
+    /* Nothing is going back, so a price per row would read as money owed or refunded. */
+    it.each(['nothing_paid', 'waived'] as const)(
+        'shows no per-person price for %s',
+        (refundRoute) => {
+            const { text, html } = render({ refundRoute })
+            for (const body of [text, html]) {
+                expect(body).not.toContain('$170.30')
+            }
+        },
+    )
 
     /* The distinction the whole template exists for. A cheque handed to an organiser cannot be
        refunded by Stripe, and telling that family their card has been refunded is a false statement
@@ -46,7 +71,7 @@ describe('renderCancellationEmail', () => {
 
     it('says a by-hand refund is arranged rather than automatic', () => {
         const { text } = render({ refundRoute: 'by_hand' })
-        expect(text).toContain('paid the organisers directly')
+        expect(text).toContain('paid the organizers directly')
         expect(text).toContain('Nothing has been refunded through this website')
     })
 
@@ -92,7 +117,7 @@ describe('renderCancellationEmail', () => {
     it('escapes registrant-supplied values', () => {
         const { html } = render({
             name: 'Alice <script>alert(1)</script>',
-            partyNames: ['Bob & "Sons"'],
+            partyMembers: [{ name: 'Bob & "Sons"', tierLabel: 'Adult', priceCents: 100 }],
             eventTitle: 'Reunion <b>27</b>',
         })
         expect(html).not.toContain('<script>')
@@ -109,7 +134,9 @@ describe('renderCancellationEmail', () => {
 
     /* A party of one is the common case for a cancellation. */
     it('handles a party of one', () => {
-        const { text } = render({ partyNames: ['Alice Patterson'] })
+        const { text } = render({
+            partyMembers: [{ name: 'Alice Patterson', tierLabel: 'Adult', priceCents: 17030 }],
+        })
         expect(text).toContain('Alice Patterson')
     })
 })

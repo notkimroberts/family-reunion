@@ -1,5 +1,6 @@
 <script lang="ts">
 import { CheckCircle2, KeyRound, LoaderCircle } from '@lucide/svelte'
+import { onMount } from 'svelte'
 import { Alert, AlertDescription, AlertTitle } from '$lib/components/ui/alert'
 import { Button } from '$lib/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card'
@@ -7,11 +8,15 @@ import { APP_NAME, CONTACT_EMAIL, CONTACT_PHONE } from '$lib/general/constants'
 import { toE164 } from '$lib/utils'
 import HostHotelPrompt from '../HostHotelPrompt.svelte'
 import RegistrationManager from '../RegistrationManager.svelte'
+import { clearRegistrationDraft } from '../clearRegistrationDraft'
 
 const POLL_INTERVAL_MS = 2000
 const POLL_TIMEOUT_MS = 30000
 
 let { data } = $props()
+
+/* This is Stripe's success page, so the form /register kept in case of a cancel is spent. */
+onMount(clearRegistrationDraft)
 
 /* The registration's status, re-read whenever the load re-runs.
 
@@ -142,7 +147,7 @@ $effect(() => {
                 <AlertDescription>
                     Your place is recorded but payment hasn't been received yet. Contact
                     <a class="underline" href="mailto:{CONTACT_EMAIL}">{CONTACT_EMAIL}</a>
-                    or call
+                    or text
                     <a class="underline" href="sms:{toE164(CONTACT_PHONE)}">{CONTACT_PHONE}</a>
                     to arrange it.
                 </AlertDescription>

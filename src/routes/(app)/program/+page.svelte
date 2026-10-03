@@ -4,26 +4,21 @@ import { StayConnected } from '$lib/components'
 import { Button } from '$lib/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card'
 import { APP_NAME } from '$lib/general/constants'
+import { formatDateRange } from '$lib/utils'
 import LocationMap from './LocationMap.svelte'
 import ScheduleCard from './ScheduleCard.svelte'
 
 let { data } = $props()
 
-let dateRange = $derived.by(() => {
-    if (!data.event?.startDate) {
-        return ''
-    }
-    const start = new Date(data.event.startDate).toLocaleDateString('en-US', {
-        month: 'long',
-        day: 'numeric',
-    })
-    const end = new Date(data.event.endDate ?? data.event.startDate).toLocaleDateString('en-US', {
-        month: 'long',
-        day: 'numeric',
-        year: 'numeric',
-    })
-    return `${start} – ${end}`
-})
+/* formatDateRange pins the reunion's zone, so the server and the browser print the same day. */
+let dateRange = $derived(
+    data.event?.startDate
+        ? formatDateRange(
+              new Date(data.event.startDate),
+              new Date(data.event.endDate ?? data.event.startDate),
+          )
+        : '',
+)
 
 /* Everything below the dates comes out of one jsonb column — see $lib/general/reunionMetadata. Each
    key is optional, so each section keeps its own presence check. */

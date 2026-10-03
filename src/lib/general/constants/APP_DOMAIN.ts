@@ -15,6 +15,7 @@
    inbound, `send.` is Resend's bounce feedback — so never consolidate or prune the MX records
    without checking which one you are holding.
 
-   Nothing builds a URL from this constant: manage and register links come from the request
-   origin. */
+   Manage and register links in emails come from the request origin, not from this constant. The one
+   place it is printed is the paper registration form ("Register online at <APP_DOMAIN>"), so a
+   change here means reprinting any forms already handed out. */
 export const APP_DOMAIN = 'pattersonfamilyreunion27.com'

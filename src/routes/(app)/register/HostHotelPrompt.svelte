@@ -1,5 +1,6 @@
 <script lang="ts">
 import { BedDouble, ExternalLink, Hotel } from '@lucide/svelte'
+import { ParkingList } from '$lib/components'
 import { Button } from '$lib/components/ui/button'
 import { Card, CardContent } from '$lib/components/ui/card'
 import { HOST_HOTEL } from '$lib/general/constants'
@@ -53,6 +54,13 @@ const bookingHref = HOST_HOTEL ? (HOST_HOTEL.bookingUrl ?? HOST_HOTEL.websiteUrl
                         {/if}
                     </p>
                 </div>
+
+                {#if HOST_HOTEL.parking?.length}
+                    <div class="flex flex-col gap-2">
+                        <p class="text-sm font-semibold">Parking</p>
+                        <ParkingList options={HOST_HOTEL.parking} />
+                    </div>
+                {/if}
 
                 <Button
                     href={bookingHref}

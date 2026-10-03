@@ -154,6 +154,50 @@ describe('POST .../registrations/[registrationId] save', () => {
         expect(result).toMatchObject({ saved: true, notified: false })
     })
 
+    /* The edit form posts every attendee on every save. Rows nobody touched are not changes, and
+       must not send "your details were updated" for each of them — which the old blanket summary
+       did on any save at all. */
+    it('does not email when every attendee row is resubmitted unchanged', async () => {
+        await save(
+            editForm({
+                members: [
+                    {
+                        memberId: seeded.memberIds[1],
+                        name: 'Bo Patterson',
+                        shirtSize: '',
+                        vegetarianMeal: '',
+                        attendedReunion2025: '',
+                    },
+                ],
+            }),
+        )
+
+        expect(mockSendConfirmation).not.toHaveBeenCalled()
+    })
+
+    it('tells the registrant each edited value as before → after', async () => {
+        await save(
+            editForm({
+                status: 'paid',
+                members: [
+                    {
+                        memberId: seeded.memberIds[1],
+                        name: 'Bo Patterson',
+                        shirtSize: 'M',
+                        vegetarianMeal: '',
+                        attendedReunion2025: '',
+                    },
+                ],
+            }),
+        )
+
+        const [, data] = mockSendConfirmation.mock.calls[0]
+        expect(data.changeSummary).toEqual([
+            { summary: 'Bo Patterson — T-shirt', before: 'Not given', after: 'M' },
+            { summary: 'Payment status', before: 'Awaiting payment', after: 'Paid' },
+        ])
+    })
+
     it('records a status change, audits it, and tells the registrant', async () => {
         await save(editForm({ status: 'paid' }))
 

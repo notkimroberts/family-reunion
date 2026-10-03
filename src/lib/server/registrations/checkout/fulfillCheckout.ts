@@ -36,7 +36,7 @@ export async function fulfillCheckout(
     /* A gift given on its own at /donate. Its whole fulfilment is the donation module's — nothing
        here concerns a registration. */
     if (metadata.type === 'donation') {
-        await fulfillDonation(metadata.donationId, paymentIntentId)
+        await fulfillDonation(metadata.donationId, paymentIntentId, origin)
         return
     }
 

@@ -16,6 +16,7 @@
         "db:reseed": "bun src/lib/server/db/seed.ts --reseed",
         "admin:create": "bun scripts/createAdmin.ts",
         "admin:reset-password": "bun scripts/resetAdminPassword.ts",
+        "email:preview": "svelte-kit sync && bun scripts/previewEmails.ts",
         "format": "prettier --write .",
         "lint": "prettier --check . && eslint .",
         "prepare": "husky",

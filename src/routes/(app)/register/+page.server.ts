@@ -71,7 +71,9 @@ export const actions: Actions = {
             eventId: form.data.eventId,
             donationCents: form.data.donationCents,
             successUrl: (token) => `${event.url.origin}/register/manage?token=${token}`,
-            cancelUrl: (token) => `${event.url.origin}/register?cancelled=true&token=${token}`,
+            /* No token: nothing on /register reads it, and in the address bar it is a credential to
+               the pending booking, kept by browser history and sent in referrers. */
+            cancelUrl: () => `${event.url.origin}/register?cancelled=true`,
         })
 
         throw redirect(303, checkoutUrl)

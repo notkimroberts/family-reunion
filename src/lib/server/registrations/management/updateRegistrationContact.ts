@@ -4,7 +4,9 @@ import type { HotelStayAnswer } from '$lib/general/constants'
 import { db } from '$lib/server/db'
 import { partyMembers, registrations } from '$lib/server/db/schema'
 import { dbg } from '$lib/server/debug'
+import type { RegistrationChange } from '$lib/server/email'
 import { assertRegistrationMutable } from '../lifecycle'
+import { diffContact } from './_diffContact'
 
 /* Corrects a registration's contact details.
 
@@ -14,9 +16,9 @@ import { assertRegistrationMutable } from '../lifecycle'
    meant the registrant silently never received their link and there was no way back. This is the
    remediation path for an alert the app already raises.
 
-   Returns what actually changed so the caller can decide whether the registrant needs telling and
-   what to write to the audit log. An email change is the one case where the notification must go to
-   the NEW address. */
+   Returns what actually changed — as flags for the audit log, and value by value for the update
+   email — so the caller can decide whether the registrant needs telling. An email change is the one
+   case where the notification must go to the NEW address. */
 export async function updateRegistrationContact(params: {
     registrationId: string
     contactName: string
@@ -26,7 +28,12 @@ export async function updateRegistrationContact(params: {
        question existed keeps its null rather than being written as a guess: the admin form posts ''
        for "no answer on file" and the caller maps that to undefined. */
     stayingAtHostHotel?: HotelStayAnswer
-}): Promise<{ changed: boolean; emailChanged: boolean; previousEmail: string }> {
+}): Promise<{
+    changed: boolean
+    emailChanged: boolean
+    previousEmail: string
+    changes: RegistrationChange[]
+}> {
     const [existing] = await db
         .select({
             status: registrations.status,
@@ -63,8 +70,20 @@ export async function updateRegistrationContact(params: {
         stayingAtHostHotel !== existing.stayingAtHostHotel
 
     if (!changed) {
-        return { changed: false, emailChanged: false, previousEmail: existing.contactEmail }
+        return {
+            changed: false,
+            emailChanged: false,
+            previousEmail: existing.contactEmail,
+            changes: [],
+        }
     }
+
+    const changes = diffContact(existing, {
+        contactName,
+        contactEmail,
+        contactPhone,
+        stayingAtHostHotel,
+    })
 
     await db
         .update(registrations)
@@ -93,5 +112,5 @@ export async function updateRegistrationContact(params: {
         emailChanged,
     )
 
-    return { changed: true, emailChanged, previousEmail: existing.contactEmail }
+    return { changed: true, emailChanged, previousEmail: existing.contactEmail, changes }
 }

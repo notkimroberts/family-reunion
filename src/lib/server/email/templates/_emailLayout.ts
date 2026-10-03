@@ -1,6 +1,14 @@
-import { APP_NAME } from '$lib/general/constants'
+import { REUNION_NAME } from '$lib/general/constants'
 import { emailThemeValue } from './_emailThemeValue'
 import { escapeHtml } from './_escapeHtml'
+
+/* Will and Roxie, the couple the reunion descends from — the same portrait as the site's favicon and
+   share card, cropped to the photograph with no transparent bands (Outlook paints transparency
+   black) and served from static/. Displayed at 120px from a 346px source, so it stays sharp on a
+   retina screen. */
+const HEADER_IMAGE_PATH = '/will_and_roxie_email.jpg'
+const HEADER_IMAGE_WIDTH = 120
+const HEADER_IMAGE_HEIGHT = 87
 
 /* Shared HTML chrome for every transactional email.
 
@@ -13,11 +21,15 @@ import { escapeHtml } from './_escapeHtml'
      (Gmail iOS, Outlook.com) recolour only what is left unspecified, so stating both keeps
      text legible either way; color-scheme additionally asks them not to invert.
    - A hidden preheader sets the inbox preview line, which otherwise samples the first visible
-     text — here the wordmark, which tells the reader nothing. */
+     text — here the wordmark, which tells the reader nothing.
+   - The header image is an absolute URL on siteOrigin, the origin the email's own links use, so it
+     loads from whichever domain sent it. Clients that block images show the alt text, and the
+     reunion's name sits under it as text, so nothing is lost without it. */
 export function emailLayout(params: {
     preheader: string
     heading: string
     bodyHtml: string
+    siteOrigin: string
 }): string {
     const { pageBackground, cardBackground, border, text, muted, accent, fontStack } =
         emailThemeValue
@@ -39,7 +51,8 @@ export function emailLayout(params: {
       <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="600" style="width:100%;max-width:600px;">
         <tr>
           <td align="center" style="padding:0 0 20px 0;font-family:${fontStack};font-size:13px;font-weight:700;letter-spacing:0.22em;text-transform:uppercase;color:${muted};">
-            ${escapeHtml(APP_NAME)}
+            <img src="${escapeHtml(params.siteOrigin)}${HEADER_IMAGE_PATH}" width="${HEADER_IMAGE_WIDTH}" height="${HEADER_IMAGE_HEIGHT}" alt="Will and Roxie Patterson" style="display:block;margin:0 auto 12px auto;border:0;border-radius:8px;outline:none;text-decoration:none;">
+            ${escapeHtml(REUNION_NAME)}
           </td>
         </tr>
         <tr>
@@ -51,7 +64,7 @@ export function emailLayout(params: {
         </tr>
         <tr>
           <td align="center" style="padding:20px 8px 0 8px;font-family:${fontStack};font-size:12px;line-height:1.6;color:${muted};">
-            You received this email because you registered for a ${escapeHtml(APP_NAME).slice(0, -1)} Family Reunion.
+            You are receiving this email about the ${escapeHtml(REUNION_NAME)}.
           </td>
         </tr>
       </table>

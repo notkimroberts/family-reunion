@@ -96,7 +96,7 @@ let aboveMaximum = $derived(value > DONATION_MAX_CENTS)
             </p>
         {:else if aboveMaximum}
             <p class="text-destructive text-sm">
-                That is larger than this form accepts — please contact the organisers instead.
+                That is larger than this form accepts — please contact the organizers instead.
             </p>
         {:else if error}
             <p class="text-destructive text-sm">{error}</p>

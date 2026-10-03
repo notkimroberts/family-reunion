@@ -3,9 +3,11 @@ import { eq } from 'drizzle-orm'
 import { db } from '$lib/server/db'
 import { partyMembers, registrations } from '$lib/server/db/schema'
 import { dbg } from '$lib/server/debug'
+import type { RegistrationChange } from '$lib/server/email'
 import { resolveTierPricing } from '$lib/server/tiers'
 import { parseBirthDate } from '$lib/utils/age'
 import { assertRegistrationMutable, touchRegistration } from '../lifecycle'
+import { diffMemberDetails, type MemberDetailValues } from './_diffMemberDetails'
 
 /* Corrects one party member's details on behalf of the registrant.
 
@@ -20,7 +22,11 @@ import { assertRegistrationMutable, touchRegistration } from '../lifecycle'
    money has arrived would leave the recorded total disagreeing with what was actually charged, with
    nothing to reconcile it and no refund issued. Repricing has to go through the registrant's own
    management link, which is the path that actually moves money. Non-financial corrections stay
-   available at every status, since a wrong birthday or shirt size has to be fixable. */
+   available at every status, since a wrong birthday or shirt size has to be fixable.
+
+   Returns what actually changed, value by value, for the update email — and writes nothing when no
+   value differs. The edit form resubmits every attendee on each save, so "a field was passed" is not
+   "something changed". */
 export async function updateAdminMemberDetails(params: {
     memberId: string
     name?: string | undefined
@@ -29,13 +35,19 @@ export async function updateAdminMemberDetails(params: {
     shirtSize?: string | undefined
     vegetarianMeal?: boolean | undefined
     attendedReunion2025?: boolean | undefined
-}): Promise<{ changed: boolean; name: string }> {
+}): Promise<{ changed: boolean; name: string; changes: RegistrationChange[] }> {
     const [member] = await db
         .select({
             id: partyMembers.id,
             name: partyMembers.name,
             tierLabel: partyMembers.tierLabel,
             priceCents: partyMembers.priceCents,
+            birthYear: partyMembers.birthYear,
+            birthMonth: partyMembers.birthMonth,
+            birthDay: partyMembers.birthDay,
+            shirtSize: partyMembers.shirtSize,
+            vegetarianMeal: partyMembers.vegetarianMeal,
+            attendedReunion2025: partyMembers.attendedReunion2025,
             registrationId: partyMembers.registrationId,
             registrationStatus: registrations.status,
             eventId: registrations.eventId,
@@ -96,14 +108,42 @@ export async function updateAdminMemberDetails(params: {
         updates.attendedReunion2025 = params.attendedReunion2025
     }
 
-    if (Object.keys(updates).length === 0) {
-        return { changed: false, name: member.name }
+    const before: MemberDetailValues = {
+        name: member.name,
+        tierLabel: member.tierLabel,
+        priceCents: member.priceCents,
+        birthYear: member.birthYear,
+        birthMonth: member.birthMonth,
+        birthDay: member.birthDay,
+        shirtSize: member.shirtSize,
+        vegetarianMeal: member.vegetarianMeal,
+        attendedReunion2025: member.attendedReunion2025,
+    }
+    const after: MemberDetailValues = {
+        name: updates.name ?? before.name,
+        tierLabel: updates.tierLabel ?? before.tierLabel,
+        priceCents: updates.priceCents ?? before.priceCents,
+        birthYear: updates.birthYear === undefined ? before.birthYear : updates.birthYear,
+        birthMonth: updates.birthMonth === undefined ? before.birthMonth : updates.birthMonth,
+        birthDay: updates.birthDay === undefined ? before.birthDay : updates.birthDay,
+        shirtSize: updates.shirtSize === undefined ? before.shirtSize : updates.shirtSize,
+        vegetarianMeal:
+            updates.vegetarianMeal === undefined ? before.vegetarianMeal : updates.vegetarianMeal,
+        attendedReunion2025:
+            updates.attendedReunion2025 === undefined
+                ? before.attendedReunion2025
+                : updates.attendedReunion2025,
+    }
+    const changes = diffMemberDetails(before, after)
+
+    if (changes.length === 0) {
+        return { changed: false, name: member.name, changes }
     }
 
     await db.update(partyMembers).set(updates).where(eq(partyMembers.id, params.memberId))
     await touchRegistration(member.registrationId)
 
-    dbg.register('admin updated member %s (%s)', params.memberId, Object.keys(updates).join(', '))
+    dbg.register('admin updated member %s (%d change(s))', params.memberId, changes.length)
 
-    return { changed: true, name: updates.name ?? member.name }
+    return { changed: true, name: after.name, changes }
 }

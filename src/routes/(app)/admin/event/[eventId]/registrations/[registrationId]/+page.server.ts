@@ -7,9 +7,11 @@ import { requireAdmin } from '$lib/server/auth/guards'
 import { db } from '$lib/server/db'
 import { registrationAudit, user as userTable } from '$lib/server/db/schema'
 import { dbg } from '$lib/server/debug'
+import type { RegistrationChange } from '$lib/server/email'
 import {
     addAdminMember,
     cancelRegistrationAsAdmin,
+    describeRegistrationChange,
     getRegistrationMembers,
     getRegistrationWithEvent,
     notifyRegistrationUpdated,
@@ -29,11 +31,13 @@ import { adminEditRegistrationSchema } from './schema'
 
 const AUDIT_HISTORY_LIMIT = 50
 
-/* Phrased for the registrant, who is the one who reads it — not for the organiser who set it. */
-const statusChangeCopyValue = {
-    paid: 'Your payment has been recorded — your registration is complete',
-    waived: 'Your place has been covered, so there is nothing to pay',
-    pending: 'Your registration is marked as awaiting payment',
+/* A payment status in the registrant's words, for the before → after line in the update email.
+   The email's lead already says what the new status means, so this only has to name it. */
+const statusLabelValue = {
+    paid: 'Paid',
+    waived: 'Covered',
+    pending: 'Awaiting payment',
+    refunded: 'Cancelled',
 } as const
 
 /* The URL names both an event and a registration, and nothing makes them agree.
@@ -131,9 +135,9 @@ export const actions: Actions = {
         }
 
         const previousStatus = found.registration.status
-        /* Drives both the audit rows and the "what changed" block in the email, so only things the
-           registrant would care about belong in here. */
-        const changes: string[] = []
+        /* Drives the "what changed" block in the email, so only things the registrant would care
+           about belong in here. Edited values carry before → after. */
+        const changes: RegistrationChange[] = []
 
         try {
             const contact = await updateRegistrationContact({
@@ -145,11 +149,7 @@ export const actions: Actions = {
             })
 
             if (contact.changed) {
-                changes.push(
-                    contact.emailChanged
-                        ? `Your contact email was changed to ${form.data.contactEmail}`
-                        : 'Your contact details were updated',
-                )
+                changes.push(...contact.changes)
                 await recordRegistrationAudit({
                     registrationId: event.params.registrationId,
                     actor: admin,
@@ -163,7 +163,7 @@ export const actions: Actions = {
             /* Removals first, so a member removed in this sitting is not also updated. */
             for (const memberId of form.data.removedMemberIds) {
                 const removed = await removeAdminMember({ memberId })
-                changes.push(`${removed.name} was removed from the party`)
+                changes.push({ summary: `${removed.name} was removed from the party` })
                 await recordRegistrationAudit({
                     registrationId: event.params.registrationId,
                     actor: admin,
@@ -189,7 +189,7 @@ export const actions: Actions = {
                 })
 
                 if (updated.changed) {
-                    changes.push(`${updated.name}'s details were updated`)
+                    changes.push(...updated.changes)
                     await recordRegistrationAudit({
                         registrationId: event.params.registrationId,
                         actor: admin,
@@ -220,7 +220,7 @@ export const actions: Actions = {
                     },
                 })
 
-                changes.push(`${newMember.name} was added to your party`)
+                changes.push({ summary: `${newMember.name} was added to your party` })
                 await recordRegistrationAudit({
                     registrationId: event.params.registrationId,
                     actor: admin,
@@ -234,7 +234,11 @@ export const actions: Actions = {
                     registrationId: event.params.registrationId,
                     status: form.data.status,
                 })
-                changes.push(statusChangeCopyValue[form.data.status])
+                changes.push({
+                    summary: 'Payment status',
+                    before: statusLabelValue[previousStatus],
+                    after: statusLabelValue[form.data.status],
+                })
                 await recordRegistrationAudit({
                     registrationId: event.params.registrationId,
                     actor: admin,
@@ -284,7 +288,7 @@ export const actions: Actions = {
             const feedback: RegistrationActionFeedback = {
                 saved: true,
                 notified: false,
-                changes,
+                changes: changes.map(describeRegistrationChange),
                 notifyError:
                     err instanceof Error
                         ? `${err.message} — the changes were saved, but they have not been told.`
@@ -293,7 +297,11 @@ export const actions: Actions = {
             return { form, ...feedback }
         }
 
-        const feedback: RegistrationActionFeedback = { saved: true, notified: true, changes }
+        const feedback: RegistrationActionFeedback = {
+            saved: true,
+            notified: true,
+            changes: changes.map(describeRegistrationChange),
+        }
         return { form, ...feedback }
     },
 

@@ -18,6 +18,9 @@ type SeedMember = {
 type SeedOptions = {
     status?: (typeof schema.registrationStatusEnum.enumValues)[number]
     stripeSessionId?: string | null
+    /* The registration-level intent, written only by the webhook's pending → paid transition. Unset
+       by default, which is what a paper entry looks like. */
+    stripePaymentIntentId?: string | null
     contactName?: string
     contactEmail?: string
     eventTitle?: string
@@ -54,6 +57,7 @@ export async function seedRegistration(db: TestDb, options: SeedOptions = {}) {
                 options.stripeSessionId === undefined
                     ? `cs_test_${++sessionCounter}`
                     : options.stripeSessionId,
+            stripePaymentIntentId: options.stripePaymentIntentId ?? null,
         })
         .returning()
 

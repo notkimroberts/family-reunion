@@ -1,7 +1,7 @@
 import { Resend } from 'resend'
 import { dev } from '$app/environment'
 import { env } from '$env/dynamic/private'
-import { APP_NAME, CONTACT_EMAIL, EMAIL_FROM_ADDRESS } from '$lib/general/constants'
+import { CONTACT_EMAIL, EMAIL_FROM_ADDRESS, REUNION_NAME } from '$lib/general/constants'
 import { dbg } from '$lib/server/debug'
 
 /* Returns a Resend client, or undefined in dev when no key is configured so local work
@@ -25,9 +25,8 @@ function getResend(): Resend | undefined {
    address — as success.
 
    replyTo is what makes the templates' "Questions? Reply to this email" true. The From address is on
-   APP_DOMAIN because that is the domain verified in Resend and DKIM/SPF have to align on it, but
-   nothing receives mail there — no MX record exists — so without this header every reply would
-   bounce. The SDK takes camelCase `replyTo` and serialises it to `reply_to`; passing `reply_to`
+   APP_DOMAIN because that is the domain verified in Resend and DKIM/SPF have to align on it; where
+   replies land is a separate decision, and this header keeps it one (see CONTACT_EMAIL). The SDK takes camelCase `replyTo` and serialises it to `reply_to`; passing `reply_to`
    directly is silently ignored.
 
    idempotencyKey (format `<event-type>/<entity-id>`, 24h window) makes a retried send
@@ -46,7 +45,7 @@ export async function send(params: {
 
     const { error } = await resend.emails.send(
         {
-            from: `${APP_NAME} <${EMAIL_FROM_ADDRESS}>`,
+            from: `${REUNION_NAME} <${EMAIL_FROM_ADDRESS}>`,
             replyTo: CONTACT_EMAIL,
             to: params.to,
             subject: params.subject,

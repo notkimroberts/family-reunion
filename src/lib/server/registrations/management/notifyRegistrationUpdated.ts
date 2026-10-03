@@ -3,10 +3,11 @@ import { eq } from 'drizzle-orm'
 import { db } from '$lib/server/db'
 import { registrations } from '$lib/server/db/schema'
 import { dbg } from '$lib/server/debug'
-import { sendRegistrationConfirmation } from '$lib/server/email'
+import { sendRegistrationConfirmation, type RegistrationChange } from '$lib/server/email'
 import { deliverManagementLink } from '../deliverManagementLink'
 import { touchRegistration } from '../lifecycle'
 import { getConfirmationEmailData } from '../queries/getConfirmationEmailData'
+import { describeRegistrationChange } from './describeRegistrationChange'
 
 /* Derives the Resend idempotency key from what changed, rather than from the registration or the
    clock. sendRegistrationConfirmation is called elsewhere with `confirm/<registrationId>`; reusing a
@@ -14,8 +15,11 @@ import { getConfirmationEmailData } from '../queries/getConfirmationEmailData'
    and never again, worse than not having the feature. A timestamp goes too far the other way and lets
    a double-submitted save send twice. Hashing the summary suppresses a retry of the same save while
    letting a genuinely different change through. */
-function changeFingerprint(changeSummary: string[]): string {
-    return createHash('sha256').update(changeSummary.join('|')).digest('hex').slice(0, 16)
+function changeFingerprint(changeSummary: RegistrationChange[]): string {
+    return createHash('sha256')
+        .update(changeSummary.map(describeRegistrationChange).join('|'))
+        .digest('hex')
+        .slice(0, 16)
 }
 
 /* Tells the registrant that an organiser changed their registration, and gives them a link that
@@ -29,7 +33,7 @@ function changeFingerprint(changeSummary: string[]): string {
    organiser's change is already committed by then, so presenting it as failed would be a lie. */
 export async function notifyRegistrationUpdated(params: {
     registrationId: string
-    changeSummary: string[]
+    changeSummary: RegistrationChange[]
     manageUrl: (token: string) => string
 }): Promise<{ sent: boolean }> {
     if (params.changeSummary.length === 0) {

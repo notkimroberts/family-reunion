@@ -1,0 +1,954 @@
+<!doctype html>
+<html>
+    <head>
+        <meta charset="utf-8" />
+        <style>
+            :root {
+                --background: #f5f5f5;
+                --card: #ffffff;
+                --foreground: #0a0a0a;
+                --primary: #171717;
+                --primary-foreground: #fafafa;
+                --muted: #ebebeb;
+                --muted-foreground: #737373;
+                --body: #404040;
+                --border: #e5e5e5;
+                --amber-bg: #fffbeb;
+                --amber-border: #fcd34d;
+                --amber-fg: #78350f;
+            }
+            * {
+                box-sizing: border-box;
+                margin: 0;
+                padding: 0;
+            }
+            body {
+                font-family: ui-sans-serif, system-ui, sans-serif;
+                background: var(--background);
+                color: var(--foreground);
+                -webkit-font-smoothing: antialiased;
+            }
+            .slide {
+                width: 1080px;
+                height: 1350px;
+                padding: 52px 56px 48px;
+                display: flex;
+                flex-direction: column;
+                gap: 28px;
+                overflow: hidden;
+            }
+            .brand {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+            }
+            .logo {
+                display: flex;
+                align-items: center;
+                gap: 20px;
+            }
+            .logo img {
+                width: 60px;
+                height: 60px;
+                border-radius: 50%;
+                object-fit: cover;
+                box-shadow:
+                    0 0 0 4px var(--background),
+                    0 0 0 7px var(--primary);
+            }
+            .logo span {
+                font-size: 28px;
+                font-weight: 600;
+                letter-spacing: 0.025em;
+                color: rgb(10 10 10 / 0.8);
+            }
+            .counter {
+                font-size: 22px;
+                font-weight: 700;
+                letter-spacing: 0.06em;
+                color: var(--muted-foreground);
+            }
+            .eyebrow {
+                font-size: 21px;
+                font-weight: 700;
+                letter-spacing: 0.22em;
+                text-transform: uppercase;
+                color: var(--muted-foreground);
+            }
+            .card {
+                flex: 1;
+                min-height: 0;
+                background: var(--card);
+                border: 2px solid var(--border);
+                border-radius: 28px;
+                padding: 52px;
+                display: flex;
+                flex-direction: column;
+                box-shadow: 0 1px 3px rgb(0 0 0 / 0.04);
+            }
+            .footer {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                gap: 24px;
+                font-size: 25px;
+                color: var(--muted-foreground);
+                padding: 0 6px;
+                white-space: nowrap;
+            }
+            .contact {
+                display: flex;
+                gap: 32px;
+                color: var(--foreground);
+                font-weight: 500;
+            }
+            .contact span {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+            }
+            .contact svg {
+                width: 26px;
+                height: 26px;
+                color: var(--muted-foreground);
+            }
+            .icon-box {
+                flex: none;
+                width: 64px;
+                height: 64px;
+                border-radius: 16px;
+                background: var(--muted);
+                color: var(--primary);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+            .icon-box svg {
+                width: 32px;
+                height: 32px;
+            }
+
+            .cover {
+                justify-content: center;
+                gap: 64px;
+            }
+            .hero {
+                display: grid;
+                grid-template-columns: auto 1fr;
+                gap: 48px;
+                align-items: center;
+            }
+            .portraits {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 16px;
+            }
+            .frame {
+                background: var(--background);
+                border-radius: 12px;
+                padding: 14px;
+                display: flex;
+                flex-direction: column;
+                gap: 12px;
+                box-shadow: 0 1px 2px rgb(0 0 0 / 0.08);
+            }
+            .frame img {
+                width: 170px;
+                height: 250px;
+                object-fit: cover;
+                border-radius: 4px;
+                display: block;
+            }
+            .frame figcaption {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 2px;
+            }
+            .frame b {
+                font-size: 20px;
+                font-weight: 600;
+            }
+            .frame figcaption span {
+                font-size: 17px;
+                color: var(--muted-foreground);
+            }
+            .title {
+                display: flex;
+                flex-direction: column;
+                gap: 18px;
+            }
+            h1 {
+                font-size: 78px;
+                line-height: 1;
+                font-weight: 700;
+                letter-spacing: -0.025em;
+            }
+            .lede {
+                font-size: 34px;
+                color: var(--muted-foreground);
+            }
+            .facts {
+                display: flex;
+                flex-direction: column;
+                gap: 18px;
+            }
+            .fact {
+                display: flex;
+                align-items: center;
+                gap: 28px;
+                padding: 24px 28px;
+                border: 2px solid var(--border);
+                border-radius: 20px;
+            }
+            .fact .icon-box {
+                width: 76px;
+                height: 76px;
+                border-radius: 18px;
+            }
+            .fact .icon-box svg {
+                width: 38px;
+                height: 38px;
+            }
+            .label {
+                font-size: 22px;
+                font-weight: 700;
+                letter-spacing: 0.14em;
+                text-transform: uppercase;
+                color: var(--muted-foreground);
+            }
+            .value {
+                font-size: 36px;
+                font-weight: 600;
+                letter-spacing: -0.01em;
+                margin-top: 4px;
+            }
+            .fact.highlight {
+                background: var(--amber-bg);
+                border-color: var(--amber-border);
+                color: var(--amber-fg);
+            }
+            .fact.highlight .icon-box {
+                background: var(--card);
+                color: var(--amber-fg);
+            }
+            .fact.highlight .label {
+                color: var(--amber-fg);
+                opacity: 0.8;
+            }
+
+            .faq {
+                gap: 12px;
+            }
+            .heading {
+                display: flex;
+                flex-direction: column;
+                gap: 10px;
+                padding-bottom: 16px;
+            }
+            h2 {
+                font-size: 60px;
+                line-height: 1.05;
+                font-weight: 700;
+                letter-spacing: -0.025em;
+            }
+            .qa {
+                list-style: none;
+                display: flex;
+                flex-direction: column;
+                flex: 1;
+            }
+            .qa li {
+                flex: 1;
+                display: flex;
+                align-items: center;
+                padding: 22px 0;
+                border-top: 2px solid var(--border);
+            }
+            .row {
+                display: flex;
+                gap: 28px;
+            }
+            .q {
+                font-size: 34px;
+                font-weight: 600;
+                line-height: 1.25;
+                letter-spacing: -0.01em;
+            }
+            .a {
+                font-size: 29px;
+                line-height: 1.45;
+                color: var(--body);
+                margin-top: 8px;
+            }
+            .chips {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 10px;
+                margin-top: 14px;
+            }
+            .chip {
+                font-size: 22px;
+                font-weight: 600;
+                color: var(--foreground);
+                border: 2px solid var(--border);
+                border-radius: 999px;
+                padding: 6px 18px;
+            }
+            .chip.email {
+                display: inline-flex;
+                align-items: center;
+                gap: 10px;
+                font-size: 25px;
+                font-weight: 500;
+            }
+            .chip.email svg {
+                width: 26px;
+                height: 26px;
+                color: var(--muted-foreground);
+            }
+            .airport {
+                display: flex;
+                align-items: center;
+                gap: 16px;
+                margin-top: 6px;
+            }
+            .code {
+                font-size: 21px;
+                font-weight: 700;
+                letter-spacing: 0.08em;
+                border-radius: 8px;
+                padding: 4px 12px;
+                background: var(--primary);
+                color: var(--primary-foreground);
+            }
+            .code.muted {
+                background: var(--muted);
+                color: var(--primary);
+            }
+        </style>
+    </head>
+    <body>
+        <section class="slide">
+            <header class="brand">
+                <div class="logo">
+                    <img
+                        src="file:///Users/kimroberts/personal/family-reunion/static/will_and_roxie_192.png"
+                        alt="" />
+                    <span>Pattersons</span>
+                </div>
+                <span class="counter">1 / 4</span>
+            </header>
+            <div class="card cover">
+                <div class="hero">
+                    <div class="portraits">
+                        <figure class="frame">
+                            <img
+                                src="file:///Users/kimroberts/personal/family-reunion/static/will_portrait.png"
+                                alt="Will Patterson" />
+                            <figcaption><b>Will Patterson</b><span>b. 1869</span></figcaption>
+                        </figure>
+
+                        <figure class="frame">
+                            <img
+                                src="file:///Users/kimroberts/personal/family-reunion/static/roxie_portrait.png"
+                                alt="Roxie Patterson" />
+                            <figcaption><b>Roxie Patterson</b><span>b. 1872</span></figcaption>
+                        </figure>
+                    </div>
+                    <div class="title">
+                        <p class="eyebrow">FAQ</p>
+                        <h1>Patterson Family Reunion</h1>
+                        <p class="lede">An update on the reunion.</p>
+                    </div>
+                </div>
+                <div class="facts">
+                    <div class="fact">
+                        <span class="icon-box"
+                            ><svg
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2"
+                                stroke-linecap="round"
+                                stroke-linejoin="round">
+                                <path d="M8 2v4" />
+                                <path d="M16 2v4" />
+                                <rect width="18" height="18" x="3" y="4" rx="2" />
+                                <path d="M3 10h18" />
+                                <path d="M8 14h.01" />
+                                <path d="M12 14h.01" />
+                                <path d="M16 14h.01" />
+                                <path d="M8 18h.01" />
+                                <path d="M12 18h.01" />
+                                <path d="M16 18h.01" /></svg
+                        ></span>
+                        <div>
+                            <p class="label">When</p>
+                            <p class="value">
+                                Friday,&nbsp;July&nbsp;23,&nbsp;2027 –
+                                Sunday,&nbsp;July&nbsp;25,&nbsp;2027
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="fact">
+                        <span class="icon-box"
+                            ><svg
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2"
+                                stroke-linecap="round"
+                                stroke-linejoin="round">
+                                <path
+                                    d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0" />
+                                <circle cx="12" cy="10" r="3" /></svg
+                        ></span>
+                        <div>
+                            <p class="label">Where</p>
+                            <p class="value">Oakstop · 2323 Broadway, Oakland, CA</p>
+                        </div>
+                    </div>
+
+                    <div class="fact highlight">
+                        <span class="icon-box"
+                            ><svg
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2"
+                                stroke-linecap="round"
+                                stroke-linejoin="round">
+                                <path d="M16 4h2a2 2 0 0 1 2 2v2" />
+                                <path
+                                    d="M21.34 15.664a1 1 0 1 0-3.004-3.004l-5.01 5.012a2 2 0 0 0-.506.854l-.837 2.87a.5.5 0 0 0 .62.62l2.87-.837a2 2 0 0 0 .854-.506z" />
+                                <path d="M8 22H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
+                                <rect x="8" y="2" width="8" height="4" rx="1" /></svg
+                        ></span>
+                        <div>
+                            <p class="label">Registration opens</p>
+                            <p class="value">October 31, 2026</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <footer class="footer">
+                <div class="contact">
+                    <span
+                        ><svg
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round">
+                            <path
+                                d="M13.832 16.568a1 1 0 0 0 1.213-.303l.355-.465A2 2 0 0 1 17 15h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2A18 18 0 0 1 2 4a2 2 0 0 1 2-2h3a2 2 0 0 1 2 2v3a2 2 0 0 1-.8 1.6l-.468.351a1 1 0 0 0-.292 1.233 14 14 0 0 0 6.392 6.384" /></svg
+                        >(510) 809-8309</span
+                    >
+                    <span
+                        ><svg
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round">
+                            <path d="m22 7-8.991 5.727a2 2 0 0 1-2.009 0L2 7" />
+                            <rect x="2" y="4" width="20" height="16" rx="2" /></svg
+                        >pattersonreunioncommittee@gmail.com</span
+                    >
+                </div>
+                <span class="hint">Swipe →</span>
+            </footer>
+        </section>
+        <section class="slide">
+            <header class="brand">
+                <div class="logo">
+                    <img
+                        src="file:///Users/kimroberts/personal/family-reunion/static/will_and_roxie_192.png"
+                        alt="" />
+                    <span>Pattersons</span>
+                </div>
+                <span class="counter">2 / 4</span>
+            </header>
+            <div class="card faq">
+                <div class="heading">
+                    <p class="eyebrow">An update on the reunion</p>
+                    <h2>The reunion</h2>
+                </div>
+                <ul class="qa">
+                    <li>
+                        <div class="row">
+                            <span class="icon-box"
+                                ><svg
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    stroke-width="2"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round">
+                                    <path d="M8 2v4" />
+                                    <path d="M16 2v4" />
+                                    <rect width="18" height="18" x="3" y="4" rx="2" />
+                                    <path d="M3 10h18" />
+                                    <path d="M8 14h.01" />
+                                    <path d="M12 14h.01" />
+                                    <path d="M16 14h.01" />
+                                    <path d="M8 18h.01" />
+                                    <path d="M12 18h.01" />
+                                    <path d="M16 18h.01" /></svg
+                            ></span>
+                            <div>
+                                <p class="q">When is the reunion?</p>
+                                <p class="a">Friday, July 23, 2027 – Sunday, July 25, 2027.</p>
+                            </div>
+                        </div>
+                    </li>
+                    <li>
+                        <div class="row">
+                            <span class="icon-box"
+                                ><svg
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    stroke-width="2"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round">
+                                    <path
+                                        d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0" />
+                                    <circle cx="12" cy="10" r="3" /></svg
+                            ></span>
+                            <div>
+                                <p class="q">Where is the venue for the main event?</p>
+                                <p class="a">Oakstop, 2323 Broadway, Oakland, CA.</p>
+                            </div>
+                        </div>
+                    </li>
+                    <li>
+                        <div class="row">
+                            <span class="icon-box"
+                                ><svg
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    stroke-width="2"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round">
+                                    <path
+                                        d="M12.127 22H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v5.125" />
+                                    <path
+                                        d="M14.62 18.8A2.25 2.25 0 1 1 18 15.836a2.25 2.25 0 1 1 3.38 2.966l-2.626 2.856a.998.998 0 0 1-1.507 0z" />
+                                    <path d="M16 2v4" />
+                                    <path d="M3 10h18" />
+                                    <path d="M8 2v4" /></svg
+                            ></span>
+                            <div>
+                                <p class="q">What’s the program for the weekend?</p>
+                                <p class="a">
+                                    The organizers are putting together a great weekend program for
+                                    everyone. It will be published here and on the website as we get
+                                    closer to the event.
+                                </p>
+                            </div>
+                        </div>
+                    </li>
+                    <li>
+                        <div class="row">
+                            <span class="icon-box"
+                                ><svg
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    stroke-width="2"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round">
+                                    <path d="m22 11-1.296-1.296a2.4 2.4 0 0 0-3.408 0L11 16" />
+                                    <path
+                                        d="M4 8a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2" />
+                                    <circle cx="13" cy="7" r="1" fill="currentColor" />
+                                    <rect x="8" y="2" width="14" height="14" rx="2" /></svg
+                            ></span>
+                            <div>
+                                <p class="q">
+                                    Will the photos from the past website still be available?
+                                </p>
+                                <p class="a">Yes, they will.</p>
+                            </div>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+
+            <footer class="footer">
+                <div class="contact">
+                    <span
+                        ><svg
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round">
+                            <path
+                                d="M13.832 16.568a1 1 0 0 0 1.213-.303l.355-.465A2 2 0 0 1 17 15h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2A18 18 0 0 1 2 4a2 2 0 0 1 2-2h3a2 2 0 0 1 2 2v3a2 2 0 0 1-.8 1.6l-.468.351a1 1 0 0 0-.292 1.233 14 14 0 0 0 6.392 6.384" /></svg
+                        >(510) 809-8309</span
+                    >
+                    <span
+                        ><svg
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round">
+                            <path d="m22 7-8.991 5.727a2 2 0 0 1-2.009 0L2 7" />
+                            <rect x="2" y="4" width="20" height="16" rx="2" /></svg
+                        >pattersonreunioncommittee@gmail.com</span
+                    >
+                </div>
+                <span class="hint">Swipe →</span>
+            </footer>
+        </section>
+        <section class="slide">
+            <header class="brand">
+                <div class="logo">
+                    <img
+                        src="file:///Users/kimroberts/personal/family-reunion/static/will_and_roxie_192.png"
+                        alt="" />
+                    <span>Pattersons</span>
+                </div>
+                <span class="counter">3 / 4</span>
+            </header>
+            <div class="card faq">
+                <div class="heading">
+                    <p class="eyebrow">An update on the reunion</p>
+                    <h2>Registration</h2>
+                </div>
+                <ul class="qa">
+                    <li>
+                        <div class="row">
+                            <span class="icon-box"
+                                ><svg
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    stroke-width="2"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round">
+                                    <path d="M16 4h2a2 2 0 0 1 2 2v2" />
+                                    <path
+                                        d="M21.34 15.664a1 1 0 1 0-3.004-3.004l-5.01 5.012a2 2 0 0 0-.506.854l-.837 2.87a.5.5 0 0 0 .62.62l2.87-.837a2 2 0 0 0 .854-.506z" />
+                                    <path d="M8 22H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
+                                    <rect x="8" y="2" width="8" height="4" rx="1" /></svg
+                            ></span>
+                            <div>
+                                <p class="q">When will registration open?</p>
+                                <p class="a">October 31, 2026.</p>
+                            </div>
+                        </div>
+                    </li>
+                    <li>
+                        <div class="row">
+                            <span class="icon-box"
+                                ><svg
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    stroke-width="2"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round">
+                                    <path d="M5 22h14" />
+                                    <path d="M5 2h14" />
+                                    <path
+                                        d="M17 22v-4.172a2 2 0 0 0-.586-1.414L12 12l-4.414 4.414A2 2 0 0 0 7 17.828V22" />
+                                    <path
+                                        d="M7 2v4.172a2 2 0 0 0 .586 1.414L12 12l4.414-4.414A2 2 0 0 0 17 6.172V2" /></svg
+                            ></span>
+                            <div>
+                                <p class="q">Why can’t I register yet?</p>
+                                <p class="a">
+                                    The organizers are putting finishing touches on the new website
+                                    to handle registration. We appreciate your patience.
+                                </p>
+                            </div>
+                        </div>
+                    </li>
+                    <li>
+                        <div class="row">
+                            <span class="icon-box"
+                                ><svg
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    stroke-width="2"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round">
+                                    <path d="m22 7-8.991 5.727a2 2 0 0 1-2.009 0L2 7" />
+                                    <rect x="2" y="4" width="20" height="16" rx="2" /></svg
+                            ></span>
+                            <div>
+                                <p class="q">Can I register by mail?</p>
+                                <p class="a">
+                                    Yes. We will mail paper registration, but we prefer you register
+                                    online if you’re able. To request a paper registration or update
+                                    your mailing address, email:
+                                    <span class="chips"
+                                        ><span class="chip email"
+                                            ><svg
+                                                viewBox="0 0 24 24"
+                                                fill="none"
+                                                stroke="currentColor"
+                                                stroke-width="2"
+                                                stroke-linecap="round"
+                                                stroke-linejoin="round">
+                                                <path d="m22 7-8.991 5.727a2 2 0 0 1-2.009 0L2 7" />
+                                                <rect
+                                                    x="2"
+                                                    y="4"
+                                                    width="20"
+                                                    height="16"
+                                                    rx="2" /></svg
+                                            >pattersonreunioncommittee@gmail.com</span
+                                        ></span
+                                    >
+                                </p>
+                            </div>
+                        </div>
+                    </li>
+                    <li>
+                        <div class="row">
+                            <span class="icon-box"
+                                ><svg
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    stroke-width="2"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round">
+                                    <path
+                                        d="M20.38 3.46 16 2a4 4 0 0 1-8 0L3.62 3.46a2 2 0 0 0-1.34 2.23l.58 3.47a1 1 0 0 0 .99.84H6v10c0 1.1.9 2 2 2h8a2 2 0 0 0 2-2V10h2.15a1 1 0 0 0 .99-.84l.58-3.47a2 2 0 0 0-1.34-2.23z" /></svg
+                            ></span>
+                            <div>
+                                <p class="q">Will there be shirts?</p>
+                                <p class="a">
+                                    Yes! Shirts are included in the price of registration.
+                                </p>
+                            </div>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+
+            <footer class="footer">
+                <div class="contact">
+                    <span
+                        ><svg
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round">
+                            <path
+                                d="M13.832 16.568a1 1 0 0 0 1.213-.303l.355-.465A2 2 0 0 1 17 15h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2A18 18 0 0 1 2 4a2 2 0 0 1 2-2h3a2 2 0 0 1 2 2v3a2 2 0 0 1-.8 1.6l-.468.351a1 1 0 0 0-.292 1.233 14 14 0 0 0 6.392 6.384" /></svg
+                        >(510) 809-8309</span
+                    >
+                    <span
+                        ><svg
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round">
+                            <path d="m22 7-8.991 5.727a2 2 0 0 1-2.009 0L2 7" />
+                            <rect x="2" y="4" width="20" height="16" rx="2" /></svg
+                        >pattersonreunioncommittee@gmail.com</span
+                    >
+                </div>
+                <span class="hint">Swipe →</span>
+            </footer>
+        </section>
+        <section class="slide">
+            <header class="brand">
+                <div class="logo">
+                    <img
+                        src="file:///Users/kimroberts/personal/family-reunion/static/will_and_roxie_192.png"
+                        alt="" />
+                    <span>Pattersons</span>
+                </div>
+                <span class="counter">4 / 4</span>
+            </header>
+            <div class="card faq">
+                <div class="heading">
+                    <p class="eyebrow">An update on the reunion</p>
+                    <h2>Travel & stay</h2>
+                </div>
+                <ul class="qa">
+                    <li>
+                        <div class="row">
+                            <span class="icon-box"
+                                ><svg
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    stroke-width="2"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round">
+                                    <path d="M10 22v-6.57" />
+                                    <path d="M12 11h.01" />
+                                    <path d="M12 7h.01" />
+                                    <path d="M14 15.43V22" />
+                                    <path d="M15 16a5 5 0 0 0-6 0" />
+                                    <path d="M16 11h.01" />
+                                    <path d="M16 7h.01" />
+                                    <path d="M8 11h.01" />
+                                    <path d="M8 7h.01" />
+                                    <rect x="4" y="2" width="16" height="20" rx="2" /></svg
+                            ></span>
+                            <div>
+                                <p class="q">Is there a host hotel?</p>
+                                <p class="a">
+                                    Yes. We have a room block at the Kissel Uptown Oakland. Use the
+                                    booking link in this post to get our rate, and book by
+                                    June&nbsp;20,&nbsp;2027.
+                                    <span class="chips"
+                                        ><span class="chip">King · $189/night</span
+                                        ><span class="chip">Double queen · $239/night</span></span
+                                    >
+                                </p>
+                            </div>
+                        </div>
+                    </li>
+                    <li>
+                        <div class="row">
+                            <span class="icon-box"
+                                ><svg
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    stroke-width="2"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round">
+                                    <path
+                                        d="M4 16v-2.38C4 11.5 2.97 10.5 3 8c.03-2.72 1.49-6 4.5-6C9.37 2 10 3.8 10 5.5c0 3.11-2 5.66-2 8.68V16a2 2 0 1 1-4 0Z" />
+                                    <path
+                                        d="M20 20v-2.38c0-2.12 1.03-3.12 1-5.62-.03-2.72-1.49-6-4.5-6C14.63 6 14 7.8 14 9.5c0 3.11 2 5.66 2 8.68V20a2 2 0 1 0 4 0Z" />
+                                    <path d="M16 17h4" />
+                                    <path d="M4 13h4" /></svg
+                            ></span>
+                            <div>
+                                <p class="q">How far is the hotel from the event venue?</p>
+                                <p class="a">Walking distance — less than 1 block.</p>
+                            </div>
+                        </div>
+                    </li>
+                    <li>
+                        <div class="row">
+                            <span class="icon-box"
+                                ><svg
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    stroke-width="2"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round">
+                                    <path
+                                        d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2" />
+                                    <circle cx="7" cy="17" r="2" />
+                                    <path d="M9 17h6" />
+                                    <circle cx="17" cy="17" r="2" /></svg
+                            ></span>
+                            <div>
+                                <p class="q">Is there parking?</p>
+                                <p class="a">
+                                    Yes, at the host hotel as well as nearby public lots.
+                                </p>
+                            </div>
+                        </div>
+                    </li>
+                    <li>
+                        <div class="row">
+                            <span class="icon-box"
+                                ><svg
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    stroke-width="2"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round">
+                                    <path d="M2 22h20" />
+                                    <path
+                                        d="M6.36 17.4 4 17l-2-4 1.1-.55a2 2 0 0 1 1.8 0l.17.1a2 2 0 0 0 1.8 0L8 12 5 6l.9-.45a2 2 0 0 1 2.09.2l4.02 3a2 2 0 0 0 2.1.2l4.19-2.06a2.41 2.41 0 0 1 1.73-.17L21 7a1.4 1.4 0 0 1 .87 1.99l-.38.76c-.23.46-.6.84-1.07 1.08L7.58 17.2a2 2 0 0 1-1.22.18Z" /></svg
+                            ></span>
+                            <div>
+                                <p class="q">Should I book my flight now?</p>
+                                <p class="a">Yes! The earlier the better.</p>
+                            </div>
+                        </div>
+                    </li>
+                    <li>
+                        <div class="row">
+                            <span class="icon-box"
+                                ><svg
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    stroke-width="2"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round">
+                                    <path
+                                        d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z" /></svg
+                            ></span>
+                            <div>
+                                <p class="q">What airport should I fly to?</p>
+                                <p class="a">
+                                    <span class="airport"
+                                        ><span class="code">OAK</span>Oakland — the closest and most
+                                        convenient</span
+                                    >
+                                    <span class="airport"
+                                        ><span class="code muted">SFO</span>San Francisco — the next
+                                        best option</span
+                                    >
+                                </p>
+                            </div>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+
+            <footer class="footer">
+                <div class="contact">
+                    <span
+                        ><svg
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round">
+                            <path
+                                d="M13.832 16.568a1 1 0 0 0 1.213-.303l.355-.465A2 2 0 0 1 17 15h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2A18 18 0 0 1 2 4a2 2 0 0 1 2-2h3a2 2 0 0 1 2 2v3a2 2 0 0 1-.8 1.6l-.468.351a1 1 0 0 0-.292 1.233 14 14 0 0 0 6.392 6.384" /></svg
+                        >(510) 809-8309</span
+                    >
+                    <span
+                        ><svg
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round">
+                            <path d="m22 7-8.991 5.727a2 2 0 0 1-2.009 0L2 7" />
+                            <rect x="2" y="4" width="20" height="16" rx="2" /></svg
+                        >pattersonreunioncommittee@gmail.com</span
+                    >
+                </div>
+            </footer>
+        </section>
+    </body>
+</html>

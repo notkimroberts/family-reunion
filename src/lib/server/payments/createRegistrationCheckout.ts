@@ -1,6 +1,7 @@
 import { dbg } from '$lib/server/debug'
 import { getStripe } from '$lib/server/stripe'
 import { buildStripeLineItem } from './_buildStripeLineItem'
+import { checkoutBrandingValue } from './_checkoutBrandingValue'
 import { encodeRegistrationMetadata } from './stripeMetadata'
 import type { RegistrationCheckoutParams, RegistrationCheckoutResult } from './types'
 
@@ -12,6 +13,20 @@ export async function createRegistrationCheckout(
         payment_method_types: ['card'],
         line_items: params.lineItems.map(buildStripeLineItem),
         mode: 'payment',
+        submit_type: 'book',
+        custom_text: { submit: { message: checkoutBrandingValue.registration.submitMessage } },
+        /* Names the payment where a person looks for it: the card statement, the Stripe dashboard
+           and any Stripe receipt. The ids let a dashboard search find the booking. Never the
+           management token — that stays on the session, where only the webhook reads it. */
+        payment_intent_data: {
+            description: params.description,
+            statement_descriptor_suffix:
+                checkoutBrandingValue.registration.statementDescriptorSuffix,
+            metadata: {
+                registrationId: params.registrationId,
+                ...(params.donationId ? { donationId: params.donationId } : {}),
+            },
+        },
         customer_email: params.customerEmail,
         success_url: params.successUrl(),
         cancel_url: params.cancelUrl(),

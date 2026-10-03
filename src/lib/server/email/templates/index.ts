@@ -9,4 +9,5 @@ export type {
     RefundRoute,
     CancellationEmailData,
     DonationReceiptData,
+    RegistrationChange,
 } from './types'

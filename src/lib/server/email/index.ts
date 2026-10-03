@@ -11,6 +11,7 @@ export type {
     RefundRoute,
     CancellationEmailData,
     DonationReceiptData,
+    RegistrationChange,
 } from './templates'
 export {
     sendRegistrationConfirmation,

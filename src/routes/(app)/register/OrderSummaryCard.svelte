@@ -34,6 +34,7 @@ let {
     status = $bindable<Status>('paid'),
     showStatus = false,
     submitFootnote,
+    submitError,
 }: {
     contactName: string
     selfTierId: string | ''
@@ -49,6 +50,9 @@ let {
     status?: Status
     showStatus?: boolean
     submitFootnote?: string
+    /* A submit that failed after validation passed. Shown under the button because on a phone that
+       is where the reader is; the form's error summary is a screen above. */
+    submitError?: string
 } = $props()
 </script>
 
@@ -121,6 +125,9 @@ let {
                     {submitLabel}
                 {/if}
             </Button>
+            {#if submitError}
+                <p role="alert" class="text-destructive text-center text-sm">{submitError}</p>
+            {/if}
             {#if submitFootnote}
                 <p class="text-muted-foreground text-center text-xs">{submitFootnote}</p>
             {/if}

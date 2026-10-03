@@ -154,7 +154,7 @@ let totalCents = $derived(sumMemberPrices(members))
     <p class="text-muted-foreground bg-card rounded-lg border px-4 py-3 text-sm">
         Need to add someone, correct a detail or cancel? Contact
         <a class="underline" href="mailto:{CONTACT_EMAIL}">{CONTACT_EMAIL}</a>
-        or call
+        or text
         <a class="underline" href="sms:{toE164(CONTACT_PHONE)}">{CONTACT_PHONE}</a>
         and the reunion organisers will take care of it.
     </p>
