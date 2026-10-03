@@ -7,10 +7,10 @@ import { createRegistrationCheckout } from '$lib/server/payments'
 import { resolveTierPricing } from '$lib/server/tiers'
 import { grossUpForStripe } from '$lib/utils/stripeFee'
 import { assertRegistrationEditable } from '../assertRegistrationEditable'
-import { getRegistrationLockDate } from '../getRegistrationLockDate'
 import { generateManagementToken } from '../hashManagementToken'
 import type { MemberInput } from './MemberInput'
 import { assertContactTierIsAdult } from './_assertContactTierIsAdult'
+import { getCheckoutEvent } from './_getCheckoutEvent'
 import { buildCheckoutLineItems } from './buildCheckoutLineItems'
 import { buildPartyMemberRow } from './buildPartyMemberRow'
 
@@ -45,7 +45,8 @@ export async function createPendingRegistration(params: {
        Without this the add/edit/remove/cancel paths are closed while the front door stays
        open, so a late registrant can still pay for a place nobody is catering for.
        Admin paper entry deliberately skips this check — see admin/registrations. */
-    assertRegistrationEditable(await getRegistrationLockDate(params.eventId))
+    const checkoutEvent = await getCheckoutEvent(params.eventId)
+    assertRegistrationEditable(checkoutEvent?.registrationLockDate ?? null)
 
     const pricingByTierId = await resolveTierPricing(
         params.eventId,
@@ -126,6 +127,7 @@ export async function createPendingRegistration(params: {
         registrationId: registration.id,
         managementToken,
         donationId,
+        description: `${checkoutEvent?.title ?? 'Family reunion'} registration`,
         customerEmail: params.contactEmail,
         successUrl: () => params.successUrl(managementToken),
         cancelUrl: () => params.cancelUrl(managementToken),

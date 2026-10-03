@@ -1,6 +1,7 @@
 import { dbg } from '$lib/server/debug'
 import { getStripe } from '$lib/server/stripe'
 import { buildStripeLineItem } from './_buildStripeLineItem'
+import { checkoutBrandingValue } from './_checkoutBrandingValue'
 import { encodeDonationMetadata } from './stripeMetadata'
 import type { DonationCheckoutParams, RegistrationCheckoutResult } from './types'
 
@@ -13,6 +14,13 @@ export async function createDonationCheckout(
         payment_method_types: ['card'],
         line_items: [buildStripeLineItem({ name: params.name, priceCents: params.amountCents })],
         mode: 'payment',
+        submit_type: 'donate',
+        custom_text: { submit: { message: checkoutBrandingValue.donation.submitMessage } },
+        payment_intent_data: {
+            description: params.name,
+            statement_descriptor_suffix: checkoutBrandingValue.donation.statementDescriptorSuffix,
+            metadata: { donationId: params.donationId },
+        },
         customer_email: params.customerEmail,
         success_url: params.successUrl(),
         cancel_url: params.cancelUrl(),

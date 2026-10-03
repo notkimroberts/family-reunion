@@ -242,6 +242,15 @@ describe('createPendingRegistration', () => {
         ])
     })
 
+    /* The payment carries the event's name into the Stripe dashboard and any Stripe receipt, where
+       the session's own metadata is not shown. */
+    it('names the payment after the event', async () => {
+        await register({ members: [{ ...CONTACT, tierId: adultTierId }] })
+
+        const [{ description }] = mockCreateCheckout.mock.calls[0]
+        expect(description).toBe('Reunion 2027 registration')
+    })
+
     /* The front door closes with the rest of them. Without this the add/edit/cancel paths are
        frozen while someone can still pay for a place nobody is catering for. */
     it('refuses once the registration lock date has passed', async () => {
