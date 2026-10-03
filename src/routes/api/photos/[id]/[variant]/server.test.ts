@@ -117,6 +117,16 @@ describe('GET /api/photos/[id]/[variant]', () => {
         expect(await statusOf(request(id, 'original'))).toBe(404)
     })
 
+    /* So a thumbnail the browser has given up on stops holding, or waiting for, a bucket socket. */
+    it('hands the request signal to the bucket fetch', async () => {
+        const id = await createPhoto({ bytes: await samplePhoto() })
+        await setPhotoStatus(id, 'approved')
+
+        await request(id, 'thumb')
+
+        expect(getObjectBody).toHaveBeenCalledWith(expect.any(String), expect.any(AbortSignal))
+    })
+
     it('404s an id that does not exist', async () => {
         expect(await statusOf(request('00000000-0000-0000-0000-000000000000', 'display'))).toBe(404)
     })
