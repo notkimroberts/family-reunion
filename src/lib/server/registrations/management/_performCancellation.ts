@@ -69,6 +69,7 @@ export async function _performCancellation(
     const members = await db
         .select({
             name: partyMembers.name,
+            tierLabel: partyMembers.tierLabel,
             priceCents: partyMembers.priceCents,
             stripePaymentIntentId: partyMembers.stripePaymentIntentId,
         })
@@ -177,7 +178,11 @@ export async function _performCancellation(
             {
                 name: registration.contactName,
                 eventTitle: reunionEvent?.title ?? 'the reunion',
-                partyNames: members.map((member) => member.name),
+                partyMembers: members.map(({ name, tierLabel, priceCents }) => ({
+                    name,
+                    tierLabel,
+                    priceCents,
+                })),
                 totalCents: sumMemberPrices(members),
                 /* Named so the donor is not left waiting for money that is not coming: the refund
                    is the places only, and their gift stays with the reunion. Only the gifts on a

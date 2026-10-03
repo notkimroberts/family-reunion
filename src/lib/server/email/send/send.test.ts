@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { APP_DOMAIN, APP_NAME, CONTACT_EMAIL } from '$lib/general/constants'
+import { APP_DOMAIN, CONTACT_EMAIL, REUNION_NAME } from '$lib/general/constants'
 
 /* The envelope, which had no test — which is how the From address could sit on `noreply@`
    indefinitely while three templates told the reader to reply to it.
@@ -9,9 +9,9 @@ import { APP_DOMAIN, APP_NAME, CONTACT_EMAIL } from '$lib/general/constants'
 
    1. The From address must be on APP_DOMAIN and must not say "noreply". Resend flags the literal
       string, and a one-way address discourages the inbox feedback reputation is built on.
-   2. Reply-To must be a monitored human address. Nothing receives mail on APP_DOMAIN — there is no
-      MX record — so without this header every reply to a confirmation bounces silently, and the
-      "Questions? Reply to this email" line in the templates is false.
+   2. Reply-To must be a monitored human address. APP_DOMAIN receives mail only through ImprovMX
+      forwarding (see CONTACT_EMAIL), so the header keeps where replies land a deliberate choice
+      rather than a side effect of the From address, and "Questions? Reply to this email" true.
 
    The SDK is mocked because it is genuinely external; the assertion is on the payload handed to it. */
 
@@ -44,7 +44,7 @@ describe('send envelope', () => {
     it('sends from the verified domain', async () => {
         await sendOne()
 
-        expect(sentPayload().from).toBe(`${APP_NAME} <reunion@${APP_DOMAIN}>`)
+        expect(sentPayload().from).toBe(`${REUNION_NAME} <reunion@${APP_DOMAIN}>`)
     })
 
     it('never sends from a no-reply address', async () => {

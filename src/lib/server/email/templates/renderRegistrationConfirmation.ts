@@ -1,8 +1,11 @@
-import { CONTACT_EMAIL, CONTACT_PHONE, HOST_HOTEL } from '$lib/general/constants'
+import { CONTACT_EMAIL, CONTACT_PHONE } from '$lib/general/constants'
 import { formatPrice, toE164 } from '$lib/utils'
+import { actionCallout } from './_actionCallout'
+import { changeSection } from './_changeSection'
 import { emailLayout } from './_emailLayout'
 import { emailThemeValue } from './_emailThemeValue'
 import { escapeHtml } from './_escapeHtml'
+import { hotelSection } from './_hotelSection'
 import { primaryButton } from './_primaryButton'
 import { sectionLabel } from './_sectionLabel'
 import type { ConfirmationStatus, RegistrationConfirmationData } from './types'
@@ -13,10 +16,13 @@ import type { ConfirmationStatus, RegistrationConfirmationData } from './types'
 
    totalLabel describes the same number — the sum of the party's snapshotted prices — so it
    must not imply money is owed when it is not: labelling a waived party "Amount due" directly
-   contradicts the note beneath it. */
+   contradicts the note beneath it.
+
+   action is something the reader must do, shown as a callout under the lead rather than a muted
+   note under the table — where "reply to arrange payment" was easy to read past. */
 const STATUS_COPY: Record<
     ConfirmationStatus,
-    { heading: string; lead: string; totalLabel: string; note?: string }
+    { heading: string; lead: string; totalLabel: string; note?: string; action?: string }
 > = {
     paid: {
         heading: 'Registration confirmed',
@@ -33,11 +39,23 @@ const STATUS_COPY: Record<
         heading: 'Registration received',
         lead: 'Your registration is recorded. It is not complete until payment is received.',
         totalLabel: 'Amount due',
-        /* Contact details are already in the sign-off directly below, so they are not
-           repeated here. */
-        note: 'Please get in touch to arrange payment.',
+        /* Contact details are already in the sign-off, so they are not repeated here. */
+        action: 'Reply to this email to arrange payment.',
     },
 }
+
+/* 'paid' covers cash and cheques recorded by an organiser as well as cards, and "your payment has
+   gone through" reads as a card charge to someone who handed over a cheque. */
+const PAID_BY_HAND_LEAD = 'Your registration is confirmed and we have received your payment.'
+
+/* Online prices are snapshotted with the card fee folded in, while the register page lists the fee
+   on its own line — without this the per-person prices look like a different, higher tier. */
+const CARD_FEE_NOTE = 'Prices include the card processing fee.'
+
+/* Registrants cannot edit their own booking any more (see /register/manage), so the email they keep
+   has to say who can. */
+const CHANGE_NOTE =
+    'Need to add someone or change a detail? Reply to this email and an organizer will update it for you.'
 
 /* Returns subject, plain-text body and HTML body confirming an event registration.
 
@@ -50,14 +68,20 @@ export function renderRegistrationConfirmation(data: RegistrationConfirmationDat
     html: string
 } {
     const copy = STATUS_COPY[data.status]
+    const isPaid = data.status === 'paid'
+    const lead = isPaid && !data.paidByCard ? PAID_BY_HAND_LEAD : copy.lead
+    const note = isPaid && data.paidByCard ? CARD_FEE_NOTE : copy.note
+    const siteOrigin = new URL(data.manageUrl).origin
+    const hotel = hotelSection(siteOrigin)
     const { insetBackground, border, text: textColor, muted, fontStack } = emailThemeValue
+    const total = `$${formatPrice(data.totalCents)}`
 
     /* An update keeps the status money sentence — what is owed or covered still applies — and gains
        a heading and lead saying an organiser changed something. Calling an edit "Registration
        confirmed" a second time reads as a duplicate and hides the change. */
     const heading = data.isUpdate ? 'Registration updated' : copy.heading
-    const updateLead = 'An organiser updated your registration. Here is how it now stands.'
-    const changes = data.isUpdate ? (data.changeSummary ?? []) : []
+    const updateLead = 'An organizer updated your registration. Here is how it now stands.'
+    const changes = changeSection(data.isUpdate ? (data.changeSummary ?? []) : [])
 
     const eventLines = [data.eventDateRange, data.venueName, data.venueAddress].filter(
         (line): line is string => Boolean(line),
@@ -68,11 +92,11 @@ export function renderRegistrationConfirmation(data: RegistrationConfirmationDat
         `Hi ${data.name},`,
         '',
         ...(data.isUpdate ? [updateLead, ''] : []),
-        ...(changes.length > 0
-            ? ['What changed:', ...changes.map((line) => `  - ${line}`), '']
-            : []),
-        copy.lead,
+        ...changes.textLines,
+        lead,
         '',
+        /* Capitals are the only emphasis plain text has. */
+        ...(copy.action ? [`PAYMENT NEEDED: ${total}. ${copy.action}`, ''] : []),
         data.eventTitle,
         ...eventLines.map((line) => `  ${line}`),
         '',
@@ -85,28 +109,16 @@ export function renderRegistrationConfirmation(data: RegistrationConfirmationDat
             ? [`  - Gift to the reunion  $${formatPrice(data.donationCents)}`]
             : []),
         '',
-        `${copy.totalLabel}: $${formatPrice(data.totalCents)}`,
-        ...(copy.note ? ['', copy.note] : []),
+        `${copy.totalLabel}: ${total}`,
+        ...(note ? ['', note] : []),
         '',
         'View your registration at any time:',
         data.manageUrl,
-        /* Rooms are the part of a reunion that runs out, and this app cannot book them — so the
-           confirmation, which is the message people keep, is where the prompt belongs. Skipped
-           entirely when no host hotel is listed.
-
-           The GROUP BOOKING link where there is one: the hotel's own site quotes rack rates and
-           knows nothing about the reunion's block. */
-        ...(HOST_HOTEL
-            ? [
-                  '',
-                  `Somewhere to stay: ${HOST_HOTEL.name} — ${HOST_HOTEL.bookingUrl ?? HOST_HOTEL.websiteUrl}`,
-                  ...(HOST_HOTEL.bookingDeadline
-                      ? [`Our room block rate holds until ${HOST_HOTEL.bookingDeadline}.`]
-                      : []),
-              ]
-            : []),
         '',
-        `Questions? ${CONTACT_EMAIL} or ${CONTACT_PHONE}`,
+        CHANGE_NOTE,
+        ...hotel.textLines,
+        '',
+        `Questions? Reply to this email, or contact us at ${CONTACT_EMAIL} or ${CONTACT_PHONE}.`,
         '',
         'See you at the reunion!',
     ].join('\n')
@@ -159,46 +171,22 @@ ${memberRows}
 ${donationRow}
   <tr>
     <td style="padding:12px 0 0 0;font-family:${fontStack};font-size:15px;font-weight:700;color:${textColor};">${escapeHtml(copy.totalLabel)}</td>
-    <td align="right" style="padding:12px 0 0 0;font-family:${fontStack};font-size:15px;font-weight:700;color:${textColor};white-space:nowrap;">$${formatPrice(data.totalCents)}</td>
+    <td align="right" style="padding:12px 0 0 0;font-family:${fontStack};font-size:15px;font-weight:700;color:${textColor};white-space:nowrap;">${total}</td>
   </tr>
 </table>`
 
-    const noteBlock = copy.note
-        ? `<p style="margin:0 0 24px 0;font-family:${fontStack};font-size:14px;line-height:1.6;color:${muted};">${escapeHtml(copy.note)}</p>`
+    const noteBlock = note
+        ? `<p style="margin:0 0 24px 0;font-family:${fontStack};font-size:14px;line-height:1.6;color:${muted};">${escapeHtml(note)}</p>`
         : '<div style="height:16px;"></div>'
 
-    const changeBlock =
-        changes.length > 0
-            ? `<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin:0 0 24px 0;">
-  <tr>
-    <td bgcolor="${insetBackground}" style="background-color:${insetBackground};border:1px solid ${border};border-radius:8px;padding:16px 18px;">
-      <p style="margin:0 0 8px 0;font-family:${fontStack};font-size:13px;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;color:${muted};">What changed</p>
-      ${changes
-          .map(
-              (line) =>
-                  `<p style="margin:0 0 4px 0;font-family:${fontStack};font-size:15px;line-height:1.5;color:${textColor};">${escapeHtml(line)}</p>`,
-          )
-          .join('\n      ')}
-    </td>
-  </tr>
-</table>`
-            : ''
-
-    /* Both colours set on the cell, like every other block here: dark-mode auto-inversion otherwise
-       leaves this one unreadable. Links the GROUP BOOKING url where there is one — the hotel's own
-       site quotes rack rates and knows nothing about the reunion's block. */
-    const hotelDeadlineSentence = HOST_HOTEL?.bookingDeadline
-        ? ` Our block rate holds until ${escapeHtml(HOST_HOTEL.bookingDeadline)}.`
-        : ''
-    const hotelBlock = HOST_HOTEL
-        ? `<p style="margin:22px 0 0 0;padding-top:18px;border-top:1px solid ${border};font-family:${fontStack};font-size:14px;line-height:1.6;color:${textColor};background-color:transparent;"><strong>Somewhere to stay.</strong> ${escapeHtml(HOST_HOTEL.tagline)} Book directly with <a href="${escapeHtml(HOST_HOTEL.bookingUrl ?? HOST_HOTEL.websiteUrl)}" style="color:${textColor};">${escapeHtml(HOST_HOTEL.name)}</a>.${hotelDeadlineSentence}</p>`
-        : ''
+    const actionBlock = copy.action ? actionCallout(`Payment needed: ${total}`, copy.action) : ''
 
     const bodyHtml = [
         paragraph(`Hi ${escapeHtml(data.name)},`),
         ...(data.isUpdate ? [paragraph(escapeHtml(updateLead))] : []),
-        changeBlock,
-        paragraph(escapeHtml(copy.lead)),
+        changes.html,
+        paragraph(escapeHtml(lead)),
+        actionBlock,
         eventBlock,
         sectionLabel('Your party'),
         partyTable,
@@ -207,17 +195,22 @@ ${donationRow}
         /* The bare URL is repeated because some clients strip or fail to linkify buttons,
            and the manage link is the registrant's only credential. */
         `<p style="margin:16px 0 0 0;font-family:${fontStack};font-size:12px;line-height:1.6;color:${muted};text-align:center;word-break:break-all;">Or paste this link into your browser:<br>${escapeHtml(data.manageUrl)}</p>`,
-        hotelBlock,
+        `<p style="margin:22px 0 0 0;font-family:${fontStack};font-size:14px;line-height:1.6;color:${textColor};">${escapeHtml(CHANGE_NOTE)}</p>`,
+        hotel.html,
         `<p style="margin:22px 0 0 0;padding-top:18px;border-top:1px solid ${border};font-family:${fontStack};font-size:13px;line-height:1.6;color:${muted};">Questions? Reply to this email, or contact us at <a href="mailto:${escapeHtml(CONTACT_EMAIL)}" style="color:${textColor};">${escapeHtml(CONTACT_EMAIL)}</a> or <a href="tel:${toE164(CONTACT_PHONE)}" style="color:${textColor};">${escapeHtml(CONTACT_PHONE)}</a>.</p>`,
+        `<p style="margin:18px 0 0 0;font-family:${fontStack};font-size:15px;line-height:1.6;color:${textColor};">See you at the reunion!</p>`,
     ].join('\n')
 
     return {
         subject: `${heading}: ${data.eventTitle}`,
         text: textBody,
         html: emailLayout({
-            preheader: `${copy.totalLabel} $${formatPrice(data.totalCents)} — ${data.partyMembers.length} ${data.partyMembers.length === 1 ? 'person' : 'people'} registered for ${data.eventTitle}.`,
+            preheader: copy.action
+                ? `Payment needed: ${total} — ${copy.action}`
+                : `${copy.totalLabel} ${total} — ${data.partyMembers.length} ${data.partyMembers.length === 1 ? 'person' : 'people'} registered for ${data.eventTitle}.`,
             heading,
             bodyHtml,
+            siteOrigin,
         }),
     }
 }

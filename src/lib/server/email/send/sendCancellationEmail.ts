@@ -17,7 +17,7 @@ export async function sendCancellationEmail(
         to,
         data.eventTitle,
         data.refundRoute,
-        data.partyNames.length,
+        data.partyMembers.length,
     )
     const { subject, text, html } = renderCancellationEmail(data)
     await send({ to, subject, text, html, idempotencyKey })

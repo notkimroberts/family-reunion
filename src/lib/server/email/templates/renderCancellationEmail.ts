@@ -25,7 +25,7 @@ const REFUND_COPY: Record<RefundRoute, { lead: string; note?: string; showsRefun
     /* Paid by cheque or cash, so no card exists to refund. Promising an automatic refund here would
        be false — the organisers have to hand the money back themselves. */
     by_hand: {
-        lead: 'Your registration has been cancelled. You paid the organisers directly, so your refund will be arranged with you.',
+        lead: 'Your registration has been cancelled. You paid the organizers directly, so your refund will be arranged with you.',
         note: 'Nothing has been refunded through this website. Please get in touch if you have not heard from us.',
         showsRefund: true,
     },
@@ -60,7 +60,7 @@ export function renderCancellationEmail(data: CancellationEmailData): {
     const keptGiftCents = copy.showsRefund ? (data.keptDonationCents ?? 0) : 0
     const keptGiftLine =
         keptGiftCents > 0
-            ? `Your gift of $${formatPrice(keptGiftCents)} is not included — gifts stay with the reunion, and we are grateful for it.`
+            ? `Your gift of $${formatPrice(keptGiftCents)} is not included — your gift stays with the reunion, and we are grateful for it.`
             : undefined
 
     /* ---- plain text ---- */
@@ -72,7 +72,11 @@ export function renderCancellationEmail(data: CancellationEmailData): {
         data.eventTitle,
         '',
         'Cancelled for:',
-        ...data.partyNames.map((name) => `  - ${name}`),
+        ...data.partyMembers.map((member) =>
+            copy.showsRefund
+                ? `  - ${member.name} (${member.tierLabel})  $${formatPrice(member.priceCents)}`
+                : `  - ${member.name}`,
+        ),
         ...(copy.showsRefund ? ['', `${amountLabel}: $${formatPrice(data.totalCents)}`] : []),
         ...(keptGiftLine ? ['', keptGiftLine] : []),
         ...(copy.note ? ['', copy.note] : []),
@@ -80,7 +84,7 @@ export function renderCancellationEmail(data: CancellationEmailData): {
         'Changed your mind? You can register again here:',
         data.registerUrl,
         '',
-        `Questions? ${CONTACT_EMAIL} or ${CONTACT_PHONE}`,
+        `Questions? Reply to this email, or contact us at ${CONTACT_EMAIL} or ${CONTACT_PHONE}.`,
     ].join('\n')
 
     /* ---- html ---- */
@@ -95,10 +99,17 @@ export function renderCancellationEmail(data: CancellationEmailData): {
   </tr>
 </table>`
 
-    const nameRows = data.partyNames
+    /* Each place with what it cost, where money is going back, so the refund total can be checked
+       line by line — the same rows the confirmation showed. Two cells on every row either way: a
+       one-cell row under a two-cell total drew its divider across only half the table. */
+    const memberRows = data.partyMembers
         .map(
-            (name) => `  <tr>
-    <td style="padding:10px 0;border-bottom:1px solid ${border};font-family:${fontStack};font-size:15px;line-height:1.4;color:${textColor};">${escapeHtml(name)}</td>
+            (member) => `  <tr>
+    <td style="padding:10px 0;border-bottom:1px solid ${border};font-family:${fontStack};font-size:15px;line-height:1.4;color:${textColor};">
+      ${escapeHtml(member.name)}
+      <span style="display:block;font-size:13px;color:${muted};">${escapeHtml(member.tierLabel)}</span>
+    </td>
+    <td align="right" style="padding:10px 0;border-bottom:1px solid ${border};font-family:${fontStack};font-size:15px;line-height:1.4;color:${textColor};white-space:nowrap;">${copy.showsRefund ? `$${formatPrice(member.priceCents)}` : ''}</td>
   </tr>`,
         )
         .join('\n')
@@ -111,7 +122,7 @@ export function renderCancellationEmail(data: CancellationEmailData): {
         : ''
 
     const partyTable = `<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin:0 0 8px 0;">
-${nameRows}
+${memberRows}
 ${amountRow}
 </table>`
 
@@ -143,6 +154,7 @@ ${amountRow}
                 : `Your ${data.eventTitle} registration has been cancelled.`,
             heading: HEADING,
             bodyHtml,
+            siteOrigin: new URL(data.registerUrl).origin,
         }),
         text,
     }

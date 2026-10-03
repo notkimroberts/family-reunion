@@ -263,6 +263,20 @@ describe('POST /api/webhooks/stripe', () => {
         )
     })
 
+    /* The webhook is the one writer of the registration's payment intent, so its own confirmation
+       is the one that says the card went through and that prices include the fee. */
+    it('tells the confirmation the booking was paid by card', async () => {
+        const seeded = await seedRegistration(db, { status: 'pending' })
+
+        await deliver(registrationSession(seeded.registrationId, { payment_intent: 'pi_card' }))
+
+        expect(mockSendEmail).toHaveBeenCalledWith(
+            'alice@example.com',
+            expect.objectContaining({ status: 'paid', paidByCard: true }),
+            `confirm/${seeded.registrationId}`,
+        )
+    })
+
     /* The payment is captured either way; failing the webhook would only make Stripe redeliver, and
        the conditional transition means the retry would not re-send anyway. */
     it('returns 200 and keeps the registration paid when the email throws', async () => {
@@ -482,6 +496,8 @@ describe('POST /api/webhooks/stripe', () => {
                     donorName: 'Ruth Patterson',
                     eventTitle: 'Patterson Family Reunion 2027',
                     amountCents: 5000,
+                    givenOn: expect.any(Date),
+                    siteOrigin: expect.any(String),
                 },
                 `donation/${donationId}`,
             )

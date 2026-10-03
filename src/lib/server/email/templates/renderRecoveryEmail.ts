@@ -5,9 +5,18 @@ import { emailThemeValue } from './_emailThemeValue'
 import { escapeHtml } from './_escapeHtml'
 import { primaryButton } from './_primaryButton'
 
+const USE_LINE =
+    'Use it to view your party and what was paid. To add someone, correct a detail or cancel, contact the reunion organizers.'
+
+/* Rotation keeps ONE earlier token alive for MANAGEMENT_TOKEN_GRACE_PERIOD_MS (7 days), and a second
+   rotation drops it at once (isManagementTokenValid). "Within a week" is true in both cases; the old
+   "older links no longer work" was false for the common one, and sent people to support with a link
+   that still worked. */
+const NEWEST_LINK_LINE = 'This is your newest link — earlier links stop working within a week.'
+
 /* Returns subject, plain-text body and HTML body for re-sending the management link to a
-   registrant who lost the original email. Requesting a new link invalidates the old one, so
-   the copy says so — otherwise a registrant with two emails open picks the dead link. */
+   registrant who lost the original email. Requesting a new link retires the old one, so the copy
+   says which to keep — otherwise a registrant with two emails open picks the one about to die. */
 export function renderRecoveryEmail(data: { eventTitle: string; manageUrl: string }): {
     subject: string
     text: string
@@ -22,27 +31,26 @@ export function renderRecoveryEmail(data: { eventTitle: string; manageUrl: strin
         '',
         data.manageUrl,
         '',
-        'Use it to view your party and what was paid. To add someone, correct a detail or cancel, contact the reunion organisers.',
+        USE_LINE,
         '',
-        'This replaces any earlier management link for this registration — older links no longer work.',
+        NEWEST_LINK_LINE,
         '',
-        `Questions? ${CONTACT_EMAIL} or ${CONTACT_PHONE}`,
+        `Questions? Reply to this email, or contact us at ${CONTACT_EMAIL} or ${CONTACT_PHONE}.`,
     ].join('\n')
 
     const paragraph = (content: string) =>
         `<p style="margin:0 0 14px 0;font-family:${fontStack};font-size:15px;line-height:1.6;color:${textColor};">${content}</p>`
 
     const bodyHtml = [
+        paragraph('Hi,'),
         paragraph(
             `Here is your link to view your registration for <strong>${escapeHtml(data.eventTitle)}</strong>.`,
         ),
-        paragraph(
-            'Use it to view your party and what was paid. To add someone, correct a detail or cancel, contact the reunion organisers.',
-        ),
+        paragraph(escapeHtml(USE_LINE)),
         '<div style="height:8px;"></div>',
         primaryButton(data.manageUrl, 'View your registration'),
         `<p style="margin:16px 0 0 0;font-family:${fontStack};font-size:12px;line-height:1.6;color:${muted};text-align:center;word-break:break-all;">Or paste this link into your browser:<br>${escapeHtml(data.manageUrl)}</p>`,
-        `<p style="margin:22px 0 0 0;padding-top:18px;border-top:1px solid ${border};font-family:${fontStack};font-size:13px;line-height:1.6;color:${muted};">This replaces any earlier management link for this registration — older links no longer work. Questions? <a href="mailto:${escapeHtml(CONTACT_EMAIL)}" style="color:${textColor};">${escapeHtml(CONTACT_EMAIL)}</a> or <a href="tel:${toE164(CONTACT_PHONE)}" style="color:${textColor};">${escapeHtml(CONTACT_PHONE)}</a>.</p>`,
+        `<p style="margin:22px 0 0 0;padding-top:18px;border-top:1px solid ${border};font-family:${fontStack};font-size:13px;line-height:1.6;color:${muted};">${escapeHtml(NEWEST_LINK_LINE)} Questions? Reply to this email, or contact us at <a href="mailto:${escapeHtml(CONTACT_EMAIL)}" style="color:${textColor};">${escapeHtml(CONTACT_EMAIL)}</a> or <a href="tel:${toE164(CONTACT_PHONE)}" style="color:${textColor};">${escapeHtml(CONTACT_PHONE)}</a>.</p>`,
     ].join('\n')
 
     return {
@@ -52,6 +60,7 @@ export function renderRecoveryEmail(data: { eventTitle: string; manageUrl: strin
             preheader: `Your registration link for ${data.eventTitle}.`,
             heading: 'Your registration link',
             bodyHtml,
+            siteOrigin: new URL(data.manageUrl).origin,
         }),
     }
 }

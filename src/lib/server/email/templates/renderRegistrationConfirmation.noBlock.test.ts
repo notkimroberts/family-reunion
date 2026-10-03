@@ -8,6 +8,7 @@ import type { RegistrationConfirmationData } from './types'
    hotel at all. Its own file rather than a second describe: the constants mock is module-level. */
 vi.mock('$lib/general/constants', () => ({
     APP_NAME: 'Family Reunion',
+    REUNION_NAME: 'Roberts Family Reunion',
     APP_DOMAIN: 'example.com',
     CONTACT_EMAIL: 'organiser@example.com',
     CONTACT_PHONE: '+1 555 0100',
@@ -29,6 +30,7 @@ const data: RegistrationConfirmationData = {
     venueName: 'Lakeside Lodge',
     venueAddress: '1 Lake Road, Springfield',
     status: 'paid',
+    paidByCard: true,
     partyMembers: [{ name: 'Alice', tierLabel: 'Adult', priceCents: 10000 }],
     totalCents: 10000,
     manageUrl: 'https://example.com/register/manage?token=tok',
@@ -46,5 +48,18 @@ describe('renderRegistrationConfirmation without a room block', () => {
         const { text, html } = renderRegistrationConfirmation(data)
         expect(text).not.toContain('holds until')
         expect(html).not.toContain('holds until')
+    })
+
+    /* "Book our room block" on a link that is not the block would mislead. */
+    it('does not call the hotel website a room block', () => {
+        const { html } = renderRegistrationConfirmation(data)
+        expect(html).toContain('Book directly with')
+        expect(html).not.toContain('room block')
+    })
+
+    it('has no parking line when the hotel lists no parking', () => {
+        const { text, html } = renderRegistrationConfirmation(data)
+        expect(text).not.toContain('Parking')
+        expect(html).not.toContain('Parking')
     })
 })

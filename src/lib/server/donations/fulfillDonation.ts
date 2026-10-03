@@ -19,6 +19,9 @@ const UNATTACHED_EVENT_TITLE = 'the family reunion'
 export async function fulfillDonation(
     donationId: string,
     paymentIntentId: string | null,
+    /* The webhook request's origin, for the receipt's header image — the same source every other
+       email's links come from. */
+    origin: string,
 ): Promise<void> {
     const feeCents = paymentIntentId ? await retrievePaymentFee(paymentIntentId) : undefined
 
@@ -54,6 +57,10 @@ export async function fulfillDonation(
                 donorName: donation.donorName,
                 eventTitle,
                 amountCents: donation.amountCents,
+                /* markDonationPaid stamped paid_at a moment ago; the webhook arrives within
+                   seconds of the charge, so now is the payment's date to the minute. */
+                givenOn: new Date(),
+                siteOrigin: origin,
             },
             `donation/${donation.id}`,
         )

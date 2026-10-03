@@ -27,6 +27,7 @@ vi.mock('$app/environment', () => ({
 vi.mock('resend', () => ({ Resend: MockResend }))
 vi.mock('$lib/general/constants', () => ({
     APP_NAME: 'Test App',
+    REUNION_NAME: 'Test Reunion',
     APP_DOMAIN: 'example.com',
     EMAIL_FROM_ADDRESS: 'reunion@example.com',
     CONTACT_EMAIL: 'organiser@example.com',
@@ -42,9 +43,10 @@ const confirmData = {
     name: 'Alice',
     eventTitle: 'Family Reunion 2026',
     status: 'paid' as const,
+    paidByCard: true,
     partyMembers: [
         { name: 'Alice', tierLabel: 'Adult', priceCents: 3000 },
-        { name: 'Bob', tierLabel: 'Child', priceCents: 2000, detail: 'age 8' },
+        { name: 'Bob', tierLabel: 'Child', priceCents: 2000, detail: 'Age 8' },
     ],
     totalCents: 5000,
     manageUrl: 'https://example.com/register/manage?token=tok-abc',

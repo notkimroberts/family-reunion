@@ -11,6 +11,7 @@ export {
     removeAdminMember,
     recordRegistrationAudit,
     notifyRegistrationUpdated,
+    describeRegistrationChange,
     setMemberCheckedIn,
     setShirtGiven,
 } from './management'

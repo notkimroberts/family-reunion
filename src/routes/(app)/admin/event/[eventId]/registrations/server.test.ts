@@ -116,16 +116,14 @@ describe('POST /admin/event/[eventId]/registrations update_person', () => {
         expect(await auditEntries()).toHaveLength(0)
     })
 
-    /* Documented rather than desired. "Changed" means a field was submitted, not that its value
-       differs from the stored one, so re-saving the same answer writes a second history entry. The
-       previous version of this test asserted the opposite — but only because it stubbed
-       updateAdminMemberDetails to report `changed: false`, so it was describing the mock. Real
-       behaviour is one entry per save. Worth revisiting if the history gets noisy; not a money bug. */
-    it('audits again when the same value is re-saved', async () => {
+    /* "Changed" now means a value differs from the stored one, not that a field was submitted —
+       updateAdminMemberDetails compares before and after to write the update email's before → after
+       lines. So re-saving the same answer is not a change and adds no history entry. */
+    it('does not audit a re-save of the same value', async () => {
         await submit({ memberId, vegetarianMeal: 'yes' })
         await submit({ memberId, vegetarianMeal: 'yes' })
 
-        expect(await auditEntries()).toHaveLength(2)
+        expect(await auditEntries()).toHaveLength(1)
     })
 
     /* Each cell posts one field. Reading a missing key as '' would let a dietary toggle clear the

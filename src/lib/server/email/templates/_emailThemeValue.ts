@@ -10,5 +10,10 @@ export const emailThemeValue = {
     text: '#171717',
     muted: '#737373',
     accent: '#171717',
+    /* Something the reader has to act on — payment still owed. Amber, matching the app's warning
+       surfaces; flat, with both colours stated so dark-mode inversion cannot wash it out. */
+    actionBackground: '#fffbeb',
+    actionBorder: '#f59e0b',
+    actionText: '#78350f',
     fontStack: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, Helvetica, Arial, sans-serif",
 } as const

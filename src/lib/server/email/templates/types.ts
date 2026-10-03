@@ -13,7 +13,7 @@ export type ConfirmationPartyMember = {
     name: string
     tierLabel: string
     priceCents: number
-    /* Optional parenthetical, e.g. "age 8, shirt M". Already assembled by the caller. */
+    /* Optional parenthetical, e.g. "Age 8, Shirt M". Already assembled by the caller. */
     detail?: string
 }
 
@@ -24,6 +24,10 @@ export type RegistrationConfirmationData = {
     venueName?: string
     venueAddress?: string
     status: ConfirmationStatus
+    /* Whether the money came through Stripe rather than to an organiser by hand. Changes the 'paid'
+       copy only: card prices carry the processing fee, and "your payment has gone through" reads as
+       a card charge to someone who handed over a cheque. Required so every producer decides. */
+    paidByCard: boolean
     partyMembers: ConfirmationPartyMember[]
     totalCents: number
     /* A gift added to the same checkout, if there was one. Named on the confirmation because it is
@@ -35,10 +39,18 @@ export type RegistrationConfirmationData = {
        the heading and adds a lead saying so, but keeps the status money sentence below it — the
        amount owed or covered is just as relevant on an update as on a first confirmation. */
     isUpdate?: boolean
-    /* Human-readable lines describing what the organiser changed, e.g. "Payment recorded as paid".
-       Only rendered for an update. Without it the registrant gets a fresh copy of their details with
-       no indication of what moved. */
-    changeSummary?: string[]
+    /* What the organiser changed. Only rendered for an update. Without it the registrant gets a fresh
+       copy of their details with no indication of what moved. */
+    changeSummary?: RegistrationChange[]
+}
+
+/* One line of "What changed" in an update email. before and after are set when a value was edited,
+   so the reader sees what it was and what it is now and can spot a wrong correction; absent for
+   something with no earlier value, such as a person added to the party. */
+export type RegistrationChange = {
+    summary: string
+    before?: string
+    after?: string
 }
 
 /* Where the money goes when a registration is cancelled.
@@ -56,8 +68,9 @@ export type CancellationEmailData = {
     name: string
     eventTitle: string
     /* Who was on the registration, so the email is a record of what was cancelled and not just a
-       notice that something was. Names only: the money is one number below. */
-    partyNames: string[]
+       notice that something was. Each price is the snapshot that was charged, itemised where money
+       goes back so the refund total can be checked against them. */
+    partyMembers: Pick<ConfirmationPartyMember, 'name' | 'tierLabel' | 'priceCents'>[]
     /* Sum of the party's snapshotted prices — what the registration was worth. Rendered only when
        money is actually going back, since "$0.00 refunded" reads as a failed refund. */
     totalCents: number
@@ -76,4 +89,9 @@ export type DonationReceiptData = {
     donorName: string
     eventTitle: string
     amountCents: number
+    /* When the gift was paid. A receipt with no date cannot be matched to a card statement. */
+    givenOn: Date
+    /* The site's origin, for the header image. The other templates take it from a link they
+       already carry; a receipt carries none. */
+    siteOrigin: string
 }
