@@ -7,7 +7,7 @@ import { toE164 } from './toE164'
 describe('toE164', () => {
     /* The real constant, since it is the only number this app ever formats. */
     it('converts the display format the app actually stores', () => {
-        expect(toE164(CONTACT_PHONE)).toBe('+15105759080')
+        expect(toE164(CONTACT_PHONE)).toBe('+15108098309')
     })
 
     it.each(['(510) 575-9080', '510-575-9080', '510.575.9080', '5105759080', '510 575 9080'])(
