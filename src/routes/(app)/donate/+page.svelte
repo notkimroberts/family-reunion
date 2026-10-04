@@ -4,12 +4,13 @@ import * as Sentry from '@sentry/sveltekit'
 import { superForm } from 'sveltekit-superforms'
 import { zod4Client as zodClient } from 'sveltekit-superforms/adapters'
 import { page } from '$app/state'
-import { DonationAmountPicker, DonationRaisedTotal } from '$lib/components'
+import { DonationAmountPicker, DonationRaisedTotal, PaymentSafetyNotice } from '$lib/components'
 import { Button } from '$lib/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card'
 import { Input } from '$lib/components/ui/input'
 import { Textarea } from '$lib/components/ui/textarea'
 import { APP_NAME, DONATION_LEDE } from '$lib/general/constants'
+import { STRIPE_CHECKOUT_NOTE } from '$lib/general/scamSafety'
 import { checkoutErrorMessage, formatPrice } from '$lib/utils'
 import { donationSchema } from './schema'
 
@@ -134,8 +135,7 @@ let heading = $derived(data.event ? `Support ${data.event.title}` : 'Support the
                     <p role="alert" class="text-destructive text-center text-sm">{$message}</p>
                 {/if}
                 <p class="text-muted-foreground text-center text-xs">
-                    You'll be redirected to a secure checkout. A gift to a family reunion is not
-                    tax-deductible.
+                    {STRIPE_CHECKOUT_NOTE} A gift to a family reunion is not tax-deductible.
                 </p>
             </form>
         </CardContent>
@@ -145,4 +145,6 @@ let heading = $derived(data.event ? `Support ${data.event.title}` : 'Support the
         Coming to the reunion? <a class="underline" href="/register">Register here</a> — you can add a
         gift on the way through.
     </p>
+
+    <PaymentSafetyNotice class="mt-6" />
 </section>

@@ -6,10 +6,11 @@ import { superForm } from 'sveltekit-superforms'
 import { zod4Client as zodClient } from 'sveltekit-superforms/adapters'
 import { replaceState } from '$app/navigation'
 import { page } from '$app/state'
-import { RegistrationDeadline } from '$lib/components'
+import { PaymentSafetyNotice, RegistrationDeadline } from '$lib/components'
 import { APP_NAME, CONTACT_EMAIL, CONTACT_PHONE } from '$lib/general/constants'
 import { quotePartyTotal } from '$lib/general/pricing'
 import { isRegistrationClosed } from '$lib/general/registration'
+import { STRIPE_CHECKOUT_NOTE } from '$lib/general/scamSafety'
 import { defaultAdultTierId } from '$lib/general/tiers'
 import {
     checkoutErrorMessage,
@@ -305,6 +306,8 @@ let isLocked = $derived(isRegistrationClosed(data.event?.registrationLockDate ??
                     {#key draftGeneration}
                         <DonationCard bind:donationCents error={$errors.donationCents?.[0]} />
                     {/key}
+
+                    <PaymentSafetyNotice />
                 </div>
 
                 <!-- Right: order summary (sticky on desktop) -->
@@ -319,7 +322,7 @@ let isLocked = $derived(isRegistrationClosed(data.event?.registrationLockDate ??
                         submitLabel={`Pay $${formatPrice(quote.totalCents)} & Register`}
                         submitting={$submitting}
                         placeholderText="Fill in your details above and press Save to continue."
-                        submitFootnote="You'll be redirected to a secure checkout."
+                        submitFootnote={STRIPE_CHECKOUT_NOTE}
                         submitError={$message} />
                     <p class="text-muted-foreground mt-3 text-center text-xs">
                         Already registered? <a class="underline" href="/register/recover"

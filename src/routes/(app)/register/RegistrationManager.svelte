@@ -156,6 +156,6 @@ let totalCents = $derived(sumMemberPrices(members))
         <a class="underline" href="mailto:{CONTACT_EMAIL}">{CONTACT_EMAIL}</a>
         or text
         <a class="underline" href="sms:{toE164(CONTACT_PHONE)}">{CONTACT_PHONE}</a>
-        and the reunion organisers will take care of it.
+        and the reunion organizers will take care of it.
     </p>
 </div>

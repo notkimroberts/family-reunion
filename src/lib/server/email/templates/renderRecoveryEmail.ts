@@ -4,6 +4,7 @@ import { emailLayout } from './_emailLayout'
 import { emailThemeValue } from './_emailThemeValue'
 import { escapeHtml } from './_escapeHtml'
 import { primaryButton } from './_primaryButton'
+import { SAFETY_NOTICE_TEXT } from './_safetyNoticeText'
 
 const USE_LINE =
     'Use it to view your party and what was paid. To add someone, correct a detail or cancel, contact the reunion organizers.'
@@ -36,6 +37,8 @@ export function renderRecoveryEmail(data: { eventTitle: string; manageUrl: strin
         NEWEST_LINK_LINE,
         '',
         `Questions? Reply to this email, or contact us at ${CONTACT_EMAIL} or ${CONTACT_PHONE}.`,
+        '',
+        SAFETY_NOTICE_TEXT,
     ].join('\n')
 
     const paragraph = (content: string) =>

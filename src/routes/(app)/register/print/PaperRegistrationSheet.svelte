@@ -15,7 +15,14 @@ const NOTE = 'text-[9px] leading-snug text-neutral-600'
 </script>
 
 <script lang="ts">
-import { APP_DOMAIN, APP_NAME, CONTACT_EMAIL, CONTACT_PHONE } from '$lib/general/constants'
+import {
+    APP_DOMAIN,
+    APP_NAME,
+    CONTACT_EMAIL,
+    CONTACT_PHONE,
+    ZELLE_RECIPIENT,
+} from '$lib/general/constants'
+import { offlinePaymentMethods } from '$lib/general/scamSafety'
 import { formatPrice } from '$lib/utils'
 import type { TierOption } from '../types'
 import PaperAttendeeBlock from './PaperAttendeeBlock.svelte'
@@ -69,8 +76,9 @@ let {
     </header>
 
     <p class={NOTE}>
-        Please print clearly in ink and tick one box in each group. Give the completed form and your
-        payment to a reunion committee member. Questions: {CONTACT_EMAIL} or {CONTACT_PHONE}.
+        Please print clearly in ink and mark one box in each group. Give the completed form to a
+        reunion committee member, and pay {offlinePaymentMethods(ZELLE_RECIPIENT)}. Never make a
+        check out to a person. Questions: {CONTACT_EMAIL} or {CONTACT_PHONE}.
     </p>
 
     <section class={SECTION}>
@@ -121,7 +129,7 @@ let {
             </div>
             <p class={NOTE}>
                 {HOST_HOTEL.name} is half a block from the reunion. Your answer tells us how much of the
-                block to hold, so please tick a box even if you are not certain.
+                block to hold, so please mark a box even if you are not certain.
                 {#if HOST_HOTEL.bookingUrl}
                     <!-- Printed as text, not linked: a paper form is typed from, not clicked. -->
                     Book our room block at {HOST_HOTEL.bookingUrl}{#if HOST_HOTEL.bookingDeadline}

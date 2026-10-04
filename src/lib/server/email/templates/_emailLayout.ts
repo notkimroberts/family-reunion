@@ -1,6 +1,7 @@
 import { REUNION_NAME } from '$lib/general/constants'
 import { emailThemeValue } from './_emailThemeValue'
 import { escapeHtml } from './_escapeHtml'
+import { safetyNoticeHtml } from './_safetyNoticeHtml'
 
 /* Will and Roxie, the couple the reunion descends from — the same portrait as the site's favicon and
    share card, cropped to the photograph with no transparent bands (Outlook paints transparency
@@ -61,6 +62,12 @@ export function emailLayout(params: {
             <div style="width:40px;height:2px;background-color:${accent};margin:14px 0 22px 0;"></div>
             ${params.bodyHtml}
           </td>
+        </tr>
+        <tr>
+          <td style="height:16px;line-height:16px;font-size:0;">&nbsp;</td>
+        </tr>
+        <tr>
+          ${safetyNoticeHtml()}
         </tr>
         <tr>
           <td align="center" style="padding:20px 8px 0 8px;font-family:${fontStack};font-size:12px;line-height:1.6;color:${muted};">

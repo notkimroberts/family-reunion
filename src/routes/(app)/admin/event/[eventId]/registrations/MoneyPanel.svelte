@@ -36,7 +36,7 @@ let notes = $derived([
               /* formatUsd, because a literal dollar sign written anywhere in a script block —
                  code OR comment — is corrupted by `bun run format`. See formatUsd and the
                  formatting note in CLAUDE.md. */
-              `Includes ${formatUsd(money.toDepositCents)} in cash or cheques. Those arrive in full, but only once deposited.`,
+              `Includes ${formatUsd(money.toDepositCents)} in cash or checks. Those arrive in full, but only once deposited.`,
           ]
         : []),
     ...(money.attachedGiftCount > 0

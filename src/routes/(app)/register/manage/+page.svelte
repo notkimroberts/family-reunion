@@ -4,7 +4,8 @@ import { onMount } from 'svelte'
 import { Alert, AlertDescription, AlertTitle } from '$lib/components/ui/alert'
 import { Button } from '$lib/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card'
-import { APP_NAME, CONTACT_EMAIL, CONTACT_PHONE } from '$lib/general/constants'
+import { APP_NAME, CONTACT_EMAIL, CONTACT_PHONE, ZELLE_RECIPIENT } from '$lib/general/constants'
+import { offlinePaymentMethods } from '$lib/general/scamSafety'
 import { toE164 } from '$lib/utils'
 import HostHotelPrompt from '../HostHotelPrompt.svelte'
 import RegistrationManager from '../RegistrationManager.svelte'
@@ -145,11 +146,11 @@ $effect(() => {
             <Alert>
                 <AlertTitle>Payment outstanding</AlertTitle>
                 <AlertDescription>
-                    Your place is recorded but payment hasn't been received yet. Contact
+                    Your place is recorded but payment hasn't been received yet. Pay
+                    {offlinePaymentMethods(ZELLE_RECIPIENT)}. Questions? Email
                     <a class="underline" href="mailto:{CONTACT_EMAIL}">{CONTACT_EMAIL}</a>
                     or text
-                    <a class="underline" href="sms:{toE164(CONTACT_PHONE)}">{CONTACT_PHONE}</a>
-                    to arrange it.
+                    <a class="underline" href="sms:{toE164(CONTACT_PHONE)}">{CONTACT_PHONE}</a>.
                 </AlertDescription>
             </Alert>
         </section>

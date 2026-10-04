@@ -3,6 +3,7 @@ import { HeartHandshake, Mail } from '@lucide/svelte'
 import { onDestroy, onMount } from 'svelte'
 import {
     DonationRaisedTotal,
+    PaymentSafetyNotice,
     RegistrationDeadline,
     ReunionLocations,
     StayConnected,
@@ -359,6 +360,7 @@ const FAMILY_STATS = [
             {/if}
         </CardContent>
     </Card>
+    <PaymentSafetyNotice class="mt-6" />
 </section>
 
 <!-- Family Story -->

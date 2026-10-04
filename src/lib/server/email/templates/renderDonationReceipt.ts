@@ -3,6 +3,7 @@ import { formatPrice, formatReunionDateTime, toE164 } from '$lib/utils'
 import { emailLayout } from './_emailLayout'
 import { emailThemeValue } from './_emailThemeValue'
 import { escapeHtml } from './_escapeHtml'
+import { SAFETY_NOTICE_TEXT } from './_safetyNoticeText'
 import type { DonationReceiptData } from './types'
 
 /* Receipt for a standalone gift. Says the amount and the date and nothing else — a donation buys
@@ -33,6 +34,8 @@ export function renderDonationReceipt(data: DonationReceiptData): {
         'This is a personal gift to a family reunion, not a charitable donation, so it is not tax-deductible.',
         '',
         `Questions? Reply to this email, or contact us at ${CONTACT_EMAIL} or ${CONTACT_PHONE}.`,
+        '',
+        SAFETY_NOTICE_TEXT,
     ].join('\n')
 
     const paragraph = (content: string) =>
