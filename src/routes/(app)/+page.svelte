@@ -1,5 +1,5 @@
 <script lang="ts">
-import { HeartHandshake, Mail, MessageSquare } from '@lucide/svelte'
+import { HeartHandshake, Mail } from '@lucide/svelte'
 import { onDestroy, onMount } from 'svelte'
 import {
     DonationRaisedTotal,
@@ -259,7 +259,7 @@ const FAMILY_STATS = [
 
 <!-- Venue & Hotel.
 
-     No max-w on the card grids in this section or the two below it. Every section here is col-span-12,
+     No max-w on the card grids in this section or the ones below it. Every section here is col-span-12,
      so they were already the same width — but Venue, Stay Connected and Get in Touch each constrained
      their cards further, to 64rem, 48rem and 42rem, against a page container of 72rem. Four different
      card widths down one page, none of them deliberate.
@@ -281,24 +281,12 @@ const FAMILY_STATS = [
     </div>
 </section>
 
-<!-- Stay Connected -->
-<section class="col-span-12 mt-8 md:mt-12">
-    <div class="mx-auto mb-8 max-w-xl text-center">
-        <h2>Stay Connected</h2>
-        <p class="text-muted-foreground mt-2">
-            Join the family online between now and the reunion.
-        </p>
-    </div>
-    <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
-        <StayConnected />
-    </div>
-</section>
-
 <!-- Support the Reunion.
 
-     Between Stay Connected and Get in Touch on purpose: after the two sections that ask for nothing,
-     and before the one that answers questions. The preset buttons carry their figure to /donate in
-     ?amount=, so a visitor who has already chosen does not choose twice. -->
+     Straight after Venue, ahead of Stay Connected: once a visitor knows where and when, giving is the
+     next thing the page can ask for, and below the community links it was easy to scroll past. The
+     preset buttons carry their figure to /donate in ?amount=, so a visitor who has already chosen
+     does not choose twice. -->
 <section id="donate" class="col-span-12 mt-8 scroll-mt-24 md:mt-12">
     <div class="mx-auto mb-8 max-w-xl text-center">
         <h2>Support the Reunion</h2>
@@ -327,46 +315,48 @@ const FAMILY_STATS = [
     </Card>
 </section>
 
-<!-- Get in Touch -->
+<!-- Stay Connected -->
+<section class="col-span-12 mt-8 md:mt-12">
+    <div class="mx-auto mb-8 max-w-xl text-center">
+        <h2>Stay Connected</h2>
+        <p class="text-muted-foreground mt-2">
+            Join the family online between now and the reunion.
+        </p>
+    </div>
+    <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+        <StayConnected />
+    </div>
+</section>
+
+<!-- Get in Touch.
+
+     Email is the channel the organizers want, so it is the filled button; the phone is a muted line
+     under it. They were two equal tiles, which gave no hint which one the organizers prefer.
+     The address is printed too: a mailto: link opens nothing on a desktop with no mail client. -->
 <section id="contact" class="col-span-12 mt-8 scroll-mt-24 md:mt-12">
     <div class="mx-auto mb-8 max-w-xl text-center">
         <h2>Get in Touch</h2>
         <p class="text-muted-foreground mt-2">
-            Have a question about the reunion? Reach the organizers directly below.
+            Have a question about the reunion? Email is the best way to reach the organizers.
         </p>
     </div>
     <Card>
-        <CardContent class="pt-6">
-            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                {#if contactEmail}
-                    <a href="mailto:{contactEmail}" class="group flex items-center gap-3">
-                        <div
-                            class="bg-primary/10 text-primary group-hover:bg-primary/20 shrink-0 rounded-md p-2 transition-colors">
-                            <Mail class="h-4 w-4" />
-                        </div>
-                        <div>
-                            <p class="text-muted-foreground text-xs">Email</p>
-                            <p class="text-sm font-medium group-hover:underline">
-                                {contactEmail}
-                            </p>
-                        </div>
-                    </a>
-                {/if}
-                {#if contactPhone}
-                    <a href="sms:{toE164(contactPhone)}" class="group flex items-center gap-3">
-                        <div
-                            class="bg-primary/10 text-primary group-hover:bg-primary/20 shrink-0 rounded-md p-2 transition-colors">
-                            <MessageSquare class="h-4 w-4" />
-                        </div>
-                        <div>
-                            <p class="text-muted-foreground text-xs">Text</p>
-                            <p class="text-sm font-medium group-hover:underline">
-                                {contactPhone}
-                            </p>
-                        </div>
-                    </a>
-                {/if}
-            </div>
+        <CardContent class="flex flex-col items-center gap-4 pt-6 text-center">
+            {#if contactEmail}
+                <div class="flex w-full flex-col items-center gap-2">
+                    <Button href="mailto:{contactEmail}" size="lg" class="w-full sm:w-fit">
+                        <Mail class="size-4" />
+                        Email the organizers
+                    </Button>
+                    <p class="text-sm font-medium break-all">{contactEmail}</p>
+                </div>
+            {/if}
+            {#if contactPhone}
+                <p class="text-muted-foreground text-sm">
+                    Or text
+                    <a class="underline" href="sms:{toE164(contactPhone)}">{contactPhone}</a>
+                </p>
+            {/if}
         </CardContent>
     </Card>
 </section>

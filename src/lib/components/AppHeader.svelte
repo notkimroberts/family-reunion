@@ -1,5 +1,5 @@
 <script lang="ts">
-import { ClipboardPen, HeartHandshake, Images, LayoutDashboard, LogOut, Menu } from '@lucide/svelte'
+import { LayoutDashboard, LogOut, Menu } from '@lucide/svelte'
 import { page } from '$app/state'
 import { authClient } from '$lib/auth-client'
 import { Avatar, AvatarFallback } from '$lib/components/ui/avatar'
@@ -10,6 +10,7 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from '$lib/components/ui/dropdown-menu'
+import { Separator } from '$lib/components/ui/separator'
 import {
     APP_NAME,
     DONATE_NAV_LINK,
@@ -19,6 +20,9 @@ import {
 import { getInitials } from '$lib/utils'
 import MobileDrawer from './MobileDrawer.svelte'
 import ThemeToggle from './ThemeToggle.svelte'
+
+const TEXT_LINK_CLASS =
+    'text-muted-foreground hover:text-foreground rounded-lg px-3 py-1.5 text-sm font-medium transition-colors'
 
 /* The theme toggle is unconditional — a visitor who prefers dark had no way to ask for it on desktop,
    since the only toggle lived in the mobile drawer. The account controls are conditional: rendering a
@@ -51,31 +55,26 @@ let mobileMenuOpen = $state(false)
             </span>
         </a>
 
-        <nav class="flex items-center gap-0.5">
-            <!-- Plain text, left of both buttons: browsing the gallery is not a call to action and
-                 must not compete with the two that are. -->
-            <a
-                href={PHOTOS_NAV_LINK.href}
-                class="text-muted-foreground hover:text-foreground flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors">
-                <Images class="h-3.5 w-3.5" />
+        <nav class="flex items-center gap-2">
+            <!-- One filled call to action and nothing competing with it. Photos and Donate are equal-
+                 weight text: Donate was an outline button and every link carried an icon, which put
+                 three visual weights side by side and made the bar read as clutter. -->
+            <a href={PHOTOS_NAV_LINK.href} class={TEXT_LINK_CLASS}>
                 {PHOTOS_NAV_LINK.label}
             </a>
 
-            <!-- Outline, and left of Register: giving is a real path through the site, but the one
-                 thing most visitors are here to do is book a place, so only that is filled. -->
-            <a
-                href={DONATE_NAV_LINK.href}
-                class="hover:bg-muted flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors">
-                <HeartHandshake class="text-primary h-3.5 w-3.5" />
+            <a href={DONATE_NAV_LINK.href} class={TEXT_LINK_CLASS}>
                 {DONATE_NAV_LINK.label}
             </a>
 
             <a
                 href={REGISTER_NAV_LINK.href}
-                class="bg-primary text-primary-foreground hover:bg-primary/90 flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors">
-                <ClipboardPen class="h-3.5 w-3.5" />
+                class="bg-primary text-primary-foreground hover:bg-primary/90 rounded-lg px-4 py-1.5 text-sm font-medium transition-colors">
                 {REGISTER_NAV_LINK.label}
             </a>
+
+            <!-- Site links left of the rule, per-visitor controls right of it. -->
+            <Separator orientation="vertical" class="data-[orientation=vertical]:h-5" />
 
             <ThemeToggle size="sm" />
 
