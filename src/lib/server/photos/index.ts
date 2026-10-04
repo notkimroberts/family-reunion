@@ -10,8 +10,5 @@ export { setPhotoStatus } from './setPhotoStatus'
 export { deletePhoto } from './deletePhoto'
 export { getServablePhotoKey, type PhotoVariant } from './getServablePhotoKey'
 export { getPhotoKey } from './getPhotoKey'
-export {
-    checkUploadRateLimit,
-    resetUploadRateLimits,
-    type RateLimitResult,
-} from './uploadRateLimit'
+export { checkUploadRateLimit, resetUploadRateLimits } from './uploadRateLimit'
+export type { RateLimitResult } from '$lib/server/rateLimit'
