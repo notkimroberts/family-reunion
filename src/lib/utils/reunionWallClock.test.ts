@@ -60,4 +60,10 @@ describe('reunion wall-clock times', () => {
     it('says PST for a winter date', () => {
         expect(formatReunionDateTime(parseReunionWallClock('2027-01-15T09:00')!)).toContain('PST')
     })
+
+    /* The day alone, for the public deadline line. 10 PM Pacific is already the 24th in UTC, so the
+       second case fails if the day is read anywhere but the reunion zone. */
+    it.each(['2027-06-23T09:00', '2027-06-23T22:00'])('states only the day for %s', (typed) => {
+        expect(formatReunionDateTime(parseReunionWallClock(typed)!, 'date')).toBe('June 23, 2027')
+    })
 })

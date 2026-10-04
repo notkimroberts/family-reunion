@@ -259,7 +259,7 @@ const FAMILY_STATS = [
 
 <!-- Venue & Hotel.
 
-     No max-w on the card grids in this section or the two below it. Every section here is col-span-12,
+     No max-w on the card grids in this section or the ones below it. Every section here is col-span-12,
      so they were already the same width — but Venue, Stay Connected and Get in Touch each constrained
      their cards further, to 64rem, 48rem and 42rem, against a page container of 72rem. Four different
      card widths down one page, none of them deliberate.
@@ -281,24 +281,12 @@ const FAMILY_STATS = [
     </div>
 </section>
 
-<!-- Stay Connected -->
-<section class="col-span-12 mt-8 md:mt-12">
-    <div class="mx-auto mb-8 max-w-xl text-center">
-        <h2>Stay Connected</h2>
-        <p class="text-muted-foreground mt-2">
-            Join the family online between now and the reunion.
-        </p>
-    </div>
-    <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
-        <StayConnected />
-    </div>
-</section>
-
 <!-- Support the Reunion.
 
-     Between Stay Connected and Get in Touch on purpose: after the two sections that ask for nothing,
-     and before the one that answers questions. The preset buttons carry their figure to /donate in
-     ?amount=, so a visitor who has already chosen does not choose twice. -->
+     Straight after Venue, ahead of Stay Connected: once a visitor knows where and when, giving is the
+     next thing the page can ask for, and below the community links it was easy to scroll past. The
+     preset buttons carry their figure to /donate in ?amount=, so a visitor who has already chosen
+     does not choose twice. -->
 <section id="donate" class="col-span-12 mt-8 scroll-mt-24 md:mt-12">
     <div class="mx-auto mb-8 max-w-xl text-center">
         <h2>Support the Reunion</h2>
@@ -325,6 +313,19 @@ const FAMILY_STATS = [
             </Button>
         </CardContent>
     </Card>
+</section>
+
+<!-- Stay Connected -->
+<section class="col-span-12 mt-8 md:mt-12">
+    <div class="mx-auto mb-8 max-w-xl text-center">
+        <h2>Stay Connected</h2>
+        <p class="text-muted-foreground mt-2">
+            Join the family online between now and the reunion.
+        </p>
+    </div>
+    <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+        <StayConnected />
+    </div>
 </section>
 
 <!-- Get in Touch -->

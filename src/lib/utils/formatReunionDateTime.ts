@@ -40,11 +40,16 @@ const DATE_OPTIONS = {
 
 /* `time` carries no date at all, for a list of things that all happened today: an arrival ticked at the
    door reads "9:41 AM PDT", and repeating the reunion's own date on every row of that list says nothing.
-   Still zone-named, for the same reason the other two are. */
+   Still zone-named, for the same reason the other two are.
+
+   `date` is the inverse — "June 23, 2027", no clock — for the public deadline line, where the hour
+   was noise. No zone name, because there is no clock time for it to disambiguate; the DAY is still
+   read in the reunion zone, so a late-evening deadline does not print as tomorrow. */
 const WIDTHS = {
     long: { weekday: 'long', month: 'long', ...DATE_OPTIONS },
     short: { weekday: 'short', month: 'short', ...DATE_OPTIONS },
     time: CLOCK_OPTIONS,
+    date: { month: 'long', day: 'numeric', year: 'numeric' },
 } as const
 
 type ReunionDateStyle = keyof typeof WIDTHS

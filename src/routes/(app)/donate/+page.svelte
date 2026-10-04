@@ -52,7 +52,8 @@ let heading = $derived(data.event ? `Support ${data.event.title}` : 'Support the
         <p class="text-muted-foreground max-w-prose text-sm">{DONATION_LEDE}</p>
         <DonationRaisedTotal
             totalCents={data.raised.totalCents}
-            giftCount={data.raised.giftCount} />
+            giftCount={data.raised.giftCount}
+            class="max-w-md" />
     </div>
 
     {#if cancelled}
