@@ -4,6 +4,7 @@ import {
     getRegistrationMembers,
     getRegistrationWithEvent,
 } from '$lib/server/registrations'
+import type { EventDetails, ManagedMember } from '../types'
 import type { PageServerLoad } from './$types'
 
 const TOKEN_COOKIE = 'reg_token'
@@ -57,7 +58,11 @@ export const load: PageServerLoad = async ({ url, cookies }) => {
 
     /* Narrow projection: do not ship contactName/contactEmail/managementToken hash to the
        client. The Svelte components only need id, status, and the session id. The token itself
-       is not returned either — nothing posts any more, and the page is reached by the cookie. */
+       is not returned either — nothing posts any more, and the page is reached by the cookie.
+
+       Members and event are narrowed the same way. Page data is readable in the page source whether
+       or not it renders, and a forwarded link would otherwise hand over every attendee's home
+       address and Stripe ids, plus the admin-only program metadata. */
     return {
         missingToken: false as const,
         registration: {
@@ -65,7 +70,21 @@ export const load: PageServerLoad = async ({ url, cookies }) => {
             status: registration.status,
             stripeSessionId: registration.stripeSessionId,
         },
-        event: reunionEvent,
-        members,
+        event: {
+            id: reunionEvent.id,
+            title: reunionEvent.title,
+            registrationLockDate: reunionEvent.registrationLockDate,
+        } satisfies EventDetails,
+        members: members.map((member): ManagedMember => ({
+            id: member.id,
+            name: member.name,
+            birthYear: member.birthYear,
+            birthMonth: member.birthMonth,
+            birthDay: member.birthDay,
+            shirtSize: member.shirtSize,
+            vegetarianMeal: member.vegetarianMeal,
+            tierLabel: member.tierLabel,
+            priceCents: member.priceCents,
+        })),
     }
 }
