@@ -32,7 +32,9 @@ export const actions: Actions = {
 
        Note that adapter-node's BODY_SIZE_LIMIT defaults to 512K, which rejects the average phone
        photo before this action is ever reached. It is raised in the Railway service variables; see
-       CLAUDE.md. Locally the dev server has no such limit, which is exactly how that bug hides. */
+       CLAUDE.md. Locally the dev server has no such limit, which is exactly how that bug hides.
+       The limit is per REQUEST, not per file, so the page posts each photo on its own; a no-JS
+       batch is one request and fails as a whole once its total passes the limit. */
     default: async ({ request, getClientAddress }) => {
         const formData = await request.formData()
         const files = formData
@@ -87,9 +89,10 @@ export const actions: Actions = {
         }
 
         if (accepted === 0) {
+            // The page sends one file per request, so this message is shown beside that one file.
+            const subject = files.length === 1 ? 'This file' : 'None of those files'
             return fail(400, {
-                message:
-                    'None of those files could be read as a photo. JPEG, PNG, HEIC and WebP all work.',
+                message: `${subject} could not be read as a photo. JPEG, PNG, HEIC and WebP all work.`,
             })
         }
 

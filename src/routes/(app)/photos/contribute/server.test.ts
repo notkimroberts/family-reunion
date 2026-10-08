@@ -94,6 +94,15 @@ describe('POST /photos/contribute', () => {
         expect(await db.select().from(photos)).toHaveLength(0)
     })
 
+    /* The page posts one file per request and shows this message beside that file's name. */
+    it('names a single unreadable file as "this file", not "those files"', async () => {
+        const result = await contribute([new TextEncoder().encode('#!/bin/sh')])
+
+        expect(result).toMatchObject({
+            data: { message: expect.stringMatching(/^This file could not be read/) },
+        })
+    })
+
     it('refuses once the address has exhausted its window', async () => {
         const one = await jpeg(80, 80)
         for (let i = 0; i < 4; i += 1) {

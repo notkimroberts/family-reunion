@@ -1,18 +1,108 @@
 <script lang="ts">
 import { ArrowLeft, Upload } from '@lucide/svelte'
-import { enhance } from '$app/forms'
 import { Button } from '$lib/components/ui/button'
 import * as Field from '$lib/components/ui/field'
 import { Input } from '$lib/components/ui/input'
 import { Textarea } from '$lib/components/ui/textarea'
 import type { ActionData, PageData } from './$types'
+import PhotoUploadProgress from './PhotoUploadProgress.svelte'
+import type { PhotoUpload } from './types'
+import { uploadPhoto } from './uploadPhoto'
 
 type Props = { data: PageData; form: ActionData }
 let { data, form }: Props = $props()
 
-let submitting = $state(false)
+const BYTES_PER_MB = 1024 * 1024
 
-const maxMb = $derived(Math.floor(data.maxBytes / (1024 * 1024)))
+let sending = $state(false)
+let uploads = $state<PhotoUpload[]>([])
+let selectionError = $state<string | undefined>()
+// Caption and name as they were on submit, so a retry sends what the first attempt sent.
+let batchFields = { action: '', caption: '', contributorName: '' }
+let formElement: HTMLFormElement | undefined = $state()
+
+const maxMb = $derived(Math.floor(data.maxBytes / BYTES_PER_MB))
+
+function readText(formData: FormData, name: string): string {
+    const value = formData.get(name)
+    return typeof value === 'string' ? value : ''
+}
+
+/* A file over the cap is failed here rather than sent: the server would refuse it anyway, and the
+   whole body would cross the network first. */
+function toUpload(file: File, id: number): PhotoUpload {
+    const oversized = file.size > data.maxBytes
+    return {
+        id,
+        file,
+        status: oversized ? 'failed' : 'queued',
+        sentBytes: 0,
+        error: oversized ? `Larger than ${maxMb} MB.` : undefined,
+        retryable: false,
+    }
+}
+
+/* Sends each photo in its own request, one after another. A failure is recorded on that row and
+   the loop moves on, so one bad file never costs the rest of the batch. Sequential, not parallel:
+   each request is decoded by sharp on a small container, and memory is the constraint there. */
+async function send(targets: PhotoUpload[]) {
+    sending = true
+    targets.forEach((upload) => {
+        upload.status = 'queued'
+        upload.sentBytes = 0
+        upload.error = undefined
+    })
+    for (const upload of targets) {
+        upload.status = 'uploading'
+        const outcome = await uploadPhoto({
+            ...batchFields,
+            file: upload.file,
+            onProgress: (sentBytes) => {
+                upload.sentBytes = sentBytes
+            },
+        })
+        if (outcome.ok) {
+            upload.status = 'done'
+        } else {
+            upload.status = 'failed'
+            upload.error = outcome.message
+            upload.retryable = outcome.retryable
+        }
+    }
+    sending = false
+    // Clear the form only when nothing is left to retry, or pressing Send again duplicates photos.
+    if (uploads.every((upload) => upload.status === 'done')) {
+        formElement?.reset()
+    }
+}
+
+function handleSubmit(event: SubmitEvent & { currentTarget: HTMLFormElement }) {
+    event.preventDefault()
+    if (sending) {
+        return
+    }
+    const formData = new FormData(event.currentTarget)
+    const files = formData
+        .getAll('photos')
+        .filter((entry): entry is File => entry instanceof File && entry.size > 0)
+
+    if (files.length > data.maxPerRequest) {
+        selectionError = `Please choose at most ${data.maxPerRequest} photos at a time.`
+        return
+    }
+    selectionError = undefined
+    batchFields = {
+        action: event.currentTarget.action,
+        caption: readText(formData, 'caption'),
+        contributorName: readText(formData, 'contributorName'),
+    }
+    uploads = files.map(toUpload)
+    void send(uploads.filter((upload) => upload.status === 'queued'))
+}
+
+function handleRetry() {
+    void send(uploads.filter((upload) => upload.status === 'failed' && upload.retryable))
+}
 </script>
 
 <svelte:head>
@@ -48,13 +138,8 @@ const maxMb = $derived(Math.floor(data.maxBytes / (1024 * 1024)))
         method="POST"
         enctype="multipart/form-data"
         class="flex flex-col gap-6"
-        use:enhance={() => {
-            submitting = true
-            return async ({ update }) => {
-                submitting = false
-                await update()
-            }
-        }}>
+        bind:this={formElement}
+        onsubmit={handleSubmit}>
         <Field.Group>
             <Field.Field>
                 <Field.Label for="photos">Photos</Field.Label>
@@ -70,6 +155,9 @@ const maxMb = $derived(Math.floor(data.maxBytes / (1024 * 1024)))
                     Up to {data.maxPerRequest} at a time, {maxMb} MB each. Location data is removed from
                     every photo before it is stored.
                 </Field.Description>
+                {#if selectionError}
+                    <p class="text-destructive text-sm" role="alert">{selectionError}</p>
+                {/if}
             </Field.Field>
 
             <Field.Field>
@@ -85,9 +173,13 @@ const maxMb = $derived(Math.floor(data.maxBytes / (1024 * 1024)))
             </Field.Field>
         </Field.Group>
 
-        <Button type="submit" disabled={submitting} class="w-fit">
+        <Button type="submit" disabled={sending} class="w-fit">
             <Upload class="size-4" />
-            {submitting ? 'Uploading…' : 'Send photos'}
+            {sending ? 'Sending…' : 'Send photos'}
         </Button>
     </form>
+
+    {#if uploads.length > 0}
+        <PhotoUploadProgress {uploads} {sending} onRetry={handleRetry} />
+    {/if}
 </section>
