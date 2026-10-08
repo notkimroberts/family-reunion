@@ -12,8 +12,9 @@ import { APP_DOMAIN } from './APP_DOMAIN'
    SPF authenticates the envelope on the `send.` subdomain and aligns under DMARC's relaxed rule.
    Sending as the committee's gmail.com would fail both.
 
-   Replies DO now reach a human at this address — the root domain has MX records forwarding every
-   address to the committee Gmail (see CONTACT_EMAIL) — but send() still sets an explicit Reply-To
-   rather than relying on that. From is constrained by what Resend will authenticate; where replies
-   land is a separate decision, and the header keeps it one. */
-export const EMAIL_FROM_ADDRESS = `reunion@${APP_DOMAIN}`
+   Replies reach a human at this address too — it is the organizers' Google Workspace address (see
+   CONTACT_EMAIL) — but send() still sets an explicit Reply-To rather than relying on that. From is
+   constrained by what Resend will authenticate; where replies land is a separate decision, and the
+   header keeps it one. It was `reunion@`, which never existed in Workspace: a client that ignored
+   Reply-To would have bounced the reply. */
+export const EMAIL_FROM_ADDRESS = `organizers@${APP_DOMAIN}`
