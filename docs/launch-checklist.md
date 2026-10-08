@@ -66,7 +66,14 @@ Do the parts in order. **Do not merge #88 before 3e.** #88 changes the From addr
 - [ ] **DMARC policy, step 3:** after another 1–2 weeks of clean reports, change it to `p=reject`. Inboxes then refuse mail that pretends to come from our domain.
 - [x] **Who receives our mail: Google.** No ImprovMX. Google (Workspace) both sends and receives `reunion@pattersonfamilyreunion.com`, which the Oct 7 report's `google` DKIM key confirms on the sending side.
 - [ ] **Google MX records:** in Namecheap → **Advanced DNS → Mail Settings**, choose **Gmail** (or **Custom MX** with the MX record Google Admin shows, usually `smtp.google.com`, priority 1). Delete any other MX records at `@`. Leave the MX record on `send.`: that one is Resend's, for bounces, and it is separate. In Google Admin, check that the domain's MX setup shows as verified.
-- [ ] Send a test email from a personal account to `reunion@pattersonfamilyreunion.com`. It must arrive in that Google mailbox. Reply from it and check that the reply arrives.
+- [ ] **Create `reunion@` in Google Workspace.** Mail to it bounces until it exists: `admin@` is a real user, and `reunion@` is not yet a user, alias or group. Pick one:
+  - **Alias** (one person reads it). In admin.google.com → **Directory → Users**, open that user, then **User information → Alternate email addresses** and add `reunion`. Then in that person's Gmail → **Settings → Accounts → Send mail as**, add `reunion@pattersonfamilyreunion.com`, so replies go out from `reunion@` and not `admin@`.
+  - **Google Group** (several organizers read it). Create the group `reunion@` and add the organizers. Set **who can post** to **Anyone on the web**: a group accepts mail only from inside the organization by default, so mail from family members would bounce.
+  - **No catch-all.** Do not route unrecognized addresses to a mailbox. It would collect spam, hide misprinted addresses, and make `payments@`, `organizer@` or any other name at the domain look official, against the scam rules. Add each extra address by name, for example `dmarc@` for the DMARC reports.
+- [ ] **Test `reunion@`.** From a personal account:
+  - Send an email to `reunion@pattersonfamilyreunion.com`. It must arrive in the alias's inbox, or for every group member.
+  - Reply to it. The reply must come **from** `reunion@`, not from `admin@`, and must arrive.
+  - Send an email to a made-up address, such as `nobody@pattersonfamilyreunion.com`. It must **bounce**, which proves there is no catch-all.
 - [ ] **Zelle:** enroll `reunion@pattersonfamilyreunion.com` with Zelle at PNC (section 13). Once #88 merges, the site names this address as the only Zelle recipient. Send $1 to it from another account to prove it works.
 - [ ] Send yourself the email previews from the new domain: `bun run email:preview -- --send you@example.com`. They must arrive in the inbox, not spam.
 
