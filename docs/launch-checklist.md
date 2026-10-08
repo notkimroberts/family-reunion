@@ -64,10 +64,9 @@ Do the parts in order. **Do not merge #88 before 3e.** #88 changes the From addr
 - [ ] **Root SPF record:** one TXT record at Host `@`, now `v=spf1 include:_spf.google.com ~all` (reported live on Oct 8, after the first report). Keep it the **only** SPF record at `@`; two is an error that breaks both. Resend does not belong in it, because Resend's SPF is on `send.`. If another service ever sends with the root domain as its sender, add it to this same record.
 - [ ] **DMARC policy, step 2:** after 1–2 weeks of clean reports, change `p=none` to `p=quarantine`. Inboxes then put mail that fails DMARC in spam.
 - [ ] **DMARC policy, step 3:** after another 1–2 weeks of clean reports, change it to `p=reject`. Inboxes then refuse mail that pretends to come from our domain.
-- [ ] **Decide who receives our mail: Google or ImprovMX, not both.** The Oct 7 report shows mail sent through Google with a `google` DKIM key, which means Google (Workspace) is set up for the domain. A domain has one set of MX records. If Google receives `reunion@`, skip the ImprovMX item and the Gmail "Send mail as" item below.
-- [ ] **Inbound mail (only if you use ImprovMX):** add the domain in ImprovMX, with a catch-all alias to the committee Gmail. In Namecheap → **Advanced DNS → Mail Settings**, choose **Custom MX** first: with any other choice Namecheap does not use your own MX records. Then add ImprovMX's root MX records, and add ImprovMX to the one root SPF record above.
-- [ ] Send a test email from a personal account to `reunion@pattersonfamilyreunion.com`. It must arrive in the committee Gmail.
-- [ ] **Gmail:** add "Send mail as" `reunion@pattersonfamilyreunion.com` through the Resend SMTP relay. Reply to the test email from that address and check that the reply arrives.
+- [x] **Who receives our mail: Google.** No ImprovMX. Google (Workspace) both sends and receives `reunion@pattersonfamilyreunion.com`, which the Oct 7 report's `google` DKIM key confirms on the sending side.
+- [ ] **Google MX records:** in Namecheap → **Advanced DNS → Mail Settings**, choose **Gmail** (or **Custom MX** with the MX record Google Admin shows, usually `smtp.google.com`, priority 1). Delete any other MX records at `@`. Leave the MX record on `send.`: that one is Resend's, for bounces, and it is separate. In Google Admin, check that the domain's MX setup shows as verified.
+- [ ] Send a test email from a personal account to `reunion@pattersonfamilyreunion.com`. It must arrive in that Google mailbox. Reply from it and check that the reply arrives.
 - [ ] **Zelle:** enroll `reunion@pattersonfamilyreunion.com` with Zelle at PNC (section 13). Once #88 merges, the site names this address as the only Zelle recipient. Send $1 to it from another account to prove it works.
 - [ ] Send yourself the email previews from the new domain: `bun run email:preview -- --send you@example.com`. They must arrive in the inbox, not spam.
 
@@ -100,7 +99,7 @@ Do the parts in order. **Do not merge #88 before 3e.** #88 changes the From addr
 
 - [ ] `/robots.txt` shows `Sitemap: https://pattersonfamilyreunion.com/sitemap.xml`.
 - [ ] The payment-safety box on `/`, `/register` and `/donate` names `pattersonfamilyreunion.com` and `reunion@pattersonfamilyreunion.com`.
-- [ ] Do one test registration. The confirmation email comes from `reunion@pattersonfamilyreunion.com`, its links open `pattersonfamilyreunion.com`, the header photo loads, and a reply reaches the committee Gmail.
+- [ ] Do one test registration. The confirmation email comes from `reunion@pattersonfamilyreunion.com`, its links open `pattersonfamilyreunion.com`, the header photo loads, and a reply reaches the `reunion@` Google mailbox.
 - [ ] Recover a link at `/register/recover` and make a test gift at `/donate`. Both emails come from the new domain.
 - [ ] Paste `https://pattersonfamilyreunion.com` into the Facebook Sharing Debugger and into iMessage. The preview shows Will and Roxie.
 
