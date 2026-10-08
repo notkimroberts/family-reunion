@@ -185,19 +185,23 @@ const FAMILY_STATS = [
                     {/if}
 
                     {#if eventState === 'upcoming'}
-                        <p class="text-2xl font-bold tabular-nums">
-                            {#if countdown.withinOneDay}
-                                {countdown.days}
-                                {countdown.days === 1 ? 'day' : 'days'}, {countdown.hours}
-                                {countdown.hours === 1 ? 'hour' : 'hours'} until we gather
-                            {:else if totalMonths > 0}
-                                {totalMonths}
-                                {totalMonths === 1 ? 'month' : 'months'} until we gather
-                            {:else}
-                                {countdown.days}
-                                {countdown.days === 1 ? 'day' : 'days'} until we gather
-                            {/if}
-                        </p>
+                        <!-- Before registration opens, the hero says only when it opens: a countdown,
+                             a head count and a closing date all invite an action nobody can take yet. -->
+                        {#if !registrationNotYetOpen}
+                            <p class="text-2xl font-bold tabular-nums">
+                                {#if countdown.withinOneDay}
+                                    {countdown.days}
+                                    {countdown.days === 1 ? 'day' : 'days'}, {countdown.hours}
+                                    {countdown.hours === 1 ? 'hour' : 'hours'} until we gather
+                                {:else if totalMonths > 0}
+                                    {totalMonths}
+                                    {totalMonths === 1 ? 'month' : 'months'} until we gather
+                                {:else}
+                                    {countdown.days}
+                                    {countdown.days === 1 ? 'day' : 'days'} until we gather
+                                {/if}
+                            </p>
+                        {/if}
 
                         <div
                             class="mt-2 flex flex-col items-center gap-3 sm:flex-row sm:justify-center lg:justify-start">
@@ -225,7 +229,7 @@ const FAMILY_STATS = [
                                 <p class="text-base">
                                     Registration opens
                                     <span class="font-semibold"
-                                        >{formatReunionDateTime(opensAt, 'long')}</span
+                                        >{formatReunionDateTime(opensAt, 'day')}</span
                                     >.
                                 </p>
                             {:else}
@@ -238,7 +242,7 @@ const FAMILY_STATS = [
                             {/if}
                         </div>
 
-                        {#if data.registrantCount > 0}
+                        {#if data.registrantCount > 0 && !registrationNotYetOpen}
                             <p class="text-muted-foreground text-sm">
                                 Join {data.registrantCount}
                                 {data.registrantCount === 1 ? 'person' : 'people'} already registered
@@ -259,10 +263,14 @@ const FAMILY_STATS = [
 
                     <!-- Outside the eventState branches on purpose: the deadline is the one date a
                          visitor has to act on, so it is stated whatever the reunion's phase — before
-                         it, during it, and after, where it explains why registration has stopped. -->
-                    <RegistrationDeadline
-                        lockDate={data.event.registrationLockDate}
-                        class="self-center lg:self-start" />
+                         it, during it, and after, where it explains why registration has stopped.
+                         The one exception is before registration opens, when the opening date is
+                         the only date that matters. -->
+                    {#if !registrationNotYetOpen}
+                        <RegistrationDeadline
+                            lockDate={data.event.registrationLockDate}
+                            class="self-center lg:self-start" />
+                    {/if}
                 </div>
             </div>
         </div>

@@ -246,7 +246,11 @@ let notYetOpen = $derived(isBeforeRegistrationOpens(opensAt))
                     {/if}
                 </div>
 
-                <RegistrationDeadline lockDate={data.event.registrationLockDate} class="mt-5" />
+                <!-- Not before opening day: a closing date next to "come back on…" reads as a
+                     second deadline to act on. -->
+                {#if !notYetOpen}
+                    <RegistrationDeadline lockDate={data.event.registrationLockDate} class="mt-5" />
+                {/if}
             </div>
         </div>
     </section>

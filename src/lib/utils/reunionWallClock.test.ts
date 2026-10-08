@@ -66,4 +66,14 @@ describe('reunion wall-clock times', () => {
     it.each(['2027-06-23T09:00', '2027-06-23T22:00'])('states only the day for %s', (typed) => {
         expect(formatReunionDateTime(parseReunionWallClock(typed)!, 'date')).toBe('June 23, 2027')
     })
+
+    /* The weekday and the day, no clock: the home page's "Registration opens …" line. */
+    it.each(['2026-10-31T09:00', '2026-10-31T22:00'])(
+        'states the weekday and day for %s',
+        (typed) => {
+            expect(formatReunionDateTime(parseReunionWallClock(typed)!, 'day')).toBe(
+                'Saturday, October 31, 2026',
+            )
+        },
+    )
 })
