@@ -32,6 +32,10 @@ vi.mock('$lib/general/constants', () => ({
     EMAIL_FROM_ADDRESS: 'reunion@example.com',
     CONTACT_EMAIL: 'organiser@example.com',
     CONTACT_PHONE: '+1 555 0100',
+    ZELLE_RECIPIENT: 'organiser@example.com',
+    CHECK_PAYEE: 'Roberts Family Reunion',
+    STATEMENT_DESCRIPTOR_PREFIX: 'PATTERSON',
+    STATEMENT_DESCRIPTOR_SUFFIXES: { registration: 'REUNION', donation: 'GIFT' },
     /* Undefined on purpose, and the only place that branch is covered: a year with no host hotel
        listed must still send a confirmation, without an empty "Somewhere to stay" block. The
        template test next door mocks a hotel and asserts the prompt appears. */

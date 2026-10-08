@@ -12,6 +12,10 @@ vi.mock('$lib/general/constants', () => ({
     APP_DOMAIN: 'example.com',
     CONTACT_EMAIL: 'organiser@example.com',
     CONTACT_PHONE: '+1 555 0100',
+    ZELLE_RECIPIENT: 'organiser@example.com',
+    CHECK_PAYEE: 'Roberts Family Reunion',
+    STATEMENT_DESCRIPTOR_PREFIX: 'PATTERSON',
+    STATEMENT_DESCRIPTOR_SUFFIXES: { registration: 'REUNION', donation: 'GIFT' },
     HOST_HOTEL: {
         kind: 'hotel',
         badge: 'Host Hotel',
@@ -210,7 +214,9 @@ describe('renderRegistrationConfirmation', () => {
             expect(subject).toContain('Registration received')
             expect(text).toContain('not complete until payment is received')
             expect(text).toContain('Amount due: $150.00')
-            expect(text).toContain('Reply to this email to arrange payment.')
+            expect(text).toContain(
+                'Pay by Zelle to organiser@example.com, or by check made out to "Roberts Family Reunion". Reply to this email with any questions.',
+            )
             expect(text).not.toContain('card processing fee')
         })
 
@@ -219,7 +225,7 @@ describe('renderRegistrationConfirmation', () => {
         it('pending puts the payment request up front in every form', () => {
             const { text, html } = renderRegistrationConfirmation({ ...data, status: 'pending' })
             expect(text).toContain(
-                'PAYMENT NEEDED: $150.00. Reply to this email to arrange payment.',
+                'PAYMENT NEEDED: $150.00. Pay by Zelle to organiser@example.com, or by check made out to "Roberts Family Reunion".',
             )
             expect(text.indexOf('PAYMENT NEEDED')).toBeLessThan(text.indexOf('Your party:'))
             expect(html).toContain('Payment needed: $150.00')

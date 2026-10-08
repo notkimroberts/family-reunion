@@ -1,4 +1,5 @@
-import { CONTACT_EMAIL, CONTACT_PHONE } from '$lib/general/constants'
+import { CONTACT_EMAIL, CONTACT_PHONE, ZELLE_RECIPIENT } from '$lib/general/constants'
+import { offlinePaymentMethods } from '$lib/general/scamSafety'
 import { formatPrice, toE164 } from '$lib/utils'
 import { actionCallout } from './_actionCallout'
 import { changeSection } from './_changeSection'
@@ -7,6 +8,7 @@ import { emailThemeValue } from './_emailThemeValue'
 import { escapeHtml } from './_escapeHtml'
 import { hotelSection } from './_hotelSection'
 import { primaryButton } from './_primaryButton'
+import { SAFETY_NOTICE_TEXT } from './_safetyNoticeText'
 import { sectionLabel } from './_sectionLabel'
 import type { ConfirmationStatus, RegistrationConfirmationData } from './types'
 
@@ -40,7 +42,7 @@ const STATUS_COPY: Record<
         lead: 'Your registration is recorded. It is not complete until payment is received.',
         totalLabel: 'Amount due',
         /* Contact details are already in the sign-off, so they are not repeated here. */
-        action: 'Reply to this email to arrange payment.',
+        action: `Pay ${offlinePaymentMethods(ZELLE_RECIPIENT)}. Reply to this email with any questions.`,
     },
 }
 
@@ -121,6 +123,8 @@ export function renderRegistrationConfirmation(data: RegistrationConfirmationDat
         `Questions? Reply to this email, or contact us at ${CONTACT_EMAIL} or ${CONTACT_PHONE}.`,
         '',
         'See you at the reunion!',
+        '',
+        SAFETY_NOTICE_TEXT,
     ].join('\n')
 
     /* ---- html ---- */

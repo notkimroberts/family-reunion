@@ -1,3 +1,5 @@
+import { STATEMENT_DESCRIPTOR_SUFFIXES } from '$lib/general/constants'
+
 /* What a payer reads on Stripe's side, per kind of checkout.
 
    statementDescriptorSuffix is appended to the account's shortened descriptor (set in the Stripe
@@ -10,12 +12,12 @@
    include the card fee while the register page lists it separately. */
 export const checkoutBrandingValue = {
     registration: {
-        statementDescriptorSuffix: 'REUNION',
+        statementDescriptorSuffix: STATEMENT_DESCRIPTOR_SUFFIXES.registration,
         submitMessage:
             'Prices include a card processing fee. A confirmation email follows once payment goes through.',
     },
     donation: {
-        statementDescriptorSuffix: 'GIFT',
+        statementDescriptorSuffix: STATEMENT_DESCRIPTOR_SUFFIXES.donation,
         submitMessage: 'This gift is not tax-deductible. A receipt follows by email.',
     },
 }

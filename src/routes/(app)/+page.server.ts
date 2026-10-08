@@ -5,7 +5,18 @@ import { getPublicDonationTotal } from '$lib/server/donations'
 import type { PageServerLoad } from './$types'
 
 export const load: PageServerLoad = async () => {
-    const events = await db.select().from(reunionEvents).where(eq(reunionEvents.status, 'open'))
+    /* Only what the page renders. The page is public, and `metadata` is the program content that
+       /program keeps behind the login — page data is readable in the source whether or not it renders. */
+    const events = await db
+        .select({
+            id: reunionEvents.id,
+            title: reunionEvents.title,
+            startDate: reunionEvents.startDate,
+            endDate: reunionEvents.endDate,
+            registrationLockDate: reunionEvents.registrationLockDate,
+        })
+        .from(reunionEvents)
+        .where(eq(reunionEvents.status, 'open'))
 
     if (events.length === 0) {
         return { event: null, registrantCount: 0, raised: { totalCents: 0, giftCount: 0 } }

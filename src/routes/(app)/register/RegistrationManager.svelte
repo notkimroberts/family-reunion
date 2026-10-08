@@ -26,7 +26,7 @@ import { CONTACT_EMAIL, CONTACT_PHONE } from '$lib/general/constants'
 import { sumMemberPrices } from '$lib/general/pricing'
 import { formatPrice, toE164 } from '$lib/utils'
 import { formatPartialBirthDate } from '$lib/utils/age'
-import type { EventDetails, PartyMember, RegistrationDetails } from './types'
+import type { EventDetails, ManagedMember, RegistrationDetails } from './types'
 
 /* READ ONLY: the registrant's record of their own party, with no control that posts. Editing, adding,
    removing and cancelling are organiser actions now — see manageReflectsServerState.test.ts, which
@@ -37,7 +37,7 @@ let {
     event,
 }: {
     registration: RegistrationDetails
-    members: PartyMember[]
+    members: ManagedMember[]
     event: EventDetails
 } = $props()
 
@@ -156,6 +156,6 @@ let totalCents = $derived(sumMemberPrices(members))
         <a class="underline" href="mailto:{CONTACT_EMAIL}">{CONTACT_EMAIL}</a>
         or text
         <a class="underline" href="sms:{toE164(CONTACT_PHONE)}">{CONTACT_PHONE}</a>
-        and the reunion organisers will take care of it.
+        and the reunion organizers will take care of it.
     </p>
 </div>

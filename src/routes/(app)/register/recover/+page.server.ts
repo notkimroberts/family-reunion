@@ -5,6 +5,7 @@ import { dbg } from '$lib/server/debug'
 import { sendRecoveryEmail } from '$lib/server/email'
 import { getRegistrationsByEmail } from '$lib/server/registrations'
 import { deliverManagementLink } from '$lib/server/registrations/deliverManagementLink'
+import { allowRecoveryRequest } from '$lib/server/registrations/recoveryRateLimit'
 import { reportError } from '$lib/server/reportError'
 import type { Actions, PageServerLoad } from './$types'
 import { recoverSchema } from './schema'
@@ -22,6 +23,13 @@ export const actions: Actions = {
         }
 
         const { email } = form.data
+
+        /* Over the limit: send nothing, rotate nothing, and answer exactly as for a sent link. */
+        if (!allowRecoveryRequest(email, event.getClientAddress())) {
+            dbg.register('recover rate-limited email=%s', email)
+            return { form, sent: true }
+        }
+
         const matches = await getRegistrationsByEmail(email)
 
         dbg.register('recover email=%s matches=%d', email, matches.length)

@@ -12,6 +12,10 @@ vi.mock('$lib/general/constants', () => ({
     APP_DOMAIN: 'example.com',
     CONTACT_EMAIL: 'organiser@example.com',
     CONTACT_PHONE: '+1 555 0100',
+    ZELLE_RECIPIENT: 'organiser@example.com',
+    CHECK_PAYEE: 'Roberts Family Reunion',
+    STATEMENT_DESCRIPTOR_PREFIX: 'PATTERSON',
+    STATEMENT_DESCRIPTOR_SUFFIXES: { registration: 'REUNION', donation: 'GIFT' },
     HOST_HOTEL: {
         kind: 'hotel',
         badge: 'Host Hotel',

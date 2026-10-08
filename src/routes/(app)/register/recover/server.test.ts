@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { registrations } from '$lib/server/db/schema'
 import { resetTestDb } from '$lib/server/db/testing/resetTestDb'
 import { hashManagementToken } from '$lib/server/registrations/hashManagementToken'
+import { resetRecoveryRateLimits } from '$lib/server/registrations/recoveryRateLimit'
 import { seedEvent } from '$lib/server/testing/seedEvent'
 import { seedRegistration } from '$lib/server/testing/seedRegistration'
 
@@ -42,7 +43,7 @@ const RESEND_FAILED = {
 
 let db: Awaited<ReturnType<typeof resetTestDb>>
 
-function recover(email = 'alice@example.com') {
+function recover(email = 'alice@example.com', clientAddress = '203.0.113.1') {
     const formData = new FormData()
     formData.append('__superform_json', stringify({ email }))
     return actions.default({
@@ -51,6 +52,7 @@ function recover(email = 'alice@example.com') {
             body: formData,
         }),
         url: new URL('http://localhost/register/recover'),
+        getClientAddress: () => clientAddress,
     } as unknown as Parameters<typeof actions.default>[0])
 }
 
@@ -67,6 +69,7 @@ describe('POST /register/recover', () => {
         vi.clearAllMocks()
         mockEnv.RESEND_API_KEY = 're_test_key'
         mockEmailSend.mockResolvedValue(RESEND_OK)
+        resetRecoveryRateLimits()
         db = await resetTestDb()
     })
 
@@ -161,6 +164,39 @@ describe('POST /register/recover', () => {
         const result = await recover('not-an-email')
 
         expect(result).toMatchObject({ status: 400 })
+        expect(mockEmailSend).not.toHaveBeenCalled()
+    })
+
+    /* Unlimited, anyone could flood a registrant with link emails, and each send rotates the token —
+       so the flood also kills the link they already hold. */
+    it('stops sending after three requests an hour for one address', async () => {
+        await seedRegistration(db, { contactEmail: 'alice@example.com' })
+
+        await recover()
+        await recover('Alice@Example.com', '203.0.113.2')
+        await recover('alice@example.com', '203.0.113.3')
+        const [lastPayload] = mockEmailSend.mock.calls[2]
+        const lastToken = lastPayload.text.match(/token=([\w-]+)/)?.[1]
+        const result = await recover('alice@example.com', '203.0.113.4')
+
+        expect(mockEmailSend).toHaveBeenCalledTimes(3)
+        /* The refused request rotated nothing: the last link sent still opens the booking. */
+        const [seeded] = await db
+            .select({ managementToken: registrations.managementToken })
+            .from(registrations)
+        expect(seeded.managementToken).toBe(hashManagementToken(lastToken))
+        /* Same generic answer, so the limit does not reveal that the address is registered. */
+        expect(result).toMatchObject({ sent: true })
+    })
+
+    it('stops one client walking a list of addresses', async () => {
+        await seedRegistration(db, { contactEmail: 'alice@example.com' })
+        await Promise.all(
+            Array.from({ length: 20 }, (_, index) => recover(`person${index}@example.com`)),
+        )
+
+        await recover('alice@example.com')
+
         expect(mockEmailSend).not.toHaveBeenCalled()
     })
 })

@@ -56,6 +56,10 @@ export type EditableMember = Pick<
     | 'tierLabel'
 >
 
+/* What RegistrationManager renders, and all the manage load sends. The management link is a
+   forwardable bearer credential, so no address or Stripe id may ride along in the page data. */
+export type ManagedMember = EditableMember & Pick<PartyMember, 'priceCents'>
+
 /* Member entry in the remove-member confirmation dialog */
 export type RemovableMember = {
     id: string
