@@ -91,10 +91,12 @@ Do the parts in order. **Do not merge #88 before 3e.** #88 changes the From addr
 
 ### 3g. The old domain, `pattersonfamilyreunion27.com`
 
-- [ ] Confirm that no real registration still holds an old-domain link. Then **detach** `pattersonfamilyreunion27.com` on Railway.
-- [ ] Do **not** let `pattersonfamilyreunion27.com` lapse. Turn on auto-renew. At the DNS host, set a 301 redirect to the new domain, and keep ImprovMX for it for 2 years or more. Old emails, paper forms and Facebook posts link to it. If it lapses, a scammer can buy it and receive the replies.
-- [ ] When nothing sends mail from the old domain any more, set its DMARC to `p=reject` and its SPF to `v=spf1 -all`. Then nobody can send mail as that domain.
-- [ ] Remove the old domain from Resend only after that, and keep its Zelle enrollment until no one uses the old address.
+Not needed: `pattersonfamilyreunion27.com` was only used for testing, never live, so nothing real links to it or sends from it.
+
+- ~~Confirm that no real registration still holds an old-domain link. Then **detach** `pattersonfamilyreunion27.com` on Railway.~~
+- ~~Do **not** let `pattersonfamilyreunion27.com` lapse. Turn on auto-renew. At the DNS host, set a 301 redirect to the new domain, and keep ImprovMX for it for 2 years or more. Old emails, paper forms and Facebook posts link to it. If it lapses, a scammer can buy it and receive the replies.~~
+- ~~When nothing sends mail from the old domain any more, set its DMARC to `p=reject` and its SPF to `v=spf1 -all`. Then nobody can send mail as that domain.~~
+- ~~Remove the old domain from Resend only after that, and keep its Zelle enrollment until no one uses the old address.~~
 
 ### 3h. Everywhere the domain is printed
 
