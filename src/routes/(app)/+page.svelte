@@ -18,8 +18,8 @@ import {
     DONATION_PRESET_CENTS,
     FACEBOOK_GROUP_URL,
 } from '$lib/general/constants'
-import { isRegistrationClosed } from '$lib/general/registration'
-import { formatDateRange, formatPrice, toE164 } from '$lib/utils'
+import { isBeforeRegistrationOpens, isRegistrationClosed } from '$lib/general/registration'
+import { formatDateRange, formatPrice, formatReunionDateTime, toE164 } from '$lib/utils'
 
 let { data } = $props()
 
@@ -120,6 +120,10 @@ let totalMonths = $derived(countdown.years * 12 + countdown.months)
 let registrationClosed = $derived(
     isRegistrationClosed(data.event?.registrationLockDate ?? null, now),
 )
+/* Before opening day, the button would lead to a page that only says "come back". The same ticking
+   clock, so a visitor who has the page open at the opening minute sees Register Now appear. */
+let opensAt = $derived(data.event?.registrationOpensAt ?? null)
+let registrationNotYetOpen = $derived(isBeforeRegistrationOpens(opensAt, now))
 
 const FAMILY_STATS = [
     { value: '1819', label: 'Nelly arrives at the Port of New Orleans' },
@@ -217,6 +221,13 @@ const FAMILY_STATS = [
                                     <HeartHandshake class="size-4" />
                                     Donate instead
                                 </Button>
+                            {:else if registrationNotYetOpen && opensAt}
+                                <p class="text-base">
+                                    Registration opens
+                                    <span class="font-semibold"
+                                        >{formatReunionDateTime(opensAt, 'long')}</span
+                                    >.
+                                </p>
                             {:else}
                                 <Button
                                     href="/register"

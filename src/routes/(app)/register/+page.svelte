@@ -9,7 +9,7 @@ import { page } from '$app/state'
 import { PaymentSafetyNotice, RegistrationDeadline } from '$lib/components'
 import { APP_NAME, CONTACT_EMAIL, CONTACT_PHONE } from '$lib/general/constants'
 import { quotePartyTotal } from '$lib/general/pricing'
-import { isRegistrationClosed } from '$lib/general/registration'
+import { isBeforeRegistrationOpens, isRegistrationClosed } from '$lib/general/registration'
 import { STRIPE_CHECKOUT_NOTE } from '$lib/general/scamSafety'
 import { defaultAdultTierId } from '$lib/general/tiers'
 import {
@@ -26,6 +26,7 @@ import FormErrorSummary from './FormErrorSummary.svelte'
 import HostHotelStayCard from './HostHotelStayCard.svelte'
 import OrderSummaryCard from './OrderSummaryCard.svelte'
 import PartyMembersBuilder from './PartyMembersBuilder.svelte'
+import RegistrationOpensNotice from './RegistrationOpensNotice.svelte'
 import YourInformationCard from './YourInformationCard.svelte'
 import { contactSaveProblems } from './contactSaveProblems'
 import { isContactComplete } from './isContactComplete'
@@ -193,6 +194,10 @@ onMount(() => {
    accepts a full party, and only fails with a 403 at submit — after the registrant has done all the
    work. */
 let isLocked = $derived(isRegistrationClosed(data.event?.registrationLockDate ?? null))
+/* Before opening day the page says when to come back instead of showing a form the server would
+   refuse (assertRegistrationOpen). */
+let opensAt = $derived(data.event?.registrationOpensAt ?? null)
+let notYetOpen = $derived(isBeforeRegistrationOpens(opensAt))
 </script>
 
 <svelte:head>
@@ -246,7 +251,9 @@ let isLocked = $derived(isRegistrationClosed(data.event?.registrationLockDate ??
         </div>
     </section>
 
-    {#if isLocked}
+    {#if notYetOpen && opensAt}
+        <RegistrationOpensNotice {opensAt} />
+    {:else if isLocked}
         <section class="col-span-12">
             <div class="bg-card rounded-xl border px-6 py-12 text-center">
                 <p class="text-lg font-semibold">Registration for this reunion has closed.</p>

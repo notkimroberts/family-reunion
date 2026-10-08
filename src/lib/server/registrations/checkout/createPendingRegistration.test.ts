@@ -266,4 +266,29 @@ describe('createPendingRegistration', () => {
         expect(mockCreateCheckout).not.toHaveBeenCalled()
         expect(await db.select().from(registrations)).toHaveLength(0)
     })
+
+    /* The register page hides the form until opening day, but a hidden form is not a guard: a
+       hand-made POST must be refused before anything is written or charged. */
+    it('refuses before registration opens, without opening a checkout', async () => {
+        await db
+            .update(reunionEvents)
+            .set({ registrationOpensAt: new Date(Date.now() + 24 * 60 * 60 * 1000) })
+            .where(eq(reunionEvents.id, eventId))
+
+        await expect(register()).rejects.toMatchObject({ status: 403 })
+
+        expect(mockCreateCheckout).not.toHaveBeenCalled()
+        expect(await db.select().from(registrations)).toHaveLength(0)
+    })
+
+    it('accepts once the opening date has passed', async () => {
+        await db
+            .update(reunionEvents)
+            .set({ registrationOpensAt: new Date('2020-01-01') })
+            .where(eq(reunionEvents.id, eventId))
+
+        await register()
+
+        expect(mockCreateCheckout).toHaveBeenCalledOnce()
+    })
 })

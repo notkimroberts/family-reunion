@@ -1,5 +1,15 @@
 <script lang="ts">
-import { ArrowLeft, Braces, CalendarRange, Lock, Plus, Tags, ToggleRight, X } from '@lucide/svelte'
+import {
+    ArrowLeft,
+    Braces,
+    CalendarClock,
+    CalendarRange,
+    Lock,
+    Plus,
+    Tags,
+    ToggleRight,
+    X,
+} from '@lucide/svelte'
 import { enhance } from '$app/forms'
 import { DateTimeField } from '$lib/components'
 import { Alert, AlertDescription } from '$lib/components/ui/alert'
@@ -148,6 +158,34 @@ const METADATA_EXAMPLE = `{
                     {/each}
                 </div>
             </div>
+        </CardContent>
+    </Card>
+
+    <Card>
+        <CardHeader>
+            <CardTitle class="flex items-center gap-2">
+                <CalendarClock class="text-muted-foreground size-4" />
+                Registration opens
+            </CardTitle>
+            <CardDescription>
+                Until this moment, the register page says when to come back and the home page shows
+                the date instead of Register Now. Leave it blank to open registration now.
+            </CardDescription>
+        </CardHeader>
+        <CardContent>
+            <form
+                method="POST"
+                action="?/update_opens_at"
+                use:enhance
+                class="flex flex-col items-start gap-3">
+                <DateTimeField
+                    id="registrationOpensAt"
+                    name="registrationOpensAt"
+                    label="Opens"
+                    value={toReunionWallClock(data.event.registrationOpensAt)}
+                    emptyNote="No opening date — registration is open now." />
+                <Button type="submit" size="sm" variant="secondary">Save opening date</Button>
+            </form>
         </CardContent>
     </Card>
 
