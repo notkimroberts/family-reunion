@@ -49,14 +49,14 @@ Do the parts in order. **Do not merge #88 before 3e.** #88 changes the From addr
 - [ ] Sign in to the registrar account that holds `pattersonfamilyreunion.com`. If someone else holds it, have it moved into the committee's account first: they unlock it and give you the transfer code, or they add you as the owner.
 - [ ] Make the account safe to keep for years. The account email must be one the committee controls, not a personal address that can lapse. Turn on two-factor sign-in.
 - [ ] Turn on the registrar lock (transfer lock), auto-renew with a card that does not expire soon, and WHOIS privacy. Write down the renewal date.
-- [ ] Decide which DNS host to use: the registrar, or the same host as `pattersonfamilyreunion27.com`. The host must support a root (apex) record that points at a hostname, called ALIAS, ANAME or CNAME flattening. Railway needs one for the apex.
+- [ ] DNS host: **Namecheap**. In Namecheap, go to **Domain List → Manage → Domain** and check that **Nameservers** says **Namecheap BasicDNS**. With **Custom DNS** the records live elsewhere and the Namecheap steps below do not apply. Namecheap supports ALIAS records, which Railway needs for the root domain.
 - [ ] Before you change anything, screenshot every DNS record the domain already has. If it served an old site or old email, note which records were for that.
 
 ### 3b. Email (before #88)
 
 - [ ] **Resend:** add `pattersonfamilyreunion.com`. Add the DNS records Resend shows: the DKIM key at `resend._domainkey`, SPF and MX on `send.`, and DMARC. Wait until Resend says **Verified**.
 - [ ] **DMARC policy:** start at `p=none` with a `rua=` report address. When the reports are clean for 2 weeks, change it to `p=reject`. Inboxes then refuse mail that pretends to come from our domain.
-- [ ] **Inbound mail:** add the domain in ImprovMX, with a catch-all alias to the committee Gmail. Add the root MX records and **one** SPF TXT record that includes both ImprovMX and Resend. Two SPF records is an error that breaks both.
+- [ ] **Inbound mail:** add the domain in ImprovMX, with a catch-all alias to the committee Gmail. In Namecheap → **Advanced DNS → Mail Settings**, choose **Custom MX** first: with any other choice Namecheap does not use your own MX records. Then add ImprovMX's root MX records and **one** SPF TXT record (Host `@`) that includes both ImprovMX and Resend. Two SPF records is an error that breaks both.
 - [ ] Send a test email from a personal account to `reunion@pattersonfamilyreunion.com`. It must arrive in the committee Gmail.
 - [ ] **Gmail:** add "Send mail as" `reunion@pattersonfamilyreunion.com` through the Resend SMTP relay. Reply to the test email from that address and check that the reply arrives.
 - [ ] **Zelle:** enroll `reunion@pattersonfamilyreunion.com` with Zelle at PNC (section 13). Once #88 merges, the site names this address as the only Zelle recipient. Send $1 to it from another account to prove it works.
@@ -64,8 +64,14 @@ Do the parts in order. **Do not merge #88 before 3e.** #88 changes the From addr
 
 ### 3c. Website (before #88)
 
-- [ ] **Railway:** add the custom domain `pattersonfamilyreunion.com` to `family-reunion-app` in production. Add the DNS records Railway shows (the apex record and any TXT check). Wait until Railway shows the certificate as active.
-- [ ] At the DNS host, set `www.pattersonfamilyreunion.com` to a 301 redirect to `https://pattersonfamilyreunion.com`.
+- [ ] **Railway:** add the custom domain `pattersonfamilyreunion.com` to `family-reunion-app` in production. Then in Namecheap → **Advanced DNS → Host Records**:
+  - Delete Namecheap's parking records: `URL Redirect @ → http://www.pattersonfamilyreunion.com/` and `CNAME www → parkingpage.namecheap.com`. If the `@` redirect stays, the root and `www` redirect to each other and the page never loads.
+  - Add an **ALIAS Record**: Host `@`, Value the target Railway shows.
+  - Add any **TXT Record** Railway shows for verification.
+  - Wait until Railway shows the certificate as active. DNS changes can take up to 30 minutes.
+- [ ] **`www` redirect** in Namecheap → **Advanced DNS → Host Records** → **Add New Record** → **URL Redirect Record**: Host `www`, Value `https://pattersonfamilyreunion.com`, type **Permanent (301)**. Not "Unmasked" (a temporary redirect) or "Masked" (a frame). Save with the green check mark.
+  - Test `http://www.pattersonfamilyreunion.com/register`, `https://www.pattersonfamilyreunion.com/register` and `www.pattersonfamilyreunion.com/register`. Each must end on `https://pattersonfamilyreunion.com` with no security warning, ideally on `/register`. Or run `curl -sI https://www.pattersonfamilyreunion.com/register` and look for `301`.
+  - If the `https://www` address shows a security warning, Namecheap's redirect has no certificate for it. Then ask the developer to add `www` as a second Railway domain and redirect it in the app instead.
 - [ ] Open `https://pattersonfamilyreunion.com/api/health`. It must return `ok`. The site still shows the old domain in its text until 3e. That is expected.
 
 ### 3d. Services that call the site (before #88)
