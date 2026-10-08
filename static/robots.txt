@@ -7,3 +7,5 @@ Allow: /register$
 Allow: /will_and_roxie.png
 Allow: /will_and_roxie_email.jpg
 Disallow: /
+
+Sitemap: https://pattersonfamilyreunion.com/sitemap.xml
