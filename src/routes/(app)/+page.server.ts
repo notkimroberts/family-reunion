@@ -13,6 +13,7 @@ export const load: PageServerLoad = async () => {
             title: reunionEvents.title,
             startDate: reunionEvents.startDate,
             endDate: reunionEvents.endDate,
+            registrationOpensAt: reunionEvents.registrationOpensAt,
             registrationLockDate: reunionEvents.registrationLockDate,
         })
         .from(reunionEvents)

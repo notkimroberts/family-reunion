@@ -201,6 +201,55 @@ describe('settings ?/update_program', () => {
     })
 })
 
+describe('settings ?/update_opens_at', () => {
+    it('requires the owner', async () => {
+        mockRequireOwner.mockImplementation(() => {
+            throw new Error('denied')
+        })
+
+        await expect(
+            actions.update_opens_at(requestWith({ registrationOpensAt: '2026-10-31T09:00' })),
+        ).rejects.toThrow('denied')
+
+        expect((await eventRow()).registrationOpensAt).toBeNull()
+    })
+
+    /* Read in the reunion's zone: 9:00 typed means 9:00 AM Pacific, not 9:00 UTC. */
+    it('stores the opening moment in the reunion time zone', async () => {
+        await actions.update_opens_at(requestWith({ registrationOpensAt: '2026-10-31T09:00' }))
+
+        expect((await eventRow()).registrationOpensAt).toEqual(
+            new Date('2026-10-31T09:00:00-07:00'),
+        )
+    })
+
+    it('clears the opening date when left blank, which opens registration now', async () => {
+        await actions.update_opens_at(requestWith({ registrationOpensAt: '2026-10-31T09:00' }))
+        await actions.update_opens_at(requestWith({ registrationOpensAt: '' }))
+
+        expect((await eventRow()).registrationOpensAt).toBeNull()
+    })
+
+    it('refuses a value it cannot read, and writes nothing', async () => {
+        const result = await actions.update_opens_at(
+            requestWith({ registrationOpensAt: 'next tuesday' }),
+        )
+
+        expect(result).toMatchObject({ status: 400 })
+        expect((await eventRow()).registrationOpensAt).toBeNull()
+    })
+
+    it('leaves the lock date, the program and the dates untouched', async () => {
+        await actions.update_opens_at(requestWith({ registrationOpensAt: '2026-10-31T09:00' }))
+
+        expect(await eventRow()).toMatchObject({
+            registrationLockDate: new Date('2027-07-01T09:00'),
+            metadata: PROGRAM,
+            startDate: new Date('2027-07-23T16:00'),
+        })
+    })
+})
+
 describe('settings ?/update_lock_date', () => {
     it('requires the owner', async () => {
         mockRequireOwner.mockImplementation(() => {

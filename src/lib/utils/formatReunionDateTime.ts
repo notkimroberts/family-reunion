@@ -44,12 +44,14 @@ const DATE_OPTIONS = {
 
    `date` is the inverse — "June 23, 2027", no clock — for the public deadline line, where the hour
    was noise. No zone name, because there is no clock time for it to disambiguate; the DAY is still
-   read in the reunion zone, so a late-evening deadline does not print as tomorrow. */
+   read in the reunion zone, so a late-evening deadline does not print as tomorrow. `day` is the same
+   with the weekday — "Saturday, October 31, 2026" — for the home page's opening-day line. */
 const WIDTHS = {
     long: { weekday: 'long', month: 'long', ...DATE_OPTIONS },
     short: { weekday: 'short', month: 'short', ...DATE_OPTIONS },
     time: CLOCK_OPTIONS,
     date: { month: 'long', day: 'numeric', year: 'numeric' },
+    day: { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' },
 } as const
 
 type ReunionDateStyle = keyof typeof WIDTHS

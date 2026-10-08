@@ -151,6 +151,27 @@ export const actions: Actions = {
         return { success: true }
     },
 
+    /* When public registration opens, and nothing else — like every action here, its .set() names
+       only its own column. Blank clears it, which means open now. */
+    update_opens_at: async (event) => {
+        requireOwner(event)
+        const data = await event.request.formData()
+
+        const registrationOpensAt = parseOptionalDate(data.get('registrationOpensAt'))
+        if ('error' in registrationOpensAt) {
+            return fail(400, { error: `Opening date: ${registrationOpensAt.error}` })
+        }
+
+        dbg.admin('update_opens_at eventId=%s', event.params.eventId)
+
+        await db
+            .update(reunionEvents)
+            .set({ registrationOpensAt: registrationOpensAt.date, updatedAt: new Date() })
+            .where(eq(reunionEvents.id, event.params.eventId))
+
+        return { success: true }
+    },
+
     update_lock_date: async (event) => {
         requireOwner(event)
         const data = await event.request.formData()

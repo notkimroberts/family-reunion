@@ -7,6 +7,7 @@ import { createRegistrationCheckout } from '$lib/server/payments'
 import { resolveTierPricing } from '$lib/server/tiers'
 import { grossUpForStripe } from '$lib/utils/stripeFee'
 import { assertRegistrationEditable } from '../assertRegistrationEditable'
+import { assertRegistrationOpen } from '../assertRegistrationOpen'
 import { generateManagementToken } from '../hashManagementToken'
 import type { MemberInput } from './MemberInput'
 import { assertContactTierIsAdult } from './_assertContactTierIsAdult'
@@ -46,6 +47,8 @@ export async function createPendingRegistration(params: {
        open, so a late registrant can still pay for a place nobody is catering for.
        Admin paper entry deliberately skips this check — see admin/registrations. */
     const checkoutEvent = await getCheckoutEvent(params.eventId)
+    /* Nor before it opens: the form is hidden until then, but a hidden form is not a guard. */
+    assertRegistrationOpen(checkoutEvent?.registrationOpensAt ?? null)
     assertRegistrationEditable(checkoutEvent?.registrationLockDate ?? null)
 
     const pricingByTierId = await resolveTierPricing(

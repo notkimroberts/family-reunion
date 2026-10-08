@@ -119,6 +119,10 @@ export const reunionEvents = pgTable(
            `event.metadata?.venue?.name`. The shape lives in $lib/general/reunionMetadata and the
            settings editor validates against it before writing — that is the only writer. */
         metadata: jsonb('metadata').$type<ReunionMetadata>().notNull().default({}),
+        /* When public registration opens. Before it, /register says when it will open and the server
+           refuses a submission. NULL means no opening date: open now, as before this column existed.
+           The counterpart of registration_lock_date, and a predicate like it. */
+        registrationOpensAt: timestamp('registration_opens_at', { withTimezone: true }),
         registrationLockDate: timestamp('registration_lock_date', { withTimezone: true }),
         createdAt: timestamp('created_at').notNull().defaultNow(),
         updatedAt: timestamp('updated_at').notNull().defaultNow(),
