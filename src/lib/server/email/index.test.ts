@@ -29,7 +29,7 @@ vi.mock('$lib/general/constants', () => ({
     APP_NAME: 'Test App',
     REUNION_NAME: 'Test Reunion',
     APP_DOMAIN: 'example.com',
-    EMAIL_FROM_ADDRESS: 'reunion@example.com',
+    EMAIL_FROM_ADDRESS: 'organizers@example.com',
     CONTACT_EMAIL: 'organiser@example.com',
     CONTACT_PHONE: '+1 555 0100',
     ZELLE_RECIPIENT: 'organiser@example.com',

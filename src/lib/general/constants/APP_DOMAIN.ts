@@ -6,17 +6,17 @@
    sent from it, so nothing was kept for compatibility. Do not add a redirect back for it.
 
    What it is load-bearing for: the transactional email FROM address, EMAIL_FROM_ADDRESS, which is
-   `reunion@<APP_DOMAIN>`. That domain has to be verified in Resend or every send is rejected — and
+   `organizers@<APP_DOMAIN>`. That domain has to be verified in Resend or every send is rejected — and
    since send() throws on Resend's error rather than resolving quietly, a registrant would reach
    Stripe, pay, and never receive their management link. Changing this means re-verifying the new
    domain in Resend FIRST, then flipping this constant.
 
-   The domain also RECEIVES mail: root MX records point at ImprovMX, whose catch-all forwards every
-   address to the committee Gmail, which replies through Resend's SMTP relay. CONTACT_EMAIL is on
-   this domain because of that. Two independent MX systems share the zone — root is ImprovMX for
-   inbound, `send.` is Resend's bounce feedback — so never consolidate or prune the MX records
-   without checking which one you are holding. SPF is likewise a SINGLE root TXT record including
-   both senders; a second SPF record is a permerror that breaks both.
+   The domain also RECEIVES mail, through Google Workspace: root MX records point at Google, and
+   CONTACT_EMAIL (`organizers@`) is a Workspace alias or group — there is no catch-all. Two
+   independent MX systems share the zone — root is Google for inbound, `send.` is Resend's bounce
+   feedback — so never consolidate or prune the MX records without checking which one you are
+   holding. SPF is likewise split: the SINGLE root TXT record names Google, and Resend's lives on
+   `send.`. A second SPF record at the root is a permerror that breaks it.
 
    `www` is not a Railway domain. It is a 301 at the DNS host, pointing here.
 
