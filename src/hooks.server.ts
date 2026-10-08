@@ -5,6 +5,7 @@ import { svelteKitHandler } from 'better-auth/svelte-kit'
 import { building, dev } from '$app/environment'
 import { auth } from '$lib/server/auth'
 import { dbg } from '$lib/server/debug'
+import { logServerError } from '$lib/server/logServerError'
 import { securityHeaders } from '$lib/server/securityHeaders'
 
 const DEV_ADMIN_USER = {
@@ -37,4 +38,4 @@ export const handle: Handle = sequence(
     },
 )
 
-export const handleError = Sentry.handleErrorWithSentry()
+export const handleError = Sentry.handleErrorWithSentry(logServerError)
