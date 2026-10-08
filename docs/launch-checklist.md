@@ -10,6 +10,8 @@ Pull requests:
 - **#87** `release/family-launch`: release work, without the domain change. Merged 2026-10-03.
 - **#91** `feat/scam-protection`: scam protection. Merged 2026-10-08.
 - **#88** `feat/domain-cutover`: domain change. Open, based on `main`. Merge it only at step 3e.
+- **#92** `feat/registration-opens`: registration stays closed until 2026-10-31 9:00 AM Pacific. Open.
+- **#93** `fix/check-payee`: checks payable to Patterson Reunion Association. Open.
 
 ---
 
@@ -28,6 +30,15 @@ Pull requests:
 - [ ] On Stripe Checkout, click the back arrow. You must return to `/register` with your details filled in again and the message "Checkout cancelled — nothing was charged."
 - [ ] Move #88 onto `main` without a force-push:
       `git switch feat/domain-cutover && git merge origin/main && git push`. Then change the base of #88 to `main`. The squash of #87 holds the same changes, so the merge is clean, and the diff of #88 shrinks back to the domain change.
+
+## 2a. Registration opens on October 31 (#92)
+
+- [ ] Check that CI is green on #92, then merge it. Railway runs migration `0023`, which sets the opening to Saturday, October 31, 2026 at 9:00 AM Pacific.
+- [ ] Open `/register`. It must say "Come back on Saturday, October 31, 2026 at 9:00 AM PDT" and show no form.
+- [ ] Open the home page. In place of **Register Now** it must say "Registration opens Saturday, October 31, 2026 at 9:00 AM PDT".
+- [ ] Settings → **Registration opens** shows `2026-10-31 09:00`. To move the date, change it there; leave it blank to open registration at once.
+- [ ] Tell the family the date: a Facebook post, and the same time on anything already shared.
+- [ ] On October 31 after 9:00 AM Pacific, check that the form is back and do one test registration.
 
 ## 3. Cut over everything to `pattersonfamilyreunion.com`
 
@@ -115,7 +126,7 @@ Do the parts in order. **Do not merge #88 before 3e.** #88 changes the From addr
 - [ ] The venue is at 2323 Broadway and the hotel at 2455 Broadway, about one block apart. The site says "half a block" in the hotel tagline, on the register page and on the paper form. Choose the correct words.
 - [ ] Check that the new phone number `(510) 809-8309` appears everywhere: the site, the emails, the paper form and the Facebook carousel.
 - [x] **Find out the correct payee name for checks.** It is **Patterson Reunion Association**, the name on the PNC deposit account.
-- [ ] **Ship the payee change.** The new `CHECK_PAYEE` value is only on your computer: it missed #91, so production still says checks go to "Patterson Family Reunion". Put it in a PR and merge it. Then check that the paper form, the scam-safety notice, the confirmation email and the pinned Facebook post all show the same name.
+- [ ] **Ship the payee change: merge #93.** Production still says checks go to "Patterson Family Reunion" until it merges. Then check that the payment box on `/`, `/register` and `/donate`, the paper form, the confirmation email and the pinned Facebook post all say "Patterson Reunion Association".
 - [ ] Read every email on an iPhone and in Gmail, in light mode and in dark mode. To send them all now from the verified domain:
       `bun run email:preview -- --send you@example.com --from-domain pattersonfamilyreunion27.com`
       The header photo shows after #87 deploys.
