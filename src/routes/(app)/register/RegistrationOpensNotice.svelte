@@ -4,9 +4,9 @@ import { Button } from '$lib/components/ui/button'
 import { CONTACT_EMAIL, CONTACT_PHONE } from '$lib/general/constants'
 import { formatReunionDateTime, toE164 } from '$lib/utils'
 
-/* Shown in place of the form until registration opens. Says the exact moment, in the reunion's zone
-   and named, so a relative in another state knows when to come back. The server refuses a submission
-   until then as well (assertRegistrationOpen); hiding the form is only the courtesy. */
+/* Shown in place of the form until registration opens. Says the day only, like the home page, read
+   in the reunion's zone so it is the same date for a relative in any state. The server refuses a
+   submission until then as well (assertRegistrationOpen); hiding the form is only the courtesy. */
 let { opensAt }: { opensAt: Date | string } = $props()
 </script>
 
@@ -17,7 +17,7 @@ let { opensAt }: { opensAt: Date | string } = $props()
             <p class="text-lg font-semibold">Registration opens soon</p>
             <p class="text-base">
                 Come back on
-                <span class="font-semibold">{formatReunionDateTime(opensAt, 'long')}</span>
+                <span class="font-semibold">{formatReunionDateTime(opensAt, 'day')}</span>
                 to register your party.
             </p>
         </div>
