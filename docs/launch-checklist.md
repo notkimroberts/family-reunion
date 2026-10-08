@@ -55,8 +55,17 @@ Do the parts in order. **Do not merge #88 before 3e.** #88 changes the From addr
 ### 3b. Email (before #88)
 
 - [ ] **Resend:** add `pattersonfamilyreunion.com`. Add the DNS records Resend shows: the DKIM key at `resend._domainkey`, SPF and MX on `send.`, and DMARC. Wait until Resend says **Verified**.
-- [ ] **DMARC policy:** start at `p=none` with a `rua=` report address. When the reports are clean for 2 weeks, change it to `p=reject`. Inboxes then refuse mail that pretends to come from our domain.
-- [ ] **Inbound mail:** add the domain in ImprovMX, with a catch-all alias to the committee Gmail. In Namecheap → **Advanced DNS → Mail Settings**, choose **Custom MX** first: with any other choice Namecheap does not use your own MX records. Then add ImprovMX's root MX records and **one** SPF TXT record (Host `@`) that includes both ImprovMX and Resend. Two SPF records is an error that breaks both.
+- [x] **DMARC published** at `p=none` with a `rua=` report address. Google's first report confirms it: `p=none`, `sp=none`, relaxed DKIM and SPF alignment.
+- [ ] **DMARC reports.** Google sends one report a day, and so does each other provider that receives our mail. Read each one:
+  - [x] **Oct 7 (UTC):** 1 message, sent through Google's servers (`209.85.220.41`). DKIM **pass** (signed by `pattersonfamilyreunion.com`, selector `google`). SPF **none**: no SPF record was found yet, probably because the new record had not spread through DNS. DMARC **pass**, because DKIM alone is enough. Nothing was blocked.
+  - [ ] The next Google report shows SPF **pass** for Google's servers.
+  - [ ] Every `source_ip` in every report is Google, Resend (Amazon SES) or another service you set up yourself. An address you do not recognize means someone else is sending mail as our domain.
+  - [ ] Once site emails go out from the new domain (the previews now, real ones after 3e), their rows show DKIM **pass** with selector `resend` and SPF **pass** on `send.pattersonfamilyreunion.com`.
+- [ ] **Root SPF record:** one TXT record at Host `@`, now `v=spf1 include:_spf.google.com ~all` (reported live on Oct 8, after the first report). Keep it the **only** SPF record at `@`; two is an error that breaks both. Resend does not belong in it, because Resend's SPF is on `send.`. If another service ever sends with the root domain as its sender, add it to this same record.
+- [ ] **DMARC policy, step 2:** after 1–2 weeks of clean reports, change `p=none` to `p=quarantine`. Inboxes then put mail that fails DMARC in spam.
+- [ ] **DMARC policy, step 3:** after another 1–2 weeks of clean reports, change it to `p=reject`. Inboxes then refuse mail that pretends to come from our domain.
+- [ ] **Decide who receives our mail: Google or ImprovMX, not both.** The Oct 7 report shows mail sent through Google with a `google` DKIM key, which means Google (Workspace) is set up for the domain. A domain has one set of MX records. If Google receives `reunion@`, skip the ImprovMX item and the Gmail "Send mail as" item below.
+- [ ] **Inbound mail (only if you use ImprovMX):** add the domain in ImprovMX, with a catch-all alias to the committee Gmail. In Namecheap → **Advanced DNS → Mail Settings**, choose **Custom MX** first: with any other choice Namecheap does not use your own MX records. Then add ImprovMX's root MX records, and add ImprovMX to the one root SPF record above.
 - [ ] Send a test email from a personal account to `reunion@pattersonfamilyreunion.com`. It must arrive in the committee Gmail.
 - [ ] **Gmail:** add "Send mail as" `reunion@pattersonfamilyreunion.com` through the Resend SMTP relay. Reply to the test email from that address and check that the reply arrives.
 - [ ] **Zelle:** enroll `reunion@pattersonfamilyreunion.com` with Zelle at PNC (section 13). Once #88 merges, the site names this address as the only Zelle recipient. Send $1 to it from another account to prove it works.
