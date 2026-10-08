@@ -9,9 +9,10 @@ Pull requests:
 - **#86** `fix/photos-s3-sockets`: photos fix. Merged 2026-10-03.
 - **#87** `release/family-launch`: release work, without the domain change. Merged 2026-10-03.
 - **#91** `feat/scam-protection`: scam protection. Merged 2026-10-08.
-- **#88** `feat/domain-cutover`: domain change. Open, based on `main`. Merge it only at step 3e.
-- **#92** `feat/registration-opens`: registration stays closed until 2026-10-31 9:00 AM Pacific. Open.
-- **#93** `fix/check-payee`: checks payable to Patterson Reunion Association. Open.
+- **#88** `feat/domain-cutover`: domain change. Merged 2026-10-08.
+- **#93** `fix/check-payee`: checks payable to Patterson Reunion Association. Merged 2026-10-08.
+- **#92** `feat/registration-opens`: registration stays closed until 2026-10-31 9:00 AM Pacific. Merged 2026-10-08.
+- **#95** `fix/organizers-address`: the site's address becomes `organizers@` (was `reunion@`, which does not exist in Workspace). Open — create `organizers@` first (step 3b).
 
 ---
 
@@ -64,17 +65,17 @@ Do the parts in order. **Do not merge #88 before 3e.** #88 changes the From addr
 - [ ] **Root SPF record:** one TXT record at Host `@`, now `v=spf1 include:_spf.google.com ~all` (reported live on Oct 8, after the first report). Keep it the **only** SPF record at `@`; two is an error that breaks both. Resend does not belong in it, because Resend's SPF is on `send.`. If another service ever sends with the root domain as its sender, add it to this same record.
 - [ ] **DMARC policy, step 2:** after 1–2 weeks of clean reports, change `p=none` to `p=quarantine`. Inboxes then put mail that fails DMARC in spam.
 - [ ] **DMARC policy, step 3:** after another 1–2 weeks of clean reports, change it to `p=reject`. Inboxes then refuse mail that pretends to come from our domain.
-- [x] **Who receives our mail: Google.** No ImprovMX. Google (Workspace) both sends and receives `reunion@pattersonfamilyreunion.com`, which the Oct 7 report's `google` DKIM key confirms on the sending side.
+- [x] **Who receives our mail: Google.** No ImprovMX. Google (Workspace) both sends and receives `organizers@pattersonfamilyreunion.com`, which the Oct 7 report's `google` DKIM key confirms on the sending side.
 - [ ] **Google MX records:** in Namecheap → **Advanced DNS → Mail Settings**, choose **Gmail** (or **Custom MX** with the MX record Google Admin shows, usually `smtp.google.com`, priority 1). Delete any other MX records at `@`. Leave the MX record on `send.`: that one is Resend's, for bounces, and it is separate. In Google Admin, check that the domain's MX setup shows as verified.
-- [ ] **Create `reunion@` in Google Workspace.** Mail to it bounces until it exists: `admin@` is a real user, and `reunion@` is not yet a user, alias or group. Pick one:
-  - **Alias** (one person reads it). In admin.google.com → **Directory → Users**, open that user, then **User information → Alternate email addresses** and add `reunion`. Then in that person's Gmail → **Settings → Accounts → Send mail as**, add `reunion@pattersonfamilyreunion.com`, so replies go out from `reunion@` and not `admin@`.
-  - **Google Group** (several organizers read it). Create the group `reunion@` and add the organizers. Set **who can post** to **Anyone on the web**: a group accepts mail only from inside the organization by default, so mail from family members would bounce.
+- [ ] **Create `organizers@` in Google Workspace, then merge #95.** #95 switches the site, every email and the Zelle instructions from `reunion@` to `organizers@`. Until it merges, the site names `reunion@`, which bounces. Mail to it bounces until it exists: `admin@` is a real user, and `organizers@` is not yet a user, alias or group. Pick one:
+  - **Alias** (one person reads it). In admin.google.com → **Directory → Users**, open that user, then **User information → Alternate email addresses** and add `reunion`. Then in that person's Gmail → **Settings → Accounts → Send mail as**, add `organizers@pattersonfamilyreunion.com`, so replies go out from `organizers@` and not `admin@`.
+  - **Google Group** (several organizers read it). Create the group `organizers@` and add the organizers. Set **who can post** to **Anyone on the web**: a group accepts mail only from inside the organization by default, so mail from family members would bounce.
   - **No catch-all.** Do not route unrecognized addresses to a mailbox. It would collect spam, hide misprinted addresses, and make `payments@`, `organizer@` or any other name at the domain look official, against the scam rules. Add each extra address by name, for example `dmarc@` for the DMARC reports.
-- [ ] **Test `reunion@`.** From a personal account:
-  - Send an email to `reunion@pattersonfamilyreunion.com`. It must arrive in the alias's inbox, or for every group member.
-  - Reply to it. The reply must come **from** `reunion@`, not from `admin@`, and must arrive.
+- [ ] **Test `organizers@`.** From a personal account:
+  - Send an email to `organizers@pattersonfamilyreunion.com`. It must arrive in the alias's inbox, or for every group member.
+  - Reply to it. The reply must come **from** `organizers@`, not from `admin@`, and must arrive.
   - Send an email to a made-up address, such as `nobody@pattersonfamilyreunion.com`. It must **bounce**, which proves there is no catch-all.
-- [ ] **Zelle:** enroll `reunion@pattersonfamilyreunion.com` with Zelle at PNC (section 13). Once #88 merges, the site names this address as the only Zelle recipient. Send $1 to it from another account to prove it works.
+- [ ] **Zelle:** enroll `organizers@pattersonfamilyreunion.com` with Zelle at PNC (section 13). Once #95 merges, the site names this address as the only Zelle recipient. Send $1 to it from another account to prove it works.
 - [ ] Send yourself the email previews from the new domain: `bun run email:preview -- --send you@example.com`. They must arrive in the inbox, not spam.
 
 ### 3c. Website (before #88)
@@ -93,7 +94,7 @@ Do the parts in order. **Do not merge #88 before 3e.** #88 changes the From addr
 
 - [ ] **Stripe webhooks**, in test mode and in live mode: change the endpoint URL to `https://pattersonfamilyreunion.com/api/webhooks/stripe`. Edit the existing endpoint, so its signing secret stays the same. If you create a new endpoint, copy its new signing secret into `STRIPE_WEBHOOK_SECRET`. The webhook's URL decides the domain of the management link in every confirmation email.
 - [ ] **Resend webhook:** change it to `https://pattersonfamilyreunion.com/api/webhooks/resend`. If the secret changes, update `RESEND_WEBHOOK_SECRET`.
-- [ ] **Stripe Dashboard → Public details:** set the website to `https://pattersonfamilyreunion.com` and the support email to `reunion@pattersonfamilyreunion.com`.
+- [ ] **Stripe Dashboard → Public details:** set the website to `https://pattersonfamilyreunion.com` and the support email to `organizers@pattersonfamilyreunion.com`.
 - [ ] **Sentry:** add the new domain to Allowed Domains.
 
 ### 3e. Switch the app (merge #88)
@@ -105,8 +106,8 @@ Do the parts in order. **Do not merge #88 before 3e.** #88 changes the From addr
 ### 3f. Check everything on the new domain
 
 - [ ] `/robots.txt` shows `Sitemap: https://pattersonfamilyreunion.com/sitemap.xml`.
-- [ ] The payment-safety box on `/`, `/register` and `/donate` names `pattersonfamilyreunion.com` and `reunion@pattersonfamilyreunion.com`.
-- [ ] Do one test registration. The confirmation email comes from `reunion@pattersonfamilyreunion.com`, its links open `pattersonfamilyreunion.com`, the header photo loads, and a reply reaches the `reunion@` Google mailbox.
+- [ ] The payment-safety box on `/`, `/register` and `/donate` names `pattersonfamilyreunion.com` and `organizers@pattersonfamilyreunion.com`.
+- [ ] Do one test registration. The confirmation email comes from `organizers@pattersonfamilyreunion.com`, its links open `pattersonfamilyreunion.com`, the header photo loads, and a reply reaches the `organizers@` Google mailbox.
 - [ ] Recover a link at `/register/recover` and make a test gift at `/donate`. Both emails come from the new domain.
 - [ ] Paste `https://pattersonfamilyreunion.com` into the Facebook Sharing Debugger and into iMessage. The preview shows Will and Roxie.
 
@@ -123,13 +124,13 @@ Not needed: `pattersonfamilyreunion27.com` was only used for testing, never live
 
 - [ ] Facebook: update the event, the group and the pinned payment post.
 - [ ] Reprint the paper forms, because they print the domain. Replace the save-the-date flyer if it shows the old domain.
-- [ ] Rebuild the Facebook FAQ carousel (`bun social/facebook-faq/build.ts`) if it should show `reunion@pattersonfamilyreunion.com` in place of the committee Gmail.
+- [ ] Rebuild the Facebook FAQ carousel (`bun social/facebook-faq/build.ts`) if it should show `organizers@pattersonfamilyreunion.com` in place of the committee Gmail.
 - [ ] Update email signatures and anything the committee has already printed or posted.
 
 ## 4. Stripe (before any real money)
 
 - [ ] Put the **live** `STRIPE_SECRET_KEY` and the **live-mode** `STRIPE_WEBHOOK_SECRET` on Railway. They are two different values. A test-mode secret with a live key makes every webhook fail. Payments then succeed, but registrations stay `pending` and no email goes out.
-- [ ] Dashboard → Public details: set the business name to "Patterson Family Reunion", the support email to `reunion@pattersonfamilyreunion.com`, the phone to `(510) 809-8309`, and the website to `https://pattersonfamilyreunion.com`.
+- [ ] Dashboard → Public details: set the business name to "Patterson Family Reunion", the support email to `organizers@pattersonfamilyreunion.com`, the phone to `(510) 809-8309`, and the website to `https://pattersonfamilyreunion.com`.
 - [ ] Statement descriptor: `PATTERSON REUNION`. **Shortened descriptor: `PATTERSON`.** The code adds `* REUNION` or `* GIFT`, so the total must stay at 22 characters or fewer.
 - [ ] Branding: icon `static/will_and_roxie_512.png`, logo, and brand and accent colours that match the site.
 - [ ] Customer emails: turn **off** the Stripe receipts for successful payments and for refunds. The site sends its own confirmation, and two emails confuse people.
@@ -176,7 +177,7 @@ Not needed: `pattersonfamilyreunion27.com` was only used for testing, never live
 ## 9. People
 
 - [ ] Do a soft launch: send the link to 3–5 relatives of different ages first. Watch Sentry, Stripe and Resend for 48 hours before you send it to the whole family.
-- [ ] Decide who answers `reunion@` and the text number, and who watches the Sentry bounce alerts.
+- [ ] Decide who answers `organizers@` and the text number, and who watches the Sentry bounce alerts.
 - [ ] Write down the refund and cancellation policy, the child-age cutoff and the deadline. No page states the refund policy yet.
 
 ## 10. Housekeeping
@@ -208,7 +209,7 @@ These items are not in the current work. Do them in this order.
 
 ## 13. Zelle email (PNC)
 
-The site and every email tell people to send Zelle only to the reunion email address (`CONTACT_EMAIL`). Zelle must be enrolled with that exact address. When #88 changes the domain, the address changes too, so do these steps for `reunion@pattersonfamilyreunion.com` before #88 merges. If you do not, the site names an address that Zelle does not know.
+The site and every email tell people to send Zelle only to the organizers' email address (`CONTACT_EMAIL`). Zelle must be enrolled with that exact address. #88 changed the domain and #95 changes the address to `organizers@`, so do these steps for `organizers@pattersonfamilyreunion.com` before #95 merges. If you do not, the site names an address that Zelle does not know.
 
 In the PNC Mobile app, you add or change your Zelle email in Zelle Settings. PNC says your Zelle account, U.S. mobile number and email address can all be updated any time in Zelle® Settings.
 
