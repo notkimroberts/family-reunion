@@ -75,7 +75,7 @@ Do the parts in order. **Do not merge #88 before 3e.** #88 changes the From addr
   - Send an email to `organizers@pattersonfamilyreunion.com`. It must arrive in the alias's inbox, or for every group member.
   - Reply to it. The reply must come **from** `organizers@`, not from `admin@`, and must arrive.
   - Send an email to a made-up address, such as `nobody@pattersonfamilyreunion.com`. It must **bounce**, which proves there is no catch-all.
-- [ ] **Zelle:** enroll `organizers@pattersonfamilyreunion.com` with Zelle at PNC (section 13). Once #95 merges, the site names this address as the only Zelle recipient. Send $1 to it from another account to prove it works.
+- [x] **Zelle:** enroll `organizers@pattersonfamilyreunion.com` with Zelle at PNC (section 13). Once #95 merges, the site names this address as the only Zelle recipient. Send $1 to it from another account to prove it works. **Done 2026-10-08.**
 - [ ] Send yourself the email previews from the new domain: `bun run email:preview -- --send you@example.com`. They must arrive in the inbox, not spam.
 
 ### 3c. Website (before #88)
@@ -110,6 +110,7 @@ Do the parts in order. **Do not merge #88 before 3e.** #88 changes the From addr
 - [ ] Do one test registration. The confirmation email comes from `organizers@pattersonfamilyreunion.com`, its links open `pattersonfamilyreunion.com`, the header photo loads, and a reply reaches the `organizers@` Google mailbox.
 - [ ] Recover a link at `/register/recover` and make a test gift at `/donate`. Both emails come from the new domain.
 - [ ] Paste `https://pattersonfamilyreunion.com` into the Facebook Sharing Debugger and into iMessage. The preview shows Will and Roxie.
+  - [ ] **Facebook Sharing Debugger warning (2026-10-08):** "The following required properties are missing: og:title, og:description, fb:app_id". The preview still works, but Facebook guesses the title and text. Ask the developer to add `og:title` and `og:description` to the page head, then click **Scrape Again** in the debugger. `fb:app_id` only links the page to a Facebook app for Facebook's own statistics; it can stay missing.
 
 ### 3g. The old domain, `pattersonfamilyreunion27.com`
 
@@ -209,25 +210,27 @@ These items are not in the current work. Do them in this order.
 
 ## 13. Zelle email (PNC)
 
-The site and every email tell people to send Zelle only to the organizers' email address (`CONTACT_EMAIL`). Zelle must be enrolled with that exact address. #88 changed the domain and #95 changes the address to `organizers@`, so do these steps for `organizers@pattersonfamilyreunion.com` before #95 merges. If you do not, the site names an address that Zelle does not know.
+**Done 2026-10-08:** `organizers@pattersonfamilyreunion.com` is enrolled with Zelle at PNC. The steps are kept below, crossed out, for a future address change.
 
-In the PNC Mobile app, you add or change your Zelle email in Zelle Settings. PNC says your Zelle account, U.S. mobile number and email address can all be updated any time in Zelle® Settings.
+~~The site and every email tell people to send Zelle only to the organizers' email address (`CONTACT_EMAIL`). Zelle must be enrolled with that exact address. #88 changed the domain and #95 changes the address to `organizers@`, so do these steps for `organizers@pattersonfamilyreunion.com` before #95 merges. If you do not, the site names an address that Zelle does not know.~~
 
-1. Open the PNC Mobile app (or PNC Online Banking) and go to Zelle (it's usually under "Send Money with Zelle").
-2. Open Zelle Settings.
-3. Tap Edit or Add next to your email, or switch your enrollment from your phone number to an email address.
-4. Enter the email address. You may be asked to verify your email address with a code, so check that inbox.
-5. Confirm which PNC account Zelle should deposit into.
+~~In the PNC Mobile app, you add or change your Zelle email in Zelle Settings. PNC says your Zelle account, U.S. mobile number and email address can all be updated any time in Zelle® Settings.~~
 
-**If it says the email is already in use:** An email address or mobile number can only be linked to one Zelle® account. If that email is enrolled at another bank, follow the prompts to transfer your mobile number or email address to use with Zelle® at PNC instead. If no transfer prompt appears, log into the other bank or the Zelle app, remove the email there, then re-enroll it with PNC.
+1. ~~Open the PNC Mobile app (or PNC Online Banking) and go to Zelle (it's usually under "Send Money with Zelle").~~
+2. ~~Open Zelle Settings.~~
+3. ~~Tap Edit or Add next to your email, or switch your enrollment from your phone number to an email address.~~
+4. ~~Enter the email address. You may be asked to verify your email address with a code, so check that inbox.~~
+5. ~~Confirm which PNC account Zelle should deposit into.~~
 
-**If you use a Zelle QR code:** changing your email could break your old code. Money sent to a Zelle® QR Code that is not associated with an enrolled U.S. mobile number or email address will not be delivered, so you may need to share your new QR code.
+~~**If it says the email is already in use:** An email address or mobile number can only be linked to one Zelle® account. If that email is enrolled at another bank, follow the prompts to transfer your mobile number or email address to use with Zelle® at PNC instead. If no transfer prompt appears, log into the other bank or the Zelle app, remove the email there, then re-enroll it with PNC.~~
 
-If you get stuck, call PNC's official line at 1-888-PNC-BANK. Some search results list other "Zelle support" phone numbers, and those can be scams. Only use the number on pnc.com or the back of your card.
+~~**If you use a Zelle QR code:** changing your email could break your old code. Money sent to a Zelle® QR Code that is not associated with an enrolled U.S. mobile number or email address will not be delivered, so you may need to share your new QR code.~~
 
-Sources:
+~~If you get stuck, call PNC's official line at 1-888-PNC-BANK. Some search results list other "Zelle support" phone numbers, and those can be scams. Only use the number on pnc.com or the back of your card.~~
 
-- [PNC – Guide to Using Zelle](https://www.pnc.com/en/personal-banking/banking/online-and-mobile-banking/zelle/guide-to-using-zelle.html)
-- [PNC – Zelle](https://www.pnc.com/en/personal-banking/banking/online-and-mobile-banking/zelle.html)
-- [Linking an email to another bank's Zelle](https://ncr-fi51840090.freshdesk.com/en/support/solutions/articles/48001230286-how-can-i-change-my-mobile-number-email-address-linked-to-another-banks-zelle-account-)
-- [Does PNC Use Zelle?](https://cftau.org/does-pnc-use-zelle/)
+~~Sources:~~
+
+- ~~[PNC – Guide to Using Zelle](https://www.pnc.com/en/personal-banking/banking/online-and-mobile-banking/zelle/guide-to-using-zelle.html)~~
+- ~~[PNC – Zelle](https://www.pnc.com/en/personal-banking/banking/online-and-mobile-banking/zelle.html)~~
+- ~~[Linking an email to another bank's Zelle](https://ncr-fi51840090.freshdesk.com/en/support/solutions/articles/48001230286-how-can-i-change-my-mobile-number-email-address-linked-to-another-banks-zelle-account-)~~
+- ~~[Does PNC Use Zelle?](https://cftau.org/does-pnc-use-zelle/)~~
