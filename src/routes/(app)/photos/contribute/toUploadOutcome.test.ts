@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { toUploadOutcome } from './toUploadOutcome'
 
+/* Every fail() case passes HTTP 200, because that is what SvelteKit sends: the action's status is
+   inside the result. Measured against the built server, not assumed. */
 describe('toUploadOutcome', () => {
     it('reads an accepted photo as ok', () => {
         expect(
@@ -10,7 +12,7 @@ describe('toUploadOutcome', () => {
 
     it('passes the action’s own message through, and does not offer a retry for a 400', () => {
         expect(
-            toUploadOutcome(400, {
+            toUploadOutcome(200, {
                 type: 'failure',
                 status: 400,
                 data: { message: '"a.jpg" is larger than 15 MB.' },
@@ -20,8 +22,14 @@ describe('toUploadOutcome', () => {
 
     it('offers a retry when the hourly limit refused it', () => {
         expect(
-            toUploadOutcome(429, { type: 'failure', status: 429, data: { message: 'Later.' } }),
+            toUploadOutcome(200, { type: 'failure', status: 429, data: { message: 'Later.' } }),
         ).toMatchObject({ ok: false, retryable: true })
+    })
+
+    it('offers a retry when the server could not store a readable photo', () => {
+        expect(
+            toUploadOutcome(200, { type: 'failure', status: 503, data: { message: 'Not saved.' } }),
+        ).toEqual({ ok: false, message: 'Not saved.', retryable: true })
     })
 
     /* adapter-node's BODY_SIZE_LIMIT answers before the action runs, as a SvelteKit error result. */
