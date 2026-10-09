@@ -7,6 +7,7 @@ import { auth } from '$lib/server/auth'
 import { dbg } from '$lib/server/debug'
 import { logServerError } from '$lib/server/logServerError'
 import { securityHeaders } from '$lib/server/securityHeaders'
+import { wwwRedirect } from '$lib/server/wwwRedirect'
 
 const DEV_ADMIN_USER = {
     id: 'dev-admin',
@@ -24,6 +25,7 @@ const DEV_ADMIN_USER = {
 export const handle: Handle = sequence(
     Sentry.sentryHandle(),
     securityHeaders,
+    wwwRedirect,
     async ({ event, resolve }) => {
         const session = await auth.api.getSession({
             headers: event.request.headers,
