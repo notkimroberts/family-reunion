@@ -1,6 +1,8 @@
+import { readFile } from 'node:fs/promises'
 import sharp from 'sharp'
 import { describe, expect, it } from 'vitest'
 import { PHOTO_DISPLAY_EDGE, PHOTO_THUMB_EDGE } from '$lib/general/constants'
+import { UnreadablePhotoError } from './UnreadablePhotoError'
 import { buildRenditions } from './_buildRenditions'
 
 /* The processing pipeline is the whole of the input validation on an endpoint that carries no
@@ -82,6 +84,14 @@ describe('buildRenditions', () => {
         await expect(buildRenditions(notAnImage)).rejects.toThrow()
     })
 
+    /* The upload action tells the visitor "not a photo" only for this class; anything else is
+       treated as a server failure and reported. */
+    it('throws UnreadablePhotoError for bytes it cannot decode', async () => {
+        const notAnImage = new TextEncoder().encode('#!/bin/sh\necho not a photo\n')
+
+        await expect(buildRenditions(notAnImage)).rejects.toBeInstanceOf(UnreadablePhotoError)
+    })
+
     it('refuses an image above the pixel cap before decoding it', async () => {
         /* PHOTO_MAX_PIXELS is a MEMORY bound — libvips holds the decoded bitmap, so this is what
            stands between one enormous upload and an OOM on a container that idles at ~150 MB. A
@@ -110,5 +120,48 @@ describe('buildRenditions', () => {
         const { display } = await buildRenditions(png)
 
         expect((await sharp(display.body).metadata()).format).toBe('jpeg')
+    })
+
+    /* An iPhone writes HEVC-coded HEIF, which the prebuilt libvips in sharp cannot decode.
+       The fixture was made with macOS `sips`: a 120×80 image, red left and blue right, carrying EXIF
+       (a 2019 DateTimeOriginal and a GPS directory), then rotated 90° clockwise. sips records that
+       rotation as an `irot` box, not by moving pixels — exactly as a phone does. */
+    describe('HEIC', () => {
+        const heicFixture = () =>
+            readFile(new URL('./fixtures/rotatedPortrait.heic', import.meta.url)).then(
+                (buffer) => new Uint8Array(buffer),
+            )
+
+        it('decodes it, upright: the irot box is applied once', async () => {
+            const { display } = await buildRenditions(await heicFixture())
+
+            expect(display).toMatchObject({ width: 80, height: 120 })
+            // Rotated clockwise, the red left half is now the top.
+            const { data } = await sharp(display.body)
+                .extract({ left: 40, top: 10, width: 1, height: 1 })
+                .raw()
+                .toBuffer({ resolveWithObject: true })
+            expect(data[0]).toBeGreaterThan(200)
+            expect(data[2]).toBeLessThan(60)
+        })
+
+        it('reads the year from its EXIF, and strips all of it from the renditions', async () => {
+            const input = await heicFixture()
+            expect((await sharp(input).metadata()).exif).toBeDefined()
+
+            const { display, thumb, takenYear } = await buildRenditions(input)
+
+            expect(takenYear).toBe(2019)
+            expect((await sharp(display.body).metadata()).exif).toBeUndefined()
+            expect((await sharp(thumb.body).metadata()).exif).toBeUndefined()
+        })
+
+        it('throws UnreadablePhotoError for a truncated HEIC', async () => {
+            const input = await heicFixture()
+
+            await expect(buildRenditions(input.slice(0, input.length / 2))).rejects.toBeInstanceOf(
+                UnreadablePhotoError,
+            )
+        })
     })
 })

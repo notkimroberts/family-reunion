@@ -5,6 +5,8 @@ import {
     PHOTO_MAX_PIXELS,
     PHOTO_THUMB_EDGE,
 } from '$lib/general/constants'
+import { UnreadablePhotoError } from './UnreadablePhotoError'
+import { decodeHeic } from './_decodeHeic'
 
 export type Rendition = {
     body: Uint8Array
@@ -58,6 +60,17 @@ function readTakenYear(exif: Buffer | undefined): number | undefined {
    survive, and .rotate() applies it to the pixels before it is discarded, so a portrait phone photo
    is not served on its side. */
 export async function buildRenditions(input: Uint8Array): Promise<Renditions> {
+    /* Everything below is sharp working on the visitor's bytes, so any failure is the file's. */
+    try {
+        return await decodeAndRender(input)
+    } catch (error) {
+        const message = error instanceof Error ? error.message : 'Unreadable image'
+        throw new UnreadablePhotoError(message, { cause: error })
+    }
+}
+
+// Probe, bounds checks, then both renditions. Wrapped by buildRenditions.
+async function decodeAndRender(input: Uint8Array): Promise<Renditions> {
     const probe = sharp(input, { failOn: 'error' })
     const metadata = await probe.metadata()
 
@@ -71,8 +84,20 @@ export async function buildRenditions(input: Uint8Array): Promise<Renditions> {
         throw new Error('Image is too large')
     }
 
+    /* sharp reads a HEIC's header — so the checks above hold for it — but its libvips cannot decode
+       HEVC pixels. Those come from libheif instead, already upright, so .rotate() below finds no
+       EXIF on the raw pixels and does nothing. */
+    const heic =
+        metadata.format === 'heif' && metadata.compression === 'hevc'
+            ? await decodeHeic(input)
+            : undefined
+    const open = () =>
+        heic
+            ? sharp(heic.data, { raw: { width: heic.width, height: heic.height, channels: 4 } })
+            : sharp(input, { failOn: 'error' })
+
     const render = async (edge: number): Promise<Rendition> => {
-        const { data, info } = await sharp(input, { failOn: 'error' })
+        const { data, info } = await open()
             .rotate()
             .resize({ width: edge, height: edge, fit: 'inside', withoutEnlargement: true })
             .jpeg({ quality: PHOTO_JPEG_QUALITY, mozjpeg: true })

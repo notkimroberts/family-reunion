@@ -1,8 +1,9 @@
 import { fail } from '@sveltejs/kit'
 import { PHOTO_MAX_PER_REQUEST, PHOTO_MAX_UPLOAD_BYTES } from '$lib/general/constants'
 import { dbg } from '$lib/server/debug'
-import { checkUploadRateLimit, createPhoto } from '$lib/server/photos'
+import { UnreadablePhotoError, checkUploadRateLimit, createPhoto } from '$lib/server/photos'
 import { getOpenEvent } from '$lib/server/registrations'
+import { reportError } from '$lib/server/reportError'
 import type { Actions, PageServerLoad } from './$types'
 
 const MAX_CAPTION_LENGTH = 280
@@ -69,6 +70,7 @@ export const actions: Actions = {
 
         let accepted = 0
         const rejected: string[] = []
+        const unsaved: string[] = []
 
         for (const file of files) {
             try {
@@ -80,29 +82,41 @@ export const actions: Actions = {
                 })
                 accepted += 1
             } catch (error) {
-                /* One unreadable file must not lose the rest of the batch. The likely causes are a
-                   HEIC the build's libvips cannot decode, a truncated upload, or something that was
-                   never an image; none of them is worth a stack trace to the visitor. */
-                dbg.upload('rejected %s: %o', file.name, error)
-                rejected.push(file.name)
+                /* One failed file must not lose the rest of the batch. An unreadable file is the
+                   visitor's problem and needs no stack trace. Anything else — the bucket, the
+                   database — is ours: it is reported, and answered as worth a retry rather than
+                   blamed on the photo. */
+                if (error instanceof UnreadablePhotoError) {
+                    dbg.upload('rejected %s: %o', file.name, error)
+                    rejected.push(file.name)
+                } else {
+                    reportError('Contributed photo could not be stored', error, {
+                        fileName: file.name,
+                        size: file.size,
+                    })
+                    unsaved.push(file.name)
+                }
             }
         }
 
+        // The page sends one file per request, so these messages are shown beside that one file.
+        const single = files.length === 1
+        if (accepted === 0 && unsaved.length > 0) {
+            return fail(503, {
+                message: `${single ? 'This photo' : 'The photos'} could not be saved. Please try again in a minute.`,
+            })
+        }
         if (accepted === 0) {
-            // The page sends one file per request, so this message is shown beside that one file.
-            const subject = files.length === 1 ? 'This file' : 'None of those files'
+            const subject = single ? 'This file' : 'None of those files'
             return fail(400, {
                 message: `${subject} could not be read as a photo. JPEG, PNG, HEIC and WebP all work.`,
             })
         }
 
-        return {
-            accepted,
-            rejected,
-            message:
-                rejected.length > 0
-                    ? `Thank you — ${accepted} photo${accepted === 1 ? '' : 's'} received. ${rejected.length} could not be read.`
-                    : `Thank you — ${accepted} photo${accepted === 1 ? '' : 's'} received.`,
-        }
+        const received = `Thank you — ${accepted} photo${accepted === 1 ? '' : 's'} received.`
+        const notRead = rejected.length > 0 ? ` ${rejected.length} could not be read.` : ''
+        const notSaved =
+            unsaved.length > 0 ? ` ${unsaved.length} could not be saved; please send again.` : ''
+        return { accepted, rejected, message: `${received}${notRead}${notSaved}` }
     },
 }
