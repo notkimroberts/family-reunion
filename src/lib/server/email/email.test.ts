@@ -13,6 +13,13 @@ vi.mock('$lib/general/constants', () => ({
     CONTACT_EMAIL: 'organiser@example.com',
     CONTACT_PHONE: '+1 555 0100',
     ZELLE_RECIPIENT: 'organiser@example.com',
+    zelleQrCodeValue: {
+        qrPath: '/zelle_qr.png',
+        logoPath: '/zelle_logo.png',
+        accountName: 'Roberts Reunion Assn',
+        alt: 'Zelle QR code for Roberts Reunion Assn',
+        scanHint: 'Scan in your banking app to pay by Zelle.',
+    },
     CHECK_PAYEE: 'Roberts Family Reunion',
     STATEMENT_DESCRIPTOR_PREFIX: 'PATTERSON',
     STATEMENT_DESCRIPTOR_SUFFIXES: { registration: 'REUNION', donation: 'GIFT' },
@@ -230,6 +237,19 @@ describe('renderRegistrationConfirmation', () => {
             expect(text.indexOf('PAYMENT NEEDED')).toBeLessThan(text.indexOf('Your party:'))
             expect(html).toContain('Payment needed: $150.00')
             expect(html.indexOf('Payment needed: $150.00')).toBeLessThan(html.indexOf('Your party'))
+        })
+
+        /* Absolute on the email's own origin: a relative src resolves against nothing in an inbox. */
+        it('pending shows the Zelle QR code, and nothing else does', () => {
+            const { html } = renderRegistrationConfirmation({ ...data, status: 'pending' })
+            const origin = new URL(data.manageUrl).origin
+            expect(html).toContain(`src="${origin}/zelle_qr.png"`)
+            expect(html).toContain('Roberts Reunion Assn')
+            for (const status of ['paid', 'waived'] as const) {
+                expect(renderRegistrationConfirmation({ ...data, status }).html).not.toContain(
+                    'zelle_qr.png',
+                )
+            }
         })
 
         it('only pending carries a payment request', () => {

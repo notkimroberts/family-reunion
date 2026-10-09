@@ -1,6 +1,7 @@
 <script lang="ts">
 import { CheckCircle2, KeyRound, LoaderCircle } from '@lucide/svelte'
 import { onMount } from 'svelte'
+import { ZelleQrCode } from '$lib/components'
 import { Alert, AlertDescription, AlertTitle } from '$lib/components/ui/alert'
 import { Button } from '$lib/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card'
@@ -142,7 +143,7 @@ $effect(() => {
         <!-- Admin-entered registration with payment still outstanding. No Stripe session
              exists, so there is nothing to poll for; say what is owed and let them manage
              their party in the meantime. -->
-        <section class="col-span-12">
+        <section class="col-span-12 flex flex-col gap-3">
             <Alert>
                 <AlertTitle>Payment outstanding</AlertTitle>
                 <AlertDescription>
@@ -153,6 +154,7 @@ $effect(() => {
                     <a class="underline" href="sms:{toE164(CONTACT_PHONE)}">{CONTACT_PHONE}</a>.
                 </AlertDescription>
             </Alert>
+            <ZelleQrCode class="self-start border" />
         </section>
     {/if}
 
