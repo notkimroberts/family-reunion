@@ -4,10 +4,13 @@ import { PHOTO_MAX_PER_REQUEST } from '$lib/general/constants'
 import { photos } from '$lib/server/db/schema'
 import { resetTestDb } from '$lib/server/db/testing/resetTestDb'
 import { resetUploadRateLimits } from '$lib/server/photos/uploadRateLimit'
+import { putObject } from '$lib/server/storage'
 
 /* The public upload POST. No credential — see ADR 0009 — so what is pinned here is that the three
    things standing in for one all hold: the batch caps, the size cap, and that every row lands
    'pending' no matter what the request asked for. The bucket is mocked; the database is real. */
+
+vi.mock('$lib/server/reportError', () => ({ reportError: vi.fn() }))
 
 vi.mock('$lib/server/storage', () => ({
     putObject: vi.fn(async () => {}),
@@ -91,6 +94,29 @@ describe('POST /photos/contribute', () => {
         const result = await contribute([new TextEncoder().encode('#!/bin/sh')])
 
         expect(result).toMatchObject({ status: 400 })
+        expect(await db.select().from(photos)).toHaveLength(0)
+    })
+
+    /* The page posts one file per request and shows this message beside that file's name. */
+    it('names a single unreadable file as "this file", not "those files"', async () => {
+        const result = await contribute([new TextEncoder().encode('#!/bin/sh')])
+
+        expect(result).toMatchObject({
+            data: { message: expect.stringMatching(/^This file could not be read/) },
+        })
+    })
+
+    /* A readable photo the bucket refused is OUR failure. Blaming the photo told a visitor their
+       good JPEG "could not be read", and offered no retry. */
+    it('answers a storage failure as retryable, not as an unreadable photo', async () => {
+        vi.mocked(putObject).mockRejectedValueOnce(new Error('Object storage is not configured'))
+
+        const result = await contribute([await jpeg()])
+
+        expect(result).toMatchObject({
+            status: 503,
+            data: { message: expect.stringMatching(/^This photo could not be saved/) },
+        })
         expect(await db.select().from(photos)).toHaveLength(0)
     })
 

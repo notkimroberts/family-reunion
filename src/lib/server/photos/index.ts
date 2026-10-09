@@ -1,4 +1,5 @@
 export { createPhoto, type CreatePhotoInput } from './createPhoto'
+export { UnreadablePhotoError } from './UnreadablePhotoError'
 export { getApprovedPhotos, type GalleryPhoto } from './getApprovedPhotos'
 export { getApprovedPhoto } from './getApprovedPhoto'
 export { getPhotoNeighbours, type PhotoNeighbours } from './getPhotoNeighbours'
