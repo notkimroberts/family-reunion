@@ -1,11 +1,14 @@
 # Only the home page and the registration form are indexed. Photos (children among them), the manage
-# page and everything behind the login stay out of search. The share-card and email header images are
-# allowed so crawlers and mail image proxies that obey robots.txt can still fetch them.
+# page and everything behind the login stay out of search. The share-card image and the images emails
+# embed (header, Zelle code and logo) are allowed so crawlers and mail image proxies that obey
+# robots.txt can still fetch them.
 User-agent: *
 Allow: /$
 Allow: /register$
 Allow: /will_and_roxie.png
 Allow: /will_and_roxie_email.jpg
+Allow: /zelle_qr.png
+Allow: /zelle_logo.png
 Disallow: /
 
 Sitemap: https://pattersonfamilyreunion.com/sitemap.xml

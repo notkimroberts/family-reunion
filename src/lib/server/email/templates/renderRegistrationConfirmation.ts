@@ -10,6 +10,7 @@ import { hotelSection } from './_hotelSection'
 import { primaryButton } from './_primaryButton'
 import { SAFETY_NOTICE_TEXT } from './_safetyNoticeText'
 import { sectionLabel } from './_sectionLabel'
+import { zelleQrBlock } from './_zelleQrBlock'
 import type { ConfirmationStatus, RegistrationConfirmationData } from './types'
 
 /* Copy keyed off registration status. One template serves both the online (always 'paid')
@@ -183,7 +184,9 @@ ${donationRow}
         ? `<p style="margin:0 0 24px 0;font-family:${fontStack};font-size:14px;line-height:1.6;color:${muted};">${escapeHtml(note)}</p>`
         : '<div style="height:16px;"></div>'
 
-    const actionBlock = copy.action ? actionCallout(`Payment needed: ${total}`, copy.action) : ''
+    const actionBlock = copy.action
+        ? `${actionCallout(`Payment needed: ${total}`, copy.action)}\n${zelleQrBlock(siteOrigin)}`
+        : ''
 
     const bodyHtml = [
         paragraph(`Hi ${escapeHtml(data.name)},`),

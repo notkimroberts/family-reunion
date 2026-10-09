@@ -40,6 +40,7 @@ export {
     PHOTO_MAX_PIXELS,
 } from './PHOTO_LIMITS'
 export { ZELLE_RECIPIENT } from './ZELLE_RECIPIENT'
+export { zelleQrCodeValue } from './zelleQrCodeValue'
 export { CHECK_PAYEE } from './CHECK_PAYEE'
 export { STATEMENT_DESCRIPTOR_PREFIX } from './STATEMENT_DESCRIPTOR_PREFIX'
 export { STATEMENT_DESCRIPTOR_SUFFIXES } from './STATEMENT_DESCRIPTOR_SUFFIXES'

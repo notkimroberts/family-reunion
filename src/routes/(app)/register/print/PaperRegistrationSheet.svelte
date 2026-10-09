@@ -21,6 +21,7 @@ import {
     CONTACT_EMAIL,
     CONTACT_PHONE,
     ZELLE_RECIPIENT,
+    zelleQrCodeValue,
 } from '$lib/general/constants'
 import { offlinePaymentMethods } from '$lib/general/scamSafety'
 import { formatPrice } from '$lib/utils'
@@ -161,12 +162,28 @@ let {
         <div class="flex items-end justify-between gap-6">
             <ul class="flex flex-wrap gap-x-5 gap-y-0.5 text-[10px]">
                 {#each tiers as tier (tier.id)}
-                    <li>
+                    <li class="whitespace-nowrap">
                         <span class="font-semibold">{tier.label}</span>
                         · ${formatPrice(tier.priceCents)} per person
                     </li>
                 {/each}
             </ul>
+            <!-- Paper is where the code earns its place: the reader holds the sheet and scans it
+                 with the phone that pays. -->
+            <div class="flex shrink-0 items-center gap-2">
+                <img
+                    src={zelleQrCodeValue.qrPath}
+                    alt={zelleQrCodeValue.alt}
+                    class="size-[0.85in]" />
+                <div class="flex max-w-[1.5in] flex-col gap-0.5">
+                    <img
+                        src={zelleQrCodeValue.logoPath}
+                        alt="Zelle"
+                        class="h-4 w-auto self-start" />
+                    <p class={NOTE}>{zelleQrCodeValue.scanHint}</p>
+                    <p class="text-[10px] font-semibold">{zelleQrCodeValue.accountName}</p>
+                </div>
+            </div>
             <div class="flex items-end gap-2 whitespace-nowrap">
                 <span class="text-[11px] font-bold tracking-widest uppercase">Total enclosed</span>
                 <span class="text-[13px] font-bold">$</span>

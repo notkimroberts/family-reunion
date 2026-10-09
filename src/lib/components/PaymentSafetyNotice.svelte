@@ -12,6 +12,7 @@ import { onMount } from 'svelte'
 import { Card, CardContent } from '$lib/components/ui/card'
 import { ZELLE_RECIPIENT } from '$lib/general/constants'
 import { paymentMethods, paymentSafetyCopyValue, type PaymentMethod } from '$lib/general/scamSafety'
+import ZelleQrCode from './ZelleQrCode.svelte'
 
 const methodIconValue = {
     card: CreditCard,
@@ -77,6 +78,7 @@ let methods = $derived(paymentMethods(zelleRecipient))
                         </li>
                     {/each}
                 </ul>
+                <ZelleQrCode />
             </div>
 
             <div
