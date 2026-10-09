@@ -18,7 +18,7 @@
    holding. SPF is likewise split: the SINGLE root TXT record names Google, and Resend's lives on
    `send.`. A second SPF record at the root is a permerror that breaks it.
 
-   `www` is not a Railway domain. It is a 301 at the DNS host, pointing here.
+   `www` is a second Railway domain, CNAMEd at the DNS host; `wwwRedirect` 301s it here.
 
    Manage and register links in emails come from the request origin, not from this constant. The one
    place it is printed is the paper registration form ("Register online at <APP_DOMAIN>"), so a
