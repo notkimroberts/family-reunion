@@ -56,7 +56,7 @@ export const EVENT_STATUS_STYLES = {
     closed: {
         label: 'Closed',
         headline: 'Registration closed',
-        note: 'Nobody new can register. Existing registrations stay editable until the lock date.',
+        note: 'Nobody new can register. Organizers can still add and change registrations.',
         icon: TriangleAlert,
         class: WARNING_SURFACE_CLASS,
         tone: 'text-amber-700 dark:text-amber-400',
