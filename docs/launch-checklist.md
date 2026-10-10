@@ -12,31 +12,32 @@ Pull requests:
 - **#88** `feat/domain-cutover`: domain change. Merged 2026-10-08.
 - **#93** `fix/check-payee`: checks payable to Patterson Reunion Association. Merged 2026-10-08.
 - **#92** `feat/registration-opens`: registration stays closed until 2026-10-31 9:00 AM Pacific. Merged 2026-10-08.
-- **#95** `fix/organizers-address`: the site's address becomes `organizers@` (was `reunion@`, which does not exist in Workspace). Open — create `organizers@` first (step 3b).
+- **#95** `fix/organizers-address`: the site's address becomes `organizers@` (was `reunion@`, which does not exist in Workspace). Merged 2026-10-08.
+- **#99** `fix/www-redirect`: `www` 301s to the bare domain over HTTPS, path kept. Merged 2026-10-09.
 
 ---
 
 ## 1. Photos (now)
 
-- [ ] Open `/photos` on your phone and check that the thumbnails load. Production was restarted on 2026-10-03 at 16:25 UTC to clear the stuck connection pool.
-- [ ] Merge **#86**. Railway then deploys it.
-- [ ] After the deploy, open `/photos` again on your phone. Also download one year as a zip and cancel it halfway.
-- [ ] One day later, search the Railway deploy logs for `socket usage at capacity`. You must get no results. If you get results, the pool is filling again. Restart the service and tell the developer.
+- [x] Open `/photos` on your phone and check that the thumbnails load. Production was restarted on 2026-10-03 at 16:25 UTC to clear the stuck connection pool.
+- [x] Merge **#86**. Railway then deploys it.
+- [x] After the deploy, open `/photos` again on your phone. Also download one year as a zip and cancel it halfway.
+- [x] One day later, search the Railway deploy logs for `socket usage at capacity`. You must get no results. If you get results, the pool is filling again. Restart the service and tell the developer.
 
 ## 2. Merge the release PR (#87)
 
-- [ ] Check that CI is green on #87.
-- [ ] Merge #87. Railway deploys to production. Stripe is still in **test** mode.
+- [x] Check that CI is green on #87.
+- [x] Merge #87. Railway deploys to production. Stripe is still in **test** mode.
 - [ ] Do one test registration with card `4242 4242 4242 4242`. Check that Stripe Checkout opens, that the button says **Book**, and that the note under it mentions the card fee. If Checkout fails to open, Stripe has rejected the statement-descriptor suffix. Set the shortened descriptor (section 4) and try again.
 - [ ] On Stripe Checkout, click the back arrow. You must return to `/register` with your details filled in again and the message "Checkout cancelled — nothing was charged."
-- [ ] Move #88 onto `main` without a force-push:
+- [x] Move #88 onto `main` without a force-push:
       `git switch feat/domain-cutover && git merge origin/main && git push`. Then change the base of #88 to `main`. The squash of #87 holds the same changes, so the merge is clean, and the diff of #88 shrinks back to the domain change.
 
 ## 2a. Registration opens on October 31 (#92)
 
-- [ ] Check that CI is green on #92, then merge it. Railway runs migration `0023`, which sets the opening to Saturday, October 31, 2026 at 9:00 AM Pacific.
-- [ ] Open `/register`. It must say "Come back on Saturday, October 31, 2026 at 9:00 AM PDT" and show no form.
-- [ ] Open the home page. In place of **Register Now** it must say "Registration opens Saturday, October 31, 2026 at 9:00 AM PDT".
+- [x] Check that CI is green on #92, then merge it. Railway runs migration `0023`, which sets the opening to Saturday, October 31, 2026 at 9:00 AM Pacific.
+- [x] Open `/register`. It must say "Come back on Saturday, October 31, 2026 at 9:00 AM PDT" and show no form.
+- [x] Open the home page. In place of **Register Now** it must say "Registration opens Saturday, October 31, 2026 at 9:00 AM PDT".
 - [ ] Settings → **Registration opens** shows `2026-10-31 09:00`. To move the date, change it there; leave it blank to open registration at once.
 - [ ] Tell the family the date: a Facebook post, and the same time on anything already shared.
 - [ ] On October 31 after 9:00 AM Pacific, check that the form is back and do one test registration.
@@ -47,15 +48,15 @@ Do the parts in order. **Do not merge #88 before 3e.** #88 changes the From addr
 
 ### 3a. Take control of the domain
 
-- [ ] Sign in to the registrar account that holds `pattersonfamilyreunion.com`. If someone else holds it, have it moved into the committee's account first: they unlock it and give you the transfer code, or they add you as the owner.
+- [x] Sign in to the registrar account that holds `pattersonfamilyreunion.com`. If someone else holds it, have it moved into the committee's account first: they unlock it and give you the transfer code, or they add you as the owner.
 - [ ] Make the account safe to keep for years. The account email must be one the committee controls, not a personal address that can lapse. Turn on two-factor sign-in.
-- [ ] Turn on the registrar lock (transfer lock), auto-renew with a card that does not expire soon, and WHOIS privacy. Write down the renewal date.
-- [ ] DNS host: **Namecheap**. In Namecheap, go to **Domain List → Manage → Domain** and check that **Nameservers** says **Namecheap BasicDNS**. With **Custom DNS** the records live elsewhere and the Namecheap steps below do not apply. Namecheap supports ALIAS records, which Railway needs for the root domain.
-- [ ] Before you change anything, screenshot every DNS record the domain already has. If it served an old site or old email, note which records were for that.
+- [x] Turn on the registrar lock (transfer lock), auto-renew with a card that does not expire soon, and WHOIS privacy. Write down the renewal date.
+- [x] DNS host: **Namecheap**. In Namecheap, go to **Domain List → Manage → Domain** and check that **Nameservers** says **Namecheap BasicDNS**. With **Custom DNS** the records live elsewhere and the Namecheap steps below do not apply. Namecheap supports ALIAS records, which Railway needs for the root domain.
+- [x] Before you change anything, screenshot every DNS record the domain already has. If it served an old site or old email, note which records were for that.
 
 ### 3b. Email (before #88)
 
-- [ ] **Resend:** add `pattersonfamilyreunion.com`. Add the DNS records Resend shows: the DKIM key at `resend._domainkey`, SPF and MX on `send.`, and DMARC. Wait until Resend says **Verified**.
+- [x] **Resend:** add `pattersonfamilyreunion.com`. Add the DNS records Resend shows: the DKIM key at `resend._domainkey`, SPF and MX on `send.`, and DMARC. Wait until Resend says **Verified**.
 - [x] **DMARC published** at `p=none` with a `rua=` report address. Google's first report confirms it: `p=none`, `sp=none`, relaxed DKIM and SPF alignment.
 - [ ] **DMARC reports.** Google sends one report a day, and so does each other provider that receives our mail. Read each one:
   - [x] **Oct 7 (UTC):** 1 message, sent through Google's servers (`209.85.220.41`). DKIM **pass** (signed by `pattersonfamilyreunion.com`, selector `google`). SPF **none**: no SPF record was found yet, probably because the new record had not spread through DNS. DMARC **pass**, because DKIM alone is enough. Nothing was blocked.
@@ -66,7 +67,7 @@ Do the parts in order. **Do not merge #88 before 3e.** #88 changes the From addr
 - [ ] **DMARC policy, step 2:** after 1–2 weeks of clean reports, change `p=none` to `p=quarantine`. Inboxes then put mail that fails DMARC in spam.
 - [ ] **DMARC policy, step 3:** after another 1–2 weeks of clean reports, change it to `p=reject`. Inboxes then refuse mail that pretends to come from our domain.
 - [x] **Who receives our mail: Google.** No ImprovMX. Google (Workspace) both sends and receives `organizers@pattersonfamilyreunion.com`, which the Oct 7 report's `google` DKIM key confirms on the sending side.
-- [ ] **Google MX records:** in Namecheap → **Advanced DNS → Mail Settings**, choose **Gmail** (or **Custom MX** with the MX record Google Admin shows, usually `smtp.google.com`, priority 1). Delete any other MX records at `@`. Leave the MX record on `send.`: that one is Resend's, for bounces, and it is separate. In Google Admin, check that the domain's MX setup shows as verified.
+- [x] **Google MX records:** in Namecheap → **Advanced DNS → Mail Settings**, choose **Gmail** (or **Custom MX** with the MX record Google Admin shows, usually `smtp.google.com`, priority 1). Delete any other MX records at `@`. Leave the MX record on `send.`: that one is Resend's, for bounces, and it is separate. In Google Admin, check that the domain's MX setup shows as verified.
 - [ ] **Create `organizers@` in Google Workspace, then merge #95.** #95 switches the site, every email and the Zelle instructions from `reunion@` to `organizers@`. Until it merges, the site names `reunion@`, which bounces. Mail to it bounces until it exists: `admin@` is a real user, and `organizers@` is not yet a user, alias or group. Pick one:
   - **Alias** (one person reads it). In admin.google.com → **Directory → Users**, open that user, then **User information → Alternate email addresses** and add `reunion`. Then in that person's Gmail → **Settings → Accounts → Send mail as**, add `organizers@pattersonfamilyreunion.com`, so replies go out from `organizers@` and not `admin@`.
   - **Google Group** (several organizers read it). Create the group `organizers@` and add the organizers. Set **who can post** to **Anyone on the web**: a group accepts mail only from inside the organization by default, so mail from family members would bounce.
@@ -80,36 +81,38 @@ Do the parts in order. **Do not merge #88 before 3e.** #88 changes the From addr
 
 ### 3c. Website (before #88)
 
-- [ ] **Railway:** add the custom domain `pattersonfamilyreunion.com` to `family-reunion-app` in production. Then in Namecheap → **Advanced DNS → Host Records**:
+- [x] **Railway:** add the custom domain `pattersonfamilyreunion.com` to `family-reunion-app` in production. Then in Namecheap → **Advanced DNS → Host Records**:
   - Delete Namecheap's parking records: `URL Redirect @ → http://www.pattersonfamilyreunion.com/` and `CNAME www → parkingpage.namecheap.com`. If the `@` redirect stays, the root and `www` redirect to each other and the page never loads.
-  - Add an **ALIAS Record**: Host `@`, Value the target Railway shows.
+  - Add an **ALIAS Record**: Host `@`, Value the target Railway shows. **Not a CNAME Record**, even though Railway says "CNAME". A CNAME at `@` beside MX and TXT records breaks the DNS rules. On 2026-10-09 Google's resolver still returned the correct MX and SPF, because Namecheap answers each record type on its own. But one other resolver followed the CNAME to Railway and found no MX. A resolver that has the CNAME cached can do that, so ALIAS removes a small risk of lost mail. **Changed to ALIAS 2026-10-09.**
   - Add any **TXT Record** Railway shows for verification.
   - Wait until Railway shows the certificate as active. DNS changes can take up to 30 minutes.
-- [ ] **`www` redirect** in Namecheap → **Advanced DNS → Host Records** → **Add New Record** → **URL Redirect Record**: Host `www`, Value `https://pattersonfamilyreunion.com`, type **Permanent (301)**. Not "Unmasked" (a temporary redirect) or "Masked" (a frame). Save with the green check mark.
+- [x] **`www` redirect:** ~~Namecheap URL Redirect Record~~ replaced by a second Railway domain and an app redirect (PR #99). **Done 2026-10-09.**
   - Test `http://www.pattersonfamilyreunion.com/register`, `https://www.pattersonfamilyreunion.com/register` and `www.pattersonfamilyreunion.com/register`. Each must end on `https://pattersonfamilyreunion.com` with no security warning, ideally on `/register`. Or run `curl -sI https://www.pattersonfamilyreunion.com/register` and look for `301`.
+  - **2026-10-09 result:** `http://www…/register` gives `301` but to `https://pattersonfamilyreunion.com`, without `/register`. `https://www…/register` hangs: Namecheap's redirect server does not answer HTTPS. The fallback below is needed.
+  - [x] **Fixed (PR #99, 2026-10-09):** `www` is a second Railway domain (`CNAME www → ziei8rvi.up.railway.app` + its TXT); the Namecheap URL Redirect is deleted. Tested: `https://www…/register` → `301` → `https://pattersonfamilyreunion.com/register`. `http://www…` first gets Railway's `301` to `https://www…`, then the same redirect.
   - If the `https://www` address shows a security warning, Namecheap's redirect has no certificate for it. Then ask the developer to add `www` as a second Railway domain and redirect it in the app instead.
-- [ ] Open `https://pattersonfamilyreunion.com/api/health`. It must return `ok`. The site still shows the old domain in its text until 3e. That is expected.
+- [x] Open `https://pattersonfamilyreunion.com/api/health`. It must return `ok`. **Done 2026-10-09.** The site still shows the old domain in its text until 3e. That is expected.
 
 ### 3d. Services that call the site (before #88)
 
 - [ ] **Stripe webhooks**, in test mode and in live mode: change the endpoint URL to `https://pattersonfamilyreunion.com/api/webhooks/stripe`. Edit the existing endpoint, so its signing secret stays the same. If you create a new endpoint, copy its new signing secret into `STRIPE_WEBHOOK_SECRET`. The webhook's URL decides the domain of the management link in every confirmation email.
-- [ ] **Resend webhook:** change it to `https://pattersonfamilyreunion.com/api/webhooks/resend`. If the secret changes, update `RESEND_WEBHOOK_SECRET`.
+- [x] **Resend webhook:** change it to `https://pattersonfamilyreunion.com/api/webhooks/resend`. If the secret changes, update `RESEND_WEBHOOK_SECRET`.
 - [ ] **Stripe Dashboard → Public details:** set the website to `https://pattersonfamilyreunion.com` and the support email to `organizers@pattersonfamilyreunion.com`.
-- [ ] **Sentry:** add the new domain to Allowed Domains.
+- [x] **Sentry:** add the new domain to Allowed Domains.
 
 ### 3e. Switch the app (merge #88)
 
-- [ ] **Railway variables:** set `BETTER_AUTH_URL=https://pattersonfamilyreunion.com`. Make sure `ORIGIN` is **not** set. Do this together with the merge: from this moment, admin sign-in works only on the new domain.
-- [ ] Check that CI is green on #88, then merge it. Railway deploys.
-- [ ] Sign in again at `https://pattersonfamilyreunion.com/login`. Cookies are per domain, so every admin must sign in again.
+- [x] **Railway variables:** set `BETTER_AUTH_URL=https://pattersonfamilyreunion.com`. Make sure `ORIGIN` is **not** set. Do this together with the merge: from this moment, admin sign-in works only on the new domain.
+- [x] Check that CI is green on #88, then merge it. Railway deploys.
+- [x] Sign in again at `https://pattersonfamilyreunion.com/login`. Cookies are per domain, so every admin must sign in again.
 
 ### 3f. Check everything on the new domain
 
-- [ ] `/robots.txt` shows `Sitemap: https://pattersonfamilyreunion.com/sitemap.xml`.
+- [x] `/robots.txt` shows `Sitemap: https://pattersonfamilyreunion.com/sitemap.xml`.
 - [ ] The payment-safety box on `/`, `/register` and `/donate` names `pattersonfamilyreunion.com` and `organizers@pattersonfamilyreunion.com`.
 - [ ] Do one test registration. The confirmation email comes from `organizers@pattersonfamilyreunion.com`, its links open `pattersonfamilyreunion.com`, the header photo loads, and a reply reaches the `organizers@` Google mailbox.
 - [ ] Recover a link at `/register/recover` and make a test gift at `/donate`. Both emails come from the new domain.
-- [ ] Paste `https://pattersonfamilyreunion.com` into the Facebook Sharing Debugger and into iMessage. The preview shows Will and Roxie.
+- [x] Paste `https://pattersonfamilyreunion.com` into the Facebook Sharing Debugger and into iMessage. The preview shows Will and Roxie.
   - [ ] **Facebook Sharing Debugger warning (2026-10-08):** "The following required properties are missing: og:title, og:description, fb:app_id". The preview still works, but Facebook guesses the title and text. Ask the developer to add `og:title` and `og:description` to the page head, then click **Scrape Again** in the debugger. `fb:app_id` only links the page to a Facebook app for Facebook's own statistics; it can stay missing.
 
 ### 3g. The old domain, `pattersonfamilyreunion27.com`
@@ -126,7 +129,7 @@ Not needed: `pattersonfamilyreunion27.com` was only used for testing, never live
 - [ ] Facebook: update the event, the group and the pinned payment post.
 - [ ] Reprint the paper forms, because they print the domain. Replace the save-the-date flyer if it shows the old domain.
 - [ ] Rebuild the Facebook FAQ carousel (`bun social/facebook-faq/build.ts`) if it should show `organizers@pattersonfamilyreunion.com` in place of the committee Gmail.
-- [ ] Update email signatures and anything the committee has already printed or posted.
+- [x] Update email signatures and anything the committee has already printed or posted.
 
 ## 4. Stripe (before any real money)
 
@@ -139,10 +142,10 @@ Not needed: `pattersonfamilyreunion27.com` was only used for testing, never live
 
 ## 5. Railway
 
-- [ ] Check that `BODY_SIZE_LIMIT` is set. The default of 512K rejects most phone photos, and this fails only in production.
+- [x] Check that `BODY_SIZE_LIMIT` is set. The default of 512K rejects most phone photos, and this fails only in production.
 - [x] Set `ADDRESS_HEADER` and `XFF_DEPTH`. Without them the photo-upload rate limit treats all visitors as one IP address, so the whole family shares 40 uploads per hour. Set on 2026-10-05 to `X-Forwarded-For` and `1` (deployment `a5ffa0fe`).
-- [ ] Verify them: submit `/register/recover` once, upload one photo on `/photos/contribute`, and search the deploy logs for `ADDRESS_HEADER`. Both pages must work, and the search must give no results. An error such as "absent from request" means the header name is wrong; delete both variables to undo.
-- [ ] Turn on Postgres backups before real registrations exist.
+- [x] Verify them: submit `/register/recover` once, upload one photo on `/photos/contribute`, and search the deploy logs for `ADDRESS_HEADER`. Both pages must work, and the search must give no results. An error such as "absent from request" means the header name is wrong; delete both variables to undo.
+- [x] Turn on Postgres backups before real registrations exist.
 
 ## 6. Content
 
@@ -183,8 +186,8 @@ Not needed: `pattersonfamilyreunion27.com` was only used for testing, never live
 
 ## 10. Housekeeping
 
-- [ ] Delete the stale branch `feat/cut-over-to-the-real-reunion-domain` on GitHub. It is from Aug 30, and its PR #71 is closed.
-- [ ] Remove the photos worktree after #86 merges: `git worktree remove ../family-reunion-hotfix`.
+- [x] Delete the stale branch `feat/cut-over-to-the-real-reunion-domain` on GitHub. It is from Aug 30, and its PR #71 is closed.
+- [x] Remove the photos worktree after #86 merges: `git worktree remove ../family-reunion-hotfix`.
 - [ ] Authorise the Sentry MCP (`/mcp`). The Resend MCP is failing at the network proxy.
 
 ## 11. Scam protection
@@ -201,7 +204,7 @@ Not needed: `pattersonfamilyreunion27.com` was only used for testing, never live
 
 These items are not in the current work. Do them in this order.
 
-- [ ] **Email links on one domain.** Do this after #88 merges and the Stripe and Resend webhooks point at the new domain.
+- [x] **Email links on one domain.** Do this after #88 merges and the Stripe and Resend webhooks point at the new domain.
   - Remove the `family-reunion-production.up.railway.app` service domain on Railway. It serves the full site, and an email sent through it links there. That teaches people a second "real" address.
   - Ask the developer to build email links and Stripe URLs from `BETTER_AUTH_URL`, not from the host of the request.
 - [ ] **Content Security Policy, report-only first.** Ask the developer to add `Content-Security-Policy-Report-Only`, with reports to Sentry. After 2 weeks with no unexpected reports, change it to enforce. Do not enforce it first: one missing source breaks part of a page with no error the user can see.
