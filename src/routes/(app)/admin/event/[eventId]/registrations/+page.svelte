@@ -19,15 +19,19 @@ import {
     type RegistrationStatus,
 } from '$lib/utils'
 import { formatBirthDate } from '$lib/utils/age'
+import { groupPeopleByBooking } from '../checkin/groupPeopleByBooking'
+import ArrivalToggle from './ArrivalToggle.svelte'
 import HeadcountPanel from './HeadcountPanel.svelte'
 import MoneyPanel from './MoneyPanel.svelte'
 import OrderSheet from './OrderSheet.svelte'
+import PartyArrivalCell from './PartyArrivalCell.svelte'
 import PaymentChannel from './PaymentChannel.svelte'
 import PaymentNote from './PaymentNote.svelte'
 import PersonFieldForm from './PersonFieldForm.svelte'
 import PhotoQueue from './PhotoQueue.svelte'
 import PublishedPhotos from './PublishedPhotos.svelte'
 import RegistrationStatusBadge from './RegistrationStatusBadge.svelte'
+import ShirtGivenToggle from './ShirtGivenToggle.svelte'
 import { getDonationTotals } from './donationTotals'
 import { getEventMoney } from './eventMoney'
 import { filterBookings } from './filterBookings'
@@ -152,6 +156,11 @@ let rooms = $derived(getRoomSummary(data.registrations))
    rather than in getRegistrationTotals: that derives from bookings, and its figures are pinned by the
    money identity — an arrival belongs to neither side of it. */
 let arrivedCount = $derived(data.people.filter((person) => person.checkedInAt !== null).length)
+/* Each booking's arrivals and shirts, for the Bookings lens. Off the same people, so a booking with no
+   places (pending, refunded) has no group and shows a dash. */
+let doorGroups = $derived(
+    new SvelteMap(groupPeopleByBooking(data.people).map((group) => [group.registrationId, group])),
+)
 let lens = $derived(lensFromUrl(page.url))
 let showPeople = $derived(lens === 'people')
 let showDonations = $derived(lens === 'donations')
@@ -539,24 +548,28 @@ $effect(() => {
                                             <span class="text-muted-foreground text-sm">
                                                 {field.label}
                                             </span>
-                                            <PersonFieldForm
-                                                memberId={person.id}
-                                                personName={person.name}
-                                                field={field.field}
-                                                label={field.label}
-                                                kind={field.kind}
-                                                value={field.value(person)} />
+                                            <div class="flex items-center gap-2">
+                                                <div class="min-w-0 flex-1">
+                                                    <PersonFieldForm
+                                                        memberId={person.id}
+                                                        personName={person.name}
+                                                        field={field.field}
+                                                        label={field.label}
+                                                        kind={field.kind}
+                                                        value={field.value(person)} />
+                                                </div>
+                                                {#if field.kind === 'shirt'}
+                                                    <ShirtGivenToggle
+                                                        {person}
+                                                        eventId={data.event.id} />
+                                                {/if}
+                                            </div>
                                         {/each}
                                     </div>
 
-                                    {#if person.checkedInAt}
-                                        <p class="text-muted-foreground text-xs">
-                                            Arrived {formatReunionDateTime(
-                                                person.checkedInAt,
-                                                'time',
-                                            )}
-                                        </p>
-                                    {/if}
+                                    <div>
+                                        <ArrivalToggle {person} eventId={data.event.id} />
+                                    </div>
 
                                     <a
                                         href="/admin/event/{data.event
@@ -595,23 +608,33 @@ $effect(() => {
                                              PersonFieldForm for why one per cell rather than one per
                                              row. -->
                                         {#each PERSON_FIELDS as field (field.field)}
-                                            <Table.Cell class="w-36">
-                                                <PersonFieldForm
-                                                    memberId={person.id}
-                                                    personName={person.name}
-                                                    field={field.field}
-                                                    label={field.label}
-                                                    kind={field.kind}
-                                                    value={field.value(person)} />
+                                            <!-- The shirt cell also holds the hand-over button: the
+                                                 size is what the greeter reads while giving it. -->
+                                            <Table.Cell
+                                                class={field.kind === 'shirt' ? 'w-56' : 'w-36'}>
+                                                <div class="flex items-center gap-2">
+                                                    <div class="min-w-0 flex-1">
+                                                        <PersonFieldForm
+                                                            memberId={person.id}
+                                                            personName={person.name}
+                                                            field={field.field}
+                                                            label={field.label}
+                                                            kind={field.kind}
+                                                            value={field.value(person)} />
+                                                    </div>
+                                                    {#if field.kind === 'shirt'}
+                                                        <ShirtGivenToggle
+                                                            {person}
+                                                            eventId={data.event.id} />
+                                                    {/if}
+                                                </div>
                                             </Table.Cell>
                                         {/each}
-                                        <!-- Read-only here. The tick belongs at the door, on the
-                                             check-in page; this column is so an organiser reconciling
-                                             the day can see it beside the shirt and meal answers. -->
-                                        <Table.Cell class="text-muted-foreground text-sm">
-                                            {person.checkedInAt
-                                                ? formatReunionDateTime(person.checkedInAt, 'time')
-                                                : '—'}
+                                        <!-- The check-in page's writes, for the desk:
+                                             fixing a mis-tap or recording the day afterwards without
+                                             opening the door list. -->
+                                        <Table.Cell>
+                                            <ArrivalToggle {person} eventId={data.event.id} />
                                         </Table.Cell>
                                         <Table.Cell>
                                             <a
@@ -640,6 +663,7 @@ $effect(() => {
                 {#snippet mobileCards()}
                     <div class="flex flex-col gap-3">
                         {#each visibleBookings as registration (registration.id)}
+                            {@const group = doorGroups.get(registration.id)}
                             <!-- Not a link, though it was one. PaymentNote now renders a "View in
                                  Stripe" anchor, and an <a> inside an <a> is invalid HTML: the browser
                                  hoists the inner one out during parsing, the hydrated tree no longer
@@ -692,6 +716,15 @@ $effect(() => {
                                         stripeTestMode={data.stripeTestMode}
                                         paidLabel={paidLabels.get(registration.id)} />
                                 </div>
+                                {#if group}
+                                    <div class="mt-3 flex items-center justify-between gap-2">
+                                        <span class="text-muted-foreground text-xs">
+                                            Arrived · shirts {group.shirtsGivenCount}/{group.members
+                                                .length}
+                                        </span>
+                                        <PartyArrivalCell {group} eventId={data.event.id} />
+                                    </div>
+                                {/if}
                                 <div class="mt-3">
                                     <Button
                                         href="/admin/event/{data.event
@@ -718,12 +751,15 @@ $effect(() => {
                                     <Table.Head>Hotel</Table.Head>
                                 {/if}
                                 <Table.Head class="text-right">Party</Table.Head>
+                                <Table.Head class="text-right">Arrived</Table.Head>
+                                <Table.Head class="text-right">Shirts</Table.Head>
                                 <Table.Head class="text-right">Total</Table.Head>
                                 <Table.Head></Table.Head>
                             </Table.Row>
                         </Table.Header>
                         <Table.Body>
                             {#each visibleBookings as registration (registration.id)}
+                                {@const group = doorGroups.get(registration.id)}
                                 <Table.Row>
                                     <Table.Cell class={rowAccent(registration)}>
                                         <p class="font-medium">{registration.contactName}</p>
@@ -753,6 +789,15 @@ $effect(() => {
                                     {/if}
                                     <Table.Cell class="text-right tabular-nums">
                                         {registration.memberCount}
+                                    </Table.Cell>
+                                    <Table.Cell class="text-right">
+                                        <PartyArrivalCell {group} eventId={data.event.id} />
+                                    </Table.Cell>
+                                    <Table.Cell
+                                        class="text-muted-foreground text-right tabular-nums">
+                                        {group
+                                            ? `${group.shirtsGivenCount}/${group.members.length}`
+                                            : '—'}
                                     </Table.Cell>
                                     <Table.Cell class="text-right tabular-nums">
                                         ${formatPrice(registration.totalCents)}
