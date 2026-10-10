@@ -1,6 +1,6 @@
 import { drizzle } from 'drizzle-orm/pglite'
 import * as schema from '$lib/server/db/schema'
-import { generateManagementToken } from '$lib/server/registrations/hashManagementToken'
+import { generateViewToken } from '$lib/server/registrations/hashViewToken'
 
 type TestDb = ReturnType<typeof drizzle<typeof schema>>
 
@@ -37,18 +37,18 @@ type SeedOptions = {
 
 /* One paid card registration with one attendee, unless told otherwise.
 
-   Returns the PLAINTEXT management token, which nothing else can: the row stores only the hash, so a
+   Returns the PLAINTEXT view token, which nothing else can: the row stores only the hash, so a
    test that wants to exercise the registrant's own path has to be handed the plaintext at the moment
    it is generated. That is what makes the token gate real in these tests rather than mocked away. */
 export async function seedRegistration(db: TestDb, options: SeedOptions = {}) {
     const eventId = options.eventId ?? (await insertEvent(db, options))
 
-    const token = generateManagementToken()
+    const token = generateViewToken()
 
     const [registration] = await db
         .insert(schema.registrations)
         .values({
-            managementToken: token.hash,
+            viewToken: token.hash,
             contactName: options.contactName ?? 'Alice Patterson',
             contactEmail: options.contactEmail ?? 'alice@example.com',
             eventId,
@@ -82,7 +82,7 @@ export async function seedRegistration(db: TestDb, options: SeedOptions = {}) {
     return {
         eventId,
         registrationId: registration.id,
-        managementToken: token.plaintext,
+        viewToken: token.plaintext,
         memberIds: inserted.map((row) => row.id),
     }
 }

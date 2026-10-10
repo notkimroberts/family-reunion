@@ -7,7 +7,7 @@ import { seedRegistration } from '$lib/server/testing/seedRegistration'
 
 const { getConfirmationEmailData } = await import('./getConfirmationEmailData')
 
-const MANAGE_URL = 'https://example.com/register/manage?token=tok'
+const VIEW_URL = 'https://example.com/register/view?token=tok'
 
 let db: Awaited<ReturnType<typeof resetTestDb>>
 
@@ -19,7 +19,7 @@ describe('getConfirmationEmailData', () => {
     it('marks a webhook-paid registration as paid by card', async () => {
         const { registrationId } = await seedRegistration(db, { stripePaymentIntentId: 'pi_1' })
 
-        const result = await getConfirmationEmailData({ registrationId, manageUrl: MANAGE_URL })
+        const result = await getConfirmationEmailData({ registrationId, viewUrl: VIEW_URL })
 
         expect(result?.data.paidByCard).toBe(true)
     })
@@ -32,7 +32,7 @@ describe('getConfirmationEmailData', () => {
             stripePaymentIntentId: null,
         })
 
-        const result = await getConfirmationEmailData({ registrationId, manageUrl: MANAGE_URL })
+        const result = await getConfirmationEmailData({ registrationId, viewUrl: VIEW_URL })
 
         expect(result?.data.paidByCard).toBe(false)
     })

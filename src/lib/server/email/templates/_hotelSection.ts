@@ -12,7 +12,7 @@ import { escapeHtml } from './_escapeHtml'
 
    Parking quotes only the hotel's own option and links the home page for the rest: a garage list
    with prices goes stale, and the site is the one place it is kept current. siteOrigin is the origin
-   of the manage link, so the link follows whichever domain sent the email. */
+   of the view link, so the link follows whichever domain sent the email. */
 export function hotelSection(siteOrigin: string): { textLines: string[]; html: string } {
     if (!HOST_HOTEL) {
         return { textLines: [], html: '' }

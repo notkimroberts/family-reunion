@@ -7,7 +7,7 @@ import { SAFETY_NOTICE_TEXT } from './_safetyNoticeText'
 import type { DonationReceiptData } from './types'
 
 /* Receipt for a standalone gift. Says the amount and the date and nothing else — a donation buys
-   no place, so there is no party table, no management link and nothing for the donor to do next.
+   no place, so there is no party table, no view link and nothing for the donor to do next.
 
    It states plainly that the gift is not tax-deductible. The reunion is a family gathering, not a
    registered charity, and a receipt that looks like a charitable one invites someone to claim it. */

@@ -53,7 +53,7 @@ const confirmData = {
         { name: 'Bob', tierLabel: 'Child', priceCents: 2000, detail: 'Age 8' },
     ],
     totalCents: 5000,
-    manageUrl: 'https://example.com/register/manage?token=tok-abc',
+    viewUrl: 'https://example.com/register/view?token=tok-abc',
 }
 
 describe('email module', () => {
@@ -78,7 +78,7 @@ describe('email module', () => {
         it('sendRecoveryEmail returns without calling send', async () => {
             await sendRecoveryEmail('test@example.com', {
                 eventTitle: 'Family Reunion 2026',
-                manageUrl: 'https://example.com/register/manage?token=tok-abc',
+                viewUrl: 'https://example.com/register/view?token=tok-abc',
             })
             expect(mockEmailSend).not.toHaveBeenCalled()
         })
@@ -108,7 +108,7 @@ describe('email module', () => {
             await expect(
                 sendRecoveryEmail('test@example.com', {
                     eventTitle: 'Family Reunion 2026',
-                    manageUrl: 'https://example.com/register/manage?token=tok-abc',
+                    viewUrl: 'https://example.com/register/view?token=tok-abc',
                 }),
             ).rejects.toThrow(/RESEND_API_KEY/)
         })
@@ -139,7 +139,7 @@ describe('email module', () => {
             await expect(
                 sendRecoveryEmail('test@example.com', {
                     eventTitle: 'Family Reunion 2026',
-                    manageUrl: 'https://example.com/register/manage?token=tok-abc',
+                    viewUrl: 'https://example.com/register/view?token=tok-abc',
                 }),
             ).rejects.toThrow(/not verified/)
         })
@@ -169,13 +169,13 @@ describe('email module', () => {
             })
         })
 
-        it('sendRegistrationConfirmation includes party members, total, and manage link', async () => {
+        it('sendRegistrationConfirmation includes party members, total, and view link', async () => {
             await sendRegistrationConfirmation('test@example.com', confirmData)
             const [payload] = mockEmailSend.mock.calls[0]
             expect(payload.text).toContain('Alice')
             expect(payload.text).toContain('Bob')
             expect(payload.text).toContain('$50.00')
-            expect(payload.text).toContain('https://example.com/register/manage?token=tok-abc')
+            expect(payload.text).toContain('https://example.com/register/view?token=tok-abc')
         })
 
         it('sends both an html and a plain-text body', async () => {
@@ -185,16 +185,16 @@ describe('email module', () => {
             expect(payload.text).not.toContain('<')
         })
 
-        it('sendRecoveryEmail sends the manage URL to the given address', async () => {
-            const manageUrl = 'https://example.com/register/manage?token=tok-xyz'
+        it('sendRecoveryEmail sends the view URL to the given address', async () => {
+            const viewUrl = 'https://example.com/register/view?token=tok-xyz'
             await sendRecoveryEmail('test@example.com', {
                 eventTitle: 'Family Reunion 2026',
-                manageUrl,
+                viewUrl,
             })
             expect(mockEmailSend).toHaveBeenCalledOnce()
             const [payload] = mockEmailSend.mock.calls[0]
             expect(payload.to).toBe('test@example.com')
-            expect(payload.text).toContain(manageUrl)
+            expect(payload.text).toContain(viewUrl)
         })
     })
 })

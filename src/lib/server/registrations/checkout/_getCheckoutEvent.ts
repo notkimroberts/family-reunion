@@ -3,7 +3,7 @@ import { db } from '$lib/server/db'
 import { reunionEvents } from '$lib/server/db/schema'
 
 /* The event facts a public checkout needs: the opening and lock dates, for assertRegistrationOpen and
-   assertRegistrationEditable, and the title, which names the payment in the Stripe dashboard and on
+   assertRegistrationNotClosed, and the title, which names the payment in the Stripe dashboard and on
    any Stripe receipt. Undefined when the event does not exist. */
 export async function getCheckoutEvent(
     eventId: string,

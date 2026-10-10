@@ -4,7 +4,7 @@ import type { RequestHandler } from './$types'
 
 const TOKEN_COOKIE = 'reg_token'
 
-/* Reads the management token from the reg_token cookie (set by /register/manage on first
+/* Reads the view token from the reg_token cookie (set by /register/view on first
    land). The cookie keeps the plaintext token out of polling-URL access logs. */
 export const GET: RequestHandler = async ({ cookies }) => {
     const token = cookies.get(TOKEN_COOKIE)

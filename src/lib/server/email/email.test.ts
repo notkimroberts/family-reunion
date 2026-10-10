@@ -43,13 +43,13 @@ vi.mock('$lib/general/constants', () => ({
 describe('renderRecoveryEmail', () => {
     const data = {
         eventTitle: 'Family Reunion 2026',
-        manageUrl: 'https://example.com/register/manage?token=abc',
+        viewUrl: 'https://example.com/register/view?token=abc',
     }
 
-    it('includes the management URL in both bodies', () => {
+    it('includes the view URL in both bodies', () => {
         const { text, html } = renderRecoveryEmail(data)
-        expect(text).toContain(data.manageUrl)
-        expect(html).toContain(data.manageUrl)
+        expect(text).toContain(data.viewUrl)
+        expect(html).toContain(data.viewUrl)
     })
 
     it('subject references the event', () => {
@@ -88,7 +88,7 @@ describe('renderRegistrationConfirmation', () => {
             { name: 'Bob', tierLabel: 'Child', priceCents: 5000, detail: 'Age 8, Shirt M' },
         ],
         totalCents: 15000,
-        manageUrl: 'https://example.com/register/manage?token=tok',
+        viewUrl: 'https://example.com/register/view?token=tok',
     }
 
     it('subject includes the event title', () => {
@@ -150,12 +150,12 @@ describe('renderRegistrationConfirmation', () => {
         }
     })
 
-    it('includes the total and the manage URL', () => {
+    it('includes the total and the view URL', () => {
         const { text, html } = renderRegistrationConfirmation(data)
         expect(text).toContain('Total paid: $150.00')
         expect(html).toContain('$150.00')
-        expect(text).toContain(data.manageUrl)
-        expect(html).toContain(data.manageUrl)
+        expect(text).toContain(data.viewUrl)
+        expect(html).toContain(data.viewUrl)
     })
 
     it('includes event date and venue when present', () => {
@@ -242,7 +242,7 @@ describe('renderRegistrationConfirmation', () => {
         /* Absolute on the email's own origin: a relative src resolves against nothing in an inbox. */
         it('pending shows the Zelle QR code, and nothing else does', () => {
             const { html } = renderRegistrationConfirmation({ ...data, status: 'pending' })
-            const origin = new URL(data.manageUrl).origin
+            const origin = new URL(data.viewUrl).origin
             expect(html).toContain(`src="${origin}/zelle_qr.png"`)
             expect(html).toContain('Roberts Reunion Assn')
             for (const status of ['paid', 'waived'] as const) {
@@ -347,7 +347,7 @@ describe('renderRegistrationConfirmation', () => {
    digits alone would pass with the href still malformed. */
 describe('the contact footer in every template', () => {
     const rendered = [
-        ['recovery', renderRecoveryEmail({ eventTitle: 'Reunion', manageUrl: 'https://x/y' })],
+        ['recovery', renderRecoveryEmail({ eventTitle: 'Reunion', viewUrl: 'https://x/y' })],
         [
             'confirmation',
             renderRegistrationConfirmation({
@@ -355,7 +355,7 @@ describe('the contact footer in every template', () => {
                 eventTitle: 'Reunion',
                 partyMembers: [{ name: 'Alice', tierLabel: 'Adult', priceCents: 16000 }],
                 totalCents: 16000,
-                manageUrl: 'https://x/y',
+                viewUrl: 'https://x/y',
                 status: 'paid',
                 paidByCard: true,
             }),

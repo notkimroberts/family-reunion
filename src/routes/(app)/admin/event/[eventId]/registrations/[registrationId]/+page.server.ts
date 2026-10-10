@@ -16,7 +16,7 @@ import {
     getRegistrationWithEvent,
     notifyRegistrationUpdated,
     recordRegistrationAudit,
-    reissueManagementLink,
+    reissueViewLink,
     removeAdminMember,
     setRegistrationStatus,
     updateAdminMemberDetails,
@@ -116,7 +116,7 @@ export const load: PageServerLoad = async (event) => {
 
 export const actions: Actions = {
     /* One save for contact, status and every member. Batched so the registrant is told once: each
-       notification rotates their management token, and rotating four times in one sitting would leave
+       notification rotates their view token, and rotating four times in one sitting would leave
        three dead links in their inbox. */
     save: async (event) => {
         const admin = requireAdmin(event)
@@ -279,7 +279,7 @@ export const actions: Actions = {
             await notifyRegistrationUpdated({
                 registrationId: event.params.registrationId,
                 changeSummary: changes,
-                manageUrl: (token) => `${event.url.origin}/register/manage?token=${token}`,
+                viewUrl: (token) => `${event.url.origin}/register/view?token=${token}`,
             })
         } catch (err) {
             reportError('registration update notification failed', err, {
@@ -306,7 +306,7 @@ export const actions: Actions = {
     },
 
     /* Rotates the token and emails a fresh link, for a registrant who has lost theirs. Their previous
-       link keeps working for the grace period — see isManagementTokenValid. */
+       link keeps working for the grace period — see isViewTokenValid. */
     reissue_link: async (event) => {
         const admin = requireAdmin(event)
 
@@ -316,15 +316,15 @@ export const actions: Actions = {
         await loadPairedRegistration(event.params)
 
         try {
-            await reissueManagementLink({
+            await reissueViewLink({
                 registrationId: event.params.registrationId,
-                manageUrl: (token) => `${event.url.origin}/register/manage?token=${token}`,
+                viewUrl: (token) => `${event.url.origin}/register/view?token=${token}`,
             })
         } catch (err) {
             /* The send failed, so nothing was rotated and the old link still works. Say so
                explicitly: an admin who thinks they have re-issued a link and has not is worse off
                than one who knows it failed. */
-            reportError('admin re-issue management link failed', err, {
+            reportError('admin re-issue view link failed', err, {
                 registrationId: event.params.registrationId,
             })
             const feedback: RegistrationActionFeedback = {
@@ -349,7 +349,7 @@ export const actions: Actions = {
     /* Cancels the whole registration on the registrant's behalf, refunding whatever Stripe took.
 
        The ONLY way to cancel anything. Registrants used to cancel their own booking from
-       /register/manage on nothing but the management link; that went, along with add- and
+       /register/view on nothing but the view link; that went, along with add- and
        remove-member, so every refund now happens here. setRegistrationStatus refuses 'refunded' in
        both directions on purpose, so this action is the whole route.
 

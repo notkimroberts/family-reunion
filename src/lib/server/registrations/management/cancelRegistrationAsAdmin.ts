@@ -8,7 +8,7 @@ import { _performCancellation } from './_performCancellation'
 
    This exists because a paper registration could not be cancelled at all. setRegistrationStatus refuses
    'refunded' in both directions on purpose — writing that column alone would tell everyone the money
-   went back when it had not — and cancelRegistration needs the management token, which the database only
+   went back when it had not — and cancelRegistration needs the view token, which the database only
    stores as a hash. So the only route was to email the registrant their own link and ask them to do it,
    for a family who paid by cheque and rang up to say they cannot come.
 
@@ -53,7 +53,7 @@ export async function cancelRegistrationAsAdmin(params: {
         return
     }
 
-    /* No lock-date check, unlike the registrant's own cancel. assertRegistrationEditable exists to stop
+    /* No lock-date check, unlike the registrant's own cancel. assertRegistrationNotClosed exists to stop
        a REGISTRANT changing their party after the organisers have sent numbers to the caterer — it is
        not a rule the organisers need protecting from. Someone who cannot come after the lock date is
        exactly the case an organiser has to be able to record. */

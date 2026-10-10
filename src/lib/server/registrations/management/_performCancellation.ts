@@ -33,7 +33,7 @@ function getRefundRoute(registration: {
    who is allowed to ask for it.
 
    Cancelling is now organiser-only, through cancelRegistrationAsAdmin. This was extracted when the
-   registrant could also cancel their own booking with nothing but the management link — the two paths
+   registrant could also cancel their own booking with nothing but the view link — the two paths
    differed ONLY in how the caller was authorised — and it stays a separate function because that is
    still the right seam: the refund rules, the loud failure, the status write and the email are the
    cancellation, and who may ask for it is not.

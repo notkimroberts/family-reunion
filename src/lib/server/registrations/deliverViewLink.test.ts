@@ -3,8 +3,8 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { registrations } from '$lib/server/db/schema'
 import { resetTestDb } from '$lib/server/db/testing/resetTestDb'
 import { seedRegistration } from '$lib/server/testing/seedRegistration'
-import { deliverManagementLink } from './deliverManagementLink'
-import { hashManagementToken } from './hashManagementToken'
+import { deliverViewLink } from './deliverViewLink'
+import { hashViewToken } from './hashViewToken'
 
 /* The rule that decides whether a registrant can still reach a booking they paid for.
 
@@ -19,15 +19,15 @@ let db: Awaited<ReturnType<typeof resetTestDb>>
 async function tokensOf(registrationId: string) {
     const [row] = await db
         .select({
-            managementToken: registrations.managementToken,
-            previousManagementToken: registrations.previousManagementToken,
+            viewToken: registrations.viewToken,
+            previousViewToken: registrations.previousViewToken,
         })
         .from(registrations)
         .where(eq(registrations.id, registrationId))
     return row
 }
 
-describe('deliverManagementLink', () => {
+describe('deliverViewLink', () => {
     beforeEach(async () => {
         db = await resetTestDb()
     })
@@ -36,7 +36,7 @@ describe('deliverManagementLink', () => {
         const seeded = await seedRegistration(db)
         let delivered = ''
 
-        const result = await deliverManagementLink({
+        const result = await deliverViewLink({
             registrationId: seeded.registrationId,
             deliver: async (token) => {
                 delivered = token
@@ -46,9 +46,7 @@ describe('deliverManagementLink', () => {
 
         expect(result).toBe('sent')
         /* The row holds the hash of exactly the token that went out in the email. */
-        expect((await tokensOf(seeded.registrationId)).managementToken).toBe(
-            hashManagementToken(delivered),
-        )
+        expect((await tokensOf(seeded.registrationId)).viewToken).toBe(hashViewToken(delivered))
     })
 
     /* THE rule. */
@@ -57,7 +55,7 @@ describe('deliverManagementLink', () => {
         const before = await tokensOf(seeded.registrationId)
 
         await expect(
-            deliverManagementLink({
+            deliverViewLink({
                 registrationId: seeded.registrationId,
                 deliver: async () => {
                     throw new Error('resend down')
@@ -74,7 +72,7 @@ describe('deliverManagementLink', () => {
         const seeded = await seedRegistration(db)
 
         await expect(
-            deliverManagementLink({
+            deliverViewLink({
                 registrationId: seeded.registrationId,
                 deliver: async () => {
                     throw new Error('resend down')
@@ -82,23 +80,23 @@ describe('deliverManagementLink', () => {
             }),
         ).rejects.toThrow()
 
-        expect((await tokensOf(seeded.registrationId)).managementToken).toBe(
-            hashManagementToken(seeded.managementToken),
+        expect((await tokensOf(seeded.registrationId)).viewToken).toBe(
+            hashViewToken(seeded.viewToken),
         )
     })
 
     /* Rotation demotes rather than discards, so the link sent before this one keeps working for the
-       grace period — and an open manage tab, whose cookie holds that plaintext, survives. */
+       grace period — and an open view tab, whose cookie holds that plaintext, survives. */
     it('demotes the outgoing token instead of discarding it', async () => {
         const seeded = await seedRegistration(db)
 
-        await deliverManagementLink({
+        await deliverViewLink({
             registrationId: seeded.registrationId,
             deliver: async () => 'sent',
         })
 
-        expect((await tokensOf(seeded.registrationId)).previousManagementToken).toBe(
-            hashManagementToken(seeded.managementToken),
+        expect((await tokensOf(seeded.registrationId)).previousViewToken).toBe(
+            hashViewToken(seeded.viewToken),
         )
     })
 
@@ -108,7 +106,7 @@ describe('deliverManagementLink', () => {
         const seeded = await seedRegistration(db)
         const before = await tokensOf(seeded.registrationId)
 
-        const result = await deliverManagementLink({
+        const result = await deliverViewLink({
             registrationId: seeded.registrationId,
             deliver: async () => 'skipped',
         })
@@ -123,7 +121,7 @@ describe('deliverManagementLink', () => {
         const seeded = await seedRegistration(db)
         const seen: string[] = []
 
-        await deliverManagementLink({
+        await deliverViewLink({
             registrationId: seeded.registrationId,
             deliver: async (token) => {
                 seen.push(token)
@@ -131,6 +129,6 @@ describe('deliverManagementLink', () => {
             },
         })
 
-        expect(seen[0]).not.toBe((await tokensOf(seeded.registrationId)).managementToken)
+        expect(seen[0]).not.toBe((await tokensOf(seeded.registrationId)).viewToken)
     })
 })

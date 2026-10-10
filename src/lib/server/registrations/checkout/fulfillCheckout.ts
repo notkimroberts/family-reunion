@@ -154,7 +154,7 @@ export async function fulfillCheckout(
         return
     }
 
-    const { registrationId, managementToken } = metadata
+    const { registrationId, viewToken } = metadata
 
     dbg.stripe('checkout.session.completed registrationId=%s', registrationId)
 
@@ -244,8 +244,8 @@ export async function fulfillCheckout(
 
     /* Email outside the transaction — a transient email failure should not roll back payment.
        Plaintext token came through Stripe metadata; the DB only ever holds the hash. */
-    const manageUrl = `${origin}/register/manage?token=${managementToken}`
-    const confirmation = await getConfirmationEmailData({ registrationId, manageUrl })
+    const viewUrl = `${origin}/register/view?token=${viewToken}`
+    const confirmation = await getConfirmationEmailData({ registrationId, viewUrl })
     if (!confirmation) {
         dbg.stripe('no confirmation data for registration %s; skipping email', registrationId)
         return

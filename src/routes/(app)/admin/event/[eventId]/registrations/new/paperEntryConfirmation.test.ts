@@ -6,7 +6,7 @@ import { describe, expect, it } from 'vitest'
    The form used to stay populated behind the banner after a successful submit, so it was unclear
    whether anything had saved. Hiding it introduced the mirror-image bug: "Add another" brought a
    blank form back but left the previous registrant's confirmation above it, complete with their
-   management link — the wrong link to hand to the next person.
+   view link — the wrong link to hand to the next person.
 
    Both are now gated on one derived value, `confirmation`, so neither can be shown without the
    other being hidden. A source guard rather than a rendered assertion because vitest runs in a node

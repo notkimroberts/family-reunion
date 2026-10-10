@@ -6,7 +6,7 @@ import { seedRegistration } from '$lib/server/testing/seedRegistration'
 
 /* The organiser's cancel, which exists because a paper registration could not be cancelled at all:
    setRegistrationStatus refuses 'refunded' in both directions, and cancelRegistration needs the
-   management token, which is only ever stored as a hash.
+   view token, which is only ever stored as a hash.
 
    These tests cover what is specific to the ADMIN path — the event pairing, the already-cancelled
    no-op, and that a cheque registration cancels without touching Stripe. The refund contract itself
@@ -175,7 +175,7 @@ describe('cancelRegistrationAsAdmin', () => {
         expect(await statusOf(seeded.registrationId)).toBe('refunded')
     })
 
-    /* No lock-date check, unlike the registrant's own cancel: assertRegistrationEditable stops a
+    /* No lock-date check, unlike the registrant's own cancel: assertRegistrationNotClosed stops a
        REGISTRANT editing after numbers have gone to the caterer, which is not a rule organisers need
        protecting from. Someone dropping out late is exactly what this has to record.
 

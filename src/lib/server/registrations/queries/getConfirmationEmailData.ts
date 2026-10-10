@@ -17,7 +17,7 @@ import { getAge } from '$lib/utils/age'
    current tier prices, so a later reprice never changes a historical confirmation. */
 export async function getConfirmationEmailData(params: {
     registrationId: string
-    manageUrl: string
+    viewUrl: string
 }): Promise<{ to: string; data: RegistrationConfirmationData } | undefined> {
     const [registration] = await db
         .select({
@@ -120,7 +120,7 @@ export async function getConfirmationEmailData(params: {
                template prints the gift as its own row so the two agree. */
             totalCents: sumMemberPrices(members) + donationCents,
             donationCents: donationCents > 0 ? donationCents : undefined,
-            manageUrl: params.manageUrl,
+            viewUrl: params.viewUrl,
         },
     }
 }

@@ -62,7 +62,7 @@ export const actions: Actions = {
        because that is where the gaps are visible and where the shirt and meal counts they feed are read.
 
        DELIBERATELY DOES NOT EMAIL THE REGISTRANT, unlike the save on the registration detail page. That
-       one rotates their management token and sends a summary because it can change what they owe and who
+       one rotates their view token and sends a summary because it can change what they owe and who
        is in their party. This changes neither. Emailing "your details were updated" for each dietary
        toggle while an organiser fills in eight gaps would train them to ignore the message that carries
        their only working link — and that link is their sole credential.

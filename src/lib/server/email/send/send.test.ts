@@ -76,7 +76,7 @@ describe('send envelope', () => {
     })
 
     /* The contract every caller that commits state depends on — /register/recover rotates the
-       management token only after a confirmed send, and the DB holds only the hash. */
+       view token only after a confirmed send, and the DB holds only the hash. */
     it('throws when Resend reports an error rather than resolving', async () => {
         mockSend.mockResolvedValue({ data: null, error: { message: 'Domain is not verified' } })
 

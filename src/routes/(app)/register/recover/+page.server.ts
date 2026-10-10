@@ -4,7 +4,7 @@ import { superValidate } from 'sveltekit-superforms/server'
 import { dbg } from '$lib/server/debug'
 import { sendRecoveryEmail } from '$lib/server/email'
 import { getRegistrationsByEmail } from '$lib/server/registrations'
-import { deliverManagementLink } from '$lib/server/registrations/deliverManagementLink'
+import { deliverViewLink } from '$lib/server/registrations/deliverViewLink'
 import { allowRecoveryRequest } from '$lib/server/registrations/recoveryRateLimit'
 import { reportError } from '$lib/server/reportError'
 import type { Actions, PageServerLoad } from './$types'
@@ -35,18 +35,18 @@ export const actions: Actions = {
         dbg.register('recover email=%s matches=%d', email, matches.length)
 
         /* The DB stores only token hashes, so a recovery link is necessarily a NEW token — and the
-           new hash is persisted only after the email is away. deliverManagementLink owns that
+           new hash is persisted only after the email is away. deliverViewLink owns that
            ordering; here we only have to decide what a failure means, which is: report it, and leave
            the registrant's existing link working. */
         await Promise.all(
             matches.map(async (registration) => {
                 try {
-                    await deliverManagementLink({
+                    await deliverViewLink({
                         registrationId: registration.id,
                         deliver: async (token) => {
                             await sendRecoveryEmail(email, {
                                 eventTitle: registration.eventTitle,
-                                manageUrl: `${event.url.origin}/register/manage?token=${token}`,
+                                viewUrl: `${event.url.origin}/register/view?token=${token}`,
                             })
                             return 'sent'
                         },

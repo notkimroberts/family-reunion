@@ -1,4 +1,4 @@
-# Only the home page and the registration form are indexed. Photos (children among them), the manage
+# Only the home page and the registration form are indexed. Photos (children among them), the view
 # page and everything behind the login stay out of search. The share-card image and the images emails
 # embed (header, Zelle code and logo) are allowed so crawlers and mail image proxies that obey
 # robots.txt can still fetch them.

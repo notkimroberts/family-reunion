@@ -58,9 +58,9 @@ export const actions: Actions = {
 
         const intake = toRegistrationIntake(form.data)
 
-        /* No assertRegistrationEditable here, unlike public registration: an admin must still be
+        /* No assertRegistrationNotClosed here, unlike public registration: an admin must still be
            able to enter a paper form that arrived after the public lock date. */
-        const { registrationId, managementToken } = await createAdminRegistration({
+        const { registrationId, viewToken } = await createAdminRegistration({
             ...intake,
             eventId: form.data.eventId,
             donationCents: form.data.donationCents,
@@ -81,12 +81,12 @@ export const actions: Actions = {
 
            A failed send must NOT roll back the registration. The row is correct and the admin has
            the link on screen; losing the entry would be the worse outcome. */
-        const manageUrl = `${event.url.origin}/register/manage?token=${managementToken}`
+        const viewUrl = `${event.url.origin}/register/view?token=${viewToken}`
         let emailSent = false
         let emailError: string | undefined
 
         try {
-            const confirmation = await getConfirmationEmailData({ registrationId, manageUrl })
+            const confirmation = await getConfirmationEmailData({ registrationId, viewUrl })
             if (confirmation) {
                 await sendRegistrationConfirmation(
                     confirmation.to,
@@ -102,6 +102,6 @@ export const actions: Actions = {
             emailError = err instanceof Error ? err.message : 'Unknown email error'
         }
 
-        return { form, success: true, registrationId, manageUrl, emailSent, emailError }
+        return { form, success: true, registrationId, viewUrl, emailSent, emailError }
     },
 }

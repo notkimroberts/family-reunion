@@ -6,9 +6,9 @@ import { dbg } from '$lib/server/debug'
 import { createRegistrationCheckout } from '$lib/server/payments'
 import { resolveTierPricing } from '$lib/server/tiers'
 import { grossUpForStripe } from '$lib/utils/stripeFee'
-import { assertRegistrationEditable } from '../assertRegistrationEditable'
+import { assertRegistrationNotClosed } from '../assertRegistrationNotClosed'
 import { assertRegistrationOpen } from '../assertRegistrationOpen'
-import { generateManagementToken } from '../hashManagementToken'
+import { generateViewToken } from '../hashViewToken'
 import type { MemberInput } from './MemberInput'
 import { assertContactTierIsAdult } from './_assertContactTierIsAdult'
 import { getCheckoutEvent } from './_getCheckoutEvent'
@@ -16,10 +16,10 @@ import { buildCheckoutLineItems } from './buildCheckoutLineItems'
 import { buildPartyMemberRow } from './buildPartyMemberRow'
 
 /* Creates a 'pending' registration + party members, then opens a Stripe Checkout session.
-   Each registration gets a permanent managementToken used as the ownership credential.
+   Each registration gets a permanent viewToken used as the ownership credential.
    The DB stores only the SHA-256 hash; the plaintext is returned to the caller, baked
    into the Stripe success URL, and carried through Stripe metadata so the webhook can
-   build the manage-URL in the confirmation email.
+   build the view URL in the confirmation email.
 
    We deliberately do NOT delete prior pending rows for this contactEmail — that would be
    an unauthenticated DOS vector (any visitor could submit the form with a victim's email
@@ -41,7 +41,7 @@ export async function createPendingRegistration(params: {
     donationCents?: number
     successUrl: (token: string) => string
     cancelUrl: (token: string) => string
-}): Promise<{ registrationId: string; managementToken: string; checkoutUrl: string }> {
+}): Promise<{ registrationId: string; viewToken: string; checkoutUrl: string }> {
     /* Freeze new registrations once the lock date passes, not just changes to existing ones.
        Without this the add/edit/remove/cancel paths are closed while the front door stays
        open, so a late registrant can still pay for a place nobody is catering for.
@@ -49,7 +49,7 @@ export async function createPendingRegistration(params: {
     const checkoutEvent = await getCheckoutEvent(params.eventId)
     /* Nor before it opens: the form is hidden until then, but a hidden form is not a guard. */
     assertRegistrationOpen(checkoutEvent?.registrationOpensAt ?? null)
-    assertRegistrationEditable(checkoutEvent?.registrationLockDate ?? null)
+    assertRegistrationNotClosed(checkoutEvent?.registrationLockDate ?? null)
 
     const pricingByTierId = await resolveTierPricing(
         params.eventId,
@@ -60,12 +60,12 @@ export async function createPendingRegistration(params: {
 
     const lineItems = buildCheckoutLineItems(params.members, pricingByTierId)
 
-    const { plaintext: managementToken, hash: tokenHash } = generateManagementToken()
+    const { plaintext: viewToken, hash: tokenHash } = generateViewToken()
 
     const [registration] = await db
         .insert(registrations)
         .values({
-            managementToken: tokenHash,
+            viewToken: tokenHash,
             contactName: params.contactName,
             contactEmail: params.contactEmail,
             contactPhone: params.contactPhone || null,
@@ -128,12 +128,12 @@ export async function createPendingRegistration(params: {
                 : []),
         ],
         registrationId: registration.id,
-        managementToken,
+        viewToken,
         donationId,
         description: `${checkoutEvent?.title ?? 'Family reunion'} registration`,
         customerEmail: params.contactEmail,
-        successUrl: () => params.successUrl(managementToken),
-        cancelUrl: () => params.cancelUrl(managementToken),
+        successUrl: () => params.successUrl(viewToken),
+        cancelUrl: () => params.cancelUrl(viewToken),
     })
 
     await db
@@ -149,5 +149,5 @@ export async function createPendingRegistration(params: {
     }
 
     dbg.register('stripe session=%s created', sessionId)
-    return { registrationId: registration.id, managementToken, checkoutUrl }
+    return { registrationId: registration.id, viewToken, checkoutUrl }
 }

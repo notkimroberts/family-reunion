@@ -9,7 +9,7 @@ import { APP_NAME, CONTACT_EMAIL, CONTACT_PHONE, ZELLE_RECIPIENT } from '$lib/ge
 import { offlinePaymentMethods } from '$lib/general/scamSafety'
 import { toE164 } from '$lib/utils'
 import HostHotelPrompt from '../HostHotelPrompt.svelte'
-import RegistrationManager from '../RegistrationManager.svelte'
+import RegistrationView from '../RegistrationView.svelte'
 import { clearRegistrationDraft } from '../clearRegistrationDraft'
 
 const POLL_INTERVAL_MS = 2000
@@ -72,7 +72,7 @@ $effect(() => {
 </script>
 
 <svelte:head>
-    <title>Manage Registration — {APP_NAME}</title>
+    <title>Your Registration — {APP_NAME}</title>
 </svelte:head>
 
 {#if data.missingToken}
@@ -87,10 +87,10 @@ $effect(() => {
             <CardContent class="flex flex-col gap-4">
                 <p class="text-muted-foreground text-sm">
                     We couldn't find an active registration session in this browser. If you've
-                    already registered, we can email a fresh management link to you.
+                    already registered, we can email you a fresh link to it.
                 </p>
                 <div class="flex flex-col gap-2">
-                    <Button href="/register/recover">Resend management link</Button>
+                    <Button href="/register/recover">Resend registration link</Button>
                     <Button href="/register" variant="outline">Start a new registration</Button>
                 </div>
             </CardContent>
@@ -141,8 +141,7 @@ $effect(() => {
 
     {#if paymentOwed}
         <!-- Admin-entered registration with payment still outstanding. No Stripe session
-             exists, so there is nothing to poll for; say what is owed and let them manage
-             their party in the meantime. -->
+             exists, so there is nothing to poll for; say what is owed and how to pay. -->
         <section class="col-span-12 flex flex-col gap-3">
             <Alert>
                 <AlertTitle>Payment outstanding</AlertTitle>
@@ -163,8 +162,5 @@ $effect(() => {
         <HostHotelPrompt />
     </section>
 
-    <RegistrationManager
-        registration={data.registration}
-        members={data.members}
-        event={data.event} />
+    <RegistrationView registration={data.registration} members={data.members} event={data.event} />
 {/if}

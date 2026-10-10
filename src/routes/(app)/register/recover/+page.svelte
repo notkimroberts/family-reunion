@@ -32,20 +32,20 @@ const { form, errors, enhance } = superForm(data.form, {
         <CardHeader>
             <CardTitle class="flex items-center gap-2">
                 <Mail class="text-muted-foreground h-5 w-5" />
-                Resend management link
+                Resend registration link
             </CardTitle>
         </CardHeader>
         <CardContent class="space-y-4">
             {#if sent}
                 <p class="text-sm">
-                    If we found a registration for that email, we've sent a fresh management link.
-                    Check your inbox.
+                    If we found a registration for that email, we've sent a fresh link to it. Check
+                    your inbox.
                 </p>
                 <Button variant="outline" href="/">Back to home</Button>
             {:else}
                 <p class="text-muted-foreground text-sm">
-                    Enter the email you used to register and we'll re-send the link to manage your
-                    party.
+                    Enter the email you used to register and we'll re-send the link to view your
+                    registration.
                 </p>
                 <form method="POST" use:enhance class="space-y-3">
                     <div class="space-y-1.5">
@@ -62,7 +62,7 @@ const { form, errors, enhance } = superForm(data.form, {
                             <p class="text-destructive text-sm">{$errors.email[0]}</p>
                         {/if}
                     </div>
-                    <Button type="submit" class="w-full">Send management link</Button>
+                    <Button type="submit" class="w-full">Send link</Button>
                 </form>
             {/if}
         </CardContent>

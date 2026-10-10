@@ -97,7 +97,7 @@ $effect(() => {
     }
 
     if (actionData.linkReissued) {
-        toast.success('New management link sent', {
+        toast.success('New registration link sent', {
             description:
                 'Their previous link keeps working for a week, so nothing they already have is broken.',
         })
@@ -205,9 +205,9 @@ async function handleCopyEmail() {
                          nothing to the person deciding whether to press this; what they need to know
                          is that it is safe and what the registrant ends up with. -->
                     <TooltipContent class="max-w-xs">
-                        Emails them a new link for managing their own registration. We can't look up
-                        the link they already have, so this makes a fresh one — their old link still
-                        works for another week.
+                        Emails them a new link to view their registration. We can't look up the link
+                        they already have, so this makes a fresh one — their old link still works
+                        for another week.
                     </TooltipContent>
                 </Tooltip>
                 {#if !isCancelled}

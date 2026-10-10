@@ -54,7 +54,7 @@ const { form, errors, message, submitting, enhance } = superForm(data.form, {
         $form.donationCents = donationCents
     },
     /* handleReset clears state explicitly, so superforms must not also reset $form out from under
-       the success banner, which reads the returned manage URL. */
+       the success banner, which reads the returned view URL. */
     resetForm: false,
 })
 
@@ -81,7 +81,7 @@ let members = $state<FormMember[]>([])
 let donationCents = $state(0)
 let copied = $state(false)
 /* The confirmation and the form are mutually exclusive: a success replaces the form with the
-   registrant's management link, and "Add another" swaps back. Derived as one value rather than two
+   registrant's view link, and "Add another" swaps back. Derived as one value rather than two
    flags so they cannot both be on screen — a stale confirmation above a blank form invites the
    admin to copy the previous registrant's link. actionData persists after the action returns, so
    success alone cannot decide; addingAnother is what dismisses it. */
@@ -170,7 +170,7 @@ async function handleCopy(url: string) {
             <p class="font-medium">Registration added.</p>
 
             {#if confirmation.emailSent}
-                <p>A confirmation email was sent with their management link.</p>
+                <p>A confirmation email was sent with their registration link.</p>
             {:else}
                 <p class="flex items-start gap-2">
                     <TriangleAlert class="mt-0.5 h-4 w-4 shrink-0" />
@@ -184,17 +184,17 @@ async function handleCopy(url: string) {
 
             <!-- Shown even on success: the plaintext token exists only in this response. -->
             <div class="flex flex-col gap-2">
-                <span class="text-xs font-semibold tracking-wide uppercase">Management link</span>
+                <span class="text-xs font-semibold tracking-wide uppercase">Registration link</span>
                 <div class="flex flex-wrap items-center gap-2">
                     <code
                         class="bg-background/60 min-w-0 flex-1 rounded px-2 py-1.5 text-xs break-all">
-                        {confirmation.manageUrl}
+                        {confirmation.viewUrl}
                     </code>
                     <Button
                         type="button"
                         variant="outline"
                         size="sm"
-                        onclick={() => handleCopy(confirmation.manageUrl)}>
+                        onclick={() => handleCopy(confirmation.viewUrl)}>
                         {#if copied}
                             <Check class="h-4 w-4" /> Copied
                         {:else}

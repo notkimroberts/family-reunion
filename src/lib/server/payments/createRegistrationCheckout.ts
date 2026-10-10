@@ -17,7 +17,7 @@ export async function createRegistrationCheckout(
         custom_text: { submit: { message: checkoutBrandingValue.registration.submitMessage } },
         /* Names the payment where a person looks for it: the card statement, the Stripe dashboard
            and any Stripe receipt. The ids let a dashboard search find the booking. Never the
-           management token — that stays on the session, where only the webhook reads it. */
+           view token — that stays on the session, where only the webhook reads it. */
         payment_intent_data: {
             description: params.description,
             statement_descriptor_suffix:
@@ -32,7 +32,7 @@ export async function createRegistrationCheckout(
         cancel_url: params.cancelUrl(),
         metadata: encodeRegistrationMetadata(
             params.registrationId,
-            params.managementToken,
+            params.viewToken,
             params.donationId,
         ),
     })

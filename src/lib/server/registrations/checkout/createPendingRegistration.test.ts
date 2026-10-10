@@ -112,8 +112,8 @@ describe('createPendingRegistration', () => {
         expect(row.status).toBe('pending')
         expect(row.contactEmail).toBe('alice@example.com')
         /* The plaintext is returned to the caller and must never be what is stored. */
-        expect(row.managementToken).not.toBe(result.managementToken)
-        expect(row.managementToken).toHaveLength(64)
+        expect(row.viewToken).not.toBe(result.viewToken)
+        expect(row.viewToken).toHaveLength(64)
     })
 
     /* The contact is an attendee too, and their row is the one flagged so their name has a single

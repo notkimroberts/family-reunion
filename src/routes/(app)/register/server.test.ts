@@ -104,7 +104,7 @@ describe('POST /register?/register', () => {
     })
 
     /* /register/recover matches on exact contact email. Stored as typed, a capitalised address is a
-       registrant who cannot recover their own management link. */
+       registrant who cannot recover their own view link. */
     it('stores the contact email lowercased', async () => {
         await expect(submit()).rejects.toBeDefined()
 

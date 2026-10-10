@@ -2,10 +2,10 @@ import { eq, sql } from 'drizzle-orm'
 import { db } from '$lib/server/db'
 import { registrations } from '$lib/server/db/schema'
 import { dbg } from '$lib/server/debug'
-import { MANAGEMENT_TOKEN_GRACE_PERIOD_MS } from './isManagementTokenValid'
+import { VIEW_TOKEN_GRACE_PERIOD_MS } from './isViewTokenValid'
 
-/* Persists a rotated management token, demoting the outgoing hash so it keeps working for the grace
-   period. See isManagementTokenValid for why the grace period exists.
+/* Persists a rotated view token, demoting the outgoing hash so it keeps working for the grace
+   period. See isViewTokenValid for why the grace period exists.
 
    CALL THIS ONLY AFTER A CONFIRMED SEND. Every caller emails the new link first and rotates second.
    Rotating before a successful send leaves the registrant holding a link that no longer hashes to
@@ -16,7 +16,7 @@ import { MANAGEMENT_TOKEN_GRACE_PERIOD_MS } from './isManagementTokenValid'
    right-hand side of SET against the old row, so previous_management_token receives the value
    management_token had before this statement. One statement, so two concurrent rotations cannot
    interleave into a state where neither old hash is retained. */
-export async function rotateManagementToken(params: {
+export async function rotateViewToken(params: {
     registrationId: string
     newHash: string
     now?: Date
@@ -26,16 +26,16 @@ export async function rotateManagementToken(params: {
     await db
         .update(registrations)
         .set({
-            managementToken: params.newHash,
-            previousManagementToken: sql`${registrations.managementToken}`,
-            previousTokenExpiresAt: new Date(now.getTime() + MANAGEMENT_TOKEN_GRACE_PERIOD_MS),
+            viewToken: params.newHash,
+            previousViewToken: sql`${registrations.viewToken}`,
+            previousTokenExpiresAt: new Date(now.getTime() + VIEW_TOKEN_GRACE_PERIOD_MS),
             updatedAt: now,
         })
         .where(eq(registrations.id, params.registrationId))
 
     dbg.register(
-        'rotated management token for registration %s; previous valid for %dms',
+        'rotated view token for registration %s; previous valid for %dms',
         params.registrationId,
-        MANAGEMENT_TOKEN_GRACE_PERIOD_MS,
+        VIEW_TOKEN_GRACE_PERIOD_MS,
     )
 }

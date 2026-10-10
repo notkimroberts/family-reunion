@@ -1,7 +1,7 @@
 /* Paths in the (app) route group that anyone may view without signing in.
 
    For launch this is the registration funnel and the donation page: '/' for the landing page,
-   '/register' which covers the form, '/register/manage' and '/register/recover', and '/donate'
+   '/register' which covers the form, '/register/view' and '/register/recover', and '/donate'
    which covers '/donate/thanks'. Everything else in the group — program, changelog, admin — is
    admin-only.
 
@@ -9,7 +9,7 @@
    registration lock date: a gift needs no chair, so nothing about it is bounded by the deadline.
 
    '/photos' covers the gallery grid and '/photos/contribute', the upload form — one prefix for
-   both, as '/register' covers manage and recover. Contributing carries no credential at all, so
+   both, as '/register' covers view and recover. Contributing carries no credential at all, so
    nothing uploaded is publicly reachable until an organiser approves it; see ADR 0009. The byte
    proxy at /api/photos/* sits outside the (app) group and enforces that itself.
 

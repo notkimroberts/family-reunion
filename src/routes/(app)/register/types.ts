@@ -24,7 +24,7 @@ export type FormMember = MemberInputData
    bindable prop per field, and so $form can hold it as a single nested value. */
 export type PersonDetails = Omit<FormMember, 'name'>
 
-/* Full party member row returned from the DB (used in RegistrationManager and EditMemberDialog) */
+/* Full party member row returned from the DB (used in RegistrationView) */
 export type PartyMember = {
     id: string
     name: string
@@ -43,8 +43,9 @@ export type PartyMember = {
     priceCents: number
 }
 
-/* The subset of PartyMember needed to edit a member's details */
-export type EditableMember = Pick<
+/* What RegistrationView renders, and all the view load sends. The view link is a
+   forwardable bearer credential, so no address or Stripe id may ride along in the page data. */
+export type RegistrationViewMember = Pick<
     PartyMember,
     | 'id'
     | 'name'
@@ -54,20 +55,10 @@ export type EditableMember = Pick<
     | 'shirtSize'
     | 'vegetarianMeal'
     | 'tierLabel'
+    | 'priceCents'
 >
 
-/* What RegistrationManager renders, and all the manage load sends. The management link is a
-   forwardable bearer credential, so no address or Stripe id may ride along in the page data. */
-export type ManagedMember = EditableMember & Pick<PartyMember, 'priceCents'>
-
-/* Member entry in the remove-member confirmation dialog */
-export type RemovableMember = {
-    id: string
-    name: string
-    priceCents: number
-}
-
-/* Registration row summary displayed in RegistrationManager */
+/* Registration row summary displayed in RegistrationView */
 export type RegistrationDetails = {
     id: string
     status: string

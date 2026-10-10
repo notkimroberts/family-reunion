@@ -37,7 +37,7 @@ const data: RegistrationConfirmationData = {
     paidByCard: true,
     partyMembers: [{ name: 'Alice', tierLabel: 'Adult', priceCents: 10000 }],
     totalCents: 10000,
-    manageUrl: 'https://example.com/register/manage?token=tok',
+    viewUrl: 'https://example.com/register/view?token=tok',
 }
 
 describe('renderRegistrationConfirmation without a room block', () => {
