@@ -1,5 +1,5 @@
 import { error, fail } from '@sveltejs/kit'
-import { eq } from 'drizzle-orm'
+import { and, eq, ne } from 'drizzle-orm'
 import { requireOwner } from '$lib/server/auth/guards'
 import { db } from '$lib/server/db'
 import { eventStatusEnum, reunionEvents } from '$lib/server/db/schema'
@@ -82,7 +82,14 @@ export const load: PageServerLoad = async (event) => {
 
     const tiers = await getTiersForEvent(reunionEvent.id)
 
-    return { event: reunionEvent, tiers }
+    /* The year that blocks this one from opening, so the Open button can say so before the
+       one_open_event index refuses it. */
+    const [otherOpenEvent] = await db
+        .select({ year: reunionEvents.year })
+        .from(reunionEvents)
+        .where(and(eq(reunionEvents.status, 'open'), ne(reunionEvents.id, reunionEvent.id)))
+
+    return { event: reunionEvent, tiers, otherOpenYear: otherOpenEvent?.year }
 }
 
 export const actions: Actions = {
@@ -151,47 +158,52 @@ export const actions: Actions = {
         return { success: true }
     },
 
-    /* When public registration opens, and nothing else — like every action here, its .set() names
-       only its own column. Blank clears it, which means open now. */
-    update_opens_at: async (event) => {
+    /* When public registration opens and closes — one card, so one action owning both columns, and
+       nothing else. Blank clears a date: no opening date is open now, no closing date is open until
+       the status changes.
+
+       Refused rather than stored: a closing date on or before the opening date, which would leave
+       registration never open, and any change to an archived year, whose dates are history. */
+    update_window: async (event) => {
         requireOwner(event)
         const data = await event.request.formData()
 
-        const registrationOpensAt = parseOptionalDate(data.get('registrationOpensAt'))
-        if ('error' in registrationOpensAt) {
-            return fail(400, { error: `Opening date: ${registrationOpensAt.error}` })
+        const opensAt = parseOptionalDate(data.get('registrationOpensAt'))
+        const closesAt = parseOptionalDate(data.get('registrationLockDate'))
+        if ('error' in opensAt) {
+            return fail(400, { error: `Opening date: ${opensAt.error}` })
+        }
+        if ('error' in closesAt) {
+            return fail(400, { error: `Closing date: ${closesAt.error}` })
+        }
+        if (opensAt.date && closesAt.date && closesAt.date <= opensAt.date) {
+            return fail(400, {
+                error: 'The closing date must be after the opening date, or registration never opens.',
+            })
         }
 
-        dbg.admin('update_opens_at eventId=%s', event.params.eventId)
-
-        await db
-            .update(reunionEvents)
-            .set({ registrationOpensAt: registrationOpensAt.date, updatedAt: new Date() })
+        const [row] = await db
+            .select({ status: reunionEvents.status })
+            .from(reunionEvents)
             .where(eq(reunionEvents.id, event.params.eventId))
-
-        return { success: true }
-    },
-
-    update_lock_date: async (event) => {
-        requireOwner(event)
-        const data = await event.request.formData()
-        const raw = (data.get('registrationLockDate') as string)?.trim()
-
-        let registrationLockDate: Date | null = null
-        if (raw) {
-            /* Reunion-local, like the start and end dates above. */
-            const d = parseReunionWallClock(raw)
-            if (!d) {
-                return fail(400, { error: 'Invalid lock date' })
-            }
-            registrationLockDate = d
+        if (!row) {
+            throw error(404, 'Event not found')
+        }
+        if (row.status === 'archived') {
+            return fail(409, {
+                error: 'This year is archived. Change its status to edit its dates.',
+            })
         }
 
-        dbg.admin('update_lock_date eventId=%s date=%s', event.params.eventId, raw)
+        dbg.admin('update_window eventId=%s', event.params.eventId)
 
         await db
             .update(reunionEvents)
-            .set({ registrationLockDate, updatedAt: new Date() })
+            .set({
+                registrationOpensAt: opensAt.date,
+                registrationLockDate: closesAt.date,
+                updatedAt: new Date(),
+            })
             .where(eq(reunionEvents.id, event.params.eventId))
 
         return { success: true }

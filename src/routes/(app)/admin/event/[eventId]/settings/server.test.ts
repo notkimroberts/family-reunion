@@ -5,7 +5,7 @@ import { resetTestDb } from '$lib/server/db/testing/resetTestDb'
 import { seedEvent } from '$lib/server/testing/seedEvent'
 import { parseReunionWallClock } from '$lib/utils'
 
-/* The settings page writes the event in four separate actions, and this file exists to keep them
+/* The settings page writes the event in separate actions, one per card, and this file exists to keep them
    separate.
 
    THE FAILURE THIS GUARDS. Dates and program content were one ?/update_event doing a single db.update
@@ -26,7 +26,7 @@ vi.mock('$lib/server/auth/guards', () => ({
     isPublicPath: vi.fn(),
 }))
 
-const { actions } = await import('./+page.server')
+const { actions, load } = await import('./+page.server')
 
 const PROGRAM = { menu: ['Ribs', 'Slaw'], venue: { name: 'Oak Park Lodge' } }
 
@@ -201,81 +201,98 @@ describe('settings ?/update_program', () => {
     })
 })
 
-describe('settings ?/update_opens_at', () => {
+describe('settings ?/update_window', () => {
+    const WINDOW = {
+        registrationOpensAt: '2026-10-31T09:00',
+        registrationLockDate: '2027-06-23T09:00',
+    }
+
     it('requires the owner', async () => {
         mockRequireOwner.mockImplementation(() => {
             throw new Error('denied')
         })
 
-        await expect(
-            actions.update_opens_at(requestWith({ registrationOpensAt: '2026-10-31T09:00' })),
-        ).rejects.toThrow('denied')
+        await expect(actions.update_window(requestWith(WINDOW))).rejects.toThrow('denied')
 
-        expect((await eventRow()).registrationOpensAt).toBeNull()
+        expect(await eventRow()).toMatchObject({
+            registrationOpensAt: null,
+            registrationLockDate: new Date('2027-07-01T09:00'),
+        })
     })
 
     /* Read in the reunion's zone: 9:00 typed means 9:00 AM Pacific, not 9:00 UTC. */
-    it('stores the opening moment in the reunion time zone', async () => {
-        await actions.update_opens_at(requestWith({ registrationOpensAt: '2026-10-31T09:00' }))
+    it('stores both moments in the reunion time zone', async () => {
+        await actions.update_window(requestWith(WINDOW))
 
-        expect((await eventRow()).registrationOpensAt).toEqual(
-            new Date('2026-10-31T09:00:00-07:00'),
-        )
+        expect(await eventRow()).toMatchObject({
+            registrationOpensAt: new Date('2026-10-31T09:00:00-07:00'),
+            registrationLockDate: new Date('2027-06-23T09:00:00-07:00'),
+        })
     })
 
-    it('clears the opening date when left blank, which opens registration now', async () => {
-        await actions.update_opens_at(requestWith({ registrationOpensAt: '2026-10-31T09:00' }))
-        await actions.update_opens_at(requestWith({ registrationOpensAt: '' }))
+    it('clears a date left blank, and a date not posted at all', async () => {
+        await actions.update_window(requestWith(WINDOW))
+        await actions.update_window(requestWith({ registrationOpensAt: '' }))
 
-        expect((await eventRow()).registrationOpensAt).toBeNull()
+        expect(await eventRow()).toMatchObject({
+            registrationOpensAt: null,
+            registrationLockDate: null,
+        })
     })
 
     it('refuses a value it cannot read, and writes nothing', async () => {
-        const result = await actions.update_opens_at(
-            requestWith({ registrationOpensAt: 'next tuesday' }),
+        const result = await actions.update_window(
+            requestWith({ ...WINDOW, registrationOpensAt: 'next tuesday' }),
         )
 
         expect(result).toMatchObject({ status: 400 })
+        expect((await eventRow()).registrationLockDate).toEqual(new Date('2027-07-01T09:00'))
+    })
+
+    /* A window that closes before it opens is a year nobody can ever register for. */
+    it('refuses a closing date on or before the opening date', async () => {
+        for (const registrationLockDate of ['2026-10-31T09:00', '2026-10-01T09:00']) {
+            const result = await actions.update_window(
+                requestWith({ registrationOpensAt: '2026-10-31T09:00', registrationLockDate }),
+            )
+            expect(result).toMatchObject({ status: 400 })
+        }
         expect((await eventRow()).registrationOpensAt).toBeNull()
     })
 
-    it('leaves the lock date, the program and the dates untouched', async () => {
-        await actions.update_opens_at(requestWith({ registrationOpensAt: '2026-10-31T09:00' }))
+    it('refuses to change an archived year', async () => {
+        await db
+            .update(reunionEvents)
+            .set({ status: 'archived' })
+            .where(eq(reunionEvents.id, eventId))
+
+        const result = await actions.update_window(requestWith(WINDOW))
+
+        expect(result).toMatchObject({ status: 409 })
+        expect((await eventRow()).registrationOpensAt).toBeNull()
+    })
+
+    it('leaves the program and the dates untouched', async () => {
+        await actions.update_window(requestWith(WINDOW))
 
         expect(await eventRow()).toMatchObject({
-            registrationLockDate: new Date('2027-07-01T09:00'),
             metadata: PROGRAM,
             startDate: new Date('2027-07-23T16:00'),
+            endDate: new Date('2027-07-25T12:00'),
         })
     })
 })
 
-describe('settings ?/update_lock_date', () => {
-    it('requires the owner', async () => {
-        mockRequireOwner.mockImplementation(() => {
-            throw new Error('denied')
-        })
+describe('settings load', () => {
+    /* So the Open button can name the year in the way before the one_open_event index refuses it. */
+    it('names another open year, and only another one', async () => {
+        const loadEvent = requestWith({}) as unknown as Parameters<typeof load>[0]
 
-        await expect(
-            actions.update_lock_date(requestWith({ registrationLockDate: '2027-09-01T00:00' })),
-        ).rejects.toThrow('denied')
+        expect(await load(loadEvent)).toMatchObject({ otherOpenYear: undefined })
 
-        expect((await eventRow()).registrationLockDate).toEqual(new Date('2027-07-01T09:00'))
-    })
+        await db.update(reunionEvents).set({ status: 'draft' }).where(eq(reunionEvents.id, eventId))
+        await seedEvent(db, { year: 2025 })
 
-    it('clears the lock when left blank', async () => {
-        await actions.update_lock_date(requestWith({ registrationLockDate: '' }))
-
-        expect((await eventRow()).registrationLockDate).toBeNull()
-    })
-
-    it('leaves the program and the dates untouched', async () => {
-        await actions.update_lock_date(requestWith({ registrationLockDate: '2027-09-01T09:00' }))
-
-        expect(await eventRow()).toMatchObject({
-            registrationLockDate: parseReunionWallClock('2027-09-01T09:00'),
-            metadata: PROGRAM,
-            startDate: new Date('2027-07-23T16:00'),
-        })
+        expect(await load(loadEvent)).toMatchObject({ otherOpenYear: 2025 })
     })
 })
