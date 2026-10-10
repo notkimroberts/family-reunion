@@ -4,7 +4,7 @@ import { db } from '$lib/server/db'
 import { registrations } from '$lib/server/db/schema'
 import { dbg } from '$lib/server/debug'
 import { sendRegistrationConfirmation, type RegistrationChange } from '$lib/server/email'
-import { deliverManagementLink } from '../deliverManagementLink'
+import { deliverViewLink } from '../deliverViewLink'
 import { touchRegistration } from '../lifecycle'
 import { getConfirmationEmailData } from '../queries/getConfirmationEmailData'
 import { describeRegistrationChange } from './describeRegistrationChange'
@@ -27,25 +27,25 @@ function changeFingerprint(changeSummary: RegistrationChange[]): string {
 
    Rotates because it must: only sha256(token) is stored, so the link in the email has to be a fresh
    one, and without the rotation this notification would break the very access it is announcing. The
-   send-before-rotate ordering lives in deliverManagementLink.
+   send-before-rotate ordering lives in deliverViewLink.
 
    Throws on send failure, and the caller is expected to report it WITHOUT failing the save — the
    organiser's change is already committed by then, so presenting it as failed would be a lie. */
 export async function notifyRegistrationUpdated(params: {
     registrationId: string
     changeSummary: RegistrationChange[]
-    manageUrl: (token: string) => string
+    viewUrl: (token: string) => string
 }): Promise<{ sent: boolean }> {
     if (params.changeSummary.length === 0) {
         return { sent: false }
     }
 
-    const delivery = await deliverManagementLink({
+    const delivery = await deliverViewLink({
         registrationId: params.registrationId,
         deliver: async (token) => {
             const payload = await getConfirmationEmailData({
                 registrationId: params.registrationId,
-                manageUrl: params.manageUrl(token),
+                viewUrl: params.viewUrl(token),
             })
 
             /* undefined covers a missing registration/event and a refunded one, none of which has an

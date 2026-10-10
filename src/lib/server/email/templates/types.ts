@@ -34,7 +34,7 @@ export type RegistrationConfirmationData = {
        part of what the card was charged: a total that silently exceeds the party table reads as an
        overcharge. Absent, not zero, when no gift was given. */
     donationCents?: number
-    manageUrl: string
+    viewUrl: string
     /* Set when an organiser changed an existing registration rather than a new one arriving. Swaps
        the heading and adds a lead saying so, but keeps the status money sentence below it — the
        amount owed or covered is just as relevant on an update as on a first confirmation. */
@@ -80,7 +80,7 @@ export type CancellationEmailData = {
     keptDonationCents?: number
     refundRoute: RefundRoute
     /* Where to start again. A cancellation is often a change of plan rather than a decision never to
-       come, and the management link is dead by this point. */
+       come, and the view link is dead by this point. */
     registerUrl: string
 }
 

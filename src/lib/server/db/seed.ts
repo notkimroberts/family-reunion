@@ -3,7 +3,7 @@ import { eq, sql } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/postgres-js'
 import postgres from 'postgres'
 import { dbg } from '../debug'
-import { hashManagementToken } from '../registrations/hashManagementToken'
+import { hashViewToken } from '../registrations/hashViewToken'
 import * as schema from './schema'
 
 faker.seed(42)
@@ -248,13 +248,13 @@ async function seed() {
             const contactEmail = faker.internet
                 .email({ firstName: contactName.split(' ')[0] })
                 .toLowerCase()
-            const managementToken = crypto.randomUUID().replace(/-/g, '')
-            const managementTokenHash = hashManagementToken(managementToken)
+            const viewToken = crypto.randomUUID().replace(/-/g, '')
+            const viewTokenHash = hashViewToken(viewToken)
 
             const [reg] = await db
                 .insert(schema.registrations)
                 .values({
-                    managementToken: managementTokenHash,
+                    viewToken: viewTokenHash,
                     contactName,
                     contactEmail,
                     eventId: event.id,

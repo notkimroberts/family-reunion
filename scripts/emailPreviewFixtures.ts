@@ -21,7 +21,7 @@ type RenderedEmail = { subject: string; text: string; html: string }
 export function emailPreviewFixtures(
     siteOrigin: string,
 ): { name: string; render: () => RenderedEmail }[] {
-    const manageUrl = `${siteOrigin}/register/manage?token=preview-token`
+    const viewUrl = `${siteOrigin}/register/view?token=preview-token`
 
     const confirmation: RegistrationConfirmationData = {
         name: 'Alice Patterson',
@@ -45,7 +45,7 @@ export function emailPreviewFixtures(
             },
         ],
         totalCents: 44390,
-        manageUrl,
+        viewUrl,
     }
 
     const cancellation: CancellationEmailData = {
@@ -147,7 +147,7 @@ export function emailPreviewFixtures(
             render: () =>
                 renderRecoveryEmail({
                     eventTitle: 'Patterson Family Reunion 2027',
-                    manageUrl,
+                    viewUrl,
                 }),
         },
     ]

@@ -5,13 +5,13 @@
    so sending one would only add a way for the two to disagree. */
 export function encodeRegistrationMetadata(
     registrationId: string,
-    managementToken: string,
+    viewToken: string,
     donationId?: string,
 ): Record<string, string> {
     return {
         type: 'registration',
         registrationId,
-        managementToken,
+        viewToken,
         ...(donationId ? { donationId } : {}),
     }
 }

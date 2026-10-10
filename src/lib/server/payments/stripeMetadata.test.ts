@@ -13,7 +13,7 @@ describe('encodeRegistrationMetadata / decode round-trip', () => {
         expect(decoded).toEqual({
             type: 'registration',
             registrationId: 'reg-123',
-            managementToken: 'plaintext-token',
+            viewToken: 'plaintext-token',
             donationId: undefined,
         })
     })
@@ -37,10 +37,22 @@ describe('encodeRegistrationMetadata / decode round-trip', () => {
             decodeSessionMetadata({
                 type: 'registration',
                 registrationId: 'reg-123',
-                managementToken: 'tok',
+                viewToken: 'tok',
                 donationId: '',
             }),
         ).toMatchObject({ donationId: undefined })
+    })
+
+    /* A checkout opened before the rename completes after it. Refusing it would leave a paid
+       registration pending with no confirmation email. */
+    it('reads the token from the old managementToken key', () => {
+        expect(
+            decodeSessionMetadata({
+                type: 'registration',
+                registrationId: 'reg-123',
+                managementToken: 'tok',
+            }),
+        ).toMatchObject({ viewToken: 'tok' })
     })
 })
 

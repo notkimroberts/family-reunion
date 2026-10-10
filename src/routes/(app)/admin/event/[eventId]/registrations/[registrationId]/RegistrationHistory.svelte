@@ -11,7 +11,7 @@ const actionCopyValue = {
     member_updated: 'Member details updated',
     member_removed: 'Member removed',
     contact_updated: 'Contact details updated',
-    link_reissued: 'Management link re-issued',
+    link_reissued: 'Registration link re-issued',
 } as const
 
 type Entry = {

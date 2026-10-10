@@ -23,7 +23,7 @@ import { assertRegistrationMutable, touchRegistration } from '../lifecycle'
      a Stripe gross-up. stripePaymentIntentId stays null, which is also what marks the row as
      never having been charged online.
 
-   Also deliberately does NOT call assertRegistrationEditable: an admin must be able to record a
+   Also deliberately does NOT call assertRegistrationNotClosed: an admin must be able to record a
    late arrival after the public lock date, consistent with createAdminRegistration. */
 export async function addAdminMember(params: {
     registrationId: string

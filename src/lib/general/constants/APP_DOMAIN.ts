@@ -8,7 +8,7 @@
    What it is load-bearing for: the transactional email FROM address, EMAIL_FROM_ADDRESS, which is
    `organizers@<APP_DOMAIN>`. That domain has to be verified in Resend or every send is rejected — and
    since send() throws on Resend's error rather than resolving quietly, a registrant would reach
-   Stripe, pay, and never receive their management link. Changing this means re-verifying the new
+   Stripe, pay, and never receive their view link. Changing this means re-verifying the new
    domain in Resend FIRST, then flipping this constant.
 
    The domain also RECEIVES mail, through Google Workspace: root MX records point at Google, and
@@ -20,7 +20,7 @@
 
    `www` is a second Railway domain, CNAMEd at the DNS host; `wwwRedirect` 301s it here.
 
-   Manage and register links in emails come from the request origin, not from this constant. The one
+   View and register links in emails come from the request origin, not from this constant. The one
    place it is printed is the paper registration form ("Register online at <APP_DOMAIN>"), so a
    change here means reprinting any forms already handed out. */
 export const APP_DOMAIN = 'pattersonfamilyreunion.com'

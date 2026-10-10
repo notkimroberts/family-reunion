@@ -7,12 +7,12 @@ import {
     registrations,
 } from '$lib/server/db/schema'
 import { resolveTierPricing } from '$lib/server/tiers'
-import { generateManagementToken } from '../hashManagementToken'
+import { generateViewToken } from '../hashViewToken'
 import type { MemberInput } from './MemberInput'
 import { assertContactTierIsAdult } from './_assertContactTierIsAdult'
 import { buildPartyMemberRow } from './buildPartyMemberRow'
 
-/* Inserts a registration directly at the given status (bypasses Stripe). Generates a managementToken so the contact can self-manage later; the DB stores only the SHA-256 hash, the plaintext is returned to the caller. */
+/* Inserts a registration directly at the given status (bypasses Stripe). Generates a viewToken so the contact can view their registration later; the DB stores only the SHA-256 hash, the plaintext is returned to the caller. */
 export async function createAdminRegistration(params: {
     eventId: string
     contactName: string
@@ -24,7 +24,7 @@ export async function createAdminRegistration(params: {
     members: MemberInput[]
     /* A gift that came with the paper form or the cheque. Zero and undefined both mean none. */
     donationCents?: number
-}): Promise<{ registrationId: string; managementToken: string }> {
+}): Promise<{ registrationId: string; viewToken: string }> {
     const pricingByTierId = await resolveTierPricing(
         params.eventId,
         params.members.map((m) => m.tierId),
@@ -32,12 +32,12 @@ export async function createAdminRegistration(params: {
 
     assertContactTierIsAdult(params.members, pricingByTierId)
 
-    const { plaintext: managementToken, hash: tokenHash } = generateManagementToken()
+    const { plaintext: viewToken, hash: tokenHash } = generateViewToken()
 
     const [registration] = await db
         .insert(registrations)
         .values({
-            managementToken: tokenHash,
+            viewToken: tokenHash,
             eventId: params.eventId,
             contactName: params.contactName,
             contactEmail: params.contactEmail,
@@ -81,5 +81,5 @@ export async function createAdminRegistration(params: {
         })
     }
 
-    return { registrationId: registration.id, managementToken }
+    return { registrationId: registration.id, viewToken }
 }

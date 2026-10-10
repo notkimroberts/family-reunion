@@ -5,7 +5,7 @@ export {
     cancelRegistrationAsAdmin,
     addAdminMember,
     setRegistrationStatus,
-    reissueManagementLink,
+    reissueViewLink,
     updateRegistrationContact,
     updateAdminMemberDetails,
     removeAdminMember,
@@ -17,9 +17,9 @@ export {
 } from './management'
 export type { AdminSettableStatus, RegistrationAuditAction } from './management'
 
-export { rotateManagementToken } from './rotateManagementToken'
-export { isManagementTokenValid, MANAGEMENT_TOKEN_GRACE_PERIOD_MS } from './isManagementTokenValid'
-export type { ManagementTokenColumns } from './isManagementTokenValid'
+export { rotateViewToken } from './rotateViewToken'
+export { isViewTokenValid, VIEW_TOKEN_GRACE_PERIOD_MS } from './isViewTokenValid'
+export type { ViewTokenColumns } from './isViewTokenValid'
 
 export type { RegistrationMember } from './queries'
 export type { RegistrationSummary } from './queries'

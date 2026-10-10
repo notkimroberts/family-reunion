@@ -55,7 +55,7 @@ const PAID_BY_HAND_LEAD = 'Your registration is confirmed and we have received y
    on its own line — without this the per-person prices look like a different, higher tier. */
 const CARD_FEE_NOTE = 'Prices include the card processing fee.'
 
-/* Registrants cannot edit their own booking any more (see /register/manage), so the email they keep
+/* Registrants cannot edit their own booking any more (see /register/view), so the email they keep
    has to say who can. */
 const CHANGE_NOTE =
     'Need to add someone or change a detail? Reply to this email and an organizer will update it for you.'
@@ -74,7 +74,7 @@ export function renderRegistrationConfirmation(data: RegistrationConfirmationDat
     const isPaid = data.status === 'paid'
     const lead = isPaid && !data.paidByCard ? PAID_BY_HAND_LEAD : copy.lead
     const note = isPaid && data.paidByCard ? CARD_FEE_NOTE : copy.note
-    const siteOrigin = new URL(data.manageUrl).origin
+    const siteOrigin = new URL(data.viewUrl).origin
     const hotel = hotelSection(siteOrigin)
     const { insetBackground, border, text: textColor, muted, fontStack } = emailThemeValue
     const total = `$${formatPrice(data.totalCents)}`
@@ -116,7 +116,7 @@ export function renderRegistrationConfirmation(data: RegistrationConfirmationDat
         ...(note ? ['', note] : []),
         '',
         'View your registration at any time:',
-        data.manageUrl,
+        data.viewUrl,
         '',
         CHANGE_NOTE,
         ...hotel.textLines,
@@ -198,10 +198,10 @@ ${donationRow}
         sectionLabel('Your party'),
         partyTable,
         noteBlock,
-        primaryButton(data.manageUrl, 'View your registration'),
+        primaryButton(data.viewUrl, 'View your registration'),
         /* The bare URL is repeated because some clients strip or fail to linkify buttons,
-           and the manage link is the registrant's only credential. */
-        `<p style="margin:16px 0 0 0;font-family:${fontStack};font-size:12px;line-height:1.6;color:${muted};text-align:center;word-break:break-all;">Or paste this link into your browser:<br>${escapeHtml(data.manageUrl)}</p>`,
+           and the view link is the registrant's only credential. */
+        `<p style="margin:16px 0 0 0;font-family:${fontStack};font-size:12px;line-height:1.6;color:${muted};text-align:center;word-break:break-all;">Or paste this link into your browser:<br>${escapeHtml(data.viewUrl)}</p>`,
         `<p style="margin:22px 0 0 0;font-family:${fontStack};font-size:14px;line-height:1.6;color:${textColor};">${escapeHtml(CHANGE_NOTE)}</p>`,
         hotel.html,
         `<p style="margin:22px 0 0 0;padding-top:18px;border-top:1px solid ${border};font-family:${fontStack};font-size:13px;line-height:1.6;color:${muted};">Questions? Reply to this email, or contact us at <a href="mailto:${escapeHtml(CONTACT_EMAIL)}" style="color:${textColor};">${escapeHtml(CONTACT_EMAIL)}</a> or <a href="tel:${toE164(CONTACT_PHONE)}" style="color:${textColor};">${escapeHtml(CONTACT_PHONE)}</a>.</p>`,

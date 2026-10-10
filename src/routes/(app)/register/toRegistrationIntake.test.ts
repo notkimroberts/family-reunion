@@ -51,7 +51,7 @@ describe('toRegistrationIntake', () => {
     })
 
     /* NOT cosmetic. /register/recover matches on exact contact email, so an address stored as typed
-       is a registrant who cannot recover their own management link. */
+       is a registrant who cannot recover their own view link. */
     it('lowercases and trims the email', () => {
         const intake = toRegistrationIntake({ ...FORM, contactEmail: '  Alice@Example.COM ' })
 

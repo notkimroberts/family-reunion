@@ -7,7 +7,7 @@ export type RegistrationByEmail = {
     eventTitle: string
 }
 
-/* Returns active registrations (paid, waived, or pending) matching the contact email, joined with the event title. Used by the recovery flow to email the management link. */
+/* Returns active registrations (paid, waived, or pending) matching the contact email, joined with the event title. Used by the recovery flow to email the view link. */
 export async function getRegistrationsByEmail(
     contactEmail: string,
 ): Promise<RegistrationByEmail[]> {

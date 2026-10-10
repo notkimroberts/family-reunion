@@ -4,18 +4,18 @@ import {
     getRegistrationMembers,
     getRegistrationWithEvent,
 } from '$lib/server/registrations'
-import type { EventDetails, ManagedMember } from '../types'
+import type { EventDetails, RegistrationViewMember } from '../types'
 import type { PageServerLoad } from './$types'
 
 const TOKEN_COOKIE = 'reg_token'
 const TOKEN_COOKIE_MAX_AGE = 60 * 60 * 24 * 30 // 30 days
 
-/* Reads the management token from either ?token= (first land from email/Stripe) or the
+/* Reads the view token from either ?token= (first land from email/Stripe) or the
    reg_token cookie (subsequent visits within the same browser). When the URL carries the
    token we set the cookie and redirect to a clean URL — keeping the plaintext out of
    subsequent access logs / Sentry breadcrumbs / referers.
 
-   Load only: this page has NO actions, and must not gain one — see manageReflectsServerState.test.ts,
+   Load only: this page has NO actions, and must not gain one — see viewReflectsServerState.test.ts,
    which pins that and says what it costs. */
 export const load: PageServerLoad = async ({ url, cookies }) => {
     const urlToken = url.searchParams.get('token')
@@ -56,7 +56,7 @@ export const load: PageServerLoad = async ({ url, cookies }) => {
 
     const members = await getRegistrationMembers(registration.id)
 
-    /* Narrow projection: do not ship contactName/contactEmail/managementToken hash to the
+    /* Narrow projection: do not ship contactName/contactEmail/viewToken hash to the
        client. The Svelte components only need id, status, and the session id. The token itself
        is not returned either — nothing posts any more, and the page is reached by the cookie.
 
@@ -75,7 +75,7 @@ export const load: PageServerLoad = async ({ url, cookies }) => {
             title: reunionEvent.title,
             registrationLockDate: reunionEvent.registrationLockDate,
         } satisfies EventDetails,
-        members: members.map((member): ManagedMember => ({
+        members: members.map((member): RegistrationViewMember => ({
             id: member.id,
             name: member.name,
             birthYear: member.birthYear,

@@ -10,7 +10,7 @@ const FIRST_SERVER_ERROR = 500
 /* At the root so it covers every route, including paths that match none — those never reach the
    (app) group's layout, so the header is not available here and the page carries its own way home.
 
-   A 4xx message is one the app wrote for a person (error(403, 'Registration changes are closed…')),
+   A 4xx message is one the app wrote for a person (error(403, 'Registration is closed…')),
    so it is shown. A 5xx message is SvelteKit's generic "Internal Error", which tells nobody anything;
    the error is already in Sentry via handleError. */
 let isNotFound = $derived(page.status === NOT_FOUND)

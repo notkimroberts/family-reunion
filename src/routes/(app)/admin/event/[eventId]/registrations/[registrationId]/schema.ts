@@ -29,7 +29,7 @@ export const adminEditMemberSchema = z.object({
 
 /* One save covers everything an organiser can change: contact, status, and every existing member.
 
-   Batched deliberately. Each save that matters to the registrant rotates their management token and
+   Batched deliberately. Each save that matters to the registrant rotates their view token and
    emails them, so four separate actions would mean four rotations and four emails for one sitting's
    work. */
 export const adminEditRegistrationSchema = z.object({

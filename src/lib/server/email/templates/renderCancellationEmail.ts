@@ -11,7 +11,7 @@ import type { CancellationEmailData, RefundRoute } from './types'
 /* Copy keyed off where the money went.
 
    Cancelling was the one action with no receipt on either side: nothing was sent, and since the
-   registrant's management link dies with the registration, they were left with no record at all that
+   registrant's view link dies with the registration, they were left with no record at all that
    they had cancelled or that a refund was owed. A dispute weeks later ("I never cancelled", "where is
    my money") had nothing to point at but the Stripe dashboard.
 

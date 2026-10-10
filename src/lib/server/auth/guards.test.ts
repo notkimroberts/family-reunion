@@ -69,7 +69,7 @@ describe('isPublicPath', () => {
     it.each([
         '/',
         '/register',
-        '/register/manage',
+        '/register/view',
         '/register/recover',
         '/donate',
         '/donate/thanks',

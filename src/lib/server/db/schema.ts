@@ -153,16 +153,16 @@ export const registrations = pgTable(
     'registrations',
     {
         id: uuid('id').primaryKey().defaultRandom(),
-        managementToken: text('management_token').notNull().unique(),
+        viewToken: text('management_token').notNull().unique(),
         /* The previous token's hash, kept briefly after a rotation.
 
            Rotation is unavoidable whenever a link has to be re-sent — only the hash is stored, so
            the original plaintext cannot be recovered by anyone. But rotating alone would invalidate
-           every link already in the registrant's inbox AND log out an open manage session, because
+           every link already in the registrant's inbox AND log out an open view session, because
            the plaintext lives in their reg_token cookie. Honouring the previous hash for a short
            window means an organiser can edit a registration without silently breaking the
            registrant's access. */
-        previousManagementToken: text('previous_management_token').unique(),
+        previousViewToken: text('previous_management_token').unique(),
         previousTokenExpiresAt: timestamp('previous_token_expires_at'),
         contactName: text('contact_name').notNull(),
         contactEmail: text('contact_email').notNull(),

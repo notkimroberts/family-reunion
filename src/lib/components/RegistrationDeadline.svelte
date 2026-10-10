@@ -4,7 +4,7 @@ import { isRegistrationClosed } from '$lib/general/registration'
 import { formatReunionDateTime } from '$lib/utils'
 
 /* The date registration closes, said on the pages a registrant actually looks at — the home page and
-   the register form. The lock date has always been enforced (assertRegistrationEditable, from
+   the register form. The lock date has always been enforced (assertRegistrationNotClosed, from
    createPendingRegistration) but was never shown, so the first anyone heard of it was a closed form.
 
    A muted line, day only: it sat under the Register button as a yellow pill with the hour and zone,

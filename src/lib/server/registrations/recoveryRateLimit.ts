@@ -1,6 +1,6 @@
 import { createRateLimiter } from '$lib/server/rateLimit'
 
-/* Limits on /register/recover, which emails a fresh management link to any registered address.
+/* Limits on /register/recover, which emails a fresh view link to any registered address.
 
    Unlimited, anyone could flood a registrant with "your registration link" mail — and every send
    rotates the token, so a flood also keeps killing the link the registrant already holds. Per email

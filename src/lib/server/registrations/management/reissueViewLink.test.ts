@@ -10,15 +10,15 @@ const { mockGetRegistrationWithEvent, mockSendRecoveryEmail, mockGenerateToken, 
 
 vi.mock('$lib/server/debug', () => ({ dbg: { register: vi.fn() } }))
 vi.mock('$lib/server/email', () => ({ sendRecoveryEmail: mockSendRecoveryEmail }))
-vi.mock('../hashManagementToken', () => ({ generateManagementToken: mockGenerateToken }))
-vi.mock('../rotateManagementToken', () => ({ rotateManagementToken: mockRotate }))
+vi.mock('../hashViewToken', () => ({ generateViewToken: mockGenerateToken }))
+vi.mock('../rotateViewToken', () => ({ rotateViewToken: mockRotate }))
 vi.mock('../queries/getRegistrationWithEvent', () => ({
     getRegistrationWithEvent: mockGetRegistrationWithEvent,
 }))
 
-const { reissueManagementLink } = await import('./reissueManagementLink')
+const { reissueViewLink } = await import('./reissueViewLink')
 
-describe('reissueManagementLink', () => {
+describe('reissueViewLink', () => {
     beforeEach(() => {
         vi.clearAllMocks()
         mockGetRegistrationWithEvent.mockResolvedValue({
@@ -39,14 +39,14 @@ describe('reissueManagementLink', () => {
             callOrder.push('rotate')
         })
 
-        await reissueManagementLink({
+        await reissueViewLink({
             registrationId: 'reg-1',
-            manageUrl: (token) => `https://example.com/register/manage?token=${token}`,
+            viewUrl: (token) => `https://example.com/register/view?token=${token}`,
         })
 
         expect(mockSendRecoveryEmail).toHaveBeenCalledWith('alice@example.com', {
             eventTitle: 'Patterson Family Reunion 2027',
-            manageUrl: 'https://example.com/register/manage?token=fresh-plain',
+            viewUrl: 'https://example.com/register/view?token=fresh-plain',
         })
         expect(mockRotate).toHaveBeenCalledWith({
             registrationId: 'reg-1',
@@ -67,9 +67,9 @@ describe('reissueManagementLink', () => {
         mockSendRecoveryEmail.mockRejectedValue(new Error('Resend rejected the email'))
 
         await expect(
-            reissueManagementLink({
+            reissueViewLink({
                 registrationId: 'reg-1',
-                manageUrl: (token) => `https://example.com/m?token=${token}`,
+                viewUrl: (token) => `https://example.com/m?token=${token}`,
             }),
         ).rejects.toThrow()
 
@@ -80,7 +80,7 @@ describe('reissueManagementLink', () => {
         mockGetRegistrationWithEvent.mockResolvedValue(undefined)
 
         await expect(
-            reissueManagementLink({ registrationId: 'nope', manageUrl: (t) => t }),
+            reissueViewLink({ registrationId: 'nope', viewUrl: (t) => t }),
         ).rejects.toThrow()
 
         expect(mockSendRecoveryEmail).not.toHaveBeenCalled()

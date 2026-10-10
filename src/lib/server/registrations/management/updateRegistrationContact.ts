@@ -12,7 +12,7 @@ import { diffContact } from './_diffContact'
 
    The email matters most. `/api/webhooks/resend` reports a bounced confirmation to Sentry, naming
    the registration — but until now nothing could act on that report: the address could not be fixed,
-   and the management link could not be resent because only its hash is stored. So a typo'd address
+   and the view link could not be resent because only its hash is stored. So a typo'd address
    meant the registrant silently never received their link and there was no way back. This is the
    remediation path for an alert the app already raises.
 

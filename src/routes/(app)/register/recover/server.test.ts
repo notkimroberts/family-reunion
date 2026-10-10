@@ -3,20 +3,20 @@ import { eq } from 'drizzle-orm'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { registrations } from '$lib/server/db/schema'
 import { resetTestDb } from '$lib/server/db/testing/resetTestDb'
-import { hashManagementToken } from '$lib/server/registrations/hashManagementToken'
+import { hashViewToken } from '$lib/server/registrations/hashViewToken'
 import { resetRecoveryRateLimits } from '$lib/server/registrations/recoveryRateLimit'
 import { seedEvent } from '$lib/server/testing/seedEvent'
 import { seedRegistration } from '$lib/server/testing/seedRegistration'
 
-/* Recovering a lost management link.
+/* Recovering a lost view link.
 
    Resend is mocked at the SDK, but nothing between the action and it is: the real
-   action → deliverManagementLink → sendRecoveryEmail → send() chain runs, because the link that was
+   action → deliverViewLink → sendRecoveryEmail → send() chain runs, because the link that was
    actually broken is send() swallowing Resend's `{ error }`.
 
    The database is real, so "did not rotate" is now the stored hash still matching the token the
    registrant is holding — the thing that decides whether they can get back into a paid booking.
-   The old version asserted a `rotateManagementToken` mock went uncalled, which is a statement about
+   The old version asserted a `rotateViewToken` mock went uncalled, which is a statement about
    the code's shape rather than about their access. */
 
 const { mockEmailSend, MockResend, mockEnv } = vi.hoisted(() => {
@@ -58,10 +58,10 @@ function recover(email = 'alice@example.com', clientAddress = '203.0.113.1') {
 
 async function storedHash(registrationId: string) {
     const [row] = await db
-        .select({ managementToken: registrations.managementToken })
+        .select({ viewToken: registrations.viewToken })
         .from(registrations)
         .where(eq(registrations.id, registrationId))
-    return row.managementToken
+    return row.viewToken
 }
 
 describe('POST /register/recover', () => {
@@ -82,7 +82,7 @@ describe('POST /register/recover', () => {
         expect(payload.to).toBe('alice@example.com')
         const sentToken = payload.text.match(/token=([\w-]+)/)?.[1]
         /* The link in the email is the one that now opens the booking. */
-        expect(await storedHash(seeded.registrationId)).toBe(hashManagementToken(sentToken))
+        expect(await storedHash(seeded.registrationId)).toBe(hashViewToken(sentToken))
         expect(result).toMatchObject({ sent: true })
     })
 
@@ -98,9 +98,7 @@ describe('POST /register/recover', () => {
 
         expect(mockEmailSend).toHaveBeenCalledOnce()
         /* The link they are already holding still works. */
-        expect(await storedHash(seeded.registrationId)).toBe(
-            hashManagementToken(seeded.managementToken),
-        )
+        expect(await storedHash(seeded.registrationId)).toBe(hashViewToken(seeded.viewToken))
         /* Still a generic success, to avoid leaking which addresses are registered. */
         expect(result).toMatchObject({ sent: true })
         /* The registrant asked for a link and silently got nothing, and the generic response hides
@@ -119,9 +117,7 @@ describe('POST /register/recover', () => {
 
         await recover()
 
-        expect(await storedHash(seeded.registrationId)).toBe(
-            hashManagementToken(seeded.managementToken),
-        )
+        expect(await storedHash(seeded.registrationId)).toBe(hashViewToken(seeded.viewToken))
     })
 
     /* One address can own several years' bookings. A failure on one must not cost them the other. */
@@ -142,10 +138,7 @@ describe('POST /register/recover', () => {
             storedHash(a.registrationId),
             storedHash(b.registrationId),
         ])
-        const original = [
-            hashManagementToken(a.managementToken),
-            hashManagementToken(b.managementToken),
-        ]
+        const original = [hashViewToken(a.viewToken), hashViewToken(b.viewToken)]
         /* Exactly one rotated: the booking whose email failed keeps the link its owner still has. */
         expect(stored.filter((hash, index) => hash === original[index])).toHaveLength(1)
     })
@@ -181,10 +174,8 @@ describe('POST /register/recover', () => {
 
         expect(mockEmailSend).toHaveBeenCalledTimes(3)
         /* The refused request rotated nothing: the last link sent still opens the booking. */
-        const [seeded] = await db
-            .select({ managementToken: registrations.managementToken })
-            .from(registrations)
-        expect(seeded.managementToken).toBe(hashManagementToken(lastToken))
+        const [seeded] = await db.select({ viewToken: registrations.viewToken }).from(registrations)
+        expect(seeded.viewToken).toBe(hashViewToken(lastToken))
         /* Same generic answer, so the limit does not reveal that the address is registered. */
         expect(result).toMatchObject({ sent: true })
     })

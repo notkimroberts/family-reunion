@@ -4,7 +4,7 @@ import { partyMembers, reunionEvents } from '$lib/server/db/schema'
 import { resetTestDb } from '$lib/server/db/testing/resetTestDb'
 import { seedRegistration } from '$lib/server/testing/seedRegistration'
 
-/* What the management link hands to the browser.
+/* What the view link hands to the browser.
 
    The link is a bearer credential with no per-request check, and families forward it. Anything the
    load returns is readable in the page source by whoever holds it, whether or not the page renders
@@ -12,18 +12,18 @@ import { seedRegistration } from '$lib/server/testing/seedRegistration'
 
 const { load } = await import('./+page.server')
 
-type ManageLoadEvent = Parameters<typeof load>[0]
+type ViewLoadEvent = Parameters<typeof load>[0]
 
 let db: Awaited<ReturnType<typeof resetTestDb>>
 
 function viewWithCookie(token: string) {
     return load({
-        url: new URL('http://localhost/register/manage'),
+        url: new URL('http://localhost/register/view'),
         cookies: { get: () => token, set: vi.fn(), delete: vi.fn() },
-    } as unknown as ManageLoadEvent)
+    } as unknown as ViewLoadEvent)
 }
 
-describe('GET /register/manage', () => {
+describe('GET /register/view', () => {
     beforeEach(async () => {
         db = await resetTestDb()
     })
@@ -44,7 +44,7 @@ describe('GET /register/manage', () => {
             .set({ metadata: { venue: { name: 'Oakstop' } } })
             .where(eq(reunionEvents.id, seeded.eventId))
 
-        const result = await viewWithCookie(seeded.managementToken)
+        const result = await viewWithCookie(seeded.viewToken)
 
         if (!result || result.missingToken) {
             throw new Error('expected the registration to load')

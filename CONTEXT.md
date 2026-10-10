@@ -33,15 +33,15 @@ _Avoid_: event details, config, settings
 A named price bracket in cents, scoped to a **reunion event** (`tiers`). A tier is chosen per **party member** at registration time, but the tier is _not_ the record of what was charged: `party_members` snapshots `tierLabel` and `priceCents` onto the row, so renaming or repricing a tier never rewrites history or a refund amount.
 
 **Registration**:
-One party's record of attending a **reunion event**, owned by a **management token** rather than by a user. Status: `pending` → `paid`, or `waived` (comped / paid offline) or `refunded` (cancelled). Holds the Stripe session ID; there is no denormalised total — the amount is the sum of its **party members**' `priceCents`.
+One party's record of attending a **reunion event**, owned by a **view token** rather than by a user. Status: `pending` → `paid`, or `waived` (comped / paid offline) or `refunded` (cancelled). Holds the Stripe session ID; there is no denormalised total — the amount is the sum of its **party members**' `priceCents`.
 _Avoid_: booking, sign-up
 
 **Audit entry**:
 An append-only row in `registration_audit` recording an **admin** change to someone else's **registration** — status change, member added / updated / removed, contact updated, link reissued. Written only by the admin paths, never by the registrant's own. It exists because several organisers share the admin panel and `updated_at` cannot say who acted. The actor's name is snapshotted alongside the FK so deleting an organiser's account does not erase the history.
 _Avoid_: log, event (see **Reunion event**), history
 
-**Management token**:
-The credential that owns a **registration** — 32 random bytes, base64url. The only credential: registration is fully public and there is no per-request auth check on `/register/manage`. The database stores only `sha256(token)`, so the plaintext exists exactly twice — in the URL sent to the registrant, and in Stripe session metadata so the webhook can build the manage link. It cannot be recovered, only rotated, which is why `/register/recover` must not rotate before a confirmed email delivery.
+**View token**:
+The credential that owns a **registration** — 32 random bytes, base64url. The only credential: registration is fully public and there is no per-request auth check on `/register/view`. The database stores only `sha256(token)`, so the plaintext exists exactly twice — in the URL sent to the registrant, and in Stripe session metadata so the webhook can build the view link. It cannot be recovered, only rotated, which is why `/register/recover` must not rotate before a confirmed email delivery.
 _Avoid_: password, API key
 
 **Contact**:
@@ -96,7 +96,7 @@ There is no link between them, and none is wanted: an organiser who signs in gai
 
 **Key invariants:**
 
-- A **registration** is reached by **management token**, never by a user session. An attendee needs no account.
+- A **registration** is reached by **view token**, never by a user session. An attendee needs no account.
 - A **party member** stores their birth date as split integers — `birthYear`, `birthMonth`, `birthDay` — to accommodate partial dates (e.g. known year, unknown day). A CHECK constraint enforces prefix consistency: day implies month, month implies year. **Birth date is optional** and plenty of rows have none. Age is always derived via `getAge()` from `$lib/utils/age`.
 - A **party member**'s `tierLabel` and `priceCents` are snapshotted at registration time, so renaming or repricing a **pricing tier** never rewrites history or a refund amount.
 
@@ -110,7 +110,7 @@ There is no link between them, and none is wanted: an organiser who signs in gai
 >
 > **Domain**: No. Only the **contact** has an email, and it lives on the parent `registrations` row. A guest member's data is limited to what the form collected — name, birth date, shirt size, address, and the two questions. If you need to reach a guest, you reach the contact.
 
-> **Dev**: Someone lost their management link. Can I look up their old one?
+> **Dev**: Someone lost their view link. Can I look up their old one?
 >
 > **Domain**: No — the database only has `sha256(token)`. `/register/recover` generates a _new_ token and emails it, which invalidates the old one. That is why the rotation only commits after the email send is confirmed: rotating on a failed send locks the registrant out permanently.
 
