@@ -3,7 +3,7 @@ import { renderRegistrationConfirmation, type RegistrationConfirmationData } fro
 import { send } from './_resend'
 
 /* Sends a registration confirmation email with the party breakdown, the amount, and the
-   management link. Pass idempotencyKey (e.g. `confirm/<registrationId>`) so a redelivered
+   view link. Pass idempotencyKey (e.g. `confirm/<registrationId>`) so a redelivered
    Stripe webhook cannot produce a second copy. */
 export async function sendRegistrationConfirmation(
     to: string,

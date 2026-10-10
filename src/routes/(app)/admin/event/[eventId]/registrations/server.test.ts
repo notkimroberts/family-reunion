@@ -89,7 +89,7 @@ describe('POST /admin/event/[eventId]/registrations update_person', () => {
     /* THE POINT OF THIS ACTION. The registration detail page's save emails the registrant because it
        can change what they owe and who is in their party; this changes neither. An email per dietary
        toggle, while an organiser fills in eight gaps, would train them to ignore the message that
-       carries their only working management link. */
+       carries their only working view link. */
     it('never emails the registrant', async () => {
         await submit({ memberId, vegetarianMeal: 'yes' })
 

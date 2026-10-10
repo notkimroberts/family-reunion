@@ -7,7 +7,7 @@ import type { MemberInput } from './MemberInput'
 
    Enforced on the server as well as hidden from the tier dropdown, because the dropdown is not a
    guard: both create paths post a tier ID chosen by the client, and the contact's row is the one
-   that carries the booking's contact details and its management token.
+   that carries the booking's contact details and its view token.
 
    Silent when the party is empty or the contact's tier did not resolve — resolveTierPricing has
    already rejected an unknown id by then, and inventing a second failure mode here would report the

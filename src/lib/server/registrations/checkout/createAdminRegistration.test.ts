@@ -131,10 +131,10 @@ describe('createAdminRegistration', () => {
         const result = await create()
 
         const [row] = await db
-            .select({ managementToken: registrations.managementToken })
+            .select({ viewToken: registrations.viewToken })
             .from(registrations)
             .where(eq(registrations.id, result.registrationId))
-        expect(row.managementToken).not.toBe(result.managementToken)
-        expect(row.managementToken).toHaveLength(64)
+        expect(row.viewToken).not.toBe(result.viewToken)
+        expect(row.viewToken).toHaveLength(64)
     })
 })

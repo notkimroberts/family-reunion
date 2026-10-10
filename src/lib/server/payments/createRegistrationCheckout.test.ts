@@ -13,11 +13,11 @@ const { createRegistrationCheckout } = await import('./createRegistrationCheckou
 const PARAMS = {
     lineItems: [{ name: 'Alice Patterson (Adult)', priceCents: 17030 }],
     registrationId: 'reg-1',
-    managementToken: 'plaintext-token',
+    viewToken: 'plaintext-token',
     donationId: 'don-1',
     description: 'Reunion 2027 registration',
     customerEmail: 'alice@example.com',
-    successUrl: () => 'https://example.com/register/manage?token=plaintext-token',
+    successUrl: () => 'https://example.com/register/view?token=plaintext-token',
     cancelUrl: () => 'https://example.com/register?cancelled=true',
 }
 
@@ -45,7 +45,7 @@ describe('createRegistrationCheckout', () => {
         )
     })
 
-    it('keeps the management token off the payment, where dashboard users and receipts see it', async () => {
+    it('keeps the view token off the payment, where dashboard users and receipts see it', async () => {
         await createRegistrationCheckout(PARAMS)
 
         const [session] = mockCreate.mock.calls[0]

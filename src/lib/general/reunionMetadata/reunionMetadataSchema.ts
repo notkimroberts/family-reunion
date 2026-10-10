@@ -10,7 +10,7 @@ import { z } from 'zod'
 
    What stayed a column is what something actually reads as a predicate: `status` (the one_open_event
    partial unique index, getOpenEvent), `year` (the ordering), start/end dates, and
-   registration_lock_date (assertRegistrationEditable).
+   registration_lock_date (assertRegistrationNotClosed).
 
    Every field is optional and the column defaults to {} — an event in draft has none of this yet, and
    the program page already renders each section only when its data is present. */

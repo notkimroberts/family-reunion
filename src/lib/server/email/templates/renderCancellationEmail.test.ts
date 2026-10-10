@@ -106,7 +106,7 @@ describe('renderCancellationEmail', () => {
         expect(render({ refundRoute }).html).toContain('Registration cancelled')
     })
 
-    /* The management link dies with the registration, so this is the registrant's only way back. */
+    /* The view link dies with the registration, so this is the registrant's only way back. */
     it.each(ALL_ROUTES)('offers the way back for %s', (refundRoute) => {
         const { text, html } = render({ refundRoute })
         expect(text).toContain(BASE.registerUrl)

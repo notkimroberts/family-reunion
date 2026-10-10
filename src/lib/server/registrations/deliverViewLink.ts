@@ -1,11 +1,11 @@
-import { generateManagementToken } from './hashManagementToken'
-import { rotateManagementToken } from './rotateManagementToken'
+import { generateViewToken } from './hashViewToken'
+import { rotateViewToken } from './rotateViewToken'
 
 /* 'skipped' means the caller decided there was nothing to send after all. Nothing is rotated, so
    the registrant's existing link keeps working. */
-export type ManagementLinkDelivery = 'sent' | 'skipped'
+export type ViewLinkDelivery = 'sent' | 'skipped'
 
-/* Issues a fresh management link and rotates the stored hash ONLY after delivery is confirmed.
+/* Issues a fresh view link and rotates the stored hash ONLY after delivery is confirmed.
 
    Rotation is unavoidable whenever a link has to be re-sent: the database stores only
    sha256(token), so nobody — not even an organiser — can recover the original plaintext. Which
@@ -24,13 +24,13 @@ export type ManagementLinkDelivery = 'sent' | 'skipped'
    returns 'sent' or throws.
 
    Rotation demotes the outgoing hash rather than discarding it, so the link the registrant was sent
-   before this one keeps working for the grace period, and an open manage tab whose cookie holds that
-   plaintext survives. Only links two generations old stop working — see isManagementTokenValid. */
-export async function deliverManagementLink(params: {
+   before this one keeps working for the grace period, and an open view tab whose cookie holds that
+   plaintext survives. Only links two generations old stop working — see isViewTokenValid. */
+export async function deliverViewLink(params: {
     registrationId: string
-    deliver: (managementToken: string) => Promise<ManagementLinkDelivery>
-}): Promise<ManagementLinkDelivery> {
-    const { plaintext, hash } = generateManagementToken()
+    deliver: (viewToken: string) => Promise<ViewLinkDelivery>
+}): Promise<ViewLinkDelivery> {
+    const { plaintext, hash } = generateViewToken()
 
     const delivery = await params.deliver(plaintext)
 
@@ -38,6 +38,6 @@ export async function deliverManagementLink(params: {
         return 'skipped'
     }
 
-    await rotateManagementToken({ registrationId: params.registrationId, newHash: hash })
+    await rotateViewToken({ registrationId: params.registrationId, newHash: hash })
     return 'sent'
 }

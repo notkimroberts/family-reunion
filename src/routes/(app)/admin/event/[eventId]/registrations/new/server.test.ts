@@ -74,7 +74,7 @@ describe('POST /admin/event/[eventId]/registrations/new', () => {
         mockSuperValidate.mockResolvedValue({ valid: true, data: { ...validFormData } })
         mockCreateAdminRegistration.mockResolvedValue({
             registrationId: 'reg-9',
-            managementToken: 'plain-tok',
+            viewToken: 'plain-tok',
         })
         mockGetConfirmationEmailData.mockResolvedValue({
             to: 'alice@example.com',
@@ -127,7 +127,7 @@ describe('POST /admin/event/[eventId]/registrations/new', () => {
         )
     })
 
-    it('emails the confirmation and returns the management link', async () => {
+    it('emails the confirmation and returns the view link', async () => {
         const result = await actions.default(makeEvent())
 
         expect(mockSendConfirmation).toHaveBeenCalledWith(
@@ -138,7 +138,7 @@ describe('POST /admin/event/[eventId]/registrations/new', () => {
         expect(result).toMatchObject({
             success: true,
             registrationId: 'reg-9',
-            manageUrl: 'http://localhost/register/manage?token=plain-tok',
+            viewUrl: 'http://localhost/register/view?token=plain-tok',
             emailSent: true,
         })
     })
@@ -155,7 +155,7 @@ describe('POST /admin/event/[eventId]/registrations/new', () => {
         expect(result).toMatchObject({
             success: true,
             registrationId: 'reg-9',
-            manageUrl: 'http://localhost/register/manage?token=plain-tok',
+            viewUrl: 'http://localhost/register/view?token=plain-tok',
             emailSent: false,
             emailError: 'Resend rejected the email',
         })

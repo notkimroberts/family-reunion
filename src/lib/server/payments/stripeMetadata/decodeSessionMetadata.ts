@@ -2,7 +2,7 @@ import type { StripeSessionMetadata } from './types'
 
 /* Parses raw Stripe session metadata into a typed StripeSessionMetadata; returns null when
    any required field is missing. Fail-closed — never default a token or id to '' since
-   downstream consumers (manageUrl construction, party_member writes) trust the value
+   downstream consumers (viewUrl construction, party_member writes) trust the value
    without re-validating. */
 export function decodeSessionMetadata(
     raw: Record<string, string> | null | undefined,
@@ -11,13 +11,15 @@ export function decodeSessionMetadata(
         return null
     }
     if (raw.type === 'registration') {
-        if (!raw.registrationId || !raw.managementToken) {
+        // managementToken: the key before the rename, on sessions opened by the previous deploy
+        const viewToken = raw.viewToken || raw.managementToken
+        if (!raw.registrationId || !viewToken) {
             return null
         }
         return {
             type: 'registration',
             registrationId: raw.registrationId,
-            managementToken: raw.managementToken,
+            viewToken,
             /* Absent OR empty means no gift. Undefined rather than '', so the webhook's
                `if (metadata.donationId)` cannot be handed a falsy id that reads as present. */
             donationId: raw.donationId || undefined,

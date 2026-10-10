@@ -1,7 +1,7 @@
 export { cancelRegistrationAsAdmin } from './cancelRegistrationAsAdmin'
 export { addAdminMember } from './addAdminMember'
 export { setRegistrationStatus, type AdminSettableStatus } from './setRegistrationStatus'
-export { reissueManagementLink } from './reissueManagementLink'
+export { reissueViewLink } from './reissueViewLink'
 export { updateRegistrationContact } from './updateRegistrationContact'
 export { updateAdminMemberDetails } from './updateAdminMemberDetails'
 export { removeAdminMember } from './removeAdminMember'

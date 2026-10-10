@@ -35,7 +35,7 @@ import { registrationSchema, type RegistrationFormData } from './schema'
 import { takeRegistrationDraft } from './takeRegistrationDraft'
 import type { FormMember, PersonDetails } from './types'
 
-/* The lock date passing while the form was open — see assertRegistrationEditable. */
+/* The lock date passing while the form was open — see assertRegistrationNotClosed. */
 const FORBIDDEN = 403
 
 let { data } = $props()
@@ -174,7 +174,7 @@ function restoreDraft(draft: RegistrationFormData) {
 
 /* In onMount, not a $state initialiser: sessionStorage exists only in the browser, and restoring
    during render would hydrate a filled form over a blank server one. The draft is taken on EVERY
-   visit, so it never outlives the next one; it is applied only after a cancel. (/register/manage
+   visit, so it never outlives the next one; it is applied only after a cancel. (/register/view
    clears it on a successful checkout.) replaceState is deferred a tick because it throws before the
    router has started. */
 onMount(() => {
@@ -337,7 +337,7 @@ let notYetOpen = $derived(isBeforeRegistrationOpens(opensAt))
                         submitError={$message} />
                     <p class="text-muted-foreground mt-3 text-center text-xs">
                         Already registered? <a class="underline" href="/register/recover"
-                            >Resend management link</a>
+                            >Resend your registration link</a>
                     </p>
                 </div>
             </div>

@@ -8,15 +8,15 @@ export type LineItemInput = {
 export type RegistrationCheckoutParams = {
     lineItems: LineItemInput[]
     registrationId: string
-    /* Plaintext management token; embedded in Stripe metadata so the webhook can build the manage URL. The DB only stores the hash. */
-    managementToken: string
+    /* Plaintext view token; embedded in Stripe metadata so the webhook can build the view URL. The DB only stores the hash. */
+    viewToken: string
     /* Set when a gift shares this checkout, so the webhook can mark that donation paid too. */
     donationId?: string
     /* Names the payment in the Stripe dashboard and on any Stripe receipt, e.g. "Reunion 2027
        registration". The Checkout session's own metadata is not shown on either. */
     description: string
     customerEmail?: string
-    /* Caller closes over whatever it wants in these — typically the plaintext managementToken. */
+    /* Caller closes over whatever it wants in these — typically the plaintext viewToken. */
     successUrl: () => string
     cancelUrl: () => string
 }

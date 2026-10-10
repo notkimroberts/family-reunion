@@ -89,7 +89,7 @@ function registrationSession(registrationId: string, extra: Record<string, unkno
         metadata: {
             type: 'registration',
             registrationId,
-            managementToken: 'plaintext-tok',
+            viewToken: 'plaintext-tok',
         },
         ...extra,
     }
@@ -238,7 +238,7 @@ describe('POST /api/webhooks/stripe', () => {
         expect(mockSendEmail).not.toHaveBeenCalled()
     })
 
-    it('emails the contact the manage link, the total and a per-registration key', async () => {
+    it('emails the contact the view link, the total and a per-registration key', async () => {
         const seeded = await seedRegistration(db, {
             status: 'pending',
             eventTitle: 'Family Reunion 2026',
@@ -254,7 +254,7 @@ describe('POST /api/webhooks/stripe', () => {
             'alice@example.com',
             expect.objectContaining({
                 eventTitle: 'Family Reunion 2026',
-                manageUrl: expect.stringContaining('token=plaintext-tok'),
+                viewUrl: expect.stringContaining('token=plaintext-tok'),
                 status: 'paid',
                 /* Summed from the rows, not from the session. */
                 totalCents: 7500,
@@ -290,7 +290,7 @@ describe('POST /api/webhooks/stripe', () => {
     })
 
     /* That send is the only one that will ever happen, so a failure reaching nobody leaves a paid
-       registrant with no management link. */
+       registrant with no view link. */
     it('reports a failed confirmation email rather than swallowing it', async () => {
         const seeded = await seedRegistration(db, { status: 'pending' })
         mockSendEmail.mockRejectedValue(new Error('Resend unavailable'))
@@ -567,7 +567,7 @@ describe('POST /api/webhooks/stripe', () => {
                     metadata: {
                         type: 'registration',
                         registrationId: seeded.registrationId,
-                        managementToken: 'plaintext-tok',
+                        viewToken: 'plaintext-tok',
                         donationId,
                     },
                 }),
@@ -592,7 +592,7 @@ describe('POST /api/webhooks/stripe', () => {
                     metadata: {
                         type: 'registration',
                         registrationId: seeded.registrationId,
-                        managementToken: 'plaintext-tok',
+                        viewToken: 'plaintext-tok',
                         donationId,
                     },
                 }),
@@ -620,7 +620,7 @@ describe('POST /api/webhooks/stripe', () => {
                     metadata: {
                         type: 'registration',
                         registrationId: seeded.registrationId,
-                        managementToken: 'plaintext-tok',
+                        viewToken: 'plaintext-tok',
                         donationId,
                     },
                 }),
@@ -661,7 +661,7 @@ describe('POST /api/webhooks/stripe', () => {
                 metadata: {
                     type: 'registration',
                     registrationId: seeded.registrationId,
-                    managementToken: 'plaintext-tok',
+                    viewToken: 'plaintext-tok',
                     donationId,
                 },
             })

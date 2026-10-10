@@ -7,7 +7,7 @@ import type { RequestHandler } from './$types'
 /* Resend delivery webhook.
 
    Exists because a bounce or spam complaint means the registrant never received their
-   management link, and nothing else in the system would ever notice: the confirmation is a
+   view link, and nothing else in the system would ever notice: the confirmation is a
    single un-retried attempt, since the conditional pending → paid transition stops a Stripe
    redelivery from sending it again.
 

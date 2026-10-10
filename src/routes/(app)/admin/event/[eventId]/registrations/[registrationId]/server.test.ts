@@ -3,7 +3,7 @@ import { eq } from 'drizzle-orm'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { partyMembers, registrationAudit, registrations } from '$lib/server/db/schema'
 import { resetTestDb } from '$lib/server/db/testing/resetTestDb'
-import { hashManagementToken } from '$lib/server/registrations/hashManagementToken'
+import { hashViewToken } from '$lib/server/registrations/hashViewToken'
 import { seedEvent } from '$lib/server/testing/seedEvent'
 import { seedRegistration } from '$lib/server/testing/seedRegistration'
 import { seedTier } from '$lib/server/testing/seedTier'
@@ -15,7 +15,7 @@ import { seedUser } from '$lib/server/testing/seedUser'
    foreign key, the token rotation the notification performs. Only Resend is mocked, because sending
    is the one thing a test must not do.
 
-   That matters most for the batching contract. Each notification ROTATES the management token, so
+   That matters most for the batching contract. Each notification ROTATES the view token, so
    three notifications for one sitting would leave two dead links in the registrant's inbox. The
    version this replaced asserted `notifyRegistrationUpdated` was called once — a statement about the
    action's shape. Here the rotation itself is counted. */
@@ -206,14 +206,14 @@ describe('POST .../registrations/[registrationId] save', () => {
         expect(mockSendConfirmation).toHaveBeenCalledOnce()
     })
 
-    it('builds the manage URL from the request origin', async () => {
+    it('builds the view URL from the request origin', async () => {
         await save(editForm({ status: 'paid' }))
 
         const [, data] = mockSendConfirmation.mock.calls[0]
-        expect(data.manageUrl).toMatch(/^http:\/\/localhost\/register\/manage\?token=/)
+        expect(data.viewUrl).toMatch(/^http:\/\/localhost\/register\/view\?token=/)
     })
 
-    /* Batching is the whole reason this is one action: each notification rotates the management
+    /* Batching is the whole reason this is one action: each notification rotates the view
        token, so three separate ones would leave two dead links in the registrant's inbox. Counted
        here as ONE rotation, not as one call to a mock. */
     it('rotates the token exactly once however much changed', async () => {
@@ -236,7 +236,7 @@ describe('POST .../registrations/[registrationId] save', () => {
         const row = await registrationRow()
         expect(mockSendConfirmation).toHaveBeenCalledOnce()
         /* The link the registrant held is demoted, not discarded — one generation, not three. */
-        expect(row.previousManagementToken).toBe(hashManagementToken(seeded.managementToken))
+        expect(row.previousViewToken).toBe(hashViewToken(seeded.viewToken))
         const [, data] = mockSendConfirmation.mock.calls[0]
         expect(data.changeSummary.length).toBeGreaterThan(1)
     })
@@ -304,7 +304,7 @@ describe('POST .../registrations/[registrationId] save', () => {
         expect((await registrationRow()).status).toBe('paid')
         expect(mockReportError).toHaveBeenCalled()
         /* Nothing was delivered, so nothing may be rotated. */
-        expect((await registrationRow()).previousManagementToken).toBeNull()
+        expect((await registrationRow()).previousViewToken).toBeNull()
     })
 })
 
@@ -371,9 +371,9 @@ describe('reissue_link', () => {
         await actions.reissue_link(makeEvent(undefined))
 
         const [, data] = mockSendRecovery.mock.calls[0]
-        expect(data.manageUrl).toMatch(/^http:\/\/localhost\/register\/manage\?token=/)
-        const token = data.manageUrl.split('token=')[1]
-        expect((await registrationRow()).managementToken).toBe(hashManagementToken(token))
+        expect(data.viewUrl).toMatch(/^http:\/\/localhost\/register\/view\?token=/)
+        const token = data.viewUrl.split('token=')[1]
+        expect((await registrationRow()).viewToken).toBe(hashViewToken(token))
         expect(await auditActions()).toContain('link_reissued')
     })
 
@@ -386,9 +386,7 @@ describe('reissue_link', () => {
 
         expect(result).toMatchObject({ status: 502 })
         expect(JSON.stringify(result)).toContain('existing link still works')
-        expect((await registrationRow()).managementToken).toBe(
-            hashManagementToken(seeded.managementToken),
-        )
+        expect((await registrationRow()).viewToken).toBe(hashViewToken(seeded.viewToken))
         expect(await auditActions()).toHaveLength(0)
         expect(mockReportError).toHaveBeenCalled()
     })
@@ -418,8 +416,6 @@ describe('the event in the URL must own the registration', () => {
         ).rejects.toMatchObject({ status: 404 })
 
         expect(mockSendRecovery).not.toHaveBeenCalled()
-        expect((await registrationRow()).managementToken).toBe(
-            hashManagementToken(seeded.managementToken),
-        )
+        expect((await registrationRow()).viewToken).toBe(hashViewToken(seeded.viewToken))
     })
 })

@@ -77,7 +77,7 @@ describe('registration draft', () => {
         expect(takeRegistrationDraft(CURRENT)).toBeUndefined()
     })
 
-    /* A successful checkout lands on /register/manage, which clears it. */
+    /* A successful checkout lands on /register/view, which clears it. */
     it('clears the draft on request', () => {
         saveRegistrationDraft(DRAFT)
         clearRegistrationDraft()

@@ -2,8 +2,8 @@
 export type RegistrationSessionMetadata = {
     type: 'registration'
     registrationId: string
-    /* Plaintext management token. The DB stores only the hash; this is the channel that carries the plaintext to the webhook so the confirmation email can include a working management URL. */
-    managementToken: string
+    /* Plaintext view token. The DB stores only the hash; this is the channel that carries the plaintext to the webhook so the confirmation email can include a working view URL. */
+    viewToken: string
     /* Set when the registrant added a gift to the same checkout, so the webhook can mark that
        donation paid off the one session. Optional: absent on every session created before
        donations existed, and on any registration without a gift. */

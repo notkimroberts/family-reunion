@@ -20,9 +20,10 @@ import { diffMemberDetails, type MemberDetailValues } from './_diffMemberDetails
 
    A TIER CHANGE IS REFUSED ON A PAID REGISTRATION. The tier sets priceCents, so changing it after
    money has arrived would leave the recorded total disagreeing with what was actually charged, with
-   nothing to reconcile it and no refund issued. Repricing has to go through the registrant's own
-   management link, which is the path that actually moves money. Non-financial corrections stay
-   available at every status, since a wrong birthday or shirt size has to be fixable.
+   nothing to reconcile it and no refund issued. Nothing in the app issues a partial refund, so
+   repricing is cancel (full refund) and re-enter, as in removeAdminMember. Non-financial
+   corrections stay available at every status, since a wrong birthday or shirt size has to be
+   fixable.
 
    Returns what actually changed, value by value, for the update email — and writes nothing when no
    value differs. The edit form resubmits every attendee on each save, so "a field was passed" is not
@@ -81,7 +82,7 @@ export async function updateAdminMemberDetails(params: {
         if (repricing && member.registrationStatus === 'paid') {
             throw error(
                 409,
-                'This registration is paid. Changing a tier would change what they owe — use the registrant’s management link so the refund is issued.',
+                'This registration is paid. Changing a tier would change what they owe, and nothing here issues a partial refund — cancel the registration, which refunds it in full, and re-enter the party on the new tier.',
             )
         }
 

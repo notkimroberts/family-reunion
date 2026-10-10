@@ -26,10 +26,10 @@ import { CONTACT_EMAIL, CONTACT_PHONE } from '$lib/general/constants'
 import { sumMemberPrices } from '$lib/general/pricing'
 import { formatPrice, toE164 } from '$lib/utils'
 import { formatPartialBirthDate } from '$lib/utils/age'
-import type { EventDetails, ManagedMember, RegistrationDetails } from './types'
+import type { EventDetails, RegistrationDetails, RegistrationViewMember } from './types'
 
 /* READ ONLY: the registrant's record of their own party, with no control that posts. Editing, adding,
-   removing and cancelling are organiser actions now — see manageReflectsServerState.test.ts, which
+   removing and cancelling are organiser actions now — see viewReflectsServerState.test.ts, which
    pins that and says why it matters. */
 let {
     registration,
@@ -37,7 +37,7 @@ let {
     event,
 }: {
     registration: RegistrationDetails
-    members: ManagedMember[]
+    members: RegistrationViewMember[]
     event: EventDetails
 } = $props()
 
