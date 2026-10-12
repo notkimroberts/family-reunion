@@ -207,7 +207,14 @@ These items are not in the current work. Do them in this order.
 - [x] **Email links on one domain.** Do this after #88 merges and the Stripe and Resend webhooks point at the new domain.
   - Remove the `family-reunion-production.up.railway.app` service domain on Railway. It serves the full site, and an email sent through it links there. That teaches people a second "real" address.
   - Ask the developer to build email links and Stripe URLs from `BETTER_AUTH_URL`, not from the host of the request.
-- [ ] **Content Security Policy, report-only first.** Ask the developer to add `Content-Security-Policy-Report-Only`, with reports to Sentry. After 2 weeks with no unexpected reports, change it to enforce. Do not enforce it first: one missing source breaks part of a page with no error the user can see.
+- [ ] **Content Security Policy, report-only first.** Do not enforce it first: one missing source breaks part of a page with no error the user can see.
+  - [x] Add `Content-Security-Policy-Report-Only`, with reports to Sentry. The policy is `kit.csp.reportOnly` in `svelte.config.js`. Merged in #106 on 2026-10-12.
+  - [ ] Deploy. Then use every page: register through to Stripe, donate, contribute a photo, open the program page map, and sign in to admin.
+  - [ ] **Read the CSP issues in Sentry, each week, from 2026-10-12 to 2026-10-26.** They are in the `family-reunion` project, with titles like `Blocked 'script' from 'example.com'`. You can also ask Claude to read them.
+    - If the source is ours (Stripe, Sentry, Google Maps, the site), add it to the policy in `svelte.config.js`. Each addition restarts the 2 weeks.
+    - If the source is `chrome-extension://`, `moz-extension://` or `safari-web-extension://`, ignore it. Those are the visitor's browser extensions.
+    - If you do not know the source, find out what it is before you continue.
+  - [ ] After 2 weeks with no unexpected reports, change `reportOnly` to `directives` to enforce. Keep `report-uri`.
 - [ ] **Stripe custom Checkout domain (optional, paid).** In Stripe Dashboard → Settings → Custom domains, add `pay.pattersonfamilyreunion.com`. Payers then type their card only on our domain. Check the monthly price first. Do it only after #88.
 - [ ] **Decide on BIMI. Recommended: skip.** BIMI shows our logo beside our emails in Gmail. Gmail and Apple Mail need a paid certificate: a VMC, which needs a registered trademark, or a CMC, which needs 12 months of logo use. DMARC `p=reject` (section 3) gives the real protection.
 
