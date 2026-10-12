@@ -4,6 +4,7 @@ import { sequence } from '@sveltejs/kit/hooks'
 import { svelteKitHandler } from 'better-auth/svelte-kit'
 import { building, dev } from '$app/environment'
 import { auth } from '$lib/server/auth'
+import { sessionLocals } from '$lib/server/auth/sessionLocals'
 import { canonicalHostRedirect } from '$lib/server/canonicalHostRedirect'
 import { dbg } from '$lib/server/debug'
 import { logServerError } from '$lib/server/logServerError'
@@ -31,10 +32,16 @@ export const handle: Handle = sequence(
             headers: event.request.headers,
         })
 
-        event.locals.user = session?.user ?? (dev ? DEV_ADMIN_USER : null)
-        event.locals.session = session?.session ?? null
+        const locals = sessionLocals(session, dev ? DEV_ADMIN_USER : null)
+        event.locals.user = locals.user
+        event.locals.session = locals.session
 
-        dbg.hooks('session user=%s dev=%s', event.locals.user?.id ?? 'none', dev)
+        dbg.hooks(
+            'session user=%s dev=%s awaitingSetup=%s',
+            event.locals.user?.id ?? 'none',
+            dev,
+            session !== null && locals.user === null,
+        )
 
         return svelteKitHandler({ event, resolve, auth, building })
     },

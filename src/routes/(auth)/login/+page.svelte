@@ -5,12 +5,14 @@ import { authClient } from '$lib/auth-client'
 import { Button } from '$lib/components/ui/button'
 import { Card, CardContent } from '$lib/components/ui/card'
 import { Input } from '$lib/components/ui/input'
-import { APP_NAME } from '$lib/general/constants'
+import { APP_NAME, TWO_FACTOR_SETUP_PATH } from '$lib/general/constants'
+import TwoFactorChallenge from './TwoFactorChallenge.svelte'
 
 let emailInput = $state('')
 let passwordInput = $state('')
 let loading = $state(false)
 let error = $state('')
+let awaitingCode = $state(false)
 
 async function handleSubmit(e: SubmitEvent) {
     e.preventDefault()
@@ -27,6 +29,16 @@ async function handleSubmit(e: SubmitEvent) {
         error = result.error.message ?? 'Invalid email or password.'
         return
     }
+    /* 2FA on: no session yet, only a challenge cookie. 2FA off: a session that hooks.server.ts
+       treats as signed out until enrollment, so it goes to the setup page, never to /admin. */
+    if ('twoFactorRedirect' in result.data && result.data.twoFactorRedirect) {
+        awaitingCode = true
+        return
+    }
+    goto(TWO_FACTOR_SETUP_PATH)
+}
+
+function handleVerified() {
     goto('/admin')
 }
 </script>
@@ -62,33 +74,38 @@ async function handleSubmit(e: SubmitEvent) {
                             </p>
                         </div>
 
-                        <form onsubmit={handleSubmit} class="space-y-3">
-                            <div class="space-y-2">
-                                <label for="email" class="text-sm font-medium">Email</label>
-                                <Input
-                                    id="email"
-                                    type="email"
-                                    placeholder="you@example.com"
-                                    bind:value={emailInput}
-                                    autocomplete="email"
-                                    required />
-                            </div>
-                            <div class="space-y-2">
-                                <label for="password" class="text-sm font-medium">Password</label>
-                                <Input
-                                    id="password"
-                                    type="password"
-                                    bind:value={passwordInput}
-                                    autocomplete="current-password"
-                                    required />
-                            </div>
-                            {#if error}
-                                <p class="text-destructive text-sm">{error}</p>
-                            {/if}
-                            <Button type="submit" class="w-full" disabled={loading}>
-                                {loading ? 'Signing in…' : 'Sign in'}
-                            </Button>
-                        </form>
+                        {#if awaitingCode}
+                            <TwoFactorChallenge onVerified={handleVerified} />
+                        {:else}
+                            <form onsubmit={handleSubmit} class="space-y-3">
+                                <div class="space-y-2">
+                                    <label for="email" class="text-sm font-medium">Email</label>
+                                    <Input
+                                        id="email"
+                                        type="email"
+                                        placeholder="you@example.com"
+                                        bind:value={emailInput}
+                                        autocomplete="email"
+                                        required />
+                                </div>
+                                <div class="space-y-2">
+                                    <label for="password" class="text-sm font-medium"
+                                        >Password</label>
+                                    <Input
+                                        id="password"
+                                        type="password"
+                                        bind:value={passwordInput}
+                                        autocomplete="current-password"
+                                        required />
+                                </div>
+                                {#if error}
+                                    <p class="text-destructive text-sm">{error}</p>
+                                {/if}
+                                <Button type="submit" class="w-full" disabled={loading}>
+                                    {loading ? 'Signing in…' : 'Sign in'}
+                                </Button>
+                            </form>
+                        {/if}
                     </div>
                 </div>
             </CardContent>

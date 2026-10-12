@@ -1,9 +1,10 @@
 import { betterAuth } from 'better-auth'
 import { drizzleAdapter } from 'better-auth/adapters/drizzle'
-import { admin } from 'better-auth/plugins'
+import { admin, twoFactor } from 'better-auth/plugins'
 import { sveltekitCookies } from 'better-auth/svelte-kit'
 import { getRequestEvent } from '$app/server'
 import { env } from '$env/dynamic/private'
+import { REUNION_NAME } from '$lib/general/constants'
 import { getDb } from '$lib/server/db'
 import * as schema from '$lib/server/db/schema'
 import { dbg } from '$lib/server/debug'
@@ -27,7 +28,11 @@ function createAuthInstance() {
                `bun run admin:create`. */
             disableSignUp: true,
         },
-        plugins: [admin(), sveltekitCookies(getRequestEvent)],
+        /* TOTP for every account. The plugin only CHALLENGES accounts that have enrolled; making
+           enrollment compulsory is hooks.server.ts's job (see needsTwoFactorSetup). The login page
+           never asks to trust the device: there are few admins and they sign in rarely, so a code
+           every time costs little, and a stolen laptop stays a password-plus-phone problem. */
+        plugins: [admin(), twoFactor({ issuer: REUNION_NAME }), sveltekitCookies(getRequestEvent)],
         session: {
             cookieCache: {
                 enabled: true,
