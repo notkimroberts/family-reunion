@@ -12,6 +12,7 @@ declare namespace App {
             emailVerified: boolean
             image?: string | null
             role?: string | null
+            twoFactorEnabled?: boolean | null
             createdAt: Date
             updatedAt: Date
         } | null

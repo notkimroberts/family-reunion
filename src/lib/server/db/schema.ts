@@ -40,6 +40,9 @@ export const user = pgTable('user', {
     banned: boolean('banned').default(false),
     banReason: text('ban_reason'),
     banExpires: timestamp('ban_expires'),
+    /* Better Auth's twoFactor plugin. False until the first code is verified at /login/setup-2fa,
+       and while false hooks.server.ts treats the session as signed out everywhere else. */
+    twoFactorEnabled: boolean('two_factor_enabled').default(false),
 })
 
 export const session = pgTable('session', {
@@ -79,6 +82,28 @@ export const account = pgTable('account', {
     createdAt: timestamp('created_at').notNull().defaultNow(),
     updatedAt: timestamp('updated_at').notNull().defaultNow(),
 })
+
+/* Better Auth's twoFactor plugin: one row per account. The plugin encrypts `secret` and
+   `backupCodes` with the auth secret (BETTER_AUTH_SECRET). `verified` stays false between enable
+   and the first code. */
+export const twoFactor = pgTable(
+    'two_factor',
+    {
+        id: text('id').primaryKey(),
+        secret: text('secret').notNull(),
+        backupCodes: text('backup_codes').notNull(),
+        userId: text('user_id')
+            .notNull()
+            .references(() => user.id, { onDelete: 'cascade' }),
+        verified: boolean('verified').default(true),
+        failedVerificationCount: integer('failed_verification_count').default(0),
+        lockedUntil: timestamp('locked_until'),
+    },
+    (table) => [
+        index('two_factor_secret_idx').on(table.secret),
+        index('two_factor_user_id_idx').on(table.userId),
+    ],
+)
 
 export const verification = pgTable('verification', {
     id: text('id').primaryKey(),
