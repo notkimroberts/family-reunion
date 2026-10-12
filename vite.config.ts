@@ -12,6 +12,11 @@ const project = 'family-reunion'
 export default defineConfig(({ mode }) => {
     const env = loadEnv(mode, process.cwd(), '')
 
+    /* MODE is 'production' for every `vite build`, so a local build reported its errors as
+       production. SENTRY_ENVIRONMENT is 'production' on Railway (build and runtime) and
+       'development' in .env.example. */
+    const sentryEnvironment = env.SENTRY_ENVIRONMENT || mode
+
     // Forward DEBUG into process.env so the `debug` package can read it.
     // Also call Debug.enable() directly — Vite loads the debug package before
     // vite.config.ts runs, so the package initializes with no enabled namespaces.
@@ -36,7 +41,7 @@ export default defineConfig(({ mode }) => {
                 release: {
                     name: pkg.version,
                     deploy: {
-                        env: process.env.SENTRY_ENVIRONMENT ?? 'production',
+                        env: sentryEnvironment,
                     },
                     setCommits: {
                         auto: true,
@@ -49,6 +54,7 @@ export default defineConfig(({ mode }) => {
         define: {
             __APP_VERSION__: JSON.stringify(pkg.version),
             'import.meta.env.VITE_SENTRY_RELEASE': JSON.stringify(pkg.version),
+            'import.meta.env.VITE_SENTRY_ENVIRONMENT': JSON.stringify(sentryEnvironment),
         },
     }
 })
