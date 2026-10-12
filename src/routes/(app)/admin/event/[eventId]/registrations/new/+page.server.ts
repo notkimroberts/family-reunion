@@ -1,8 +1,9 @@
 import { fail } from '@sveltejs/kit'
 import { zod4 as zod } from 'sveltekit-superforms/adapters'
-import { defaults, superValidate } from 'sveltekit-superforms/server'
+import { defaults, setError, superValidate } from 'sveltekit-superforms/server'
 import { HOST_HOTEL } from '$lib/general/constants'
 import { requireAdmin } from '$lib/server/auth/guards'
+import { isOwner } from '$lib/server/auth/isOwner'
 import { dbg } from '$lib/server/debug'
 import { sendRegistrationConfirmation } from '$lib/server/email'
 import { createAdminRegistration, getConfirmationEmailData } from '$lib/server/registrations'
@@ -49,11 +50,16 @@ export const load: PageServerLoad = async (event) => {
 
 export const actions: Actions = {
     default: async (event) => {
-        requireAdmin(event)
+        const admin = requireAdmin(event)
 
         const form = await superValidate(event.request, zod(adminRegistrationSchema))
         if (!form.valid) {
             return fail(400, { form })
+        }
+
+        /* A waived registration is places given away, so only the owner may record one. */
+        if (form.data.status === 'waived' && !isOwner(admin)) {
+            return setError(form, 'status', 'Only the site admin can waive payment.')
         }
 
         const intake = toRegistrationIntake(form.data)

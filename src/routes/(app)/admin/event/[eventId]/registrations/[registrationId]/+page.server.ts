@@ -3,7 +3,8 @@ import { desc, eq } from 'drizzle-orm'
 import { zod4 as zod } from 'sveltekit-superforms/adapters'
 import { defaults, superValidate } from 'sveltekit-superforms/server'
 import { sumMemberPrices } from '$lib/general/pricing'
-import { requireAdmin } from '$lib/server/auth/guards'
+import { requireAdmin, requireOwner } from '$lib/server/auth/guards'
+import { isOwner } from '$lib/server/auth/isOwner'
 import { db } from '$lib/server/db'
 import { registrationAudit, user as userTable } from '$lib/server/db/schema'
 import { dbg } from '$lib/server/debug'
@@ -135,6 +136,18 @@ export const actions: Actions = {
         }
 
         const previousStatus = found.registration.status
+
+        /* Removing a person and changing what was paid are the owner's: both move money or give
+           places away. Refused before anything is written, so a mixed save never half-lands. */
+        const touchesOwnerFields =
+            form.data.removedMemberIds.length > 0 || form.data.status !== previousStatus
+        if (touchesOwnerFields && !isOwner(admin)) {
+            const feedback: RegistrationActionFeedback = {
+                saveError:
+                    'Only the site admin can remove people or change the payment status. Nothing was saved.',
+            }
+            return fail(403, { form, ...feedback })
+        }
         /* Drives the "what changed" block in the email, so only things the registrant would care
            about belong in here. Edited values carry before → after. */
         const changes: RegistrationChange[] = []
@@ -353,10 +366,10 @@ export const actions: Actions = {
        remove-member, so every refund now happens here. setRegistrationStatus refuses 'refunded' in
        both directions on purpose, so this action is the whole route.
 
-       Guarded by requireAdmin like every action here, and cancelRegistrationAsAdmin re-checks the
-       event pairing at the write itself, because this one is irreversible. */
+       Owner-only, since it refunds and cannot be undone. cancelRegistrationAsAdmin re-checks the
+       event pairing at the write itself for the same reason. */
     cancel: async (event) => {
-        const admin = requireAdmin(event)
+        const admin = requireOwner(event)
 
         await loadPairedRegistration(event.params)
 

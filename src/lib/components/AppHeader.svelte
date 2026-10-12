@@ -17,6 +17,7 @@ import {
     PHOTOS_NAV_LINK,
     REGISTER_NAV_LINK,
 } from '$lib/general/constants'
+import { hasAdminAccess } from '$lib/general/roles'
 import { getInitials } from '$lib/utils'
 import MobileDrawer from './MobileDrawer.svelte'
 import ThemeToggle from './ThemeToggle.svelte'
@@ -103,7 +104,7 @@ let mobileMenuOpen = $state(false)
                         <!-- The admin area has no entry point in the nav — /login redirects to it once,
                              and after that an organizer had to type the URL. It belongs behind the
                              avatar because it is per-account, not per-visitor. -->
-                        {#if user.role === 'admin'}
+                        {#if hasAdminAccess(user.role)}
                             <DropdownMenuItem>
                                 {#snippet child({ props })}
                                     <a href="/admin" {...props}>

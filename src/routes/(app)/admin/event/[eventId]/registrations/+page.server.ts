@@ -1,7 +1,7 @@
 import { error, fail } from '@sveltejs/kit'
 import { eq } from 'drizzle-orm'
 import { env } from '$env/dynamic/private'
-import { requireAdmin } from '$lib/server/auth/guards'
+import { requireAdmin, requireOwner } from '$lib/server/auth/guards'
 import { db } from '$lib/server/db'
 import { partyMembers, registrations } from '$lib/server/db/schema'
 import { getDonationsForEvent } from '$lib/server/donations'
@@ -152,7 +152,10 @@ export const actions: Actions = {
             return { photoModerated: decision }
         }
 
+        /* Delete is the irreversible one — the objects go too — so it is the owner's. Reject is
+           not, and stays with every organizer. */
         if (decision === 'delete') {
+            requireOwner(event)
             await deletePhoto(photoId)
             return { photoModerated: 'deleted' }
         }

@@ -1,12 +1,12 @@
-/* Bootstraps an admin account by creating a Better Auth user with role='admin'. */
+/* Bootstraps an organizer account. Make it the owner afterward with `bun run admin:set-role`. */
 /* Usage: bun scripts/createAdmin.ts <email> <password> [name] */
 /* DATABASE_URL must be set; BETTER_AUTH_URL is optional (any string works for offline signup). */
 import { betterAuth } from 'better-auth'
 import { drizzleAdapter } from 'better-auth/adapters/drizzle'
-import { admin } from 'better-auth/plugins'
 import { eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/postgres-js'
 import postgres from 'postgres'
+import { ORGANIZER_ROLE } from '../src/lib/general/constants/ORGANIZER_ROLE'
 import * as schema from '../src/lib/server/db/schema'
 
 const [, , email, password, nameArg] = process.argv
@@ -29,7 +29,6 @@ const auth = betterAuth({
     baseURL: process.env.BETTER_AUTH_URL ?? 'http://localhost:5173',
     database: drizzleAdapter(db, { provider: 'pg', schema }),
     emailAndPassword: { enabled: true },
-    plugins: [admin()],
 })
 
 const name = nameArg ?? email.split('@')[0]
@@ -40,7 +39,7 @@ const result = await auth.api.signUpEmail({
 
 const userId = result.user.id
 
-await db.update(schema.user).set({ role: 'admin' }).where(eq(schema.user.id, userId))
+await db.update(schema.user).set({ role: ORGANIZER_ROLE }).where(eq(schema.user.id, userId))
 
-console.log(`Admin created: ${email} (id=${userId})`)
+console.log(`Organizer created: ${email} (id=${userId})`)
 await client.end()

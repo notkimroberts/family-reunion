@@ -1,6 +1,6 @@
 import { betterAuth } from 'better-auth'
 import { drizzleAdapter } from 'better-auth/adapters/drizzle'
-import { admin, twoFactor } from 'better-auth/plugins'
+import { twoFactor } from 'better-auth/plugins'
 import { sveltekitCookies } from 'better-auth/svelte-kit'
 import { getRequestEvent } from '$app/server'
 import { env } from '$env/dynamic/private'
@@ -32,7 +32,18 @@ function createAuthInstance() {
            enrollment compulsory is hooks.server.ts's job (see needsTwoFactorSetup). The login page
            never asks to trust the device: there are few admins and they sign in rarely, so a code
            every time costs little, and a stolen laptop stays a password-plus-phone problem. */
-        plugins: [admin(), twoFactor({ issuer: REUNION_NAME }), sveltekitCookies(getRequestEvent)],
+        /* No admin() plugin. It mounted /api/auth/admin/* ahead of SvelteKit routing and let any
+           admin set-role, set-user-password, remove-user and update-user (email included) on any
+           account — so any organizer could make themselves the owner. The app called none of them;
+           the admin:* scripts are the account tools. Pinned by adminApi.test.ts. */
+        plugins: [twoFactor({ issuer: REUNION_NAME }), sveltekitCookies(getRequestEvent)],
+        user: {
+            additionalFields: {
+                /* The column the admin plugin used to declare. input: false, so /update-user cannot
+                   set it — the role decides who is the owner. */
+                role: { type: 'string', required: false, input: false },
+            },
+        },
         session: {
             cookieCache: {
                 enabled: true,

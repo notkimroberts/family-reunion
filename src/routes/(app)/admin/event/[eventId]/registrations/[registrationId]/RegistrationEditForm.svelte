@@ -32,6 +32,7 @@ let {
     members,
     tiers,
     isPaid,
+    isOwner,
     onCancel,
     onSaved,
 }: {
@@ -41,6 +42,9 @@ let {
     /* Drives the money guardrail in the UI. The server refuses these too — this only explains why
        before the organizer tries. */
     isPaid: boolean
+    /* Removing people and changing the payment status are the owner's. Hidden for an organizer; the
+       server refuses them too. */
+    isOwner: boolean
     onCancel: () => void
     onSaved: () => void
 } = $props()
@@ -164,21 +168,23 @@ function handleRestore(memberId: string) {
     <FormErrorSummary errors={$errors} message={$message} />
 
     <!-- Money, not who to contact, so it gets its own section. -->
-    <Card>
-        <CardHeader class="pb-3">
-            <CardTitle class="text-base">Payment status</CardTitle>
-        </CardHeader>
-        <CardContent class="flex flex-col gap-2">
-            <NativeSelect id="editStatus" bind:value={$form.status}>
-                {#each SETTABLE_STATUSES as status (status.value)}
-                    <option value={status.value}>{status.label}</option>
-                {/each}
-            </NativeSelect>
-            <p class="text-muted-foreground text-xs">
-                Changing this emails the registrant to tell them where their payment stands.
-            </p>
-        </CardContent>
-    </Card>
+    {#if isOwner}
+        <Card>
+            <CardHeader class="pb-3">
+                <CardTitle class="text-base">Payment status</CardTitle>
+            </CardHeader>
+            <CardContent class="flex flex-col gap-2">
+                <NativeSelect id="editStatus" bind:value={$form.status}>
+                    {#each SETTABLE_STATUSES as status (status.value)}
+                        <option value={status.value}>{status.label}</option>
+                    {/each}
+                </NativeSelect>
+                <p class="text-muted-foreground text-xs">
+                    Changing this emails the registrant to tell them where their payment stands.
+                </p>
+            </CardContent>
+        </Card>
+    {/if}
 
     <!-- The contact and their own attendance in one card. They are one person, so: one Name field, and
          an email and phone that plainly belong to them rather than floating above a separate card
@@ -264,7 +270,7 @@ function handleRestore(memberId: string) {
                                 onclick={() => handleRestore(row.memberId)}>
                                 <Undo2 class="size-3.5" /> Keep
                             </Button>
-                        {:else}
+                        {:else if isOwner}
                             <Button
                                 type="button"
                                 variant="ghost"

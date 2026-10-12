@@ -15,7 +15,15 @@ An organizer who signs in with email and password at `/login`. Managed entirely 
 _Avoid_: account, member, registrant
 
 **Admin**:
-A **User** with `role = 'admin'`. Granted via the Better Auth admin plugin; checked by `requireAdmin()` in guards. In practice every user is an admin: there is no non-admin reason to sign in.
+A **User** who may use the admin area: an **organizer** or the **owner**. Checked by `requireAdmin()` / `hasAdminAccess()`. Every user is one: there is no non-admin reason to sign in.
+
+**Organizer**:
+An **admin** with `role = 'admin'` (the stored value predates the owner role). Runs the registrations: edits details, adds people, takes paper forms, checks people in, approves and rejects **photos**.
+_Avoid_: staff, volunteer
+
+**Owner**:
+The site admin — an **admin** with `role = 'owner'`. Everything an **organizer** can do, plus whatever moves money or cannot be undone: event settings and prices, new years, cancelling (refunds), removing people, changing or waiving payment status, deleting photos. Set only by `bun run admin:set-role`. See [ADR 0010](docs/adr/0010-owner-is-a-role.md).
+_Avoid_: super admin, site admin (in code)
 
 > There is no app-level profile table. An earlier design had `user_profiles` holding contact details per user; it was removed along with magic-link sign-in when registration became public. Contact details now live on the **registration**.
 

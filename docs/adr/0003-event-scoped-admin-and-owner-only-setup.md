@@ -1,6 +1,6 @@
 # ADR 0003 — The admin is event-scoped, and Setup is owner-only by identity
 
-**Status:** Accepted, with one part superseded  
+**Status:** Accepted, with two parts superseded — the identity gate by [ADR 0010](./0010-owner-is-a-role.md)  
 **Date:** 2026-08-28  
 **Amended:** 2026-08-29 — `/admin` is a landing page listing the reunions, **not** a redirect. See
 "Consequences".

@@ -213,11 +213,16 @@ async function handleCopyEmail() {
                 {#if !isCancelled}
                     <!-- Outline rather than destructive: it sits beside the primary action an
                          organizer actually came here for, and the dialog behind it is where the
-                         weight belongs. -->
-                    <Button variant="outline" size="sm" onclick={() => (cancelDialogOpen = true)}>
-                        <Ban class="size-4" />
-                        Cancel registration
-                    </Button>
+                         weight belongs. Owner-only: it refunds and cannot be undone. -->
+                    {#if data.isOwner}
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onclick={() => (cancelDialogOpen = true)}>
+                            <Ban class="size-4" />
+                            Cancel registration
+                        </Button>
+                    {/if}
                     <Button onclick={() => (editing = true)}>
                         <Pencil class="size-4" />
                         Edit registration
@@ -256,6 +261,7 @@ async function handleCopyEmail() {
             members={data.members}
             tiers={data.tiers}
             {isPaid}
+            isOwner={data.isOwner}
             onCancel={() => (editing = false)}
             onSaved={() => (editing = false)} />
     {:else}
@@ -357,7 +363,7 @@ async function handleCopyEmail() {
     {/if}
 </section>
 
-{#if !isCancelled}
+{#if !isCancelled && data.isOwner}
     <AdminCancelDialog
         contactName={data.registration.contactName}
         paymentState={payment}

@@ -1,7 +1,6 @@
 import { createHmac } from 'node:crypto'
 import { betterAuth } from 'better-auth'
 import { drizzleAdapter } from 'better-auth/adapters/drizzle'
-import { admin } from 'better-auth/plugins'
 import { eq } from 'drizzle-orm'
 import { beforeAll, describe, expect, it, vi } from 'vitest'
 import * as schema from '$lib/server/db/schema'
@@ -58,7 +57,6 @@ async function createAdminAccount(email: string) {
         baseURL: 'http://localhost:5173',
         database: drizzleAdapter(db, { provider: 'pg', schema }),
         emailAndPassword: { enabled: true },
-        plugins: [admin()],
     })
     await bootstrap.api.signUpEmail({ body: { email, password: PASSWORD, name: 'Admin' } })
 }

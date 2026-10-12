@@ -1,7 +1,6 @@
 import { betterAuth } from 'better-auth'
 import { drizzleAdapter } from 'better-auth/adapters/drizzle'
 import { hashPassword } from 'better-auth/crypto'
-import { admin } from 'better-auth/plugins'
 import { beforeAll, describe, expect, it, vi } from 'vitest'
 import * as schema from '$lib/server/db/schema'
 import { resetTestDb } from '$lib/server/db/testing/resetTestDb'
@@ -26,7 +25,6 @@ async function createAdminAccount(email: string) {
         baseURL: 'http://localhost:5173',
         database: drizzleAdapter(db, { provider: 'pg', schema }),
         emailAndPassword: { enabled: true },
-        plugins: [admin()],
     })
     return bootstrap.api.signUpEmail({
         body: { email, password: OLD_PASSWORD, name: 'Owner' },

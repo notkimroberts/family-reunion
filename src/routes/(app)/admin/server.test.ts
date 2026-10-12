@@ -14,7 +14,6 @@ const { mockRequireAdmin, mockIsOwner, mockSummaries } = vi.hoisted(() => ({
     mockSummaries: vi.fn(),
 }))
 
-vi.mock('$env/dynamic/private', () => ({ env: { OWNER_EMAIL: 'kim@example.com' } }))
 vi.mock('$lib/server/auth/guards', () => ({ requireAdmin: mockRequireAdmin }))
 vi.mock('$lib/server/auth/isOwner', () => ({ isOwner: mockIsOwner }))
 vi.mock('$lib/server/registrations', () => ({ getEventSummaries: mockSummaries }))

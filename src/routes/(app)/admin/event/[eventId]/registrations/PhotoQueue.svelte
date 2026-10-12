@@ -4,8 +4,9 @@ import { enhance } from '$app/forms'
 import { Button } from '$lib/components/ui/button'
 import type { ModerationPhoto } from '$lib/server/photos'
 
-type Props = { photos: ModerationPhoto[] }
-let { photos }: Props = $props()
+/* canDelete: delete is permanent, so it is the owner's. The action refuses it too. */
+type Props = { photos: ModerationPhoto[]; canDelete: boolean }
+let { photos, canDelete }: Props = $props()
 </script>
 
 {#if photos.length === 0}
@@ -52,14 +53,16 @@ let { photos }: Props = $props()
                             Reject
                         </Button>
                     </form>
-                    <form method="POST" action="?/moderate_photo" use:enhance>
-                        <input type="hidden" name="photoId" value={photo.id} />
-                        <input type="hidden" name="decision" value="delete" />
-                        <Button type="submit" size="sm" variant="ghost">
-                            <Trash2 class="size-3.5" />
-                            Delete
-                        </Button>
-                    </form>
+                    {#if canDelete}
+                        <form method="POST" action="?/moderate_photo" use:enhance>
+                            <input type="hidden" name="photoId" value={photo.id} />
+                            <input type="hidden" name="decision" value="delete" />
+                            <Button type="submit" size="sm" variant="ghost">
+                                <Trash2 class="size-3.5" />
+                                Delete
+                            </Button>
+                        </form>
+                    {/if}
                 </div>
             </li>
         {/each}

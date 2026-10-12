@@ -1,5 +1,6 @@
 import { error } from '@sveltejs/kit'
 import { isUuid } from '$lib/general/ids'
+import { hasAdminAccess } from '$lib/general/roles'
 import { getPhotoKey, getServablePhotoKey, type PhotoVariant } from '$lib/server/photos'
 import { getObjectBody } from '$lib/server/storage'
 import type { RequestHandler } from './$types'
@@ -35,7 +36,7 @@ export const GET: RequestHandler = async ({ params, url, locals, request }) => {
         error(404, 'Not found')
     }
 
-    const isAdmin = locals.user?.role === 'admin'
+    const isAdmin = hasAdminAccess(locals.user?.role)
     const key = isAdmin
         ? await getPhotoKey(params.id, variant)
         : await getServablePhotoKey(params.id, variant)

@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { ORGANIZER_ROLE, OWNER_ROLE } from '$lib/general/constants'
 import { actions } from './+page.server'
 
 const { mockSuperValidate } = vi.hoisted(() => ({ mockSuperValidate: vi.fn() }))
@@ -17,7 +18,10 @@ const {
 
 const { mockReportError } = vi.hoisted(() => ({ mockReportError: vi.fn() }))
 
-vi.mock('sveltekit-superforms/server', () => ({ superValidate: mockSuperValidate }))
+vi.mock('sveltekit-superforms/server', async (importOriginal) => ({
+    ...(await importOriginal<typeof import('sveltekit-superforms/server')>()),
+    superValidate: mockSuperValidate,
+}))
 vi.mock('sveltekit-superforms', () => ({ defaults: vi.fn() }))
 vi.mock('sveltekit-superforms/adapters', () => ({ zod4: (s: unknown) => s }))
 vi.mock('$lib/server/auth/guards', () => ({ requireAdmin: mockRequireAdmin }))
@@ -71,6 +75,7 @@ function makeEvent() {
 describe('POST /admin/event/[eventId]/registrations/new', () => {
     beforeEach(() => {
         vi.clearAllMocks()
+        mockRequireAdmin.mockReturnValue({ id: 'admin-1', role: OWNER_ROLE })
         mockSuperValidate.mockResolvedValue({ valid: true, data: { ...validFormData } })
         mockCreateAdminRegistration.mockResolvedValue({
             registrationId: 'reg-9',
@@ -124,6 +129,30 @@ describe('POST /admin/event/[eventId]/registrations/new', () => {
         await actions.default(makeEvent())
         expect(mockCreateAdminRegistration).toHaveBeenCalledWith(
             expect.objectContaining({ status: 'waived' }),
+        )
+    })
+
+    /* Waiving gives places away, so it is the owner's. */
+    it('refuses a waived registration from an organizer', async () => {
+        mockRequireAdmin.mockReturnValue({ id: 'organizer-1', role: ORGANIZER_ROLE })
+        mockSuperValidate.mockResolvedValue({
+            valid: true,
+            data: { ...validFormData, status: 'waived' },
+        })
+
+        const result = await actions.default(makeEvent())
+
+        expect(result).toMatchObject({ status: 400 })
+        expect(mockCreateAdminRegistration).not.toHaveBeenCalled()
+    })
+
+    it('lets an organizer record a paid registration', async () => {
+        mockRequireAdmin.mockReturnValue({ id: 'organizer-1', role: ORGANIZER_ROLE })
+
+        await actions.default(makeEvent())
+
+        expect(mockCreateAdminRegistration).toHaveBeenCalledWith(
+            expect.objectContaining({ status: 'paid' }),
         )
     })
 
