@@ -1,5 +1,5 @@
 import type { RequestEvent } from '@sveltejs/kit'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { securityHeaders } from './securityHeaders'
 
 function run(response: Response) {
@@ -27,5 +27,38 @@ describe('securityHeaders', () => {
         )
 
         expect(response.headers.get('Cache-Control')).toBe('private, max-age=300')
+    })
+
+    /* Dev reports would land in the production Sentry project, beside real ones. */
+    describe('the report-only policy', () => {
+        const policy = "default-src 'self'; report-uri https://sentry.example/security/"
+
+        function withPolicy() {
+            return new Response('ok', {
+                headers: { 'Content-Security-Policy-Report-Only': policy },
+            })
+        }
+
+        it('keeps report-uri outside dev', async () => {
+            const response = await run(withPolicy())
+
+            expect(response.headers.get('Content-Security-Policy-Report-Only')).toBe(policy)
+        })
+
+        it('drops report-uri in dev and keeps the rest', async () => {
+            vi.resetModules()
+            vi.doMock('$app/environment', () => ({ dev: true }))
+            const { securityHeaders: devSecurityHeaders } = await import('./securityHeaders')
+
+            const response = await devSecurityHeaders({
+                event: {} as RequestEvent,
+                resolve: async () => withPolicy(),
+            })
+
+            expect(response.headers.get('Content-Security-Policy-Report-Only')).toBe(
+                "default-src 'self'",
+            )
+            vi.doUnmock('$app/environment')
+        })
     })
 })
