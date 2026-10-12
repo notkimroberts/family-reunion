@@ -1,12 +1,6 @@
 import { isRedirect } from '@sveltejs/kit'
-import { describe, expect, it, vi } from 'vitest'
-
-/* The guards barrel now re-exports requireOwner, which imports $env/dynamic/private — a SvelteKit
-   virtual module vitest cannot resolve. Mocked here rather than importing each guard by path, so this
-   file keeps testing the public surface an app file actually imports. */
-vi.mock('$env/dynamic/private', () => ({ env: {} }))
-
-const { isPublicPath, requireAdmin, requireAuth } = await import('./guards')
+import { describe, expect, it } from 'vitest'
+import { isPublicPath, requireAdmin, requireAuth } from './guards'
 
 type MockEvent = { locals: { user?: unknown } }
 
@@ -44,6 +38,12 @@ describe('requireAuth', () => {
 describe('requireAdmin', () => {
     it('returns the user when role is admin', () => {
         const user = { id: '1', role: 'admin' }
+        expect(requireAdmin(makeEvent(user) as never)).toBe(user)
+    })
+
+    /* The owner holds a role of its own and must not lose the admin area for it. */
+    it('returns the user when role is owner', () => {
+        const user = { id: '1', role: 'owner' }
         expect(requireAdmin(makeEvent(user) as never)).toBe(user)
     })
 

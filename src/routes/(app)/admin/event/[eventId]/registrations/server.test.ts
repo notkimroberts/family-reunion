@@ -1,6 +1,7 @@
+import { isRedirect } from '@sveltejs/kit'
 import { eq } from 'drizzle-orm'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { partyMembers, registrationAudit } from '$lib/server/db/schema'
+import { partyMembers, photos, registrationAudit } from '$lib/server/db/schema'
 import { resetTestDb } from '$lib/server/db/testing/resetTestDb'
 import { seedEvent } from '$lib/server/testing/seedEvent'
 import { seedRegistration } from '$lib/server/testing/seedRegistration'
@@ -184,5 +185,51 @@ describe('POST /admin/event/[eventId]/registrations update_person', () => {
         await expect(
             submit({ memberId: '00000000-0000-0000-0000-000000000000', vegetarianMeal: 'yes' }),
         ).rejects.toMatchObject({ status: 404 })
+    })
+})
+
+/* Delete removes the stored objects too, so it is the owner's. Reject is reversible and stays with
+   every organizer. */
+describe('moderate_photo as an organizer', () => {
+    let photoId: string
+
+    beforeEach(async () => {
+        const [row] = await db
+            .insert(photos)
+            .values({ displayKey: 'display/x.jpg', thumbKey: 'thumb/x.jpg', width: 10, height: 10 })
+            .returning({ id: photos.id })
+        photoId = row.id
+    })
+
+    function moderate(decision: string) {
+        const body = new FormData()
+        body.set('photoId', photoId)
+        body.set('decision', decision)
+        return actions.moderate_photo({
+            request: new Request('http://localhost/admin/event/x/registrations', {
+                method: 'POST',
+                body,
+            }),
+            url: new URL('http://localhost/admin/event/x/registrations'),
+            params: { eventId },
+            locals: { user: ADMIN },
+        } as unknown as Parameters<typeof actions.moderate_photo>[0])
+    }
+
+    async function photoRow() {
+        const [row] = await db.select().from(photos).where(eq(photos.id, photoId))
+        return row
+    }
+
+    it('may reject', async () => {
+        await moderate('reject')
+
+        expect((await photoRow()).status).toBe('rejected')
+    })
+
+    it('may not delete', async () => {
+        await expect(moderate('delete')).rejects.toSatisfy(isRedirect)
+
+        expect(await photoRow()).toBeDefined()
     })
 })

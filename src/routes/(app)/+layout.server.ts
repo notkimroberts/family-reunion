@@ -1,4 +1,5 @@
 import { redirect } from '@sveltejs/kit'
+import { hasAdminAccess } from '$lib/general/roles'
 import { isPublicPath } from '$lib/server/auth/guards'
 import type { LayoutServerLoad } from './$types'
 
@@ -7,7 +8,7 @@ export const load: LayoutServerLoad = async ({ locals, url }) => {
        enough: Better Auth's email+password provider exposes a sign-up endpoint, so anyone
        could mint a role='user' account and satisfy a presence-only check. Sign-up is now
        disabled too — this is the second of the two locks, so neither alone is load-bearing. */
-    if (!isPublicPath(url.pathname) && locals.user?.role !== 'admin') {
+    if (!isPublicPath(url.pathname) && !hasAdminAccess(locals.user?.role)) {
         throw redirect(302, '/login')
     }
 

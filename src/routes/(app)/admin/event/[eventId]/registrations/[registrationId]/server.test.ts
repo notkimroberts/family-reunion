@@ -1,6 +1,8 @@
+import { isRedirect } from '@sveltejs/kit'
 import { stringify } from 'devalue'
 import { eq } from 'drizzle-orm'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { ORGANIZER_ROLE, OWNER_ROLE } from '$lib/general/constants'
 import { partyMembers, registrationAudit, registrations } from '$lib/server/db/schema'
 import { resetTestDb } from '$lib/server/db/testing/resetTestDb'
 import { hashViewToken } from '$lib/server/registrations/hashViewToken'
@@ -33,7 +35,14 @@ vi.mock('$lib/server/reportError', () => ({ reportError: mockReportError }))
 
 const { actions } = await import('./+page.server')
 
-const ADMIN = { id: 'admin-1', name: 'Kim Roberts', role: 'admin' }
+/* The owner by default: status changes and removals are owner-only. */
+const ADMIN = { id: 'admin-1', name: 'Kim Roberts', role: OWNER_ROLE, email: 'kim@example.com' }
+const ORGANIZER = {
+    id: 'organizer-1',
+    name: 'Aunt Rose',
+    role: ORGANIZER_ROLE,
+    email: 'rose@example.com',
+}
 
 let db: Awaited<ReturnType<typeof resetTestDb>>
 let eventId: string
@@ -70,6 +79,7 @@ function editForm(overrides: Record<string, unknown> = {}) {
 function makeEvent(
     body: Record<string, unknown> | undefined,
     params: { eventId?: string; registrationId?: string } = {},
+    user: typeof ADMIN = ADMIN,
 ) {
     const formData = new FormData()
     if (body) {
@@ -83,7 +93,7 @@ function makeEvent(
             eventId: params.eventId ?? eventId,
             registrationId: params.registrationId ?? seeded.registrationId,
         },
-        locals: { user: ADMIN },
+        locals: { user },
     } as unknown as Parameters<typeof actions.save>[0]
 }
 
@@ -118,6 +128,7 @@ beforeEach(async () => {
     mockSendConfirmation.mockResolvedValue(undefined)
     db = await resetTestDb()
     await seedUser(db, ADMIN)
+    await seedUser(db, ORGANIZER)
     eventId = await seedEvent(db)
     adultTierId = await seedTier(db, eventId, { label: 'Adult', priceCents: 16000 })
     childTierId = await seedTier(db, eventId, { label: 'Child', priceCents: 9000 })
@@ -417,5 +428,50 @@ describe('the event in the URL must own the registration', () => {
 
         expect(mockSendRecovery).not.toHaveBeenCalled()
         expect((await registrationRow()).viewToken).toBe(hashViewToken(seeded.viewToken))
+    })
+})
+
+/* Removing people, changing the payment status and cancelling are the owner's. Each is refused
+   before anything is written, so an organizer's mixed save never half-lands. */
+describe('what an organizer may not do', () => {
+    const saveAsOrganizer = (body: Record<string, unknown>) =>
+        actions.save(makeEvent(body, {}, ORGANIZER))
+
+    it('still saves contact edits', async () => {
+        const result = await saveAsOrganizer(editForm({ contactName: 'Alice P. Patterson' }))
+
+        expect(result).toMatchObject({ saved: true })
+        expect((await registrationRow()).contactName).toBe('Alice P. Patterson')
+    })
+
+    it('refuses a status change and writes nothing else in the same save', async () => {
+        const result = await saveAsOrganizer(
+            editForm({ status: 'waived', contactName: 'Alice P. Patterson' }),
+        )
+
+        expect(result).toMatchObject({ status: 403 })
+        const row = await registrationRow()
+        expect(row.status).toBe('pending')
+        expect(row.contactName).toBe('Alice Patterson')
+        expect(mockSendConfirmation).not.toHaveBeenCalled()
+    })
+
+    it('refuses a removal', async () => {
+        const result = await saveAsOrganizer(editForm({ removedMemberIds: [seeded.memberIds[1]] }))
+
+        expect(result).toMatchObject({ status: 403 })
+        expect(await members()).toHaveLength(2)
+    })
+
+    it('cannot cancel', async () => {
+        let caught: unknown
+        try {
+            await actions.cancel(makeEvent(undefined, {}, ORGANIZER))
+        } catch (err) {
+            caught = err
+        }
+
+        expect(isRedirect(caught)).toBe(true)
+        expect((await registrationRow()).status).toBe('pending')
     })
 })

@@ -10,6 +10,7 @@ import {
     PHOTOS_NAV_LINK,
     REGISTER_NAV_LINK,
 } from '$lib/general/constants'
+import { hasAdminAccess } from '$lib/general/roles'
 import { getInitials } from '$lib/utils'
 
 type Props = {
@@ -68,7 +69,7 @@ const linkClass = (active: boolean) =>
                 <HeartHandshake class="h-4 w-4" />
                 {DONATE_NAV_LINK.label}
             </a>
-            {#if user?.role === 'admin'}
+            {#if hasAdminAccess(user?.role)}
                 <a href="/admin" onclick={onClose} class={linkClass(isActive('/admin'))}>
                     <LayoutDashboard class="h-4 w-4" />
                     Admin

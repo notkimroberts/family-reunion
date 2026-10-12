@@ -263,6 +263,7 @@ async function handleCopy(url: string) {
                         placeholderText="Fill in the contact's details above and press Save to continue."
                         contactSuffix="contact"
                         showStatus
+                        canWaive={data.isOwner}
                         bind:status={$form.status} />
                     {#if $errors.status?.[0]}
                         <p class="text-destructive mt-2 text-sm">{$errors.status[0]}</p>

@@ -1,4 +1,3 @@
-import { env } from '$env/dynamic/private'
 import { requireAdmin } from '$lib/server/auth/guards'
 import { isOwner } from '$lib/server/auth/isOwner'
 import type { LayoutServerLoad } from './$types'
@@ -22,6 +21,6 @@ export const load: LayoutServerLoad = async (event) => {
         /* Drives whether the registrations page offers the Event settings link. The server still
            guards the settings load and every action there — this only stops advertising a door that
            will not open. */
-        isOwner: isOwner(user, env.OWNER_EMAIL),
+        isOwner: isOwner(user),
     }
 }

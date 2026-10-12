@@ -16,5 +16,4 @@ export const env: Record<string, string> = {
     RESEND_API_KEY: 're_test_stub',
     RESEND_WEBHOOK_SECRET: 'whsec_resend_test_stub',
     BETTER_AUTH_URL: 'http://localhost:5173',
-    OWNER_EMAIL: 'owner@example.com',
 }

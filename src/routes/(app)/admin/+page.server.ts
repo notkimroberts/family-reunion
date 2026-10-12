@@ -1,4 +1,3 @@
-import { env } from '$env/dynamic/private'
 import { requireAdmin } from '$lib/server/auth/guards'
 import { isOwner } from '$lib/server/auth/isOwner'
 import { getEventSummaries } from '$lib/server/registrations'
@@ -22,6 +21,6 @@ export const load: PageServerLoad = async (event) => {
         events: await getEventSummaries(),
         /* Hiding is not the protection — /admin/event/new calls requireOwner in its load and in its
            action. This only stops advertising a door that will not open. */
-        isOwner: isOwner(user, env.OWNER_EMAIL),
+        isOwner: isOwner(user),
     }
 }

@@ -408,7 +408,7 @@ $effect(() => {
                 Photos contributed by the family, waiting on a decision. Nothing here is publicly
                 visible until it is approved.
             </p>
-            <PhotoQueue photos={data.pendingPhotos} />
+            <PhotoQueue photos={data.pendingPhotos} canDelete={data.isOwner} />
 
             {#if data.eventPhotos.length > 0}
                 <PublishedPhotos photos={data.eventPhotos} />

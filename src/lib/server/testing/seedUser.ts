@@ -1,4 +1,5 @@
 import { drizzle } from 'drizzle-orm/pglite'
+import { ORGANIZER_ROLE } from '$lib/general/constants'
 import * as schema from '$lib/server/db/schema'
 
 type TestDb = ReturnType<typeof drizzle<typeof schema>>
@@ -9,7 +10,7 @@ type TestDb = ReturnType<typeof drizzle<typeof schema>>
    registration_audit's foreign key and actor snapshot point at. */
 export async function seedUser(
     db: TestDb,
-    user: { id?: string; name?: string; email?: string } = {},
+    user: { id?: string; name?: string; email?: string; role?: string } = {},
 ) {
     const [row] = await db
         .insert(schema.user)
@@ -17,7 +18,7 @@ export async function seedUser(
             id: user.id ?? 'user-abc',
             name: user.name ?? 'Kim Roberts',
             email: user.email ?? 'kim@example.com',
-            role: 'admin',
+            role: user.role ?? ORGANIZER_ROLE,
         })
         .returning({ id: schema.user.id })
     return row.id

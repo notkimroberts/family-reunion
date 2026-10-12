@@ -33,6 +33,7 @@ let {
     contactSuffix = 'you',
     status = $bindable<Status>('paid'),
     showStatus = false,
+    canWaive = true,
     submitFootnote,
     submitError,
 }: {
@@ -49,6 +50,8 @@ let {
     contactSuffix?: string
     status?: Status
     showStatus?: boolean
+    /* Waiving is the owner's: it gives places away. The server refuses it too. */
+    canWaive?: boolean
     submitFootnote?: string
     /* A submit that failed after validation passed. Shown under the button because on a phone that
        is where the reader is; the form's error summary is a screen above. */
@@ -112,7 +115,9 @@ let {
                     <label for="orderStatus" class="text-sm font-medium">Payment status</label>
                     <NativeSelect id="orderStatus" name="status" bind:value={status}>
                         {#each Object.entries(statusLabelsValue) as [value, label] (value)}
-                            <option {value}>{label}</option>
+                            {#if canWaive || value !== 'waived'}
+                                <option {value}>{label}</option>
+                            {/if}
                         {/each}
                     </NativeSelect>
                 </div>

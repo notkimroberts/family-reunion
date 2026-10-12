@@ -3,6 +3,7 @@ import { type Handle } from '@sveltejs/kit'
 import { sequence } from '@sveltejs/kit/hooks'
 import { svelteKitHandler } from 'better-auth/svelte-kit'
 import { building, dev } from '$app/environment'
+import { OWNER_ROLE } from '$lib/general/constants'
 import { auth } from '$lib/server/auth'
 import { sessionLocals } from '$lib/server/auth/sessionLocals'
 import { canonicalHostRedirect } from '$lib/server/canonicalHostRedirect'
@@ -10,13 +11,14 @@ import { dbg } from '$lib/server/debug'
 import { logServerError } from '$lib/server/logServerError'
 import { securityHeaders } from '$lib/server/securityHeaders'
 
+/* The owner, so local dev reaches every screen. To see the organizer's view, sign in as one. */
 const DEV_ADMIN_USER = {
     id: 'dev-admin',
     name: 'Dev Admin',
     email: 'admin@localhost',
     emailVerified: true,
     image: null,
-    role: 'admin',
+    role: OWNER_ROLE,
     createdAt: new Date(),
     updatedAt: new Date(),
 }
