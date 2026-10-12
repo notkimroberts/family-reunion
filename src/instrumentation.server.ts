@@ -10,7 +10,7 @@ Sentry.init({
        Dev errors belong in the terminal, which already shows them. */
     enabled: import.meta.env.PROD,
 
-    environment: import.meta.env.MODE,
+    environment: import.meta.env.VITE_SENTRY_ENVIRONMENT,
     release: import.meta.env.VITE_SENTRY_RELEASE,
 
     tracesSampleRate: 1.0,
