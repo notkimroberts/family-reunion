@@ -4,6 +4,30 @@ These checks need a person to do them: dashboards, DNS, money, phones and judgme
 
 **Tick the boxes in the description of the draft PR that adds this file. Do not merge that PR**, because it only exists to give the checklist a UI. This file is a copy taken when the PR was last updated.
 
+**Progress: 66 of 113 done (58%)** — counted 2026-10-12.
+
+| Section | Done |
+| --- | --- |
+| 1. Photos (now) | 4/4 |
+| 2. Merge the release PR (#87) | 3/5 |
+| 2a. Registration opens on October 31 (#92) | 4/6 |
+| 3a. Take control of the domain | 5/5 |
+| 3b. Email (before #88) | 10/16 |
+| 3c. Website (before #88) | 4/4 |
+| 3d. Services that call the site (before #88) | 3/4 |
+| 3e. Switch the app (merge #88) | 3/3 |
+| 3f. Check everything on the new domain | 4/6 |
+| 3h. Everywhere the domain is printed | 2/4 |
+| 4. Stripe (before any real money) | 5/6 |
+| 5. Railway | 4/4 |
+| 6. Content | 2/7 |
+| 7. Payment rehearsal (with live keys, real card, then refund) | 0/10 |
+| 8. Devices | 2/3 |
+| 9. People | 0/3 |
+| 10. Housekeeping | 2/3 |
+| 11. Scam protection | 7/12 |
+| 12. Scam protection: later | 2/8 |
+
 Pull requests:
 
 - **#86** `fix/photos-s3-sockets`: photos fix. Merged 2026-10-03.
@@ -14,6 +38,12 @@ Pull requests:
 - **#92** `feat/registration-opens`: registration stays closed until 2026-10-31 9:00 AM Pacific. Merged 2026-10-08.
 - **#95** `fix/organizers-address`: the site's address becomes `organizers@` (was `reunion@`, which does not exist in Workspace). Merged 2026-10-08.
 - **#99** `fix/www-redirect`: `www` 301s to the bare domain over HTTPS, path kept. Merged 2026-10-09.
+- **#103** `feat/lookalike-domain-redirect`: `pattersonsfamilyreunion.com` and its `www` 301 to the real domain. Merged 2026-10-12.
+- **#104** `feat/admin-2fa`: TOTP 2FA required for every admin, `admin:reset-2fa`. Tested locally 2026-10-12; ready to merge (conflict with #108 resolved).
+- **#105** `chore/american-spelling-check`: CI and pre-commit fail on British spelling in added lines. Merged 2026-10-12.
+- **#106** report-only Content Security Policy, reported to Sentry. Merged 2026-10-12.
+- **#107** `chore/american-spelling-cleanup`: American spelling across the codebase. Merged 2026-10-12.
+- **#108** Sentry: a local build's errors and CSP reports go under `SENTRY_ENVIRONMENT`. Merged 2026-10-12.
 
 ---
 
@@ -38,18 +68,18 @@ Pull requests:
 - [x] Check that CI is green on #92, then merge it. Railway runs migration `0023`, which sets the opening to Saturday, October 31, 2026 at 9:00 AM Pacific.
 - [x] Open `/register`. It must say "Come back on Saturday, October 31, 2026 at 9:00 AM PDT" and show no form.
 - [x] Open the home page. In place of **Register Now** it must say "Registration opens Saturday, October 31, 2026 at 9:00 AM PDT".
-- [ ] Settings → **Registration opens** shows `2026-10-31 09:00`. To move the date, change it there; leave it blank to open registration at once.
+- [x] Settings → **Registration opens** shows `2026-10-31 09:00`. To move the date, change it there; leave it blank to open registration at once.
 - [ ] Tell the family the date: a Facebook post, and the same time on anything already shared.
 - [ ] On October 31 after 9:00 AM Pacific, check that the form is back and do one test registration.
 
 ## 3. Cut over everything to `pattersonfamilyreunion.com`
 
-Do the parts in order. **Do not merge #88 before 3e.** #88 changes the From address of every email, the Zelle address shown on the site and the domain printed on the paper form. If the email setup is not ready, a family pays and gets no management link.
+Do the parts in order. **Do not merge #88 before 3e.** #88 changes the From address of every email, the Zelle address shown on the site and the domain printed on the paper form. If the email setup is not ready, a family pays and gets no view link.
 
 ### 3a. Take control of the domain
 
 - [x] Sign in to the registrar account that holds `pattersonfamilyreunion.com`. If someone else holds it, have it moved into the committee's account first: they unlock it and give you the transfer code, or they add you as the owner.
-- [ ] Make the account safe to keep for years. The account email must be one the committee controls, not a personal address that can lapse. Turn on two-factor sign-in.
+- [x] Make the account safe to keep for years. The account email must be one the committee controls, not a personal address that can lapse. Turn on two-factor sign-in.
 - [x] Turn on the registrar lock (transfer lock), auto-renew with a card that does not expire soon, and WHOIS privacy. Write down the renewal date.
 - [x] DNS host: **Namecheap**. In Namecheap, go to **Domain List → Manage → Domain** and check that **Nameservers** says **Namecheap BasicDNS**. With **Custom DNS** the records live elsewhere and the Namecheap steps below do not apply. Namecheap supports ALIAS records, which Railway needs for the root domain.
 - [x] Before you change anything, screenshot every DNS record the domain already has. If it served an old site or old email, note which records were for that.
@@ -63,21 +93,21 @@ Do the parts in order. **Do not merge #88 before 3e.** #88 changes the From addr
   - [ ] The next Google report shows SPF **pass** for Google's servers.
   - [ ] Every `source_ip` in every report is Google, Resend (Amazon SES) or another service you set up yourself. An address you do not recognize means someone else is sending mail as our domain.
   - [ ] Once site emails go out from the new domain (the previews now, real ones after 3e), their rows show DKIM **pass** with selector `resend` and SPF **pass** on `send.pattersonfamilyreunion.com`.
-- [ ] **Root SPF record:** one TXT record at Host `@`, now `v=spf1 include:_spf.google.com ~all` (reported live on Oct 8, after the first report). Keep it the **only** SPF record at `@`; two is an error that breaks both. Resend does not belong in it, because Resend's SPF is on `send.`. If another service ever sends with the root domain as its sender, add it to this same record.
+- [x] **Root SPF record:** one TXT record at Host `@`, now `v=spf1 include:_spf.google.com ~all` (reported live on Oct 8, after the first report). Keep it the **only** SPF record at `@`; two is an error that breaks both. Resend does not belong in it, because Resend's SPF is on `send.`. If another service ever sends with the root domain as its sender, add it to this same record. **Verified 2026-10-09** with Google DNS: exactly one SPF record at `@`, `v=spf1 include:_spf.google.com ~all`.
 - [ ] **DMARC policy, step 2:** after 1–2 weeks of clean reports, change `p=none` to `p=quarantine`. Inboxes then put mail that fails DMARC in spam.
 - [ ] **DMARC policy, step 3:** after another 1–2 weeks of clean reports, change it to `p=reject`. Inboxes then refuse mail that pretends to come from our domain.
 - [x] **Who receives our mail: Google.** No ImprovMX. Google (Workspace) both sends and receives `organizers@pattersonfamilyreunion.com`, which the Oct 7 report's `google` DKIM key confirms on the sending side.
 - [x] **Google MX records:** in Namecheap → **Advanced DNS → Mail Settings**, choose **Gmail** (or **Custom MX** with the MX record Google Admin shows, usually `smtp.google.com`, priority 1). Delete any other MX records at `@`. Leave the MX record on `send.`: that one is Resend's, for bounces, and it is separate. In Google Admin, check that the domain's MX setup shows as verified.
-- [ ] **Create `organizers@` in Google Workspace, then merge #95.** #95 switches the site, every email and the Zelle instructions from `reunion@` to `organizers@`. Until it merges, the site names `reunion@`, which bounces. Mail to it bounces until it exists: `admin@` is a real user, and `organizers@` is not yet a user, alias or group. Pick one:
+- [x] **Create `organizers@` in Google Workspace, then merge #95.** #95 switches the site, every email and the Zelle instructions from `reunion@` to `organizers@`. Until it merges, the site names `reunion@`, which bounces. Mail to it bounces until it exists: `admin@` is a real user, and `organizers@` is not yet a user, alias or group. Pick one:
   - **Alias** (one person reads it). In admin.google.com → **Directory → Users**, open that user, then **User information → Alternate email addresses** and add `reunion`. Then in that person's Gmail → **Settings → Accounts → Send mail as**, add `organizers@pattersonfamilyreunion.com`, so replies go out from `organizers@` and not `admin@`.
   - **Google Group** (several organizers read it). Create the group `organizers@` and add the organizers. Set **who can post** to **Anyone on the web**: a group accepts mail only from inside the organization by default, so mail from family members would bounce.
   - **No catch-all.** Do not route unrecognized addresses to a mailbox. It would collect spam, hide misprinted addresses, and make `payments@`, `organizer@` or any other name at the domain look official, against the scam rules. Add each extra address by name, for example `dmarc@` for the DMARC reports.
-- [ ] **Test `organizers@`.** From a personal account:
+- [x] **Test `organizers@`.** From a personal account:
   - Send an email to `organizers@pattersonfamilyreunion.com`. It must arrive in the alias's inbox, or for every group member.
   - Reply to it. The reply must come **from** `organizers@`, not from `admin@`, and must arrive.
   - Send an email to a made-up address, such as `nobody@pattersonfamilyreunion.com`. It must **bounce**, which proves there is no catch-all.
 - [x] **Zelle:** enroll `organizers@pattersonfamilyreunion.com` with Zelle at PNC (section 13). Once #95 merges, the site names this address as the only Zelle recipient. Send $1 to it from another account to prove it works. **Done 2026-10-08.**
-- [ ] Send yourself the email previews from the new domain: `bun run email:preview -- --send you@example.com`. They must arrive in the inbox, not spam.
+- [x] Send yourself the email previews from the new domain: `bun run email:preview -- --send you@example.com`. They must arrive in the inbox, not spam.
 
 ### 3c. Website (before #88)
 
@@ -95,9 +125,9 @@ Do the parts in order. **Do not merge #88 before 3e.** #88 changes the From addr
 
 ### 3d. Services that call the site (before #88)
 
-- [ ] **Stripe webhooks**, in test mode and in live mode: change the endpoint URL to `https://pattersonfamilyreunion.com/api/webhooks/stripe`. Edit the existing endpoint, so its signing secret stays the same. If you create a new endpoint, copy its new signing secret into `STRIPE_WEBHOOK_SECRET`. The webhook's URL decides the domain of the management link in every confirmation email.
+- [ ] **Stripe webhooks**, in test mode and in live mode: change the endpoint URL to `https://pattersonfamilyreunion.com/api/webhooks/stripe`. Edit the existing endpoint, so its signing secret stays the same. If you create a new endpoint, copy its new signing secret into `STRIPE_WEBHOOK_SECRET`. The webhook's URL decides the domain of the view link in every confirmation email.
 - [x] **Resend webhook:** change it to `https://pattersonfamilyreunion.com/api/webhooks/resend`. If the secret changes, update `RESEND_WEBHOOK_SECRET`.
-- [ ] **Stripe Dashboard → Public details:** set the website to `https://pattersonfamilyreunion.com` and the support email to `organizers@pattersonfamilyreunion.com`.
+- [x] **Stripe Dashboard → Public details:** set the website to `https://pattersonfamilyreunion.com` and the support email to `organizers@pattersonfamilyreunion.com`.
 - [x] **Sentry:** add the new domain to Allowed Domains.
 
 ### 3e. Switch the app (merge #88)
@@ -109,8 +139,8 @@ Do the parts in order. **Do not merge #88 before 3e.** #88 changes the From addr
 ### 3f. Check everything on the new domain
 
 - [x] `/robots.txt` shows `Sitemap: https://pattersonfamilyreunion.com/sitemap.xml`.
-- [ ] The payment-safety box on `/`, `/register` and `/donate` names `pattersonfamilyreunion.com` and `organizers@pattersonfamilyreunion.com`.
-- [ ] Do one test registration. The confirmation email comes from `organizers@pattersonfamilyreunion.com`, its links open `pattersonfamilyreunion.com`, the header photo loads, and a reply reaches the `organizers@` Google mailbox.
+- [x] The payment-safety box on `/`, `/register` and `/donate` names `pattersonfamilyreunion.com` and `organizers@pattersonfamilyreunion.com`.
+- [x] Do one test registration. The confirmation email comes from `organizers@pattersonfamilyreunion.com`, its links open `pattersonfamilyreunion.com`, the header photo loads, and a reply reaches the `organizers@` Google mailbox.
 - [ ] Recover a link at `/register/recover` and make a test gift at `/donate`. Both emails come from the new domain.
 - [x] Paste `https://pattersonfamilyreunion.com` into the Facebook Sharing Debugger and into iMessage. The preview shows Will and Roxie.
   - [ ] **Facebook Sharing Debugger warning (2026-10-08):** "The following required properties are missing: og:title, og:description, fb:app_id". The preview still works, but Facebook guesses the title and text. Ask the developer to add `og:title` and `og:description` to the page head, then click **Scrape Again** in the debugger. `fb:app_id` only links the page to a Facebook app for Facebook's own statistics; it can stay missing.
@@ -127,18 +157,18 @@ Not needed: `pattersonfamilyreunion27.com` was only used for testing, never live
 ### 3h. Everywhere the domain is printed
 
 - [ ] Facebook: update the event, the group and the pinned payment post.
-- [ ] Reprint the paper forms, because they print the domain. Replace the save-the-date flyer if it shows the old domain.
+- [x] Reprint the paper forms, because they print the domain. Replace the save-the-date flyer if it shows the old domain.
 - [ ] Rebuild the Facebook FAQ carousel (`bun social/facebook-faq/build.ts`) if it should show `organizers@pattersonfamilyreunion.com` in place of the committee Gmail.
 - [x] Update email signatures and anything the committee has already printed or posted.
 
 ## 4. Stripe (before any real money)
 
-- [ ] Put the **live** `STRIPE_SECRET_KEY` and the **live-mode** `STRIPE_WEBHOOK_SECRET` on Railway. They are two different values. A test-mode secret with a live key makes every webhook fail. Payments then succeed, but registrations stay `pending` and no email goes out.
-- [ ] Dashboard → Public details: set the business name to "Patterson Family Reunion", the support email to `organizers@pattersonfamilyreunion.com`, the phone to `(510) 809-8309`, and the website to `https://pattersonfamilyreunion.com`.
-- [ ] Statement descriptor: `PATTERSON REUNION`. **Shortened descriptor: `PATTERSON`.** The code adds `* REUNION` or `* GIFT`, so the total must stay at 22 characters or fewer.
-- [ ] Branding: icon `static/will_and_roxie_512.png`, logo, and brand and accent colours that match the site.
-- [ ] Customer emails: turn **off** the Stripe receipts for successful payments and for refunds. The site sends its own confirmation, and two emails confuse people.
-- [ ] Turn on Apple Pay and Google Pay.
+- [ ] Put the **live** `STRIPE_SECRET_KEY` and the **live-mode** `STRIPE_WEBHOOK_SECRET` on Railway. They are two different values. A test-mode secret with a live key makes every webhook fail. Payments then succeed, but registrations stay `pending` and no email goes out. **2026-10-09: Railway still has the `sk_test_` key.** Create the live webhook endpoint (`checkout.session.completed`, Snapshot, API `2026-08-26.dahlia`) and keep its secret until go-live; swap both values in one save.
+- [x] Dashboard → Public details: set the business name to "Patterson Family Reunion", the support email to `organizers@pattersonfamilyreunion.com`, the phone to `(510) 809-8309`, and the website to `https://pattersonfamilyreunion.com`.
+- [x] Statement descriptor: `PATTERSON REUNION`. **Shortened descriptor: `PATTERSON`.** The code adds `* REUNION` or `* GIFT`, so the total must stay at 22 characters or fewer.
+- [x] Branding: icon `static/will_and_roxie_512.png`, logo, and brand and accent colors that match the site.
+- [x] Customer emails: turn **off** the Stripe receipts for successful payments and for refunds. The site sends its own confirmation, and two emails confuse people.
+- [x] Turn on Apple Pay and Google Pay.
 
 ## 5. Railway
 
@@ -154,7 +184,7 @@ Not needed: `pattersonfamilyreunion27.com` was only used for testing, never live
 - [ ] The venue is at 2323 Broadway and the hotel at 2455 Broadway, about one block apart. The site says "half a block" in the hotel tagline, on the register page and on the paper form. Choose the correct words.
 - [ ] Check that the new phone number `(510) 809-8309` appears everywhere: the site, the emails, the paper form and the Facebook carousel.
 - [x] **Find out the correct payee name for checks.** It is **Patterson Reunion Association**, the name on the PNC deposit account.
-- [ ] **Ship the payee change: merge #93.** Production still says checks go to "Patterson Family Reunion" until it merges. Then check that the payment box on `/`, `/register` and `/donate`, the paper form, the confirmation email and the pinned Facebook post all say "Patterson Reunion Association".
+- [x] **Ship the payee change: merge #93.** Production still says checks go to "Patterson Family Reunion" until it merges. Then check that the payment box on `/`, `/register` and `/donate`, the paper form, the confirmation email and the pinned Facebook post all say "Patterson Reunion Association".
 - [ ] Read every email on an iPhone and in Gmail, in light mode and in dark mode. To send them all now from the verified domain:
       `bun run email:preview -- --send you@example.com --from-domain pattersonfamilyreunion27.com`
       The header photo shows after #87 deploys.
@@ -165,18 +195,18 @@ Not needed: `pattersonfamilyreunion27.com` was only used for testing, never live
 - [ ] Register 1 adult, 1 child and a gift. The total includes the gift and the email lists the gift.
 - [ ] Cancel at Stripe. The form comes back filled in and nothing is charged.
 - [ ] In the Stripe dashboard, resend the `checkout.session.completed` webhook. No second email arrives.
-- [ ] Admin: enter a paper registration paid by cheque (the email says "received", not "gone through"), one waived, and one pending (the email shows a boxed payment request).
+- [ ] Admin: enter a paper registration paid by check (the email says "received", not "gone through"), one waived, and one pending (the email shows a boxed payment request).
 - [ ] Admin: change one person's T-shirt size. The email shows `M → L` and nothing else.
 - [ ] Admin: cancel with a refund. The email lists each refunded place, the gift is kept, and the refund appears in Stripe.
-- [ ] Recover the management link at `/register/recover`.
+- [ ] Recover the view link at `/register/recover`.
 - [ ] Make a standalone gift at `/donate`. The button says **Donate** and the receipt shows the date.
 - [ ] After the lock date, a submit shows "Registration has closed, so nothing was charged".
 
 ## 8. Devices
 
 - [ ] Test on an iPhone SE or another small phone, on Android Chrome and on an iPad, with the large text setting on and in dark mode.
-- [ ] Check deliverability: Gmail, iPhone Mail, Outlook and Yahoo deliver to the inbox, not to spam. Get a mail-tester.com score.
-- [ ] Check link previews: Facebook Sharing Debugger and iMessage, for `/` and `/register`.
+- [x] Check deliverability: Gmail, iPhone Mail, Outlook and Yahoo deliver to the inbox, not to spam. Get a mail-tester.com score.
+- [x] Check link previews: Facebook Sharing Debugger and iMessage, for `/` and `/register`.
 
 ## 9. People
 
@@ -188,17 +218,23 @@ Not needed: `pattersonfamilyreunion27.com` was only used for testing, never live
 
 - [x] Delete the stale branch `feat/cut-over-to-the-real-reunion-domain` on GitHub. It is from Aug 30, and its PR #71 is closed.
 - [x] Remove the photos worktree after #86 merges: `git worktree remove ../family-reunion-hotfix`.
-- [ ] Authorise the Sentry MCP (`/mcp`). The Resend MCP is failing at the network proxy.
+- [ ] Authorize the Sentry MCP (`/mcp`). The Resend MCP is failing at the network proxy. Still unauthorized on 2026-10-12.
 
 ## 11. Scam protection
 
+- **2FA is PR #104, tested locally 2026-10-12 and ready to merge.** Merging signs every admin out of `/admin` until they enroll; the owner enrolls first.
 - [ ] Before the 2FA change deploys, tell every admin to have an authenticator app ready. Each admin must set up 2FA at the next sign-in. The owner goes first.
-- [ ] Store every admin's backup codes in a safe place. If an admin loses the phone and the codes, run `bun run admin:reset-2fa <email>` through `railway ssh`.
-- [ ] After the deploy, run `curl -sI https://<domain>/` and look for the security headers. Then check that Stripe Checkout opens, the map loads, and photos and the photo zip load.
+- [x] Store every admin's backup codes in a safe place. If an admin loses the phone and the codes, run `bun run admin:reset-2fa <email>` through `railway ssh`.
+- [ ] After the deploy, run `curl -sI https://<domain>/` and look for the security headers. Then check that Stripe Checkout opens, the map loads, and photos and the photo zip load. **Headers verified 2026-10-12:** all six present (`frame-ancestors 'none'`, `X-Frame-Options: DENY`, `nosniff`, `Referrer-Policy`, `Permissions-Policy`, HSTS 1 year).
 - [x] Check that section 5's `ADDRESS_HEADER` and `XFF_DEPTH` are set. Without them, the recovery-email limit treats all visitors as one IP address.
 - [ ] Facebook: pin a post with the same payment rules as the site. Make the group require admin approval for new posts and new members. Fake "pay here" posts are the most likely attack.
 - [ ] Tell the committee: organizers never ask for payment by text, and they use only the official Zelle account.
-- [ ] Optional: register one common misspelling of the domain (about $12 per year) and redirect it to the real domain.
+- [x] Optional: register one common misspelling of the domain (about $12 per year) and redirect it to the real domain. **Bought `pattersonsfamilyreunion.com` (2026-10-12).**
+  - [x] **Railway** (Pro allows 20 custom domains per service): on `family-reunion-app`, add `pattersonsfamilyreunion.com` and `www.pattersonsfamilyreunion.com`, port 8080. Namecheap's own redirect is not an option: it does not answer HTTPS.
+  - [x] Namecheap → `pattersonsfamilyreunion.com` → **Advanced DNS**: delete the parking records. Add **ALIAS** `@` and **CNAME** `www` to the targets Railway shows (ALIAS, not CNAME, at `@`), and both `_railway-verify` TXT records.
+  - [x] Lock it against fake email: `TXT @ v=spf1 -all` and `TXT _dmarc v=DMARC1; p=reject;`. Add `MX @ .` priority `0` (null MX) if Namecheap accepts it. Then nobody can send mail that passes as this domain.
+  - [x] Merge **#103**, which adds the look-alike to the app's redirect.
+  - [ ] When Railway shows both certificates active, test `https://pattersonsfamilyreunion.com/register`, `https://www.pattersonsfamilyreunion.com/register` and `http://pattersonsfamilyreunion.com/register` with `curl -sI`. Each must end at `301` with `location: https://pattersonfamilyreunion.com/register`.
 
 ## 12. Scam protection: later
 
@@ -209,7 +245,7 @@ These items are not in the current work. Do them in this order.
   - Ask the developer to build email links and Stripe URLs from `BETTER_AUTH_URL`, not from the host of the request.
 - [ ] **Content Security Policy, report-only first.** Do not enforce it first: one missing source breaks part of a page with no error the user can see.
   - [x] Add `Content-Security-Policy-Report-Only`, with reports to Sentry. The policy is `kit.csp.reportOnly` in `svelte.config.js`. Merged in #106 on 2026-10-12.
-  - [ ] Deploy. Then use every page: register through to Stripe, donate, contribute a photo, open the program page map, and sign in to admin.
+  - [ ] Deploy. Then use every page: register through to Stripe, donate, contribute a photo, open the program page map, and sign in to admin. **Deployed 2026-10-12** (#106, Railway deployment SUCCESS); the page walk-through is still to do.
   - [ ] **Read the CSP issues in Sentry, each week, from 2026-10-12 to 2026-10-26.** They are in the `family-reunion` project, with titles like `Blocked 'script' from 'example.com'`. You can also ask Claude to read them.
     - If the source is ours (Stripe, Sentry, Google Maps, the site), add it to the policy in `svelte.config.js`. Each addition restarts the 2 weeks.
     - If the source is `chrome-extension://`, `moz-extension://` or `safari-web-extension://`, ignore it. Those are the visitor's browser extensions.
