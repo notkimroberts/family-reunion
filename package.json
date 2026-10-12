@@ -18,6 +18,7 @@
         "admin:reset-password": "bun scripts/resetAdminPassword.ts",
         "email:preview": "svelte-kit sync && bun scripts/previewEmails.ts",
         "format": "prettier --write .",
+        "lint:spelling": "bun scripts/checkAmericanSpelling.ts --base origin/main",
         "lint": "prettier --check . && eslint .",
         "prepare": "husky",
         "release": "commit-and-tag-version",
