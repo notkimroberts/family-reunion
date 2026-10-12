@@ -1,10 +1,16 @@
 import adapter from '@sveltejs/adapter-node'
 import { vitePreprocess } from '@sveltejs/vite-plugin-svelte'
+import { loadEnv } from 'vite'
+
+/* Same source as Sentry.init's environment (vite.config.ts), so a local build's reports are not
+   filed as production. Mode 'production': only a build sends reports — securityHeaders strips
+   report-uri in dev. */
+const sentryEnvironment =
+    loadEnv('production', process.cwd(), '').SENTRY_ENVIRONMENT || 'production'
 
 /* Sentry's security endpoint, built from SENTRY_DSN (a .ts constant this file cannot import).
    contentSecurityPolicy.test.ts fails if the two drift apart. */
-const SENTRY_CSP_REPORT_URI =
-    'https://o4506248569946112.ingest.us.sentry.io/api/4511474410061824/security/?sentry_key=44700b1cf399333eea0d49e221aee58c&sentry_environment=production'
+const SENTRY_CSP_REPORT_URI = `https://o4506248569946112.ingest.us.sentry.io/api/4511474410061824/security/?sentry_key=44700b1cf399333eea0d49e221aee58c&sentry_environment=${encodeURIComponent(sentryEnvironment)}`
 
 /* Report-only: the browser blocks nothing and reports every load the list does not name. A miss in
    an enforced policy breaks part of a page with no visible error, so this runs in production for two

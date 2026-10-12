@@ -1,18 +1,41 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { MAP_EMBED_URL, SENTRY_DSN } from '$lib/general/constants'
 import config from '../../../svelte.config.js'
 
 const reportOnly = config.kit?.csp?.reportOnly ?? {}
 const dsn = new URL(SENTRY_DSN)
 
+/* The config reads SENTRY_ENVIRONMENT when it loads, so each case loads a fresh copy. */
+async function reportEnvironmentFor(sentryEnvironment: string) {
+    vi.stubEnv('SENTRY_ENVIRONMENT', sentryEnvironment)
+    vi.resetModules()
+    const { default: freshConfig } = await import('../../../svelte.config.js')
+    const reportUri = new URL(freshConfig.kit?.csp?.reportOnly?.['report-uri']?.[0] ?? '')
+    return reportUri.searchParams.get('sentry_environment')
+}
+
 /* Each source a page needs and a policy could forget. A miss is silent once the policy enforces. */
 describe('report-only Content Security Policy', () => {
+    afterEach(() => {
+        vi.unstubAllEnvs()
+    })
+
     it('reports to the Sentry project SENTRY_DSN names', () => {
         const reportUri = new URL(reportOnly['report-uri']?.[0] ?? '')
 
         expect(reportUri.origin).toBe(dsn.origin)
         expect(reportUri.pathname).toBe(`/api${dsn.pathname}/security/`)
         expect(reportUri.searchParams.get('sentry_key')).toBe(dsn.username)
+    })
+
+    /* A local build must not file its violations beside production's. */
+    it('files reports under SENTRY_ENVIRONMENT', async () => {
+        expect(await reportEnvironmentFor('development')).toBe('development')
+        expect(await reportEnvironmentFor('production')).toBe('production')
+    })
+
+    it('files reports under production when SENTRY_ENVIRONMENT is empty', async () => {
+        expect(await reportEnvironmentFor('')).toBe('production')
     })
 
     it('lets the browser send errors and replays to Sentry', () => {
