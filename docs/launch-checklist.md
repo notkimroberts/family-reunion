@@ -6,27 +6,27 @@ These checks need a person to do them: dashboards, DNS, money, phones and judgme
 
 **Progress: 66 of 113 done (58%)** — counted 2026-10-12.
 
-| Section | Done |
-| --- | --- |
-| 1. Photos (now) | 4/4 |
-| 2. Merge the release PR (#87) | 3/5 |
-| 2a. Registration opens on October 31 (#92) | 4/6 |
-| 3a. Take control of the domain | 5/5 |
-| 3b. Email (before #88) | 10/16 |
-| 3c. Website (before #88) | 4/4 |
-| 3d. Services that call the site (before #88) | 3/4 |
-| 3e. Switch the app (merge #88) | 3/3 |
-| 3f. Check everything on the new domain | 4/6 |
-| 3h. Everywhere the domain is printed | 2/4 |
-| 4. Stripe (before any real money) | 5/6 |
-| 5. Railway | 4/4 |
-| 6. Content | 2/7 |
-| 7. Payment rehearsal (with live keys, real card, then refund) | 0/10 |
-| 8. Devices | 2/3 |
-| 9. People | 0/3 |
-| 10. Housekeeping | 2/3 |
-| 11. Scam protection | 7/12 |
-| 12. Scam protection: later | 2/8 |
+| Section                                                       | Done  |
+| ------------------------------------------------------------- | ----- |
+| 1. Photos (now)                                               | 4/4   |
+| 2. Merge the release PR (#87)                                 | 3/5   |
+| 2a. Registration opens on October 31 (#92)                    | 4/6   |
+| 3a. Take control of the domain                                | 5/5   |
+| 3b. Email (before #88)                                        | 10/16 |
+| 3c. Website (before #88)                                      | 4/4   |
+| 3d. Services that call the site (before #88)                  | 3/4   |
+| 3e. Switch the app (merge #88)                                | 3/3   |
+| 3f. Check everything on the new domain                        | 4/6   |
+| 3h. Everywhere the domain is printed                          | 2/4   |
+| 4. Stripe (before any real money)                             | 5/6   |
+| 5. Railway                                                    | 4/4   |
+| 6. Content                                                    | 2/7   |
+| 7. Payment rehearsal (with live keys, real card, then refund) | 0/10  |
+| 8. Devices                                                    | 2/3   |
+| 9. People                                                     | 0/3   |
+| 10. Housekeeping                                              | 2/3   |
+| 11. Scam protection                                           | 7/12  |
+| 12. Scam protection: later                                    | 2/8   |
 
 Pull requests:
 
