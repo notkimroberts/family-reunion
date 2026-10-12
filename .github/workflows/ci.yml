@@ -11,6 +11,9 @@ jobs:
             FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
         steps:
             - uses: actions/checkout@v4
+              with:
+                  # The spelling check diffs against the base branch, which a shallow clone lacks.
+                  fetch-depth: 0
 
             - uses: oven-sh/setup-bun@v2
               with:
@@ -21,6 +24,9 @@ jobs:
 
             - name: Lint
               run: bun run lint
+
+            - name: American spelling in added lines
+              run: bun scripts/checkAmericanSpelling.ts --base origin/${{ github.base_ref }}
 
             - name: Type check
               run: bun run check
