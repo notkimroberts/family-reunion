@@ -36,7 +36,7 @@ export function hotelSection(siteOrigin: string): { textLines: string[]; html: s
             : []),
     ]
 
-    /* Both colours set on each paragraph, like every other block: dark-mode auto-inversion otherwise
+    /* Both colors set on each paragraph, like every other block: dark-mode auto-inversion otherwise
        leaves it unreadable. */
     const paragraphStyle = `font-family:${fontStack};font-size:14px;line-height:1.6;color:${textColor};background-color:transparent;`
     const deadlineSentence = HOST_HOTEL.bookingDeadline

@@ -3,7 +3,7 @@ import { db } from '$lib/server/db'
 import { photos } from '$lib/server/db/schema'
 import { photoCursorAfter, photoCursorBefore } from './_photoCursor'
 
-export type PhotoNeighbours = {
+export type PhotoNeighbors = {
     previousId: string | undefined
     nextId: string | undefined
     position: number
@@ -23,10 +23,10 @@ export type PhotoNeighbours = {
 
    Deliberately does NOT wrap around at the ends. Reaching the last photo and being silently returned
    to the first reads as a bug; a disabled arrow says "that is all of them". */
-export async function getPhotoNeighbours(
+export async function getPhotoNeighbors(
     photoId: string,
     year?: number,
-): Promise<PhotoNeighbours | undefined> {
+): Promise<PhotoNeighbors | undefined> {
     const scope = (extra?: ReturnType<typeof sql>) =>
         and(
             eq(photos.status, 'approved'),

@@ -15,7 +15,7 @@ const TERMINAL_STATUSES: readonly RegistrationStatus[] = ['refunded']
    returning undefined instead of throwing. Adding a second terminal status would have meant finding
    all seven.
 
-   The MESSAGE stays with the caller. What an organiser should do next is different when they were
+   The MESSAGE stays with the caller. What an organizer should do next is different when they were
    trying to add someone than when they were renaming the contact, and collapsing seven specific
    sentences into one generic 409 would trade a real thing for a tidy one. */
 export function assertRegistrationMutable(status: RegistrationStatus, message: string): void {

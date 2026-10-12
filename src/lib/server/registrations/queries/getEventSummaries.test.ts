@@ -70,7 +70,7 @@ describe('getEventSummaries', () => {
 
     /* postgres returns sum() as a STRING. Adding without coercing concatenates: '80000' + '48000'
        would become '8000048000', a plausible-looking number three orders of magnitude out. This is
-       now the driver's real behaviour rather than a fixture that says 'cents' is a string. */
+       now the driver's real behavior rather than a fixture that says 'cents' is a string. */
     it('coerces the string sums postgres returns', async () => {
         const eventId = await seedEvent(db, { year: 2027 })
         await seedRegistration(db, {

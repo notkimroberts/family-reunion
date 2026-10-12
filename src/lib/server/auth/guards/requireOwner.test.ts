@@ -86,7 +86,7 @@ describe('requireOwner', () => {
     })
 
     /* The deliberate fail-open, and the reason it is safe: role 'admin' is still required, so the
-       degraded state is the old behaviour rather than an open door. */
+       degraded state is the old behavior rather than an open door. */
     it('lets any admin through when OWNER_EMAIL is unset', async () => {
         const requireOwner = await loadRequireOwner()
 

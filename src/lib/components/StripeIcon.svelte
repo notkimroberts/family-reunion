@@ -1,7 +1,7 @@
 <script lang="ts">
 /* The Stripe brand mark, following FacebookIcon/InstagramIcon: a plain inline SVG rather than a
    dependency. currentColor by default so it can sit muted in a table row and still be legible in dark
-   mode; pass fill="#635BFF" (Stripe's own purple) where the brand colour is wanted. */
+   mode; pass fill="#635BFF" (Stripe's own purple) where the brand color is wanted. */
 let { class: className = 'h-4 w-4', fill = 'currentColor' }: { class?: string; fill?: string } =
     $props()
 </script>

@@ -31,7 +31,7 @@ export type EventPerson = {
    six is six chairs, six meals and six shirts, and the bookings view collapses it to a single row.
 
    'paid' and 'waived' only. A pending registration is not an attendee yet and a refunded one is not one
-   any more, so including either would inflate every count an organiser reads off this. The bookings view
+   any more, so including either would inflate every count an organizer reads off this. The bookings view
    is where pending money is chased.
 
    Ordered by the contact then the person, so a party stays together. */

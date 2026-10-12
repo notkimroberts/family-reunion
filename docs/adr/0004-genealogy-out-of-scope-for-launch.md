@@ -37,7 +37,7 @@ stay in the schema, unread. No migration, and nothing is dropped.
   event, same query scope, different grain. As separate tabs the second one was named after its contents
   while being used for its one action; with the action gone, a tab of its own could not be justified.
 - **A toggle keeps both a click away.** A party of six is one row in Bookings and six chairs in People,
-  and an organiser needs both readings within the same minute.
+  and an organizer needs both readings within the same minute.
 - **`?view=` is safe where `?eventId` was not.** ADR 0003 removed a search param because two pages
   disagreed about what its absence meant. This one is scoped to a single route and means nothing
   anywhere else; it is in the URL only so the lens survives a reload and a trip into a registration.

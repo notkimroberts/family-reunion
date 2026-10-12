@@ -20,7 +20,7 @@ import { getStripe } from '$lib/server/stripe'
 
    `fee`, not `amount - net`: they agree for a plain charge, but `net` is what lands in the balance and
    the two diverge for cases like a partially-captured payment. `fee` is the number Stripe's dashboard
-   shows as "Fee", which is the one an organiser reconciles against. */
+   shows as "Fee", which is the one an organizer reconciles against. */
 export async function retrievePaymentFee(paymentIntentId: string): Promise<number | undefined> {
     try {
         const paymentIntent = await getStripe().paymentIntents.retrieve(paymentIntentId, {

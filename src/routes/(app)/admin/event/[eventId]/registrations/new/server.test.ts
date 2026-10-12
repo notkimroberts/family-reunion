@@ -172,8 +172,8 @@ describe('POST /admin/event/[eventId]/registrations/new', () => {
 
     /* Email is lowercased in the action, not the schema — a schema transform would rewrite what
        the user is typing during client-side validation. /register/recover matches on exact
-       contact email, so this normalisation is what makes recovery work. */
-    it('normalises the contact email before storing it', async () => {
+       contact email, so this normalization is what makes recovery work. */
+    it('normalizes the contact email before storing it', async () => {
         await actions.default(makeEvent())
         expect(mockCreateAdminRegistration).toHaveBeenCalledWith(
             expect.objectContaining({ contactEmail: 'alice@example.com' }),

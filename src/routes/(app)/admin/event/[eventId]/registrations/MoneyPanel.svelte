@@ -7,7 +7,7 @@ import type { EventMoney } from './eventMoney'
 /* What the reunion has, as one figure with its workings under it.
 
    THE HEADLINE IS THE POINT. This panel used to print "In the bank" twice — once for registrations,
-   once for gifts — and leave the organiser to add them up; the first question anyone brings to this
+   once for gifts — and leave the organizer to add them up; the first question anyone brings to this
    screen is "how much money do we have", and it now has one answer. The rows beneath are the terms
    of that sum, and getEventMoney's test pins them to it: registrations + gifts − fees − losses is
    the figure above them, or the panel is lying about its own arithmetic.
@@ -25,7 +25,7 @@ let { money }: { money: EventMoney } = $props()
 /* Assembled from what is actually true, not printed unconditionally.
 
    These were two paragraphs of prose sitting in the middle of a column of figures, which pushed the
-   order sheet off the fold. Behind an ⓘ they are still one tap away for the organiser who wonders
+   order sheet off the fold. Behind an ⓘ they are still one tap away for the organizer who wonders
    why the total is short — the same move the Comped line already makes. */
 let notes = $derived([
     money.feesAreExact

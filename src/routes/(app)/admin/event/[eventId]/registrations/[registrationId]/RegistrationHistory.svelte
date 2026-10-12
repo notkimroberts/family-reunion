@@ -54,7 +54,7 @@ function actionLabel(action: string): string {
 }
 
 /* Renders the parts of detail worth reading — a status transition and a person's name. Anything else
-   stays out rather than dumping raw JSON at an organiser. */
+   stays out rather than dumping raw JSON at an organizer. */
 function detailLabel(detail: unknown): string {
     if (typeof detail !== 'object' || detail === null) {
         return ''
@@ -83,7 +83,7 @@ function detailLabel(detail: unknown): string {
     <CardContent>
         {#if history.length === 0}
             <p class="text-muted-foreground text-sm">
-                No admin changes recorded. Anything an organiser changes from here on is listed.
+                No admin changes recorded. Anything an organizer changes from here on is listed.
             </p>
         {:else}
             <ul class="flex flex-col gap-3">

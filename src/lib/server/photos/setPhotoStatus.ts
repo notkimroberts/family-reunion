@@ -6,7 +6,7 @@ import { photos } from '$lib/server/db/schema'
 
    A rejected photo keeps its row and its objects rather than being deleted. That is deliberate: it
    records that a decision was made, so the same image re-uploaded by the same person does not read
-   as a new arrival, and an organiser who mis-taps can undo it. Purging is a separate, explicit act
+   as a new arrival, and an organizer who mis-taps can undo it. Purging is a separate, explicit act
    — see deletePhoto. */
 export async function setPhotoStatus(
     photoId: string,

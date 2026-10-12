@@ -57,7 +57,7 @@ export const POST: RequestHandler = async ({ request }) => {
 
     /* `to` is an array; a confirmation only ever has one recipient, but handle the general case. */
     for (const recipient of event.data.to) {
-        /* Contact emails are stored lowercased by the registration schema, so normalise before
+        /* Contact emails are stored lowercased by the registration schema, so normalize before
            matching or a differently-cased recipient would silently find nothing. */
         const matches = await getRegistrationsByEmail(recipient.trim().toLowerCase())
 
@@ -66,7 +66,7 @@ export const POST: RequestHandler = async ({ request }) => {
             emailId: event.data.email_id,
             subject: event.data.subject,
             detail: detail ?? null,
-            /* Name the affected registrations so an organiser can act rather than guess. */
+            /* Name the affected registrations so an organizer can act rather than guess. */
             registrationIds: matches.map((match) => match.id).join(',') || 'none',
         })
     }

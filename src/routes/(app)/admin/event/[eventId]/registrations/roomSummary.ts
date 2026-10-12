@@ -3,7 +3,7 @@ import type { RegistrationSummary } from '$lib/server/registrations'
 /* How many rooms to hold at the host hotel.
 
    PARTIES AND PEOPLE BOTH, because neither answers the question alone: a hotel block is negotiated in
-   rooms, and a party of five needs more than one. The organiser divides; this reports the two figures
+   rooms, and a party of five needs more than one. The organizer divides; this reports the two figures
    honestly rather than guessing an occupancy.
 
    Counted over paid-and-waived bookings only, the same set the shirt and meal counts use, for the

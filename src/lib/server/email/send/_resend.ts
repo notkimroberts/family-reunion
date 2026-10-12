@@ -26,7 +26,7 @@ function getResend(): Resend | undefined {
 
    replyTo is what makes the templates' "Questions? Reply to this email" true. The From address is on
    APP_DOMAIN because that is the domain verified in Resend and DKIM/SPF have to align on it; where
-   replies land is a separate decision, and this header keeps it one (see CONTACT_EMAIL). The SDK takes camelCase `replyTo` and serialises it to `reply_to`; passing `reply_to`
+   replies land is a separate decision, and this header keeps it one (see CONTACT_EMAIL). The SDK takes camelCase `replyTo` and serializes it to `reply_to`; passing `reply_to`
    directly is silently ignored.
 
    idempotencyKey (format `<event-type>/<entity-id>`, 24h window) makes a retried send

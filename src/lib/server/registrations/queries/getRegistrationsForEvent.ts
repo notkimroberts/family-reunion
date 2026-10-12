@@ -11,7 +11,7 @@ export type RegistrationSummary = {
     /* The enum, not a plain string. Drizzle already returns the union here — the hand-written
        annotation was pure widening, and it was load-bearing widening: it is why the admin LIST could
        not pass a row to getPaymentState, and so could not tell an abandoned Stripe checkout from a
-       cheque that has not arrived. That distinction is the whole reason getPaymentState exists. */
+       check that has not arrived. That distinction is the whole reason getPaymentState exists. */
     status: (typeof registrationStatusEnum.enumValues)[number]
     stripeSessionId: string | null
     /* For the dashboard deep link on a paid row. Null for anything not paid online. */
@@ -41,11 +41,11 @@ export type RegistrationSummary = {
    the net tier price while online ones carry the Stripe gross-up: each row records what that
    person actually cost, which is the honest figure, so a mixed party's total is a mix by design.
 
-   Includes every status, cancelled ones too — an organiser needs to see that a registration was
+   Includes every status, cancelled ones too — an organizer needs to see that a registration was
    refunded, not have it vanish.
 
    stripeSessionId is returned so the list can distinguish a public registration abandoned at
-   checkout from a paper one awaiting a cheque. Both are 'pending' and they need opposite
+   checkout from a paper one awaiting a check. Both are 'pending' and they need opposite
    follow-ups — see getPaymentState. */
 export async function getRegistrationsForEvent(eventId: string): Promise<RegistrationSummary[]> {
     const rows = await db

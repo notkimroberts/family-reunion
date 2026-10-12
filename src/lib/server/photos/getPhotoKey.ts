@@ -5,7 +5,7 @@ import type { PhotoVariant } from './getServablePhotoKey'
 
 /* Resolves a key with NO status check.
 
-   For the moderation queue only: an organiser cannot decide on a photo they are not allowed to
+   For the moderation queue only: an organizer cannot decide on a photo they are not allowed to
    look at. Every caller must have passed requireAdmin first. Public paths use
    getServablePhotoKey, which is the one that enforces 'approved'. */
 export async function getPhotoKey(

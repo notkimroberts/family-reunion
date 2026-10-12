@@ -21,7 +21,7 @@ export type DonationSummary = {
 /* Every gift recorded against one reunion, newest first.
 
    Includes pending and refunded rows, like the registrations list does: a pending gift is an
-   abandoned checkout, and an organiser reconciling against Stripe needs to see that it exists
+   abandoned checkout, and an organizer reconciling against Stripe needs to see that it exists
    rather than wonder where it went. */
 export async function getDonationsForEvent(eventId: string): Promise<DonationSummary[]> {
     return db

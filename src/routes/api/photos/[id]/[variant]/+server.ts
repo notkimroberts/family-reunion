@@ -25,7 +25,7 @@ const VARIANTS: PhotoVariant[] = ['display', 'thumb']
    most of what this feature would ever cost in egress.
 
    Do NOT make the cache public or the max-age long. A shared proxy holding a copy would keep
-   serving a photo after an organiser rejected it, which removes the only protection the feature
+   serving a photo after an organizer rejected it, which removes the only protection the feature
    has. */
 export const GET: RequestHandler = async ({ params, url, locals, request }) => {
     const variant = params.variant as PhotoVariant

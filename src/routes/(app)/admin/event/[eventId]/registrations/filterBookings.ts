@@ -7,7 +7,7 @@ import type { RegistrationStatus } from '$lib/utils'
    An undefined status is the unfiltered chip — "All" is not a status, so it cannot be a value.
 
    Searches the contact only. A booking is identified by whoever made it; searching the guests too
-   would return parties whose visible row matches nothing an organiser typed, which reads as a bug. */
+   would return parties whose visible row matches nothing an organizer typed, which reads as a bug. */
 export function filterBookings(
     registrations: readonly RegistrationSummary[],
     query: { search: string; status: RegistrationStatus | undefined },

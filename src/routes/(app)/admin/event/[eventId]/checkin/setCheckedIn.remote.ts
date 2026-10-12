@@ -18,7 +18,7 @@ const checkinInput = z.object({
    request and the in-function guard is the whole protection.
 
    eventId comes from the payload, not from `params`: inside a remote function `params` describes the
-   page the call came from and is client-controllable, so it must never decide authorisation. The server
+   page the call came from and is client-controllable, so it must never decide authorization. The server
    function pairs the member against it and 404s on a mismatch. */
 export const setCheckedIn = command(checkinInput, async ({ memberId, eventId, checkedIn }) => {
     const admin = requireAdmin(getRequestEvent())

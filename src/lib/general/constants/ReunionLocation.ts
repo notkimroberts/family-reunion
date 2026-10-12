@@ -13,7 +13,7 @@ export type ReunionLocation = {
     /* Where a room in the reunion's block is actually booked, when a block is held. Distinct from
        websiteUrl: the hotel's own site quotes rack rates and knows nothing about the block. */
     bookingUrl?: string
-    /* Last day the block's discounted rate is honoured, already formatted for display. A plain
+    /* Last day the block's discounted rate is honored, already formatted for display. A plain
        string, not a Date: it is never compared, only printed. */
     bookingDeadline?: string
     instagramUrl?: string

@@ -24,7 +24,7 @@ export function toE164(phone: string): string {
     if (digits.length === 10) {
         return `+1${digits}`
     }
-    /* Not a shape we recognise. Return the digits rather than guessing a country code onto them —
+    /* Not a shape we recognize. Return the digits rather than guessing a country code onto them —
        a wrong prefix dials the wrong person, an unprefixed number just fails to dial. */
     return digits
 }

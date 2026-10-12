@@ -61,7 +61,7 @@ describe('stripeFeeOnChargeCents', () => {
     })
 
     /* Round-trips with the gross-up, which is the property the panel depends on: charge the grossed-up
-       amount, and what lands is the tier price the organiser set. */
+       amount, and what lands is the tier price the organizer set. */
     it.each([100, 5000, 10000, 16000, 26000, 58000])(
         'leaves the intended net of %d cents after the fee',
         (net) => {

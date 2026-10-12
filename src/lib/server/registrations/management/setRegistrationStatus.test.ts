@@ -105,7 +105,7 @@ describe('setRegistrationStatus', () => {
         expect((await rowOf(seeded.registrationId)).status).toBe('pending')
     })
 
-    /* A no-op must not bump updatedAt either — an organiser re-selecting the status they are already
+    /* A no-op must not bump updatedAt either — an organizer re-selecting the status they are already
        on should not move the registration up a list sorted by recency. */
     it('writes nothing when the status already matches', async () => {
         const seeded = await seedRegistration(db, { status: 'paid' })

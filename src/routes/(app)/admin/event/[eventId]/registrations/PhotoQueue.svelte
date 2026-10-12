@@ -19,7 +19,7 @@ let { photos }: Props = $props()
         {#each photos as photo (photo.id)}
             <li class="border-border flex flex-col gap-3 rounded-lg border p-3">
                 <!-- The admin variant of the byte proxy serves pending photos; the public one does
-                     not. An organiser cannot decide on something they are not allowed to see. -->
+                     not. An organizer cannot decide on something they are not allowed to see. -->
                 <img
                     src="/api/photos/{photo.id}/display"
                     alt={photo.caption ?? 'Contributed photograph awaiting review'}

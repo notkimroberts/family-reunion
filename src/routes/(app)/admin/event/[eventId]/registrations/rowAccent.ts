@@ -1,6 +1,6 @@
 import { getPaymentState } from '$lib/utils'
 
-/* The coloured left edge on a booking row.
+/* The colored left edge on a booking row.
 
    Amber when the row needs chasing, green when the money is in, red when it was cancelled and
    refunded. Both pending states share amber and both paid states share green, because the edge

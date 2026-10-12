@@ -19,13 +19,13 @@ without holding an account.
 
 Registration is fully public. Each registration is owned by a **management token** — 32 random
 bytes, base64url — and that token is the only credential. `/register/manage` performs no
-per-request auth check: possession of the token _is_ the authorisation.
+per-request auth check: possession of the token _is_ the authorization.
 
 The database stores only `sha256(token)`. The plaintext exists in exactly two places: the URL
 sent to the registrant, and Stripe session metadata, so the webhook can build the manage link
 for the confirmation email.
 
-Users still exist, but only for organisers, who sign in with email and password to reach
+Users still exist, but only for organizers, who sign in with email and password to reach
 `/admin`.
 
 ## Rationale
@@ -53,7 +53,7 @@ Users still exist, but only for organisers, who sign in with email and password 
   `src/routes/(app)/register/recover/server.test.ts`.
 - **Tokens live in email indefinitely.** No expiry, because an expired link would strand
   someone mid-event. Accepted.
-- **No "my registrations" view for a signed-in organiser.** Their own registration is reached
+- **No "my registrations" view for a signed-in organizer.** Their own registration is reached
   by token like everyone else's.
 
 ## Consequences

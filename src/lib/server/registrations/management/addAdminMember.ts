@@ -10,14 +10,14 @@ import { assertRegistrationMutable, touchRegistration } from '../lifecycle'
 
 /* Adds one party member to an existing registration, offline.
 
-   Id-based and admin-guarded rather than token-gated: the caller is an organiser, and the
+   Id-based and admin-guarded rather than token-gated: the caller is an organizer, and the
    database stores only sha256(token), so admin code cannot present the plaintext the
    registrant-facing management functions require.
 
    Deliberately different from addMember (checkout/addMember.ts) in two ways:
 
    - It never touches Stripe. addMember always opens a Checkout session, which is wrong for a
-     family paying by cheque.
+     family paying by check.
    - It snapshots the tier's NET priceCents, exactly as createAdminRegistration does, so an
      offline addition sits on the same price basis as the rest of the party rather than carrying
      a Stripe gross-up. stripePaymentIntentId stays null, which is also what marks the row as

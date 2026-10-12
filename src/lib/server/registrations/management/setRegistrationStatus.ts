@@ -5,7 +5,7 @@ import { registrationStatusEnum, registrations } from '$lib/server/db/schema'
 import { dbg } from '$lib/server/debug'
 import { assertRegistrationMutable } from '../lifecycle'
 
-/* The statuses an organiser may set by hand — the enum minus 'refunded', which must go through
+/* The statuses an organizer may set by hand — the enum minus 'refunded', which must go through
    cancelRegistrationAsAdmin so the money actually goes back. Derived rather than spelled out, so adding a
    status to the enum cannot leave this list silently stale. */
 export type AdminSettableStatus = Exclude<
@@ -54,7 +54,7 @@ export async function setRegistrationStatus(params: {
         .update(registrations)
         .set({
             status: params.status,
-            /* Recorded when the organiser says the money arrived, and CLEARED when they take it back.
+            /* Recorded when the organizer says the money arrived, and CLEARED when they take it back.
                A registration moved from paid to pending is owed again, and a stale paid date beside a
                Pending badge is worse than no date — it reads as a payment that has gone missing. Waived
                gets none: nothing was paid, so there is no payment date to show. */

@@ -13,7 +13,7 @@ let previousDecode: Promise<unknown> = Promise.resolve()
    also keeps a hostile file inside the wasm sandbox rather than in native code.
 
    libheif applies the HEIF rotation and mirror boxes itself, so the pixels come back upright. The
-   EXIF Orientation tag must NOT be applied on top: for HEIF it is informational, and honouring it
+   EXIF Orientation tag must NOT be applied on top: for HEIF it is informational, and honoring it
    would rotate an iPhone portrait twice.
 
    Measured: a 12 MP photo costs ~300 MB of RSS and a 24 MP one ~540 MB, and the process keeps that

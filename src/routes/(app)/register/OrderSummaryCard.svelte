@@ -137,7 +137,7 @@ let {
                  what the reunion costs. Presented as a rate card, not as options to choose between:
                  which tier applies follows from age.
 
-                 It is labelled, and the card is titled "What it costs" until there is an order,
+                 It is labeled, and the card is titled "What it costs" until there is an order,
                  because two price rows under an "Order Summary" heading read as a basket with
                  something already in it — one report of exactly that. Nothing here is chargeable
                  yet; nobody has been added. -->

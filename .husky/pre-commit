@@ -11,4 +11,6 @@ if git diff --cached --name-only | grep -qx 'bun.lock'; then
     fi
 fi
 
+bun scripts/checkAmericanSpelling.ts --staged
+
 bunx lint-staged

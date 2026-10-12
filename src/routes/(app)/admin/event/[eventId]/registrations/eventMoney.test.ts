@@ -5,7 +5,7 @@ import { getDonationTotals } from './donationTotals'
 import { getEventMoney } from './eventMoney'
 import { getRegistrationTotals } from './registrationTotals'
 
-/* The one figure an organiser is actually looking for: what the reunion has.
+/* The one figure an organizer is actually looking for: what the reunion has.
 
    THE INVARIANT, and the reason this module exists. The panel prints the headline first and its
    contributing lines beneath it, so those lines have to add up to it on screen:
@@ -87,7 +87,7 @@ describe('getEventMoney', () => {
             expectReconciles(money([reg({})], [gift({})]))
         })
 
-        it('holds with cash and cheques in the mix', () => {
+        it('holds with cash and checks in the mix', () => {
             expectReconciles(
                 money([
                     reg({ id: 'a', stripeFeeCents: 509 }),
@@ -122,7 +122,7 @@ describe('getEventMoney', () => {
         })
     })
 
-    /* The defect the redesign exists to fix: two "In the bank" figures the organiser had to add up. */
+    /* The defect the redesign exists to fix: two "In the bank" figures the organizer had to add up. */
     it('adds registration money and gift money into one spendable figure', () => {
         const registrations = getRegistrationTotals([reg({ stripeFeeCents: 509 })])
         const gifts = getDonationTotals([gift({ stripeFeeCents: 175 })])
@@ -154,7 +154,7 @@ describe('getEventMoney', () => {
         expect(result.bankedCents).toBe(0)
     })
 
-    it('reports cash and cheques as still to deposit', () => {
+    it('reports cash and checks as still to deposit', () => {
         const result = money([reg({ stripeSessionId: null, totalCents: 16000 })])
 
         expect(result.toDepositCents).toBe(16000)

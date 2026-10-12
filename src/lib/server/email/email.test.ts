@@ -10,9 +10,9 @@ vi.mock('$lib/general/constants', () => ({
     APP_NAME: 'Family Reunion',
     REUNION_NAME: 'Roberts Family Reunion',
     APP_DOMAIN: 'example.com',
-    CONTACT_EMAIL: 'organiser@example.com',
+    CONTACT_EMAIL: 'organizer@example.com',
     CONTACT_PHONE: '+1 555 0100',
-    ZELLE_RECIPIENT: 'organiser@example.com',
+    ZELLE_RECIPIENT: 'organizer@example.com',
     zelleQrCodeValue: {
         qrPath: '/zelle_qr.png',
         logoPath: '/zelle_logo.png',
@@ -192,7 +192,7 @@ describe('renderRegistrationConfirmation', () => {
             expect(html).toContain('Prices include the card processing fee.')
         })
 
-        /* An organiser recording a cheque marks it 'paid' too, and "gone through" reads as a card
+        /* An organizer recording a check marks it 'paid' too, and "gone through" reads as a card
            charge to someone who never gave a card. Nor did their price carry a card fee. */
         it('paid by hand says the payment was received, with no card fee note', () => {
             const { text } = renderRegistrationConfirmation({
@@ -222,17 +222,17 @@ describe('renderRegistrationConfirmation', () => {
             expect(text).toContain('not complete until payment is received')
             expect(text).toContain('Amount due: $150.00')
             expect(text).toContain(
-                'Pay by Zelle to organiser@example.com, or by check made out to "Roberts Family Reunion". Reply to this email with any questions.',
+                'Pay by Zelle to organizer@example.com, or by check made out to "Roberts Family Reunion". Reply to this email with any questions.',
             )
             expect(text).not.toContain('card processing fee')
         })
 
         /* The one thing a pending registrant must do. As a muted note under the table it was easy
-           to read past, so it leads — boxed in HTML, capitalised in text, and in the inbox preview. */
+           to read past, so it leads — boxed in HTML, capitalized in text, and in the inbox preview. */
         it('pending puts the payment request up front in every form', () => {
             const { text, html } = renderRegistrationConfirmation({ ...data, status: 'pending' })
             expect(text).toContain(
-                'PAYMENT NEEDED: $150.00. Pay by Zelle to organiser@example.com, or by check made out to "Roberts Family Reunion".',
+                'PAYMENT NEEDED: $150.00. Pay by Zelle to organizer@example.com, or by check made out to "Roberts Family Reunion".',
             )
             expect(text.indexOf('PAYMENT NEEDED')).toBeLessThan(text.indexOf('Your party:'))
             expect(html).toContain('Payment needed: $150.00')
@@ -269,7 +269,7 @@ describe('renderRegistrationConfirmation', () => {
         expect(text).toContain('- Alice (Adult)')
     })
 
-    /* Names and venue text are registrant- or organiser-supplied and land inside HTML. */
+    /* Names and venue text are registrant- or organizer-supplied and land inside HTML. */
     it('escapes HTML in supplied names', () => {
         const { html } = renderRegistrationConfirmation({
             ...data,

@@ -19,7 +19,7 @@ import RegistrationEditForm from './RegistrationEditForm.svelte'
 import RegistrationHistory from './RegistrationHistory.svelte'
 import RegistrationMoneyCard from './RegistrationMoneyCard.svelte'
 
-/* The one thing the status badge cannot say. 'pending' covers both a paper form awaiting a cheque and
+/* The one thing the status badge cannot say. 'pending' covers both a paper form awaiting a check and
    a public registration abandoned at Stripe Checkout, and those need opposite follow-ups — see
    getPaymentState. Rendered as a single line of context under the heading, not as a second status. */
 const pendingReasonValue = {
@@ -45,7 +45,7 @@ let { data, form: actionData } = $props()
    and re-firing a "Changes saved" toast because something unrelated updated would be worse than not
    toasting at all. A fresh action result is always a new object.
 
-   Errors are given no duration, so they sit until dismissed. An organiser who misses "saved, but they
+   Errors are given no duration, so they sit until dismissed. An organizer who misses "saved, but they
    have not been told" believes the registrant was emailed when they were not — that must not be
    allowed to fade on its own. */
 let handledResult: unknown = undefined
@@ -158,7 +158,7 @@ async function handleCopyEmail() {
             </div>
             <!-- Contact details live here rather than in a card of their own: an email and a phone
                  number are not worth a titled panel, and reading them next to the name is how an
-                 organiser actually uses them. -->
+                 organizer actually uses them. -->
             <div class="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
                 <span class="font-medium">{data.registration.contactEmail}</span>
                 <Button type="button" variant="ghost" size="sm" onclick={handleCopyEmail}>
@@ -201,7 +201,7 @@ async function handleCopyEmail() {
                             </form>
                         {/snippet}
                     </TooltipTrigger>
-                    <!-- Written for an organiser, not an engineer. "Only a hash is stored" says
+                    <!-- Written for an organizer, not an engineer. "Only a hash is stored" says
                          nothing to the person deciding whether to press this; what they need to know
                          is that it is safe and what the registrant ends up with. -->
                     <TooltipContent class="max-w-xs">
@@ -212,7 +212,7 @@ async function handleCopyEmail() {
                 </Tooltip>
                 {#if !isCancelled}
                     <!-- Outline rather than destructive: it sits beside the primary action an
-                         organiser actually came here for, and the dialog behind it is where the
+                         organizer actually came here for, and the dialog behind it is where the
                          weight belongs. -->
                     <Button variant="outline" size="sm" onclick={() => (cancelDialogOpen = true)}>
                         <Ban class="size-4" />
@@ -227,12 +227,12 @@ async function handleCopyEmail() {
         {/if}
     </div>
 
-    <!-- Cancellation is the one status that changes what an organiser may DO here, so it keeps an
+    <!-- Cancellation is the one status that changes what an organizer may DO here, so it keeps an
          alert. The rest is said once, by the badge.
 
          What it says about the money depends on whether any arrived. A checkout the payer abandoned
          is cancelled with no refund issued — _performCancellation returns without calling Stripe —
-         and telling an organiser "the money has gone back" there sends them looking for a refund
+         and telling an organizer "the money has gone back" there sends them looking for a refund
          that does not exist, or worse, reassures a registrant who was never charged. -->
     {#if isCancelled}
         <Alert variant="destructive">

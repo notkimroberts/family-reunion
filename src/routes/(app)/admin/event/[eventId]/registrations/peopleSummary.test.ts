@@ -89,7 +89,7 @@ describe('getPeopleSummary', () => {
     })
 
     /* A size from before the list settled must still be visible — it is a real garment somebody needs. */
-    it('keeps an unrecognised size, sorted to the end', () => {
+    it('keeps an unrecognized size, sorted to the end', () => {
         const summary = getPeopleSummary([
             person({ id: 'a', shirtSize: '4XL' }),
             person({ id: 'b', shirtSize: 'M' }),

@@ -11,7 +11,7 @@ import { markDonationPaid } from './markDonationPaid'
    createPendingDonation on why eventId is nullable. */
 const UNATTACHED_EVENT_TITLE = 'the family reunion'
 
-/* Webhook fulfilment for a standalone gift: mark it paid, record what Stripe took, thank the donor.
+/* Webhook fulfillment for a standalone gift: mark it paid, record what Stripe took, thank the donor.
 
    The fee is read BEFORE the update because it is a network call to Stripe and must not hold a
    transaction open, and because the update has to stay the single conditional statement that makes

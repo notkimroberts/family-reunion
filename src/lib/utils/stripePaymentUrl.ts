@@ -8,7 +8,7 @@
    a test key — the one place that actually knows.
 
    Returns undefined rather than a broken link when there is no intent, which is every registration paid
-   by cheque, every abandoned checkout, and everything paid before the id was stored at registration
+   by check, every abandoned checkout, and everything paid before the id was stored at registration
    level. A link that goes nowhere is worse than no link. */
 export function stripePaymentUrl(
     paymentIntentId: string | null | undefined,

@@ -18,7 +18,7 @@ import { seedRegistration } from '$lib/server/testing/seedRegistration'
 
    The version this replaced could not exercise either. Its own comment said so: "That is a database
    guarantee, and this mock cannot exercise it", and the double-count guard had to be asserted as a
-   structural property — that the fee travelled in the same `.set()` as the status — because
+   structural property — that the fee traveled in the same `.set()` as the status — because
    asserting the fee was not written twice "would fail against correct code". Here the test simply
    delivers the same webhook twice and reads the column.
 

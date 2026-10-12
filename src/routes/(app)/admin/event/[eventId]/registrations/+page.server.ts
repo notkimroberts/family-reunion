@@ -27,7 +27,7 @@ import type { Actions, PageServerLoad } from './$types'
    Photos is the odd one and deliberately so: it is NOT scoped to params.eventId. Contributed photos
    carry a nullable event_id (mirroring donations) and the recovered archive has none at all, so a
    queue filtered by year would silently hide the very rows most in need of a decision. There is
-   only ever one queue, and it hangs off whichever year the organiser happens to be looking at. */
+   only ever one queue, and it hangs off whichever year the organizer happens to be looking at. */
 export const load: PageServerLoad = async (event) => {
     requireAdmin(event)
 
@@ -57,14 +57,14 @@ export const load: PageServerLoad = async (event) => {
 }
 
 export const actions: Actions = {
-    /* Corrects the details an organiser fills in from a phone call or a stack of paper forms: shirt size,
+    /* Corrects the details an organizer fills in from a phone call or a stack of paper forms: shirt size,
        birthday, dietary answer, and whether they came last time. Edited straight from the People lens,
        because that is where the gaps are visible and where the shirt and meal counts they feed are read.
 
        DELIBERATELY DOES NOT EMAIL THE REGISTRANT, unlike the save on the registration detail page. That
        one rotates their view token and sends a summary because it can change what they owe and who
        is in their party. This changes neither. Emailing "your details were updated" for each dietary
-       toggle while an organiser fills in eight gaps would train them to ignore the message that carries
+       toggle while an organizer fills in eight gaps would train them to ignore the message that carries
        their only working link — and that link is their sole credential.
 
        It is still audited, so the change is accountable rather than invisible. */

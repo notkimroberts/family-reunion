@@ -21,7 +21,7 @@ job. Three days before launch it offered:
   because admin renders inside the `(app)` route group. Having no top of its own is why the theme toggle
   and sign-out ended up stranded at the bottom of the sidebar.
 - **A dashboard whose headline number was Total Users** — a figure with no bearing on a reunion — and
-  which sat between the organiser and the registration list they actually came for.
+  which sat between the organizer and the registration list they actually came for.
 
 Three UI variants were prototyped on `/admin?variant=` and thrown away; the verdict is recorded in the
 commit that removed them.
@@ -55,14 +55,14 @@ of `requireAdmin`. It **fails open** when the variable is unset, and reports tha
   comparisons gate the app — `requireAdmin`, and the `(app)` group layout — so an owner with any other
   role value would lose `/admin`, `/family-tree`, `/gallery`, `/shop` and `/program`. Better Auth's
   `admin({ adminRoles: [...] })` does not degrade either; it throws at plugin construction, and auth is
-  lazily initialised, so that surfaces on every request including public pages.
+  lazily initialized, so that surfaces on every request including public pages.
 - **Role is self-service.** Better Auth mounts `POST /api/auth/admin/set-role` ahead of SvelteKit
   routing. Its only check is that the caller is an admin; there is no self-target guard. Any admin can
   already grant themselves any role, so a role-keyed owner gate would be decoration.
 - **Identity is the one thing that cannot be edited from inside the app**, which is what makes it a
   usable gate for one person.
 - **Fail-open is the right direction here, and it is a trade, not an oversight.** The degraded state is
-  the previous behaviour: admins only, never the public, because the group layout still requires
+  the previous behavior: admins only, never the public, because the group layout still requires
   `role='admin'`. Failing closed would mean one forgotten Railway variable locks the owner out of their
   own event settings and pricing days before a launch. Wrong-but-recoverable beats right-but-bricked.
 - **Three of the four event statuses mean nobody can register**, including `draft`, which leaves
@@ -73,7 +73,7 @@ of `requireAdmin`. It **fails open** when the variable is unset, and reports tha
 ## Consequences
 
 - **`/admin` is no longer a page.** The old dashboard's year-on-year comparison is gone with it; the
-  numbers an organiser reads now sit beside the registration list, per event. A cross-year view, if
+  numbers an organizer reads now sit beside the registration list, per event. A cross-year view, if
   wanted, needs a new home.
 
   > **Superseded, 2026-08-29.** `/admin` is a page again — a landing page listing the reunions, one card
@@ -83,7 +83,7 @@ of `requireAdmin`. It **fails open** when the variable is unset, and reports tha
   > The rest of this ADR stands: every working view is still event-scoped, and `/admin` navigates to one
   > rather than showing a dashboard of its own.
 
-- **`/admin/event/[eventId]/attendees` changed behaviour, not just location.** It previously shipped
+- **`/admin/event/[eventId]/attendees` changed behavior, not just location.** It previously shipped
   every paid attendee of every reunion and filtered in the browser. The cross-year reading that appeared
   to justify that was never implemented — year was the first sort key, so the same cousin's rows sat as
   far apart as possible, and nothing flagged one as already linked. The genuine cross-year view lives on

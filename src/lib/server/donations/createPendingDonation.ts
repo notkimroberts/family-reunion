@@ -7,7 +7,7 @@ import { createDonationCheckout } from '$lib/server/payments'
 /* Records a pending gift and opens a Stripe Checkout session for it.
 
    DELIBERATELY DOES NOT CHECK THE REGISTRATION LOCK DATE, unlike createPendingRegistration. The
-   lock exists so catering and shirt counts can be finalised; a gift needs no chair, so /donate
+   lock exists so catering and shirt counts can be finalized; a gift needs no chair, so /donate
    keeps working after registration closes — which is also when someone who cannot come is most
    likely to want to give.
 

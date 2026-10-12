@@ -40,7 +40,7 @@ function parseOptionalDate(
 /* Parses and validates the add_tier/update_tier form fields shared by both actions.
 
    A tier is a label and a price. It used to carry an adult/child shirt-size flag as well, which no
-   size list ever read — the label is what tells an organiser which shirts a tier means, and the order
+   size list ever read — the label is what tells an organizer which shirts a tier means, and the order
    sheet groups by it. */
 function parseTierForm(data: FormData):
     | {
@@ -214,7 +214,7 @@ export const actions: Actions = {
        page. It was the last reason that route existed.
 
        The friendly 23505 handling is the point: `one_open_event` is a partial unique index, so opening a
-       second year is a database error rather than a validation failure, and without this the organiser
+       second year is a database error rather than a validation failure, and without this the organizer
        gets a 500 for a mistake with an obvious remedy. */
     update_status: async (event) => {
         requireOwner(event)

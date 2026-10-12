@@ -18,7 +18,7 @@ import type { ConfirmationStatus, RegistrationConfirmationData } from './types'
    still owed), so the money sentence has to change rather than the whole email.
 
    totalLabel describes the same number — the sum of the party's snapshotted prices — so it
-   must not imply money is owed when it is not: labelling a waived party "Amount due" directly
+   must not imply money is owed when it is not: labeling a waived party "Amount due" directly
    contradicts the note beneath it.
 
    action is something the reader must do, shown as a callout under the lead rather than a muted
@@ -47,8 +47,8 @@ const STATUS_COPY: Record<
     },
 }
 
-/* 'paid' covers cash and cheques recorded by an organiser as well as cards, and "your payment has
-   gone through" reads as a card charge to someone who handed over a cheque. */
+/* 'paid' covers cash and checks recorded by an organizer as well as cards, and "your payment has
+   gone through" reads as a card charge to someone who handed over a check. */
 const PAID_BY_HAND_LEAD = 'Your registration is confirmed and we have received your payment.'
 
 /* Online prices are snapshotted with the card fee folded in, while the register page lists the fee
@@ -80,7 +80,7 @@ export function renderRegistrationConfirmation(data: RegistrationConfirmationDat
     const total = `$${formatPrice(data.totalCents)}`
 
     /* An update keeps the status money sentence — what is owed or covered still applies — and gains
-       a heading and lead saying an organiser changed something. Calling an edit "Registration
+       a heading and lead saying an organizer changed something. Calling an edit "Registration
        confirmed" a second time reads as a duplicate and hides the change. */
     const heading = data.isUpdate ? 'Registration updated' : copy.heading
     const updateLead = 'An organizer updated your registration. Here is how it now stands.'

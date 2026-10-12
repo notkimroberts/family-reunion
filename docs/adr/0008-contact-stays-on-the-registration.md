@@ -8,7 +8,7 @@
 `registrations` carries `contact_name`, `contact_email` and `contact_phone`. The contact is also an
 attendee — the public form makes them pick their own tier — so there is a `party_members` row for the
 same person, flagged `is_contact`. That makes `contact_name` and that row's `name` two copies of one
-string, which looks like a normalisation failure and invites the obvious fix: move all three onto
+string, which looks like a normalization failure and invites the obvious fix: move all three onto
 `party_members`, and perhaps rename the table to `registrants` while there.
 
 This ADR records why not, because the question will be asked again.
@@ -67,5 +67,5 @@ accurate word — it is what every row is, contact or not.
   is not in it. That is a product question (should the public Remove refuse on the contact's own row,
   as the admin one does?), not a schema one, and it is deliberately left open.
 - If contact details ever need to belong to a person rather than a booking — several bookings by one
-  organiser, say — the answer is a `contacts` table the registration points at, not columns on
+  organizer, say — the answer is a `contacts` table the registration points at, not columns on
   `party_members`.

@@ -4,7 +4,7 @@ import { REUNION_TIME_ZONE } from '$lib/general/constants'
 /* The inverse of parseReunionWallClock: a stored instant back to the "YYYY-MM-DDTHH:mm" digits an
    <input type="datetime-local"> expects, expressed in the reunion's zone.
 
-   Needed because the box has to show the organiser the same time the public pages do. Reading the
+   Needed because the box has to show the organizer the same time the public pages do. Reading the
    instant back with toISOString() would put UTC digits in the field, so re-saving an untouched form
    would shift the date seven or eight hours every time it was opened.
 

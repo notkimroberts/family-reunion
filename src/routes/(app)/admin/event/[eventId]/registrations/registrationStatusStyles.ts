@@ -8,17 +8,17 @@ import type { RegistrationStatus } from '$lib/utils'
    read two different ways depending on where you looked. These are the database's four statuses and
    nothing else.
 
-   Extracted from RegistrationStatusBadge so the filter buttons can wear the same colours as the rows
+   Extracted from RegistrationStatusBadge so the filter buttons can wear the same colors as the rows
    they filter. Two copies of a palette is the same drift with a longer fuse: a green nobody can find in
-   the list is worse than no colour at all.
+   the list is worse than no color at all.
 
-   Colour carries the meaning at a glance, which is the whole job in a list of thirty: green is money in,
+   Color carries the meaning at a glance, which is the whole job in a list of thirty: green is money in,
    amber is money still owed, blue is comped, red is cancelled. Explicit palette classes rather than
    semantic tokens because the theme has no green or amber token, following the paper-entry success
    banner, and both light and dark are set so auto-inversion cannot wash them out.
 
    Each also carries an icon, so the distinction survives for a reader who cannot separate the greens and
-   ambers — roughly one man in twelve. Colour and shape say the same thing rather than colour alone. */
+   ambers — roughly one man in twelve. Color and shape say the same thing rather than color alone. */
 export const REGISTRATION_STATUS_STYLES = {
     paid: {
         label: 'Paid',

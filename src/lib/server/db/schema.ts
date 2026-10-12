@@ -184,8 +184,8 @@ export const registrations = pgTable(
            Rotation is unavoidable whenever a link has to be re-sent — only the hash is stored, so
            the original plaintext cannot be recovered by anyone. But rotating alone would invalidate
            every link already in the registrant's inbox AND log out an open view session, because
-           the plaintext lives in their reg_token cookie. Honouring the previous hash for a short
-           window means an organiser can edit a registration without silently breaking the
+           the plaintext lives in their reg_token cookie. Honoring the previous hash for a short
+           window means an organizer can edit a registration without silently breaking the
            registrant's access. */
         previousViewToken: text('previous_management_token').unique(),
         previousTokenExpiresAt: timestamp('previous_token_expires_at'),
@@ -208,7 +208,7 @@ export const registrations = pgTable(
         /* The Stripe PaymentIntent for the original checkout, at registration level.
 
            party_members carries its own copy, but that one is per-member and documented as unreliable —
-           null for a cheque payer AND for an abandoned checkout, with removeMember falling back to
+           null for a check payer AND for an abandoned checkout, with removeMember falling back to
            retrieving it from the session. This is the id the admin list links to the Stripe dashboard
            with, so it needs to be the registration's own. */
         stripePaymentIntentId: text('stripe_payment_intent_id'),
@@ -232,7 +232,7 @@ export const registrations = pgTable(
         /* When the money actually arrived, as distinct from updatedAt.
 
            updatedAt cannot answer this: any later edit — a corrected email, a shirt size — bumps it, so
-           it drifts away from the payment date the moment anyone touches the row. Stripe fulfilment also
+           it drifts away from the payment date the moment anyone touches the row. Stripe fulfillment also
            writes no audit row, so before this column there was no record of when an online payment
            landed.
 
@@ -295,7 +295,7 @@ export const partyMembers = pgTable(
            is that person, so their name has one editable field and one writer rather than two copies
            quietly disagreeing. See updateRegistrationContact. */
         isContact: boolean('is_contact').notNull().default(false),
-        /* When this attendee arrived at the reunion, recorded from the door by an organiser.
+        /* When this attendee arrived at the reunion, recorded from the door by an organizer.
 
            A TIMESTAMP, not a boolean: "who was here by 11am" and "who arrived after the food ran
            out" are answerable from an instant and unrecoverable from a flag. NULL means not arrived,
@@ -373,7 +373,7 @@ export const donations = pgTable(
         stripeSessionId: text('stripe_session_id').unique(),
         stripePaymentIntentId: text('stripe_payment_intent_id'),
         status: donationStatusEnum('status').notNull().default('pending'),
-        /* withTimezone, like the reunion_events datetimes: this date is shown to an organiser, so it
+        /* withTimezone, like the reunion_events datetimes: this date is shown to an organizer, so it
            has to survive the server's zone. */
         paidAt: timestamp('paid_at', { withTimezone: true }),
         createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
@@ -396,11 +396,11 @@ export const registrationAuditActionEnum = pgEnum('registration_audit_action', [
 
 /* Append-only record of admin changes to someone else's registration.
 
-   registrations.updated_at was the only trace, so with several organisers sharing the admin panel
+   registrations.updated_at was the only trace, so with several organizers sharing the admin panel
    "who marked this paid?" and "who removed that person?" had no answer. These changes involve money
    and other people's places, which is exactly what wants a history.
 
-   actor_user_id is set null rather than cascade on user delete: removing an organiser's account must
+   actor_user_id is set null rather than cascade on user delete: removing an organizer's account must
    not erase the record that a change happened. detail carries the shape of that action — a status
    change stores { from, to }, a member change stores the name and what altered. */
 export const registrationAudit = pgTable(
@@ -413,7 +413,7 @@ export const registrationAudit = pgTable(
         actorUserId: text('actor_user_id').references(() => user.id, { onDelete: 'set null' }),
         /* Snapshot of who acted, kept alongside the FK rather than relying on it.
 
-           Two reasons. On delete set null erases the actor when an organiser's account is removed,
+           Two reasons. On delete set null erases the actor when an organizer's account is removed,
            which defeats the purpose of a history. And in dev there is no session, so hooks.server.ts
            substitutes a user id that has no row — the FK rejected it and the whole audit write was
            lost silently. A name that is only ever read back needs no referential integrity. */

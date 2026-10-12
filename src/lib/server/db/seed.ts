@@ -288,7 +288,7 @@ async function seed() {
     /* A few standalone gifts per year, plus one attached to a booking, so the Gifts lens, the money
        panel's gift block and the home page's "raised so far" line all have something to render
        locally. One pending row on the open year: that is an abandoned checkout, which is the state
-       an organiser reconciling against Stripe most needs to recognise. */
+       an organizer reconciling against Stripe most needs to recognize. */
     for (const event of events) {
         const eventRegistrations = await db
             .select({ id: schema.registrations.id })

@@ -34,7 +34,7 @@ let saving = $state(false)
 
 /* A size recorded before this list settled — or an adult size on a child, which every form in the app
    currently allows — must still appear, or the select would show the wrong row as selected and the
-   organiser would have no way to see what is actually stored. See shirtSizeOptions. */
+   organizer would have no way to see what is actually stored. See shirtSizeOptions. */
 let sizeOptions = $derived(shirtSizeOptions(value))
 
 function handleChange(changed: Event) {

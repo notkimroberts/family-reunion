@@ -1,5 +1,5 @@
 <script lang="ts">
-/* A tick box with its answer printed beside it. Replaces the first draft's unlabelled grid cells:
+/* A tick box with its answer printed beside it. Replaces the first draft's unlabeled grid cells:
    a column of 22px cells under an "XS S M L…" header asks the reader to count across to find
    their size, which is exactly the kind of thing that goes wrong on paper. */
 let { label }: { label: string } = $props()

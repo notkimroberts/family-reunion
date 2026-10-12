@@ -2,15 +2,15 @@ import { CircleCheck, CircleSlash, Eye, TriangleAlert } from '@lucide/svelte'
 import { WARNING_SURFACE_CLASS } from './WARNING_SURFACE_CLASS'
 import type { EventStatus } from './eventStatuses'
 
-/* One vocabulary for a reunion year's status: label, icon, colour.
+/* One vocabulary for a reunion year's status: label, icon, color.
 
    Shared because three surfaces describe the same four values and had each invented their own. The
    /admin year cards carried a local STATUS_COPY plus a statusTone() that made `closed` grey;
    EventStatusBanner made `closed` amber and had no entry for `open` at all; the settings page printed
-   the raw database word in an outline Badge. Same status, three appearances, and the one an organiser
+   the raw database word in an outline Badge. Same status, three appearances, and the one an organizer
    most needs to notice — a year that is not open — was the quietest of them.
 
-   Colour AND icon, not colour alone: roughly one man in twelve cannot separate the greens from the
+   Color AND icon, not color alone: roughly one man in twelve cannot separate the greens from the
    ambers, so the shape has to carry the same meaning. Explicit palette classes rather than semantic
    tokens because the theme has no green, amber or sky token, and both light and dark are set so
    auto-inversion cannot wash them out. Same reasoning, same palette, as
@@ -23,7 +23,7 @@ import type { EventStatus } from './eventStatuses'
    is the one card that should catch the eye first.
 
    `note` is the consequence in the reader's terms. "Closed" names a state; "nobody can register" is what
-   an organiser is actually deciding about, and it is what the status card shows under the buttons.
+   an organizer is actually deciding about, and it is what the status card shows under the buttons.
 
    DELIBERATELY NOT re-exported from the constants barrel, and imported by path instead. This module
    imports @lucide/svelte, which resolves to .svelte files; `$lib/general/constants` is imported by

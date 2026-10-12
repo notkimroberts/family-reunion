@@ -25,7 +25,7 @@ import { setTestDb } from './pgliteDb'
    suite issues DDL. THE ONE THING IT DOES NOT UNDO IS DDL: a test that creates, alters or drops
    something must restore the template itself rather than assume this cleaned up after it.
 
-   The table list is discovered from the catalogue, never hardcoded. A migration that adds a table
+   The table list is discovered from the catalog, never hardcoded. A migration that adds a table
    has to be truncated automatically or rows start surviving between tests, which presents as
    flakiness somewhere unrelated. Only the `public` schema is touched: drizzle's migration tracker
    lives in its own `drizzle` schema and must survive, since globalSetup's template depends on it.

@@ -4,7 +4,7 @@ import { donations } from '$lib/server/db/schema'
 
 export type RegistrationGift = {
     amountCents: number
-    /* Which charge the gift rode on. Null for a gift an organiser recorded against a paper entry —
+    /* Which charge the gift rode on. Null for a gift an organizer recorded against a paper entry —
        no card was involved, so nothing about it is refundable through Stripe. */
     stripePaymentIntentId: string | null
 }

@@ -8,7 +8,7 @@ import { seedEvent } from '$lib/server/testing/seedEvent'
    these assert on rows, and on which rows each query returns.
 
    What is being pinned is the moderation gate. Upload carries no credential (ADR 0009), so
-   "nothing is public until an organiser approves it" is the only protection the feature has, and it
+   "nothing is public until an organizer approves it" is the only protection the feature has, and it
    is enforced in two independent places — the gallery query and the byte proxy's key lookup. Both
    are tested, because a photo that is merely unlisted is not the same as one that is unreachable. */
 
@@ -31,7 +31,7 @@ const { deletePhoto } = await import('./deletePhoto')
 const { getApprovedPhoto } = await import('./getApprovedPhoto')
 const { getPhotoYears } = await import('./getPhotoYears')
 const { getApprovedPhotoKeysForYear } = await import('./getApprovedPhotoKeysForYear')
-const { getPhotoNeighbours } = await import('./getPhotoNeighbours')
+const { getPhotoNeighbors } = await import('./getPhotoNeighbors')
 const { getEventPhotos } = await import('./getEventPhotos')
 
 let db: Awaited<ReturnType<typeof resetTestDb>>
@@ -247,7 +247,7 @@ describe('arrow navigation', () => {
         const gallery = await getApprovedPhotos()
         expect(gallery.map((p) => p.id)).toEqual([newest, middle, oldest])
 
-        const at = await getPhotoNeighbours(middle)
+        const at = await getPhotoNeighbors(middle)
         expect(at?.previousId).toBe(newest)
         expect(at?.nextId).toBe(oldest)
         expect(at?.position).toBe(2)
@@ -257,10 +257,10 @@ describe('arrow navigation', () => {
     it('does not wrap around at either end', async () => {
         const { oldest, newest } = await threeApproved()
 
-        expect((await getPhotoNeighbours(newest))?.previousId).toBeUndefined()
-        expect((await getPhotoNeighbours(newest))?.position).toBe(1)
-        expect((await getPhotoNeighbours(oldest))?.nextId).toBeUndefined()
-        expect((await getPhotoNeighbours(oldest))?.position).toBe(3)
+        expect((await getPhotoNeighbors(newest))?.previousId).toBeUndefined()
+        expect((await getPhotoNeighbors(newest))?.position).toBe(1)
+        expect((await getPhotoNeighbors(oldest))?.nextId).toBeUndefined()
+        expect((await getPhotoNeighbors(oldest))?.position).toBe(3)
     })
 
     it('stays inside the year when one is given', async () => {
@@ -269,13 +269,13 @@ describe('arrow navigation', () => {
         await setPhotoStatus(only2025, 'approved')
         await setPhotoStatus(other, 'approved')
 
-        const scoped = await getPhotoNeighbours(only2025, 2025)
+        const scoped = await getPhotoNeighbors(only2025, 2025)
 
         expect(scoped?.total).toBe(1)
         expect(scoped?.nextId).toBeUndefined()
         expect(scoped?.previousId).toBeUndefined()
-        /* Unscoped, the 2027 photo IS a neighbour — proving the filter is what excluded it. */
-        expect((await getPhotoNeighbours(only2025))?.total).toBe(2)
+        /* Unscoped, the 2027 photo IS a neighbor — proving the filter is what excluded it. */
+        expect((await getPhotoNeighbors(only2025))?.total).toBe(2)
     })
 
     it('skips photos that are not approved', async () => {
@@ -285,14 +285,14 @@ describe('arrow navigation', () => {
         await setPhotoStatus(first, 'approved')
         await setPhotoStatus(third, 'approved')
 
-        expect((await getPhotoNeighbours(third))?.nextId).toBe(first)
-        expect((await getPhotoNeighbours(third))?.total).toBe(2)
+        expect((await getPhotoNeighbors(third))?.nextId).toBe(first)
+        expect((await getPhotoNeighbors(third))?.total).toBe(2)
     })
 
     it('is undefined for a photo nobody may see', async () => {
         const pending = await createPhoto({ bytes: await samplePhoto() })
 
-        expect(await getPhotoNeighbours(pending)).toBeUndefined()
+        expect(await getPhotoNeighbors(pending)).toBeUndefined()
     })
 })
 

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { toRegistrationIntake } from './toRegistrationIntake'
 
-/* The normalisation that both registration routes depend on and neither may own.
+/* The normalization that both registration routes depend on and neither may own.
 
    It is deliberately NOT in the zod schema: the schemas are shared with client-side validation,
    where a transform would rewrite what someone is halfway through typing. */

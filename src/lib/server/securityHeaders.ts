@@ -1,8 +1,8 @@
 import type { Handle } from '@sveltejs/kit'
 import { dev } from '$app/environment'
 
-/* Headers set on every response. Not a full CSP — a script policy has to list every source (Sentry,
-   the map embed, Stripe) and a miss breaks a page silently; see LAUNCH_CHECKLIST section 12.
+/* Headers set on every response. The enforced CSP is frame-ancestors only. The full policy is
+   report-only, in svelte.config.js, because SvelteKit must add a nonce for its own inline script.
 
    - frame-ancestors / X-Frame-Options: no other site may frame ours. A scam page wrapping the real
      site is a convincing fake; X-Frame-Options covers browsers too old for frame-ancestors, and many
@@ -22,6 +22,17 @@ const securityHeadersValue = {
    hard to leave, and the domain is still moving. */
 const HSTS_VALUE = 'max-age=31536000'
 
+const REPORT_ONLY_HEADER = 'Content-Security-Policy-Report-Only'
+
+/* Dev keeps the policy, so the console still names a violation, but sends Sentry nothing — as
+   hooks.client.ts does. svelte.config.js has no `dev` flag to check. */
+function withoutReportUri(policy: string) {
+    return policy
+        .split(';')
+        .filter((directive) => !directive.trim().startsWith('report-uri'))
+        .join(';')
+}
+
 export const securityHeaders: Handle = async ({ event, resolve }) => {
     const response = await resolve(event)
     Object.entries(securityHeadersValue).forEach(([name, value]) => {
@@ -29,6 +40,10 @@ export const securityHeaders: Handle = async ({ event, resolve }) => {
     })
     if (!dev) {
         response.headers.set('Strict-Transport-Security', HSTS_VALUE)
+    }
+    const reportOnlyPolicy = response.headers.get(REPORT_ONLY_HEADER)
+    if (dev && reportOnlyPolicy) {
+        response.headers.set(REPORT_ONLY_HEADER, withoutReportUri(reportOnlyPolicy))
     }
     return response
 }

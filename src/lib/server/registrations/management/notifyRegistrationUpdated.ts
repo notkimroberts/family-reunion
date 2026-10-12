@@ -22,7 +22,7 @@ function changeFingerprint(changeSummary: RegistrationChange[]): string {
         .slice(0, 16)
 }
 
-/* Tells the registrant that an organiser changed their registration, and gives them a link that
+/* Tells the registrant that an organizer changed their registration, and gives them a link that
    works.
 
    Rotates because it must: only sha256(token) is stored, so the link in the email has to be a fresh
@@ -30,7 +30,7 @@ function changeFingerprint(changeSummary: RegistrationChange[]): string {
    send-before-rotate ordering lives in deliverViewLink.
 
    Throws on send failure, and the caller is expected to report it WITHOUT failing the save — the
-   organiser's change is already committed by then, so presenting it as failed would be a lie. */
+   organizer's change is already committed by then, so presenting it as failed would be a lie. */
 export async function notifyRegistrationUpdated(params: {
     registrationId: string
     changeSummary: RegistrationChange[]
