@@ -29,7 +29,7 @@ describe('quotePartyTotal', () => {
         )
     })
 
-    /* Paper entry. A cheque costs nothing to process, so quoting a fee would invent a deduction
+    /* Paper entry. A check costs nothing to process, so quoting a fee would invent a deduction
        Stripe never made. */
     it('quotes no fee when the money did not go through Stripe', () => {
         const quote = quotePartyTotal([16000, 9000], { applyStripeFee: false })

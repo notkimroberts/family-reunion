@@ -33,7 +33,7 @@ export async function fulfillCheckout(
         return
     }
 
-    /* A gift given on its own at /donate. Its whole fulfilment is the donation module's — nothing
+    /* A gift given on its own at /donate. Its whole fulfillment is the donation module's — nothing
        here concerns a registration. */
     if (metadata.type === 'donation') {
         await fulfillDonation(metadata.donationId, paymentIntentId, origin)
@@ -159,7 +159,7 @@ export async function fulfillCheckout(
     dbg.stripe('checkout.session.completed registrationId=%s', registrationId)
 
     /* Conditional pending → paid transition. Doing it in one statement makes concurrent
-       Stripe redeliveries serialise: exactly one matches and returns a row, so exactly one
+       Stripe redeliveries serialize: exactly one matches and returns a row, so exactly one
        confirmation email is sent. An unconditional update would re-send on every redelivery.
        'pending' is the only legal source state — a waived or refunded registration must not
        be flipped by a stray webhook. */

@@ -10,7 +10,7 @@
    Identity is the thing that cannot be edited from inside the app, so identity is the gate.
 
    FAILS OPEN when ownerEmail is unset, and that is the deliberate trade-off: the degraded state is
-   today's behaviour (any admin, never a stranger — the group layout still requires role 'admin'),
+   today's behavior (any admin, never a stranger — the group layout still requires role 'admin'),
    whereas failing closed would mean a forgotten Railway variable locks the owner out of event settings
    and pricing. Wrong-but-recoverable beats right-but-bricked days before a launch. requireOwner
    reports the missing configuration so it cannot stay unnoticed. */

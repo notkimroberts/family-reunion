@@ -1,6 +1,6 @@
 import { error } from '@sveltejs/kit'
 import { isUuid } from '$lib/general/ids'
-import { getApprovedPhoto, getPhotoNeighbours } from '$lib/server/photos'
+import { getApprovedPhoto, getPhotoNeighbors } from '$lib/server/photos'
 import { parsePhotoYear } from '../parsePhotoYear'
 import type { PageServerLoad } from './$types'
 
@@ -19,14 +19,14 @@ export const load: PageServerLoad = async ({ params, url }) => {
     }
 
     const year = parsePhotoYear(url)
-    const [photo, neighbours] = await Promise.all([
+    const [photo, neighbors] = await Promise.all([
         getApprovedPhoto(params.id),
-        getPhotoNeighbours(params.id, year),
+        getPhotoNeighbors(params.id, year),
     ])
 
-    if (!photo || !neighbours) {
+    if (!photo || !neighbors) {
         error(404, 'Photo not found')
     }
 
-    return { photo, neighbours, year }
+    return { photo, neighbors, year }
 }

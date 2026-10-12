@@ -3,7 +3,7 @@ import { HOST_HOTEL } from '$lib/general/constants'
 import type { PeopleSummary } from './peopleSummary'
 import type { RoomSummary } from './roomSummary'
 
-/* Shirt sizes per tier and the meal split — what an organiser reads down a phone to a supplier.
+/* Shirt sizes per tier and the meal split — what an organizer reads down a phone to a supplier.
 
    Counting is in peopleSummary.ts and tested there. */
 

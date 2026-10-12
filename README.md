@@ -4,7 +4,7 @@
 [![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/project/879a5c19-03d9-426a-aee3-207aec98321a/service/f968a4a8-5fc2-473c-b4a7-fa737dbe9e17)
 [![Sentry](https://img.shields.io/badge/sentry-monitored-362d59)](https://22aae0d29adf.sentry.io/projects/family-reunion/?project=4511474410061824)
 
-A web application for managing family reunions — registration, payments, and the organiser's dashboard for both.
+A web application for managing family reunions — registration, payments, and the organizer's dashboard for both.
 
 ## Tech Stack
 

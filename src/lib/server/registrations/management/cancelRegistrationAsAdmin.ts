@@ -4,13 +4,13 @@ import { db } from '$lib/server/db'
 import { registrations } from '$lib/server/db/schema'
 import { _performCancellation } from './_performCancellation'
 
-/* An organiser cancelling someone else's registration, from the admin registration page.
+/* An organizer cancelling someone else's registration, from the admin registration page.
 
    This exists because a paper registration could not be cancelled at all. setRegistrationStatus refuses
    'refunded' in both directions on purpose — writing that column alone would tell everyone the money
    went back when it had not — and cancelRegistration needs the view token, which the database only
    stores as a hash. So the only route was to email the registrant their own link and ask them to do it,
-   for a family who paid by cheque and rang up to say they cannot come.
+   for a family who paid by check and rang up to say they cannot come.
 
    Id-based and admin-guarded rather than token-gated, for the same reason as updateAdminMemberDetails:
    the token's plaintext is unavailable to admin code by design.
@@ -20,7 +20,7 @@ import { _performCancellation } from './_performCancellation'
    write happens rather than trusted from a caller — the same reasoning as the update_person action.
 
    Deliberately NOT restricted to paper registrations, though that is the case that prompted it. An
-   organiser who needs to cancel a card payment on someone's behalf needs the refund to be issued, and
+   organizer who needs to cancel a card payment on someone's behalf needs the refund to be issued, and
    _performCancellation is the code that does that correctly. Refusing card registrations here would
    leave the harder half of the job undone and invite someone to reach for raw SQL. */
 export async function cancelRegistrationAsAdmin(params: {
@@ -54,8 +54,8 @@ export async function cancelRegistrationAsAdmin(params: {
     }
 
     /* No lock-date check, unlike the registrant's own cancel. assertRegistrationNotClosed exists to stop
-       a REGISTRANT changing their party after the organisers have sent numbers to the caterer — it is
-       not a rule the organisers need protecting from. Someone who cannot come after the lock date is
-       exactly the case an organiser has to be able to record. */
+       a REGISTRANT changing their party after the organizers have sent numbers to the caterer — it is
+       not a rule the organizers need protecting from. Someone who cannot come after the lock date is
+       exactly the case an organizer has to be able to record. */
     await _performCancellation(registration, params.registerUrl)
 }

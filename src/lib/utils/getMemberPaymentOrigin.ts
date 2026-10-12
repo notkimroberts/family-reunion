@@ -4,12 +4,12 @@ export type MemberPaymentOrigin =
 /* How one party member's place was paid for.
 
    Needs both the member's own columns and the registration's, because a member row alone cannot tell
-   the difference between "recorded offline by an organiser" and "part of an online order that was
+   the difference between "recorded offline by an organizer" and "part of an online order that was
    never completed" — in both cases every Stripe column is null. Reading the member alone is exactly
    the bug this replaces.
 
    The registration STATUS is read first. A comped party has a price snapshotted against every member
-   and no payment columns anywhere, which is indistinguishable from a cheque payer by Stripe data alone
+   and no payment columns anywhere, which is indistinguishable from a check payer by Stripe data alone
    — so a waived registration rendered "Recorded offline" beside a "Waived" badge, saying two different
    things about the same money. Nothing was recorded as paid; it was written off.
 
@@ -32,7 +32,7 @@ export function getMemberPaymentOrigin(
         return 'paid_online'
     }
 
-    /* No payment columns at all. If the registration never opened a Stripe session, an organiser
+    /* No payment columns at all. If the registration never opened a Stripe session, an organizer
        entered this person by hand. If it did, this row belongs to an order that never settled — which
        is unpaid, not offline. */
     return registration.stripeSessionId ? 'unpaid' : 'recorded_offline'

@@ -7,7 +7,7 @@
 ## Context
 
 [ADR 0003](./0003-event-scoped-admin-and-owner-only-setup.md) created `/admin/setup` as an owner-only
-area holding the things an organiser touches rarely: reunion years, tiers and prices, photos, the
+area holding the things an organizer touches rarely: reunion years, tiers and prices, photos, the
 storefront, and admin accounts. Five destinations behind one door.
 
 Four of those destinations no longer exist. Photos and the storefront were deleted with the gallery and
@@ -31,7 +31,7 @@ only display the field as a read-only badge.
 `getAdminEvents` / `getAdminUsers` remote functions with the `admin/types.ts` types they returned.
 
 **Creating a year moves to `/admin`**, as a form that opens on demand beside the year cards. It creates
-the year in `draft` with Adult and Child tiers at $0 — unchanged behaviour — then navigates to that
+the year in `draft` with Adult and Child tiers at $0 — unchanged behavior — then navigates to that
 year's settings, because a draft with $0 tiers cannot take a registration and the list would not say so.
 
 > **Amended 2026-08-30 — the create form is its own route, `/admin/event/new`.** The panel that expanded
@@ -59,7 +59,7 @@ of them, while the page for that year rendered the same field as a badge you cou
 facts could not both be right.
 
 **One less concept.** ADR 0003's Organizer/Setup split was about getting developer clutter off the
-organiser's screen. That is still the goal, but the clutter is gone rather than relocated — deleted with
+organizer's screen. That is still the goal, but the clutter is gone rather than relocated — deleted with
 the features that produced it. The remaining admin is three shapes: the list of years, one year's
 registrations, one year's settings.
 

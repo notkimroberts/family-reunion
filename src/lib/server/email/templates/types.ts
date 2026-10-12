@@ -24,9 +24,9 @@ export type RegistrationConfirmationData = {
     venueName?: string
     venueAddress?: string
     status: ConfirmationStatus
-    /* Whether the money came through Stripe rather than to an organiser by hand. Changes the 'paid'
+    /* Whether the money came through Stripe rather than to an organizer by hand. Changes the 'paid'
        copy only: card prices carry the processing fee, and "your payment has gone through" reads as
-       a card charge to someone who handed over a cheque. Required so every producer decides. */
+       a card charge to someone who handed over a check. Required so every producer decides. */
     paidByCard: boolean
     partyMembers: ConfirmationPartyMember[]
     totalCents: number
@@ -35,11 +35,11 @@ export type RegistrationConfirmationData = {
        overcharge. Absent, not zero, when no gift was given. */
     donationCents?: number
     viewUrl: string
-    /* Set when an organiser changed an existing registration rather than a new one arriving. Swaps
+    /* Set when an organizer changed an existing registration rather than a new one arriving. Swaps
        the heading and adds a lead saying so, but keeps the status money sentence below it — the
        amount owed or covered is just as relevant on an update as on a first confirmation. */
     isUpdate?: boolean
-    /* What the organiser changed. Only rendered for an update. Without it the registrant gets a fresh
+    /* What the organizer changed. Only rendered for an update. Without it the registrant gets a fresh
        copy of their details with no indication of what moved. */
     changeSummary?: RegistrationChange[]
 }
@@ -56,7 +56,7 @@ export type RegistrationChange = {
 /* Where the money goes when a registration is cancelled.
 
    This exists because "cancelled" alone cannot be written about honestly. A card payment goes back
-   through Stripe automatically; a cheque or cash handed to an organiser does not, and telling that
+   through Stripe automatically; a check or cash handed to an organizer does not, and telling that
    family "a refund has been issued" would be a straightforward lie followed by a phone call. A
    pending registration never paid, and a waived place never had anything to return.
 

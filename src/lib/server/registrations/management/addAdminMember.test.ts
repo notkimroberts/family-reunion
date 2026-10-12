@@ -5,12 +5,12 @@ import { resetTestDb } from '$lib/server/db/testing/resetTestDb'
 import { seedRegistration } from '$lib/server/testing/seedRegistration'
 import { seedTier } from '$lib/server/testing/seedTier'
 
-/* The organiser adding one person to an existing registration, offline.
+/* The organizer adding one person to an existing registration, offline.
 
    Runs against a real Postgres, so "the row is null" is read back from the column. The version this
    replaced asserted on the object handed to a fake query builder, which meant it could tell an
    omitted key from an explicit null — a distinction the database does not make, and which broke the
-   test the moment the insert shape moved into buildPartyMemberRow without any behaviour changing. */
+   test the moment the insert shape moved into buildPartyMemberRow without any behavior changing. */
 
 const { addAdminMember } = await import('./addAdminMember')
 

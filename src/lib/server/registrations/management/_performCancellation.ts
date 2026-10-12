@@ -14,7 +14,7 @@ import { planRefunds } from './_planRefunds'
 /* Where the money goes back, read off the registration rather than guessed.
 
    'paid' with a Stripe session means Checkout took a card payment, so the refund is automatic.
-   'paid' with no session is a cheque or cash handed to an organiser: nothing to refund through
+   'paid' with no session is a check or cash handed to an organizer: nothing to refund through
    Stripe, and the email must say so instead of promising a refund that will never arrive. */
 function getRefundRoute(registration: {
     status: string
@@ -32,9 +32,9 @@ function getRefundRoute(registration: {
 /* Refunds, marks 'refunded', and emails the registrant — the whole cancellation, minus the question of
    who is allowed to ask for it.
 
-   Cancelling is now organiser-only, through cancelRegistrationAsAdmin. This was extracted when the
+   Cancelling is now organizer-only, through cancelRegistrationAsAdmin. This was extracted when the
    registrant could also cancel their own booking with nothing but the view link — the two paths
-   differed ONLY in how the caller was authorised — and it stays a separate function because that is
+   differed ONLY in how the caller was authorized — and it stays a separate function because that is
    still the right seam: the refund rules, the loud failure, the status write and the email are the
    cancellation, and who may ask for it is not.
 

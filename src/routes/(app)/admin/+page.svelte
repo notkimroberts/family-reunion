@@ -25,7 +25,7 @@ import { cn, formatDateRange, formatPrice } from '$lib/utils'
 /* Status shown as a short headline rather than as the full EventStatusBanner: the banner explains a
    consequence at length, which is right above a page you are working on and too much in a list of four.
 
-   Labels, icons and colours come from EVENT_STATUS_STYLES, shared with the settings page. This file used
+   Labels, icons and colors come from EVENT_STATUS_STYLES, shared with the settings page. This file used
    to carry its own STATUS_COPY and statusTone(), which is how `closed` ended up grey here and amber in
    the banner. */
 
@@ -87,7 +87,7 @@ function dates(event: EventSummary): string | undefined {
                 {@const StatusIcon = status.icon}
                 <!-- The border carries the status, from the same palette as the badge inside the card
                      and as the settings page: green is open and working, sky is a draft, amber is closed,
-                     grey is archived. It replaces a primary-coloured ring that marked the open year but
+                     grey is archived. It replaces a primary-colored ring that marked the open year but
                      said nothing about the other three, so a draft and an archived year looked alike. -->
                 <a
                     href="/admin/event/{event.id}/registrations"
@@ -106,7 +106,7 @@ function dates(event: EventSummary): string | undefined {
                     </div>
 
                     <div class="flex flex-col gap-0.5">
-                        <!-- Icon as well as colour: roughly one man in twelve cannot separate the greens
+                        <!-- Icon as well as color: roughly one man in twelve cannot separate the greens
                              from the ambers, so the shape has to say the same thing. -->
                         <span class="flex items-center gap-1.5 text-xs font-semibold {status.tone}">
                             <StatusIcon class="size-3.5" />

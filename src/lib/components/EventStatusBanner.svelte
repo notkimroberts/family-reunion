@@ -7,7 +7,7 @@ import { cn } from '$lib/utils'
 
    Three of the four statuses mean the public cannot register: a `draft` event is not published at all
    (getOpenEvent returns nothing, so /register has no event), and `closed`/`archived` have stopped.
-   Only `open` is working. A badge next to a heading is exactly the kind of thing an organiser scans
+   Only `open` is working. A badge next to a heading is exactly the kind of thing an organizer scans
    past — and the cost of scanning past it is wondering for a day why nobody is signing up.
 
    So `open` gets NOTHING. Silence is the signal that all is well, and a banner that is always there
@@ -27,7 +27,7 @@ let { status, class: className }: { status: EventStatus; class?: string } = $pro
 /* `open` gets no banner at all — see above. */
 let style = $derived(status === 'open' ? undefined : EVENT_STATUS_STYLES[status])
 let body = $derived(status === 'open' ? undefined : bodyValue[status])
-/* Capitalised so it can be used as a component; {@const} cannot live at the top level of markup. */
+/* Capitalized so it can be used as a component; {@const} cannot live at the top level of markup. */
 let Icon = $derived(style?.icon)
 </script>
 

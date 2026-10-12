@@ -8,7 +8,7 @@ import { viewTokenCandidate } from '../viewTokenCandidate'
    found. Used by the post-checkout polling client.
 
    Accepts a previous token inside its grace period, like every other token path — a registrant
-   polling this page while an organiser edits their registration must not be dropped mid-poll. */
+   polling this page while an organizer edits their registration must not be dropped mid-poll. */
 export async function getRegistrationStatus(viewToken: string): Promise<{
     id: string
     status: (typeof registrationStatusEnum.enumValues)[number]

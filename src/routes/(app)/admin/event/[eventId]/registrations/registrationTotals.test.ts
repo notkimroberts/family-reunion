@@ -94,7 +94,7 @@ describe('getRegistrationTotals', () => {
        uses to name it. */
     it('reports comped places separately from money', () => {
         const totals = getRegistrationTotals([
-            /* Paid by cheque, so no Stripe fee muddies the comparison this test is making. */
+            /* Paid by check, so no Stripe fee muddies the comparison this test is making. */
             reg({
                 id: 'a',
                 status: 'paid',
@@ -177,7 +177,7 @@ describe('getRegistrationTotals', () => {
         /* An adult place nets $160, so the card is charged $165.09 and Stripe keeps $5.09. */
         const ADULT_GROSS = grossUpForStripe(16000)
 
-        it('separates card money from cash and cheques', () => {
+        it('separates card money from cash and checks', () => {
             const totals = getRegistrationTotals([
                 reg({ id: 'a', stripeSessionId: 'cs_1', totalCents: ADULT_GROSS }),
                 reg({ id: 'b', stripeSessionId: null, totalCents: 16000 }),
@@ -189,7 +189,7 @@ describe('getRegistrationTotals', () => {
 
         /* THE point of the split. Cash never went near Stripe, so no fee may be deducted from it —
            a flat "Collected minus 2.9%" would quietly shrink a year of paper registrations. */
-        it('charges no fee against cash or cheques', () => {
+        it('charges no fee against cash or checks', () => {
             const totals = getRegistrationTotals([
                 reg({ id: 'a', stripeSessionId: null, totalCents: 58000 }),
             ])
@@ -346,7 +346,7 @@ describe('getRegistrationTotals', () => {
             expect(totals.bankedCents).toBe(ADULT_GROSS - 509 - 509)
         })
 
-        /* A cancelled cheque registration cost nothing: Stripe never touched it. */
+        /* A cancelled check registration cost nothing: Stripe never touched it. */
         it('loses nothing on a cancelled offline booking', () => {
             const totals = getRegistrationTotals([
                 reg({ status: 'refunded', stripeSessionId: null, totalCents: 16000 }),

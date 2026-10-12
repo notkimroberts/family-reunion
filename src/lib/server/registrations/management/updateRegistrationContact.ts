@@ -52,7 +52,7 @@ export async function updateRegistrationContact(params: {
 
     assertRegistrationMutable(existing.status, 'This registration was cancelled and refunded.')
 
-    /* Normalised here rather than in the schema: the schemas are shared with client-side validation,
+    /* Normalized here rather than in the schema: the schemas are shared with client-side validation,
        where a transform would rewrite what someone is mid-way through typing. */
     const contactName = params.contactName.trim()
     const contactEmail = params.contactEmail.trim().toLowerCase()

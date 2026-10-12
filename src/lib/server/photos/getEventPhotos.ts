@@ -6,7 +6,7 @@ import type { ModerationPhoto } from './getPhotosForModeration'
 /* The photos already published for one reunion year, for the admin lens.
 
    Separate from getPhotosForModeration, which is the pending INBOX and is deliberately unscoped.
-   This is the opposite: everything already decided and attached to this year, so an organiser can
+   This is the opposite: everything already decided and attached to this year, so an organizer can
    see what the family can see and take something down after the fact. Without it the lens showed
    "nothing waiting" beside 290 published photos, which reads as data loss. */
 export async function getEventPhotos(eventId: string): Promise<ModerationPhoto[]> {

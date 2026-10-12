@@ -3,13 +3,13 @@ import { SHIRT_SIZES } from '$lib/general/constants'
 import { shirtSizeOptions } from './shirtSizeOptions'
 
 /* A select that silently drops the stored value is worse than one with an odd extra option: it shows
-   the wrong size as selected, and the organiser reading the shirt order has no way to know. */
+   the wrong size as selected, and the organizer reading the shirt order has no way to know. */
 describe('shirtSizeOptions', () => {
     it('offers the canonical list when nothing is recorded', () => {
         expect(shirtSizeOptions('')).toEqual([...SHIRT_SIZES])
     })
 
-    it.each(SHIRT_SIZES)('offers the canonical list for the recognised size %s', (size) => {
+    it.each(SHIRT_SIZES)('offers the canonical list for the recognized size %s', (size) => {
         expect(shirtSizeOptions(size)).toEqual([...SHIRT_SIZES])
     })
 
@@ -19,13 +19,13 @@ describe('shirtSizeOptions', () => {
         expect(shirtSizeOptions('4XL')).toContain('4XL')
     })
 
-    it('puts the unrecognised value last, where the order sheet also sorts it', () => {
+    it('puts the unrecognized value last, where the order sheet also sorts it', () => {
         const options = shirtSizeOptions('4XL')
         expect(options[options.length - 1]).toBe('4XL')
         expect(options.slice(0, -1)).toEqual([...SHIRT_SIZES])
     })
 
-    it('does not duplicate a recognised size', () => {
+    it('does not duplicate a recognized size', () => {
         const options = shirtSizeOptions('M')
         expect(options.filter((size) => size === 'M')).toHaveLength(1)
     })
@@ -36,7 +36,7 @@ describe('shirtSizeOptions', () => {
         expect(shirtSizeOptions('   ')).toEqual([...SHIRT_SIZES])
     })
 
-    it('trims a padded recognised size rather than appending it', () => {
+    it('trims a padded recognized size rather than appending it', () => {
         expect(shirtSizeOptions(' L ')).toEqual([...SHIRT_SIZES])
     })
 

@@ -119,7 +119,7 @@ function handleRetry() {
         </a>
         <h1>Add your photos</h1>
         <p class="text-muted-foreground">
-            Photographs are checked by an organiser before they appear in the gallery, so it may be
+            Photographs are checked by an organizer before they appear in the gallery, so it may be
             a day or two before yours shows up.
         </p>
     </div>

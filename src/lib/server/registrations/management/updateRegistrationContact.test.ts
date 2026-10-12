@@ -69,7 +69,7 @@ describe('updateRegistrationContact', () => {
         expect((await attendeeRow())?.name).toBe('Alice Patterson')
     })
 
-    it('normalises before comparing, so whitespace is not a rename', async () => {
+    it('normalizes before comparing, so whitespace is not a rename', async () => {
         const result = await updateRegistrationContact({
             registrationId: seeded.registrationId,
             contactName: '  Alice Patterson  ',
@@ -81,7 +81,7 @@ describe('updateRegistrationContact', () => {
         expect((await contactRow()).contactEmail).toBe('alice@example.com')
     })
 
-    /* /register/recover matches on exact contact email, so a capitalised address stored as typed is
+    /* /register/recover matches on exact contact email, so a capitalized address stored as typed is
        a registrant who cannot recover their own link. */
     it('stores a changed email lowercased', async () => {
         await updateRegistrationContact({

@@ -3,7 +3,7 @@ import { resetTestDb } from '$lib/server/db/testing/resetTestDb'
 import { seedRegistration } from '$lib/server/testing/seedRegistration'
 
 /* paidByCard decides whether a 'paid' confirmation says the card went through and that prices carry
-   the fee. A paper entry recorded as paid by cheque must not be told either. */
+   the fee. A paper entry recorded as paid by check must not be told either. */
 
 const { getConfirmationEmailData } = await import('./getConfirmationEmailData')
 
@@ -24,7 +24,7 @@ describe('getConfirmationEmailData', () => {
         expect(result?.data.paidByCard).toBe(true)
     })
 
-    /* A checkout abandoned and later settled by cheque still has a session id, so the session is not
+    /* A checkout abandoned and later settled by check still has a session id, so the session is not
        the sign of a card — only the intent the webhook writes is. */
     it('marks a paper entry as not paid by card, even with an abandoned checkout session', async () => {
         const { registrationId } = await seedRegistration(db, {

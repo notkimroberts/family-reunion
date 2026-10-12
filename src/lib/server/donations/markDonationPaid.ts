@@ -13,7 +13,7 @@ export type PaidDonation = {
 /* Conditional pending → paid, in one statement, returning the row only when this call is what
    moved it.
 
-   One statement so concurrent Stripe redeliveries serialise: exactly one matches, so exactly one
+   One statement so concurrent Stripe redeliveries serialize: exactly one matches, so exactly one
    receipt is sent. An unconditional update would thank the donor again on every redelivery. Same
    shape as the registration transition in fulfillCheckout, and for the same reason.
 

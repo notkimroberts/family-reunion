@@ -14,7 +14,7 @@ import { resetPassword } from './resetPassword'
    string. The format is Better Auth's to define, so a hash written any other way would look fine in
    the column and be rejected at sign-in as a wrong password. */
 
-const EMAIL = 'organiser@example.com'
+const EMAIL = 'organizer@example.com'
 const OLD_PASSWORD = 'OldPassword123'
 const NEW_PASSWORD = 'NewPassword456'
 

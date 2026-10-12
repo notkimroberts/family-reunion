@@ -7,7 +7,7 @@ import type { EventPerson } from '$lib/server/registrations'
    purchase order. Counting a pending party's shirts would buy garments for people who may never come.
 
    Grouped by `tierLabel`, the snapshot party_members carries for exactly this kind of reading. This
-   grouping IS the adult-versus-youth split an organiser needs — "Adult: S 1 M 3 · Child: S 1 M 1" — and
+   grouping IS the adult-versus-youth split an organizer needs — "Adult: S 1 M 3 · Child: S 1 M 1" — and
    it is why the tiers table no longer carries a shirt-size category: the label already says it, and a
    third tier appears here on its own with no code change. Reaching a per-tier column would have meant
    matching by label anyway, since party_members has no tier id.
@@ -29,7 +29,7 @@ export type PeopleSummary = {
 }
 
 /* SHIRT_SIZES order, not alphabetical: sorted by name the sizes read L, M, S, XL, XS, which is no use to
-   anyone. An unrecognised size — a value from before the list settled — sorts to the end rather than
+   anyone. An unrecognized size — a value from before the list settled — sorts to the end rather than
    being dropped. */
 function bySizeOrder(a: string, b: string): number {
     const order = (size: string) => {

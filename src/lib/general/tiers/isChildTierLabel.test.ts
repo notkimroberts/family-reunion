@@ -2,17 +2,17 @@ import { describe, expect, it } from 'vitest'
 import { isChildTierLabel } from './isChildTierLabel'
 
 /* The predicate gates one thing: the contact's own tier. It is a word match on a label the
-   organiser typed, so the cases worth pinning are the labels a real event actually carries and the
+   organizer typed, so the cases worth pinning are the labels a real event actually carries and the
    ones a bare substring test would get wrong. */
 describe('isChildTierLabel', () => {
     it.each(['Child', 'child', 'Children', 'Kid', 'Kids', 'Youth', 'Infant', 'Toddler', 'Minor'])(
-        'recognises %s',
+        'recognizes %s',
         (label) => {
             expect(isChildTierLabel(label)).toBe(true)
         },
     )
 
-    it.each(['Adult', 'Senior', 'Guest', 'Adult (18+)'])('does not recognise %s', (label) => {
+    it.each(['Adult', 'Senior', 'Guest', 'Adult (18+)'])('does not recognize %s', (label) => {
         expect(isChildTierLabel(label)).toBe(false)
     })
 

@@ -23,8 +23,8 @@ const REFUND_COPY: Record<RefundRoute, { lead: string; note?: string; showsRefun
         note: 'Refunds usually appear on a statement within 5 to 10 business days, depending on the bank. We never ask for bank details, a card number or a fee to send a refund.',
         showsRefund: true,
     },
-    /* Paid by cheque or cash, so no card exists to refund. Promising an automatic refund here would
-       be false — the organisers have to hand the money back themselves. */
+    /* Paid by check or cash, so no card exists to refund. Promising an automatic refund here would
+       be false — the organizers have to hand the money back themselves. */
     by_hand: {
         lead: 'Your registration has been cancelled. You paid the organizers directly, so your refund will be arranged with you.',
         note: 'Nothing has been refunded through this website. Please get in touch if you have not heard from us. We never ask for your bank login, a card number or a fee to send a refund.',

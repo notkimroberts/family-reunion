@@ -5,7 +5,7 @@ import type { DonationSummary } from '$lib/server/donations'
 
    No status chips, for the same reason People has none: the chips name registration statuses, and a
    gift's states are not those. Every gift is listed, including the pending ones — an abandoned
-   donation checkout is exactly what an organiser reconciling against Stripe is looking for.
+   donation checkout is exactly what an organizer reconciling against Stripe is looking for.
 
    Matches the donor's name and email; the message is deliberately not searched, so a common word in
    somebody's dedication cannot pull unrelated rows into a search for a name. */

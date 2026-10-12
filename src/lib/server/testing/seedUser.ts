@@ -3,7 +3,7 @@ import * as schema from '$lib/server/db/schema'
 
 type TestDb = ReturnType<typeof drizzle<typeof schema>>
 
-/* An organiser row, for the paths that record who acted.
+/* An organizer row, for the paths that record who acted.
 
    Better Auth owns this table in production; a test only needs the id and name that
    registration_audit's foreign key and actor snapshot point at. */

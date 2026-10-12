@@ -68,7 +68,7 @@ const FEE_NOTE = {
             </span>
         </div>
         <!-- Each of these is a genuinely different reason for "no fee", and reading the wrong one
-             off a bare $0.00 is how an organiser concludes a refund went missing. -->
+             off a bare $0.00 is how an organizer concludes a refund went missing. -->
         <p class="text-muted-foreground text-xs">
             {#if status === 'paid'}
                 Paid by hand, so Stripe took nothing. It arrives in full once deposited.

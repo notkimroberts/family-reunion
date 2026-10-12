@@ -10,7 +10,7 @@ type Props = {
 
 let { eventId, matches }: Props = $props()
 
-/* Why this person cannot be ticked, in the words an organiser would use at the door. A bare status badge
+/* Why this person cannot be ticked, in the words an organizer would use at the door. A bare status badge
    would make the greeter guess, and "refunded" on its own does not say "they cancelled". */
 function reasonFor(match: UnlistedAttendee): string {
     if (match.status === 'pending') {

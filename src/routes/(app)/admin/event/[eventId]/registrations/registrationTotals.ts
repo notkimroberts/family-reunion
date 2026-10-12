@@ -4,7 +4,7 @@ import { getRegistrationMoney } from './registrationMoney'
 /* What a year adds up to, for the panel beside the registrations list.
 
    A pure function rather than a set of $derived expressions in the page, so the arithmetic that an
-   organiser will read off a screen and repeat on a phone call is testable.
+   organizer will read off a screen and repeat on a phone call is testable.
 
    Two matched groups, paid-or-covered and not-paid, because a count whose qualifier is invisible gets
    read as a bug: "Parties 4" beside a list of eleven bookings — whose Party column sums to every
@@ -33,7 +33,7 @@ export type RegistrationTotals = {
     waivedCents: number
     /* What registrants paid, split by how it arrived, because only one side of it loses a fee.
 
-       Card money is charged gross and arrives short. Cash and cheques arrive whole, so counting them
+       Card money is charged gross and arrives short. Cash and checks arrive whole, so counting them
        through the fee formula would invent a deduction Stripe never made — which is exactly what a
        single "Collected minus 2.9%" line would have done to a year of paper registrations. */
     cardPaidCents: number
@@ -55,7 +55,7 @@ export type RegistrationTotals = {
        was the first version of this figure. getRegistrationMoney decides. */
     lostToRefundsCents: number
     /* Collected, minus the fees on it, minus the fees lost to cancellations: what a bank statement
-       will show. Cheques still have to be deposited; nothing here knows whether that has happened. */
+       will show. Checks still have to be deposited; nothing here knows whether that has happened. */
     bankedCents: number
     /* False when any contributing figure came from the estimate, so the panel can stop claiming
        precision it does not have. */

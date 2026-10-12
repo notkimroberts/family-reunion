@@ -11,7 +11,7 @@ import type { RegistrationTotals } from './registrationTotals'
    figure on the panel was a head count printed twice for two different fives.
 
    Coming is the catering number and carries the weight here. The party count is secondary text
-   under its own head count rather than a labelled row of its own, which is what removes four rows
+   under its own head count rather than a labeled row of its own, which is what removes four rows
    from the old layout. */
 
 /* Matches the subheadings on the event settings page, so the two admin surfaces read as one design. */
@@ -34,7 +34,7 @@ let { totals, arrivedCount }: { totals: RegistrationTotals; arrivedCount: number
     </div>
 
     <!-- Arrivals, from the check-in page. Hidden until the first tick: before the day it is "0 of 148
-         arrived" on every visit, which is noise on a panel an organiser reads all year. NOT part of
+         arrived" on every visit, which is noise on a panel an organizer reads all year. NOT part of
          RegistrationTotals — that type derives from bookings and its output is pinned by the money
          identity in eventMoney.test.ts, and arriving is not money. -->
     {#if arrivedCount > 0}
@@ -50,7 +50,7 @@ let { totals, arrivedCount }: { totals: RegistrationTotals; arrivedCount: number
     {/if}
 
     <!-- Shown even at zero, unlike the money rows: "Not paid 0" is the answer to a question an
-         organiser is actively asking, and its absence would read as a missing section. -->
+         organizer is actively asking, and its absence would read as a missing section. -->
     <div class="flex items-baseline justify-between gap-3">
         <div class="flex flex-col">
             <span class="text-sm">Not paid</span>
@@ -62,7 +62,7 @@ let { totals, arrivedCount }: { totals: RegistrationTotals; arrivedCount: number
     </div>
 
     <!-- Comped places are why Coming can exceed what the money accounts for. The explanation is
-         behind the label rather than printed under it: this is a column of figures an organiser
+         behind the label rather than printed under it: this is a column of figures an organizer
          scans, and prose in the middle of it is what made the old panel unreadable. -->
     {#if totals.waivedPartyCount > 0}
         <div class="flex items-center justify-between gap-3">

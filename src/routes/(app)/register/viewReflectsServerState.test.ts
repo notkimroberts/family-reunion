@@ -15,7 +15,7 @@ function code(path: string): string {
 }
 
 /* The page is a record, not a control panel. Adding, removing, editing and cancelling are all
-   organiser actions now — the registrant's view link buys a view of their own party.
+   organizer actions now — the registrant's view link buys a view of their own party.
 
    Worth pinning rather than trusting to review: the deleted actions were reachable with nothing but
    the link, and two of them issued Stripe refunds. Reintroducing a form here is not a UI regression,
@@ -36,7 +36,7 @@ describe('the view page cannot mutate anything', () => {
 
 /* The other half of the same complaint, by a different mechanism.
 
-   The registrant no longer cancels — an organiser does, from the admin — but the page must still
+   The registrant no longer cancels — an organizer does, from the admin — but the page must still
    show it, and the load returning 'refunded' is the only way it can. The page held the status in a
    mount-time `$state(untrack(() => data.registration.status))` copy and never read `data` again, so
    the 'refunded' branch could not render. The page kept saying "You're registered!" over a booking

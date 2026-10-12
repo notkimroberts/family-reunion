@@ -4,12 +4,12 @@ import { donations, registrations } from '$lib/server/db/schema'
 import { resetTestDb } from '$lib/server/db/testing/resetTestDb'
 import { seedRegistration } from '$lib/server/testing/seedRegistration'
 
-/* The organiser's cancel, which exists because a paper registration could not be cancelled at all:
+/* The organizer's cancel, which exists because a paper registration could not be cancelled at all:
    setRegistrationStatus refuses 'refunded' in both directions, and cancelRegistration needs the
    view token, which is only ever stored as a hash.
 
    These tests cover what is specific to the ADMIN path — the event pairing, the already-cancelled
-   no-op, and that a cheque registration cancels without touching Stripe. The refund contract itself
+   no-op, and that a check registration cancels without touching Stripe. The refund contract itself
    (loud failure, one fee per intent, the email) lives in _performCancellation and is covered by
    cancelRegistration.test.ts, which exercises the same function through the registrant's route. */
 
@@ -30,7 +30,7 @@ const REGISTER_URL = 'https://example.com/register'
 
 let db: Awaited<ReturnType<typeof resetTestDb>>
 
-/* A cheque registration: paid, but never through Checkout. The case the feature was added for. */
+/* A check registration: paid, but never through Checkout. The case the feature was added for. */
 const PAPER_PAID = {
     stripeSessionId: null,
     contactName: 'Wanda Trantow',
@@ -55,7 +55,7 @@ describe('cancelRegistrationAsAdmin', () => {
         db = await resetTestDb()
     })
 
-    /* THE case this exists for: money arrived as a cheque, so there is nothing for Stripe to refund and
+    /* THE case this exists for: money arrived as a check, so there is nothing for Stripe to refund and
        the cancellation must still go through. */
     it('cancels a paper registration without touching Stripe', async () => {
         const seeded = await seedRegistration(db, { ...PAPER_PAID })
@@ -84,9 +84,9 @@ describe('cancelRegistrationAsAdmin', () => {
         expect(mockSendCancellation.mock.calls[0][1].refundRoute).toBe('by_hand')
     })
 
-    /* A card payment must still be refunded when an organiser cancels on someone's behalf. Restricting
+    /* A card payment must still be refunded when an organizer cancels on someone's behalf. Restricting
        this to paper registrations would leave the harder half of the job undone. */
-    it('refunds a card payment when the organiser cancels', async () => {
+    it('refunds a card payment when the organizer cancels', async () => {
         const seeded = await seedRegistration(db, {
             members: [{ name: 'Wanda', priceCents: 16509, stripePaymentIntentId: 'pi_1' }],
         })
@@ -143,7 +143,7 @@ describe('cancelRegistrationAsAdmin', () => {
     })
 
     /* A double-submitted dialog must not email a second cancellation. Quietly doing nothing is right
-       here — the end state the organiser asked for already holds. */
+       here — the end state the organizer asked for already holds. */
     it('does nothing when the registration is already cancelled', async () => {
         const seeded = await seedRegistration(db, { ...PAPER_PAID, status: 'refunded' })
 
@@ -159,7 +159,7 @@ describe('cancelRegistrationAsAdmin', () => {
         expect(mockSendCancellation).not.toHaveBeenCalled()
     })
 
-    /* An unpaid paper entry — someone who never sent the cheque. Nothing to refund, and the email must
+    /* An unpaid paper entry — someone who never sent the check. Nothing to refund, and the email must
        not imply otherwise. */
     it('closes an unpaid registration with nothing to refund', async () => {
         const seeded = await seedRegistration(db, { ...PAPER_PAID, status: 'pending' })
@@ -176,11 +176,11 @@ describe('cancelRegistrationAsAdmin', () => {
     })
 
     /* No lock-date check, unlike the registrant's own cancel: assertRegistrationNotClosed stops a
-       REGISTRANT editing after numbers have gone to the caterer, which is not a rule organisers need
+       REGISTRANT editing after numbers have gone to the caterer, which is not a rule organizers need
        protecting from. Someone dropping out late is exactly what this has to record.
 
        This used to be asserted by reading the source file and grepping it for the guard's NAME. With a
-       real database the rule can be stated as behaviour instead: a locked event, and the cancellation
+       real database the rule can be stated as behavior instead: a locked event, and the cancellation
        still goes through. */
     it('cancels after the registration lock date has passed', async () => {
         const seeded = await seedRegistration(db, {

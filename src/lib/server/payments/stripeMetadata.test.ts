@@ -129,7 +129,7 @@ describe('encodeAddMemberMetadata / decode round-trip', () => {
         expect(encoded.memberAttendedReunion2025).toBe('')
     })
 
-    it('serialises memberPriceCents as a string', () => {
+    it('serializes memberPriceCents as a string', () => {
         const encoded = encodeAddMemberMetadata({
             registrationId: 'reg-123',
             memberName: 'Carol',
@@ -155,7 +155,7 @@ describe('decodeSessionMetadata edge cases', () => {
         expect(decodeSessionMetadata({})).toBeNull()
     })
 
-    it('returns null for unrecognised type with no registrationId', () => {
+    it('returns null for unrecognized type with no registrationId', () => {
         expect(decodeSessionMetadata({ type: 'unknown' })).toBeNull()
     })
 })

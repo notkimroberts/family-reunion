@@ -28,7 +28,7 @@ const wordPattern = new RegExp(
     'gi',
 )
 
-/* A word, not part of one: no letter before it, so getPhotoNeighbours (an existing identifier) is
+/* A word, not part of one: no letter before it, so an identifier like getPhotoNeighbours is
    left alone, and no LOWERCASE letter after it, so organiserName and CHEQUE_PAYEE still count. */
 function isWholeWord(text: string, start: number, end: number): boolean {
     return !/[A-Za-z]/.test(text[start - 1] ?? '') && !/[a-z]/.test(text[end] ?? '')

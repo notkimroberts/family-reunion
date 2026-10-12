@@ -68,12 +68,12 @@ describe('rowAccent', () => {
         expect(rowAccent(SHAPES[state])).not.toBe('')
     })
 
-    /* The colours must stay distinguishable — telling them apart down a column of rows is the
+    /* The colors must stay distinguishable — telling them apart down a column of rows is the
        entire purpose. Four, not six: both paid states share green and both pending states share
        amber, deliberately, because the edge answers "does this row want anything from me". */
-    it('gives each meaning its own colour', () => {
-        const colours = ALL_STATES.map((state) => rowAccent(SHAPES[state]))
-        expect(new Set(colours).size).toBe(4)
+    it('gives each meaning its own color', () => {
+        const colors = ALL_STATES.map((state) => rowAccent(SHAPES[state]))
+        expect(new Set(colors).size).toBe(4)
     })
 
     /* Every state carries the same width and padding, so rows do not shift sideways depending on

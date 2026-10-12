@@ -5,13 +5,13 @@ import { NativeSelect } from '$lib/components/ui/native-select'
 import { HOST_HOTEL } from '$lib/general/constants'
 import type { HotelStayAnswer } from '$lib/general/constants'
 
-/* Whether this party will stay at the host hotel, asked because the organisers hold a block of rooms
+/* Whether this party will stay at the host hotel, asked because the organizers hold a block of rooms
    and the number they hold is guesswork without it.
 
    ONE QUESTION PER BOOKING, not per attendee: a household books rooms together, and asking each
    person would produce a party of four with four contradictory answers and no room count.
 
-   Renders nothing when no host hotel is listed — REUNION_LOCATIONS is a plain constant an organiser
+   Renders nothing when no host hotel is listed — REUNION_LOCATIONS is a plain constant an organizer
    edits, and a year with no hotel is a legitimate state. The schema still requires an answer, so the
    page seeds 'undecided' in that case; see register/+page.svelte. */
 

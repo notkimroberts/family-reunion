@@ -26,9 +26,9 @@ export type RegistrationIntake = {
    lowercase were character-for-character identical in both files, and the `self` mapping was a
    third copy of what toMemberInputs already does for everyone else in the party.
 
-   NORMALISATION LIVES HERE, NOT IN THE SCHEMA. The schemas are shared with client-side validation,
+   NORMALIZATION LIVES HERE, NOT IN THE SCHEMA. The schemas are shared with client-side validation,
    where a zod transform would rewrite what someone is halfway through typing. Lowercasing is not
-   cosmetic: /register/recover finds a booking by exact contact email, so a capitalised address
+   cosmetic: /register/recover finds a booking by exact contact email, so a capitalized address
    stored as typed is a registrant who cannot recover their own link. */
 export function toRegistrationIntake(form: {
     contactFirstName: string

@@ -17,7 +17,7 @@ export const donationSchema = z.object({
         .int()
         .min(DONATION_MIN_CENTS, `Please give at least $${DONATION_MIN_CENTS / 100}`)
         .max(DONATION_MAX_CENTS, 'That is larger than this form accepts'),
-    /* Bounded because it is stored and shown to organisers; a runaway paste is not a message. */
+    /* Bounded because it is stored and shown to organizers; a runaway paste is not a message. */
     message: z.string().trim().max(500, 'Please keep the message under 500 characters').optional(),
 })
 

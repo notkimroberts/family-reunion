@@ -31,7 +31,7 @@ import PaperCheckbox from './PaperCheckbox.svelte'
 import PaperField from './PaperField.svelte'
 
 /* The paper form itself: a fixed Letter-width sheet that renders identically on screen and on
-   paper, so what an organiser sees before pressing Print is what comes out. It runs to two pages —
+   paper, so what an organizer sees before pressing Print is what comes out. It runs to two pages —
    every field is sized for handwriting, and sections carry break-inside-avoid so a page break lands
    between blocks rather than through one. */
 let {

@@ -41,7 +41,7 @@ let { photos }: Props = $props()
                         class="bg-muted aspect-square w-full rounded object-cover"
                         loading="lazy" />
                 </a>
-                <!-- Unpublish rather than delete: it is the reversible one, and an organiser
+                <!-- Unpublish rather than delete: it is the reversible one, and an organizer
                      reaching for this in a hurry should not need to be sure. Deleting for good is
                      still available from the queue once it lands back there as rejected. -->
                 <form

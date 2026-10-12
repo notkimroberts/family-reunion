@@ -15,7 +15,7 @@ export type GalleryPhoto = {
 /* The public gallery, newest first, optionally one year only.
 
    Ordered on the TUPLE (createdAt, id), not createdAt alone. Two photos uploaded in the same
-   millisecond would otherwise have no defined order between them, and getPhotoNeighbours walks the
+   millisecond would otherwise have no defined order between them, and getPhotoNeighbors walks the
    same sequence to work out prev/next — if the two orderings disagree, arrow navigation silently
    skips a photo or loops between two. A total order in both places is what stops that.
 

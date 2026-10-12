@@ -97,7 +97,7 @@ export async function getConfirmationEmailData(params: {
             venueAddress: reunionEvent.metadata.venue?.address,
             status: registration.status satisfies ConfirmationStatus,
             /* Written only by the webhook's pending → paid transition. Paper entries and an
-               organiser's status change never set it, so it is the one reliable sign of a card. */
+               organizer's status change never set it, so it is the one reliable sign of a card. */
             paidByCard: registration.stripePaymentIntentId !== null,
             partyMembers: members.map((member) => {
                 const extras: string[] = []

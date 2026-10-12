@@ -52,7 +52,7 @@ schema first.
 
 **The settings editor is a single JSON textarea, and it fails loudly.** The structured fields it
 replaced (venue inputs, line-per-item textareas, three JSON boxes) each mapped to one column; with one
-column there is one field. See Consequences for why the failure behaviour had to change with it.
+column there is one field. See Consequences for why the failure behavior had to change with it.
 
 **The homepage's hard-coded reunion data stays hard-coded.** `REUNION_LOCATIONS` (the Oakstop venue
 card and the Kissel host hotel), `MAP_EMBED_URL`, the family stats and the family story are constants

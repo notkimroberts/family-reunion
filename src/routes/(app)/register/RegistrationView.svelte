@@ -29,7 +29,7 @@ import { formatPartialBirthDate } from '$lib/utils/age'
 import type { EventDetails, RegistrationDetails, RegistrationViewMember } from './types'
 
 /* READ ONLY: the registrant's record of their own party, with no control that posts. Editing, adding,
-   removing and cancelling are organiser actions now — see viewReflectsServerState.test.ts, which
+   removing and cancelling are organizer actions now — see viewReflectsServerState.test.ts, which
    pins that and says why it matters. */
 let {
     registration,

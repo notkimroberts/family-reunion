@@ -101,7 +101,7 @@ let mobileMenuOpen = $state(false)
                         </div>
                         <DropdownMenuSeparator />
                         <!-- The admin area has no entry point in the nav — /login redirects to it once,
-                             and after that an organiser had to type the URL. It belongs behind the
+                             and after that an organizer had to type the URL. It belongs behind the
                              avatar because it is per-account, not per-visitor. -->
                         {#if user.role === 'admin'}
                             <DropdownMenuItem>

@@ -4,7 +4,7 @@ import { sendRecoveryEmail } from '$lib/server/email'
 import { deliverViewLink } from '../deliverViewLink'
 import { getRegistrationWithEvent } from '../queries/getRegistrationWithEvent'
 
-/* Emails the registrant a fresh view link, for when an organiser needs to get them back
+/* Emails the registrant a fresh view link, for when an organizer needs to get them back
    into their registration.
 
    The send-before-rotate ordering — and the reason a registrant is locked out permanently if it is

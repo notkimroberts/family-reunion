@@ -38,7 +38,7 @@ export function groupPeopleByBooking(people: readonly EventPerson[]): CheckinGro
         ...group,
         arrivedCount: group.members.filter((member) => member.checkedInAt !== null).length,
         /* Counted apart from arrivals, because a party can be entirely present with nobody holding a
-           shirt yet — which is the state an organiser has to be able to see. */
+           shirt yet — which is the state an organizer has to be able to see. */
         shirtsGivenCount: group.members.filter((member) => member.shirtGivenAt !== null).length,
     }))
 }

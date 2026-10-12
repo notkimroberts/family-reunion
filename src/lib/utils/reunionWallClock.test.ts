@@ -3,7 +3,7 @@ import { formatReunionDateTime } from './formatReunionDateTime'
 import { parseReunionWallClock } from './parseReunionWallClock'
 import { toReunionWallClock } from './toReunionWallClock'
 
-/* The three halves of one contract: an organiser types wall-clock digits, they are stored as the
+/* The three halves of one contract: an organizer types wall-clock digits, they are stored as the
    instant those digits name IN THE REUNION'S ZONE, and every screen reads them back as the same
    digits. The bug this replaced read them as UTC, so a 9:00 AM deadline closed registration at 2:00 AM
    Pacific and both admin screens agreed with each other while disagreeing with the family. */

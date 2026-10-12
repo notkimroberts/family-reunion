@@ -61,7 +61,7 @@ describe('renderCancellationEmail', () => {
         },
     )
 
-    /* The distinction the whole template exists for. A cheque handed to an organiser cannot be
+    /* The distinction the whole template exists for. A check handed to an organizer cannot be
        refunded by Stripe, and telling that family their card has been refunded is a false statement
        followed by a phone call. */
     it('promises a card refund only when Stripe took the payment', () => {

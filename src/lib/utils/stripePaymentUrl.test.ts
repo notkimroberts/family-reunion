@@ -18,7 +18,7 @@ describe('stripePaymentUrl', () => {
         )
     })
 
-    /* No intent covers every cheque payer, every abandoned checkout, and everything paid before the id
+    /* No intent covers every check payer, every abandoned checkout, and everything paid before the id
        was stored at registration level. A link that goes nowhere is worse than no link. */
     it.each([
         ['null', null],

@@ -23,7 +23,7 @@ export type PartyQuote = {
    register/+page.svelte that re-derived the same arithmetic. Two implementations of "what do we
    charge" is one more than a payment form can afford.
 
-   `applyStripeFee: false` is the paper-entry case. A cheque handed to an organiser costs the reunion
+   `applyStripeFee: false` is the paper-entry case. A check handed to an organizer costs the reunion
    nothing to process, so quoting a fee on it would invent a deduction Stripe never made — the same
    distinction the admin totals panel draws between card and offline money.
 

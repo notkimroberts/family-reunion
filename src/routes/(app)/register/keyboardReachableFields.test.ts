@@ -12,7 +12,7 @@ import { describe, expect, it } from 'vitest'
 
    This guard is a source match rather than a rendered-DOM assertion because vitest runs in a node
    environment here with no svelte plugin, so components cannot be compiled in tests. It therefore
-   pins the import, not the behaviour: any bits-ui Select reintroduced into these files brings the
+   pins the import, not the behavior: any bits-ui Select reintroduced into these files brings the
    Safari skip back with it. */
 const REGISTER_DIR = 'src/routes/(app)/register'
 /* The admin registration forms are as form-heavy as the public one and reuse the same field

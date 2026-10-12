@@ -2,7 +2,7 @@ import { emailThemeValue } from './_emailThemeValue'
 import { escapeHtml } from './_escapeHtml'
 
 /* A boxed, amber block for something the reader has to do — the one thing in the email that must
-   not be read past. Both colours on the cell so dark-mode inversion cannot wash it out. */
+   not be read past. Both colors on the cell so dark-mode inversion cannot wash it out. */
 export function actionCallout(title: string, body: string): string {
     const { actionBackground, actionBorder, actionText, fontStack } = emailThemeValue
 
