@@ -19,7 +19,7 @@ const HEADER_IMAGE_HEIGHT = 87
    - Every style is inline. Gmail strips <head><style> on forwarded mail and in some webmail
      views, so nothing structural may depend on it.
    - Explicit background-color AND color on each cell. Clients that auto-invert for dark mode
-     (Gmail iOS, Outlook.com) recolour only what is left unspecified, so stating both keeps
+     (Gmail iOS, Outlook.com) recolor only what is left unspecified, so stating both keeps
      text legible either way; color-scheme additionally asks them not to invert.
    - A hidden preheader sets the inbox preview line, which otherwise samples the first visible
      text — here the wordmark, which tells the reader nothing.

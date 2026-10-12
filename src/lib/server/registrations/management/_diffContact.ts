@@ -2,7 +2,7 @@ import type { HotelStayAnswer } from '$lib/general/constants'
 import type { RegistrationChange } from '$lib/server/email'
 import { describeOptional } from './_describeOptional'
 
-/* The registrations columns an organiser can correct on the contact, as stored. */
+/* The registrations columns an organizer can correct on the contact, as stored. */
 export type ContactValues = {
     contactName: string
     contactEmail: string
@@ -32,7 +32,7 @@ const FIELDS: { label: string; describe: (values: ContactValues) => string }[] =
     },
 ]
 
-/* What an organiser's edit changed about the booking's contact, as before → after lines for the
+/* What an organizer's edit changed about the booking's contact, as before → after lines for the
    update email. Empty when nothing moved. */
 export function diffContact(before: ContactValues, after: ContactValues): RegistrationChange[] {
     return FIELDS.flatMap(({ label, describe }) => {

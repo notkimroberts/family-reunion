@@ -91,7 +91,7 @@ describe('createAdminRegistration', () => {
         ])
     })
 
-    it('records the status the organiser chose', async () => {
+    it('records the status the organizer chose', async () => {
         const result = await create({ status: 'waived' })
 
         const [row] = await db

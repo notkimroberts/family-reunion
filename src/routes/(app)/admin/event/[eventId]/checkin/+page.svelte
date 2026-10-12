@@ -25,7 +25,7 @@ let { data }: { data: PageData } = $props()
 let search = $state('')
 
 /* Arrivals ticked in this session, keyed by member id. An OVERLAY on the loaded rows rather than a mutable
-   copy of them: a copy would either be re-initialised on every reload — throwing away a tick that was
+   copy of them: a copy would either be re-initialized on every reload — throwing away a tick that was
    already saved — or drift from the server permanently. */
 const overrides = new SvelteMap<string, Date | null>()
 
@@ -58,7 +58,7 @@ const arrivedCount = $derived(people.filter((person) => person.checkedInAt !== n
 
 const shirtsGivenCount = $derived(people.filter((person) => person.shirtGivenAt !== null).length)
 
-/* People who are HERE and have no size on file — the ones an organiser has to ask before the box is
+/* People who are HERE and have no size on file — the ones an organizer has to ask before the box is
    empty. Counted on arrivals only: a missing size for somebody who never turns up is not a job. */
 const missingSizeHere = $derived(
     people.filter((person) => person.checkedInAt !== null && !person.shirtSize).length,
@@ -188,7 +188,7 @@ function handleFocus() {
             {shirtsGivenCount === 1 ? 'shirt' : 'shirts'} given
         </p>
 
-        <!-- The chase list, stated as a number rather than left for the organiser to spot chip by chip
+        <!-- The chase list, stated as a number rather than left for the organizer to spot chip by chip
              down a long list. -->
         {#if missingSizeHere > 0}
             <p class="text-destructive text-xs">

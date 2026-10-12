@@ -172,7 +172,7 @@ function restoreDraft(draft: RegistrationFormData) {
     draftGeneration += 1
 }
 
-/* In onMount, not a $state initialiser: sessionStorage exists only in the browser, and restoring
+/* In onMount, not a $state initializer: sessionStorage exists only in the browser, and restoring
    during render would hydrate a filled form over a blank server one. The draft is taken on EVERY
    visit, so it never outlives the next one; it is applied only after a cancel. (/register/view
    clears it on a successful checkout.) replaceState is deferred a tick because it throws before the

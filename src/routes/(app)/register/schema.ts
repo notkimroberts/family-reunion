@@ -9,7 +9,7 @@ import { isValidPhone, isValidZip } from '$lib/utils'
 
 /* No .transform() anywhere in here, deliberately. These schemas are used for client-side
    validation as well as server parsing, and a transform would rewrite what the user typed
-   mid-edit — lowercasing an email under the cursor, for example. Normalisation (trimming names,
+   mid-edit — lowercasing an email under the cursor, for example. Normalization (trimming names,
    lowercasing the email) happens once in the actions, which is also the only place that matters
    for what gets stored. */
 

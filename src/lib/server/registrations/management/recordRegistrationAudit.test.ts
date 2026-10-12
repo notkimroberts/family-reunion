@@ -102,7 +102,7 @@ describe('recordRegistrationAudit', () => {
         expect(await entries()).toMatchObject([{ actorUserId: null, actorName: null }])
     })
 
-    /* Deleting an organiser's account must not erase the record that they acted — which is why the
+    /* Deleting an organizer's account must not erase the record that they acted — which is why the
        name is snapshotted beside the FK and the FK is ON DELETE SET NULL. */
     it('keeps the actor’s name after their account is deleted', async () => {
         await seedUser(db, REAL_ADMIN)

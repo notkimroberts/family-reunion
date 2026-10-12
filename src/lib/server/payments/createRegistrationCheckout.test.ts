@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-/* What the payer and the organisers see on Stripe's side. Nothing else asserts on the session
+/* What the payer and the organizers see on Stripe's side. Nothing else asserts on the session
    payload: every caller's suite mocks this module whole. */
 
 const mockCreate = vi.fn()

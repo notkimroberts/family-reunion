@@ -1,6 +1,6 @@
 # Family Reunion
 
-A full-stack app for one job: taking registrations and money for a family reunion. Two sub-domains share the codebase — identity (the organisers who administer it) and events (the reunion, its prices, and who is coming) — each with its own model of a "person."
+A full-stack app for one job: taking registrations and money for a family reunion. Two sub-domains share the codebase — identity (the organizers who administer it) and events (the reunion, its prices, and who is coming) — each with its own model of a "person."
 
 > An earlier version of this app also carried a genealogy tree and a storefront. Both are deleted, tables included — see [ADR 0004](docs/adr/0004-genealogy-out-of-scope-for-launch.md) and [ADR 0005](docs/adr/0005-drop-genealogy-and-gallery-tables.md). **Family member** and **relationship** are no longer terms in this domain. Do not reintroduce them by reflex on finding a dangling reference.
 >
@@ -11,7 +11,7 @@ A full-stack app for one job: taking registrations and money for a family reunio
 ### Identity
 
 **User**:
-An organiser who signs in with email and password at `/login`. Managed entirely by Better Auth (`user`, `session`, `account` tables). Users exist only to administer the app — attendees never have one.
+An organizer who signs in with email and password at `/login`. Managed entirely by Better Auth (`user`, `session`, `account` tables). Users exist only to administer the app — attendees never have one.
 _Avoid_: account, member, registrant
 
 **Admin**:
@@ -33,11 +33,11 @@ _Avoid_: event details, config, settings
 A named price bracket in cents, scoped to a **reunion event** (`tiers`). A tier is chosen per **party member** at registration time, but the tier is _not_ the record of what was charged: `party_members` snapshots `tierLabel` and `priceCents` onto the row, so renaming or repricing a tier never rewrites history or a refund amount.
 
 **Registration**:
-One party's record of attending a **reunion event**, owned by a **view token** rather than by a user. Status: `pending` → `paid`, or `waived` (comped / paid offline) or `refunded` (cancelled). Holds the Stripe session ID; there is no denormalised total — the amount is the sum of its **party members**' `priceCents`.
+One party's record of attending a **reunion event**, owned by a **view token** rather than by a user. Status: `pending` → `paid`, or `waived` (comped / paid offline) or `refunded` (cancelled). Holds the Stripe session ID; there is no denormalized total — the amount is the sum of its **party members**' `priceCents`.
 _Avoid_: booking, sign-up
 
 **Audit entry**:
-An append-only row in `registration_audit` recording an **admin** change to someone else's **registration** — status change, member added / updated / removed, contact updated, link reissued. Written only by the admin paths, never by the registrant's own. It exists because several organisers share the admin panel and `updated_at` cannot say who acted. The actor's name is snapshotted alongside the FK so deleting an organiser's account does not erase the history.
+An append-only row in `registration_audit` recording an **admin** change to someone else's **registration** — status change, member added / updated / removed, contact updated, link reissued. Written only by the admin paths, never by the registrant's own. It exists because several organizers share the admin panel and `updated_at` cannot say who acted. The actor's name is snapshotted alongside the FK so deleting an organizer's account does not erase the history.
 _Avoid_: log, event (see **Reunion event**), history
 
 **View token**:
@@ -73,7 +73,7 @@ discarded. Their bucket keys on the photo row are the only pointers to the objec
 _Avoid_: thumbnail (that is one of the two), original, variant
 
 **Moderation queue**:
-The **photos** awaiting a decision, shown to organisers as the `?view=photos` lens on the registrations
+The **photos** awaiting a decision, shown to organizers as the `?view=photos` lens on the registrations
 page. Deliberately not scoped to the reunion event in the URL: archive photos have no event, and a
 queue filtered by year would hide the rows most needing a decision.
 _Avoid_: pending photos, review queue, inbox
@@ -89,10 +89,10 @@ The app has two distinct ways of representing a person. This is intentional:
 
 | Model                             | Table           | Identified by                  | Purpose                                                                 |
 | --------------------------------- | --------------- | ------------------------------ | ----------------------------------------------------------------------- |
-| **User**                          | `user`          | email + password (Better Auth) | Organisers signing in to administer the app                             |
+| **User**                          | `user`          | email + password (Better Auth) | Organizers signing in to administer the app                             |
 | **Registrant** + **Guest member** | `party_members` | parent `registrations` row     | Attendance at a specific event — the registrant and any guests they add |
 
-There is no link between them, and none is wanted: an organiser who signs in gains no view of their own registration, and registering creates no account.
+There is no link between them, and none is wanted: an organizer who signs in gains no view of their own registration, and registering creates no account.
 
 **Key invariants:**
 

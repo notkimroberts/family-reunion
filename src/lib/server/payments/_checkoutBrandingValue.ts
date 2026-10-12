@@ -5,7 +5,7 @@ import { STATEMENT_DESCRIPTOR_SUFFIXES } from '$lib/general/constants'
    statementDescriptorSuffix is appended to the account's shortened descriptor (set in the Stripe
    Dashboard, e.g. "PATTERSON"), so the card statement reads "PATTERSON* REUNION". Stripe rejects the
    whole session if prefix + "* " + suffix exceeds 22 characters, or the suffix has no letter or
-   contains < > \ ' " * — kept short so the prefix has room. A relative who does not recognise the
+   contains < > \ ' " * — kept short so the prefix has room. A relative who does not recognize the
    charge disputes it.
 
    submitMessage renders under the Pay button. The registration one exists because line-item prices

@@ -35,8 +35,8 @@ describe('toE164', () => {
     )
 
     /* A wrong country code dials a stranger; an unprefixed number simply fails to dial. Guessing is
-       the more expensive error, so an unrecognised length is left bare. */
-    it('does not invent a country code for an unrecognisable number', () => {
+       the more expensive error, so an unrecognized length is left bare. */
+    it('does not invent a country code for an unrecognizable number', () => {
         expect(toE164('12345')).toBe('12345')
     })
 

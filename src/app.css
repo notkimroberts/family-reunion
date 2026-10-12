@@ -287,7 +287,7 @@
 }
 
 /* Printing. The only page meant for paper is /register/print, whose sheet sets its own black-on-white
-   colours so it does not depend on the theme tokens — but the shell around it still has to get out of
+   colors so it does not depend on the theme tokens — but the shell around it still has to get out of
    the way: header and footer are marked print:hidden, and the layout's centring, padding and grid gap
    would otherwise eat a third of the sheet. print-color-adjust keeps the table's header shading, which
    browsers drop by default. */
@@ -319,7 +319,7 @@
     }
 
     /* The paper sheet is built out of nested flex containers, which is right on screen and wrong on
-       paper: Chrome does not honour break-inside-avoid on a FLEX ITEM, so an attendee block could be
+       paper: Chrome does not honor break-inside-avoid on a FLEX ITEM, so an attendee block could be
        sliced across the page boundary however it was marked. Block layout is what makes the browser
        respect the break rules, and margins stand in for the `gap` that block layout drops. */
     [data-paper-sheet],
@@ -337,7 +337,7 @@
 
     /* Only the sheet and its sections flatten. The grids INSIDE a section — the two-up name fields,
        the city/state/ZIP row — must stay grids, and an attendee block must stay a flex container; a
-       block-level flex container honours break-inside-avoid perfectly well. It is being a flex ITEM
+       block-level flex container honors break-inside-avoid perfectly well. It is being a flex ITEM
        that made the rule inert. */
     [data-paper-attendee] {
         break-inside: avoid;

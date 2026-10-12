@@ -4,7 +4,7 @@ import { parseReunionMetadata } from './parseReunionMetadata'
 /* The settings page edits all of /program's content as one JSON blob, so this parser is the only
    thing standing between a mistyped paste and a blank program page. The action it replaced caught
    JSON.parse and wrote null, which reported success and destroyed the content — every test here
-   exists to pin the opposite behaviour. */
+   exists to pin the opposite behavior. */
 
 const FULL_METADATA = {
     venue: {

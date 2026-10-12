@@ -12,11 +12,11 @@ import {
 } from '$lib/components/ui/alert-dialog'
 import { formatUsd, type PaymentState } from '$lib/utils'
 
-/* Confirming a cancellation an organiser is making on someone else's behalf.
+/* Confirming a cancellation an organizer is making on someone else's behalf.
 
-   The copy changes with how the money arrived, because that decides what the organiser has to do next
+   The copy changes with how the money arrived, because that decides what the organizer has to do next
    and it is the one thing they cannot see from here. Telling them "a refund will be issued" for a family
-   who paid by cheque would leave a real debt unpaid in the belief the app had handled it. */
+   who paid by check would leave a real debt unpaid in the belief the app had handled it. */
 const CONSEQUENCE: Record<PaymentState, (amount: string) => string> = {
     paid_online: (amount) =>
         `${amount} will be refunded to the card they paid with. This happens now, through Stripe.`,
@@ -57,7 +57,7 @@ let consequence = $derived(CONSEQUENCE[paymentState](formatUsd(totalCents)))
             <AlertDialogTitle>Cancel {contactName}'s registration?</AlertDialogTitle>
             <AlertDialogDescription>
                 <!-- The head count is here because it is what leaves the catering numbers, and it is
-                     the part an organiser is most likely to be checking. -->
+                     the part an organizer is most likely to be checking. -->
                 {memberCount}
                 {memberCount === 1 ? 'person' : 'people'} will be removed from the reunion. {consequence}
                 They will be emailed a record of it, and this cannot be undone — they would have to register

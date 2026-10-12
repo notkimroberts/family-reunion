@@ -65,7 +65,7 @@ describe('isPublicPath', () => {
     /* Registration funnel, the donation page and the gallery — must stay reachable with no session.
        /donate is also the one public path that outlives the registration lock date, and /photos
        covers both the grid and the credential-free upload form; nothing uploaded there is served
-       until an organiser approves it. */
+       until an organizer approves it. */
     it.each([
         '/',
         '/register',

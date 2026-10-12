@@ -8,10 +8,10 @@ import { cn } from '$lib/utils'
    Keyed on the presence of a Stripe session rather than on payment status, because those answer
    different questions. Status says whether the money is in; this says which route it came by, and the
    two combine — "Stripe · Pending" is a family who opened Checkout and stopped, "Paper · Pending" is a
-   cheque that has not arrived. The list's chase note spells out which, and they need opposite chasing.
+   check that has not arrived. The list's chase note spells out which, and they need opposite chasing.
 
-   Labelled as well as iconned. An icon alone in a money column is a guess, and the two cases are the
-   ones an organiser must not confuse. */
+   Labeled as well as iconned. An icon alone in a money column is a guess, and the two cases are the
+   ones an organizer must not confuse. */
 let { stripeSessionId, class: className }: { stripeSessionId: string | null; class?: string } =
     $props()
 

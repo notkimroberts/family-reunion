@@ -75,7 +75,7 @@ export const load: PageServerLoad = async (event) => {
                 joinedActorName: userTable.name,
             })
             .from(registrationAudit)
-            /* Left join: a row whose organiser account was deleted has a null actorUserId, and the
+            /* Left join: a row whose organizer account was deleted has a null actorUserId, and the
                change still has to appear in the history. */
             .leftJoin(userTable, eq(registrationAudit.actorUserId, userTable.id))
             .where(eq(registrationAudit.registrationId, event.params.registrationId))
@@ -249,7 +249,7 @@ export const actions: Actions = {
         } catch (err) {
             /* A guard refusing — a repricing on a paid party, emptying a party — arrives here as an
                HttpError. Surface its message rather than a generic failure: the reason IS the value,
-               since it tells the organiser what to do instead. */
+               since it tells the organizer what to do instead. */
             const message =
                 typeof err === 'object' && err !== null && 'body' in err
                     ? String((err as { body: { message?: string } }).body?.message ?? 'Save failed')
@@ -273,7 +273,7 @@ export const actions: Actions = {
         }
 
         /* Everything above is committed by this point. A failed notification must therefore NOT
-           present the save as failed — that sends the organiser back to redo work that already
+           present the save as failed — that sends the organizer back to redo work that already
            landed. Reported separately instead. */
         try {
             await notifyRegistrationUpdated({
@@ -310,7 +310,7 @@ export const actions: Actions = {
     reissue_link: async (event) => {
         const admin = requireAdmin(event)
 
-        /* Pairing checked here too. Not for authorisation — any admin may re-issue any link — but so a
+        /* Pairing checked here too. Not for authorization — any admin may re-issue any link — but so a
            stale or hand-edited URL cannot email a link on behalf of a year it does not belong to and
            then write the audit row under that year's page. */
         await loadPairedRegistration(event.params)
@@ -369,7 +369,7 @@ export const actions: Actions = {
         } catch (err) {
             /* A failed refund leaves the registration untouched — that is the contract
                _performCancellation holds, and it is why this can safely report and stop rather than
-               leaving the organiser guessing whether the money moved. */
+               leaving the organizer guessing whether the money moved. */
             reportError('admin cancel registration failed', err, {
                 registrationId: event.params.registrationId,
             })
@@ -388,7 +388,7 @@ export const actions: Actions = {
             registrationId: event.params.registrationId,
             actor: admin,
             action: 'status_changed',
-            detail: { to: 'refunded', reason: 'cancelled by organiser' },
+            detail: { to: 'refunded', reason: 'cancelled by organizer' },
         })
 
         const feedback: RegistrationActionFeedback = { cancelled: true }

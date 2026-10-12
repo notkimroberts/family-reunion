@@ -263,7 +263,7 @@ describe('POST .../registrations/[registrationId] save', () => {
         expect((await members()).map((row) => row.name)).toEqual(['Alice Patterson'])
     })
 
-    /* A guard refusing — repricing a paid party, emptying a party — has to reach the organiser as its
+    /* A guard refusing — repricing a paid party, emptying a party — has to reach the organizer as its
        own reason. A generic "save failed" leaves them with no idea what to do instead. */
     it('surfaces a guard refusal message rather than a generic failure', async () => {
         await db
@@ -294,7 +294,7 @@ describe('POST .../registrations/[registrationId] save', () => {
     })
 
     /* The change is already committed when the email is attempted. Reporting the save as failed would
-       send the organiser back to redo work that actually landed. */
+       send the organizer back to redo work that actually landed. */
     it('still reports the save as succeeded when the notification fails', async () => {
         mockSendConfirmation.mockRejectedValue(new Error('Resend rejected the email'))
 

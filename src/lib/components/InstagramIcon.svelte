@@ -2,7 +2,7 @@
 /* Local brand icon rather than @lucide/svelte's, which is deprecated and due for removal in
    v1.0 — same reason FacebookIcon exists. Path from Simple Icons.
 
-   Flat single colour, not Instagram's official gradient: gradients are out of keeping with
+   Flat single color, not Instagram's official gradient: gradients are out of keeping with
    the rest of the app's surfaces. */
 let { class: className = 'h-5 w-5' }: { class?: string } = $props()
 </script>

@@ -2,7 +2,7 @@
 import { ChevronDown, type IconProps } from '@lucide/svelte'
 import type { Component, Snippet } from 'svelte'
 
-/* A collapsed, labelled section of a location card — room rates, parking. Native <details>, so it
+/* A collapsed, labeled section of a location card — room rates, parking. Native <details>, so it
    opens with no JavaScript and is keyboard- and screen-reader-operable as is. */
 let {
     label,

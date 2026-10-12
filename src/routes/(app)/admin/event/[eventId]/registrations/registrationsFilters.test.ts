@@ -5,7 +5,7 @@ import { filterPeople } from './filterPeople'
 import { lensFromUrl } from './registrationsViewUrl'
 import { urlForLens } from './urlForLens'
 
-/* What the organiser can actually see. These rules lived inside $derived expressions in a 710-line
+/* What the organizer can actually see. These rules lived inside $derived expressions in a 710-line
    component, where nothing could reach them: the project has no component test harness at all. A
    filter that silently drops rows is indistinguishable from an empty year. */
 
@@ -98,7 +98,7 @@ describe('filterPeople', () => {
         person({ id: 'p2', name: 'Junior Trantow', contactName: 'Wanda Trantow' }),
     ]
 
-    /* An organiser is as likely to be handed "the Pattersons" as a first name, and a child's own
+    /* An organizer is as likely to be handed "the Pattersons" as a first name, and a child's own
        name may not be the one on the booking. */
     it('matches whoever registered the person, not just the person', () => {
         const result = filterPeople(rows, { search: 'alice' })
@@ -136,7 +136,7 @@ describe('filterDonations', () => {
         expect(filterDonations(rows, { search: 'wanda@' }).map((row) => row.id)).toEqual(['d2'])
     })
 
-    /* A pending gift is an abandoned checkout, and an organiser reconciling against Stripe is
+    /* A pending gift is an abandoned checkout, and an organizer reconciling against Stripe is
        looking for exactly those — so the lens lists every status. */
     it('keeps gifts of every status', () => {
         expect(filterDonations(rows, { search: '' })).toHaveLength(2)
@@ -168,7 +168,7 @@ describe('the lens in the URL', () => {
     })
 
     /* Anything else is not a lens. Falling back to bookings beats rendering nothing. */
-    it('falls back to bookings for an unrecognised value', () => {
+    it('falls back to bookings for an unrecognized value', () => {
         expect(lensFromUrl(new URL('http://x/r?view=chairs'))).toBe('bookings')
     })
 

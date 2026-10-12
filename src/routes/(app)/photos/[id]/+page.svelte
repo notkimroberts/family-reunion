@@ -16,14 +16,14 @@ let imageUrl = $derived(new URL(`/api/photos/${data.photo.id}/display`, page.url
 /* The year filter rides along, so arrows walk the set the visitor was actually looking at. */
 let suffix = $derived(data.year ? `?year=${data.year}` : '')
 let previousHref = $derived(
-    data.neighbours.previousId ? `/photos/${data.neighbours.previousId}${suffix}` : undefined,
+    data.neighbors.previousId ? `/photos/${data.neighbors.previousId}${suffix}` : undefined,
 )
 let nextHref = $derived(
-    data.neighbours.nextId ? `/photos/${data.neighbours.nextId}${suffix}` : undefined,
+    data.neighbors.nextId ? `/photos/${data.neighbors.nextId}${suffix}` : undefined,
 )
 let galleryHref = $derived(`/photos${suffix}`)
 
-/* Warm the neighbours so an arrow tap is instant rather than a visible load. preloadData fetches
+/* Warm the neighbors so an arrow tap is instant rather than a visible load. preloadData fetches
    the page data only; the browser then has the <img> URL early enough to start it too. */
 $effect(() => {
     for (const href of [previousHref, nextHref]) {
@@ -94,7 +94,7 @@ function handleTouchEnd(event: TouchEvent) {
             All photos{data.year ? ` · ${data.year}` : ''}
         </a>
         <p class="text-muted-foreground text-sm tabular-nums">
-            {data.neighbours.position} of {data.neighbours.total}
+            {data.neighbors.position} of {data.neighbors.total}
         </p>
     </div>
 

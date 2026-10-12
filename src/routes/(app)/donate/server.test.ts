@@ -93,7 +93,7 @@ describe('POST /donate?/donate', () => {
     })
 
     /* THE distinguishing case. The lock date closes registration so catering counts can be
-       finalised; a gift needs no chair, so /donate has to keep working after it. */
+       finalized; a gift needs no chair, so /donate has to keep working after it. */
     it('still accepts a gift after the registration lock date has passed', async () => {
         await db
             .update(reunionEvents)

@@ -25,7 +25,7 @@ import RegistrationCard from './RegistrationCard.svelte'
 
    Registration — status, opening and closing date — is one card (RegistrationCard), because only
    together do they say whether the public can register now. The reunion's dates sit with Tiers,
-   because those two are what an organiser revisits: when it is and what it costs. The JSON textarea is
+   because those two are what an organizer revisits: when it is and what it costs. The JSON textarea is
    96 lines tall and is edited once a year — pairing it with the dates meant scrolling past the whole
    program to reach a field you came to change.
 
@@ -100,7 +100,7 @@ const METADATA_EXAMPLE = `{
     <RegistrationCard event={data.event} otherOpenYear={data.otherOpenYear} />
 </section>
 
-<!-- When it is and what it costs: the two things an organiser comes back to. Two forms in one card,
+<!-- When it is and what it costs: the two things an organizer comes back to. Two forms in one card,
      each with its own Save — ?/update_dates and the tier actions write disjoint tables, so neither can
      clear the other's fields. That is the property that made the old single-card/single-Save rule
      necessary, and it does not apply here. -->
@@ -156,12 +156,12 @@ const METADATA_EXAMPLE = `{
                 </p>
             {/if}
 
-            <!-- COMPACT. Each tier was a bordered card holding two labelled fields and a full-width
+            <!-- COMPACT. Each tier was a bordered card holding two labeled fields and a full-width
                  Save, so four tiers filled a screen to show four labels and four numbers. Now one row
                  per tier with the labels carried once by a header, the price prefixed with $ instead of
                  captioned "Price ($)", and Delete as an icon.
 
-                 The header is md:+ only. Stacked at 375px a row sits directly under its neighbour with
+                 The header is md:+ only. Stacked at 375px a row sits directly under its neighbor with
                  no header in reach, so each field keeps its own sr-only label — the visible header is
                  decoration for the wide case, never the only naming. -->
             {#if data.tiers.length > 0}
@@ -219,7 +219,7 @@ const METADATA_EXAMPLE = `{
                     <form method="POST" action="?/delete_tier" use:enhance>
                         <!-- Icon-only on md+, but never icon-only on mobile: stacked at 375px this is
                              a full-width control directly under Save with no confirmation behind it,
-                             and an unlabelled bin there is one mis-tap from deleting a tier. -->
+                             and an unlabeled bin there is one mis-tap from deleting a tier. -->
                         <input type="hidden" name="tierId" value={tier.id} />
                         <Button
                             type="submit"
@@ -272,7 +272,7 @@ const METADATA_EXAMPLE = `{
 </section>
 
 <!-- Standing alone, and last. It is a 96-line textarea plus a worked example, edited once a year;
-     above the dates and the tiers it put the whole program between the organiser and the two fields
+     above the dates and the tiers it put the whole program between the organizer and the two fields
      they actually came back for. -->
 <section class="col-span-12 xl:col-span-8">
     <Card>

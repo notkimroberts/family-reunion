@@ -38,10 +38,10 @@ The sizing is measured across the recovered archive rather than estimated:
 
 ## Decision
 
-**A public gallery at `/photos`, with public contribution and organiser moderation.**
+**A public gallery at `/photos`, with public contribution and organizer moderation.**
 
 - **Anyone may upload, with no credential.** No token, no passcode, no account.
-- **Nothing is publicly visible until an organiser approves it.** Every contributed row is written
+- **Nothing is publicly visible until an organizer approves it.** Every contributed row is written
   `pending`. The public gallery query filters on `approved`, and the byte proxy re-reads the status on
   every request.
 - **Storage is a Railway object storage bucket**, private. `$lib/server/storage` returns, along with
@@ -89,7 +89,7 @@ re-checked per request. The cache header is `private, max-age=300` for the same 
 **`event_id` is nullable because the archive predates every reunion event row.** The 290 photographs
 belong to no year in `reunion_events`, and a photograph contributed between reunions is recorded rather
 than refused. This is the reasoning already applied to `donations.event_id` in
-[ADR 0008](./0008-contact-stays-on-the-registration.md)'s neighbourhood, and it is why the moderation
+[ADR 0008](./0008-contact-stays-on-the-registration.md)'s neighborhood, and it is why the moderation
 lens is deliberately **not** filtered by `params.eventId`: a queue scoped to a year would hide exactly
 the rows most needing a decision.
 

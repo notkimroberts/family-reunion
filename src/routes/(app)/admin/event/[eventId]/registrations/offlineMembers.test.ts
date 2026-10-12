@@ -27,7 +27,7 @@ describe('admin add-member stays offline', () => {
             /\$lib\/server\/payments/,
         )
         /* checkout/addMember always opens a Stripe session and rejects non paid/waived — reusing
-           it here would charge a family who is paying by cheque. */
+           it here would charge a family who is paying by check. */
         expect(source, 'must use addAdminMember, not checkout/addMember').not.toMatch(
             /\baddMember\b/,
         )

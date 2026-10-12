@@ -59,7 +59,7 @@ describe('hasRegistrationEdits', () => {
     it.each([
         ['contactName', { contactName: 'Alice Roberts' }],
         ['contactEmail', { contactEmail: 'alice@new.example.com' }],
-        /* Booking-level like the fields above it, and Save has to notice it on its own — an organiser
+        /* Booking-level like the fields above it, and Save has to notice it on its own — an organizer
            who only answers the hotel question has made a real edit. */
         ['stayingAtHostHotel', { stayingAtHostHotel: 'yes' as const }],
         ['contactPhone', { contactPhone: '5105551234' }],
@@ -71,7 +71,7 @@ describe('hasRegistrationEdits', () => {
     })
 
     /* Every field PartyMemberFields can write. The JSON comparison covers them without being told,
-       so this pins the behaviour rather than the implementation — including the contact's name, which
+       so this pins the behavior rather than the implementation — including the contact's name, which
        is edited through the Contact field and lands on their row. */
     it.each([
         ['name', { name: 'Bobby Patterson' }],

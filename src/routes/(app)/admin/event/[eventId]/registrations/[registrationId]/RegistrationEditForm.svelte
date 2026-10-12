@@ -39,7 +39,7 @@ let {
     members: RegistrationMember[]
     tiers: TierOption[]
     /* Drives the money guardrail in the UI. The server refuses these too — this only explains why
-       before the organiser tries. */
+       before the organizer tries. */
     isPaid: boolean
     onCancel: () => void
     onSaved: () => void
@@ -54,7 +54,7 @@ const { form, errors, message, submitting, enhance } = superForm(initialForm, {
     resetForm: false,
     /* Leave edit mode only on a genuine success. A guard refusing (repricing a paid party, emptying
        it) comes back as fail(409) and a validation error as fail(400) — both must keep the form open
-       with the staged changes intact, or the organiser is told it did not save while losing the work
+       with the staged changes intact, or the organizer is told it did not save while losing the work
        they would need to retry. */
     onResult: ({ result }) => {
         if (result.type === 'success') {
@@ -182,7 +182,7 @@ function handleRestore(memberId: string) {
 
     <!-- The contact and their own attendance in one card. They are one person, so: one Name field, and
          an email and phone that plainly belong to them rather than floating above a separate card
-         labelled CONTACT. -->
+         labeled CONTACT. -->
     <Card>
         <CardHeader class="pb-3">
             <CardTitle class="text-base">Contact</CardTitle>

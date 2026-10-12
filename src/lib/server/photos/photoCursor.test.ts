@@ -4,8 +4,8 @@ import { photoCursorAfter, photoCursorBefore } from './_photoCursor'
 
 /* Regression test for a bug that shipped green.
 
-   getPhotoNeighbours interpolated a JS Date into a raw sql`` template. A raw interpolation bypasses
-   drizzle's column mapper, so the Date reached the driver unserialised: postgres.js threw "the
+   getPhotoNeighbors interpolated a JS Date into a raw sql`` template. A raw interpolation bypasses
+   drizzle's column mapper, so the Date reached the driver unserialized: postgres.js threw "the
    string argument must be of type string ... received an instance of Date" from inside its Bind
    frame, and every photo page 500'd in production.
 

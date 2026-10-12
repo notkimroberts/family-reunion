@@ -74,7 +74,7 @@ describe('findBritishSpellings', () => {
         expect(found.map((spelling) => spelling.british)).toEqual(['organiser', 'CHEQUE'])
     })
 
-    /* An existing camelCase identifier must not block every line that calls it. */
+    /* A camelCase identifier, e.g. from a library, must not block every line that calls it. */
     it('leaves the word alone inside an identifier', () => {
         expect(findBritishSpellings(diffAdding('a.ts', ['await getPhotoNeighbours(id)']))).toEqual(
             [],

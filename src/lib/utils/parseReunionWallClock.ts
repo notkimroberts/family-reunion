@@ -5,7 +5,7 @@ import { REUNION_TIME_ZONE } from '$lib/general/constants'
    the REUNION's zone, and returns the instant it names.
 
    THE BUG THIS FIXES. datetime-local posts bare digits with no offset, and `new Date(digits)` reads
-   them in whatever zone the runtime is in — UTC on Railway. So an organiser typing 9:00 AM stored
+   them in whatever zone the runtime is in — UTC on Railway. So an organizer typing 9:00 AM stored
    09:00 UTC, and registration actually closed at 2:00 AM Pacific: seven hours before the deadline
    everyone had been shown. Nothing surfaced it, because the settings page echoed the value back in UTC
    too, so both screens agreed with each other and neither agreed with the family.

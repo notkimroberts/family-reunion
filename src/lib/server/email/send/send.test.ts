@@ -66,7 +66,7 @@ describe('send envelope', () => {
         expect(CONTACT_EMAIL).toBe(`organizers@${APP_DOMAIN}`)
     })
 
-    /* The SDK takes camelCase and serialises it itself. `reply_to` is accepted by the TYPE checker
+    /* The SDK takes camelCase and serializes it itself. `reply_to` is accepted by the TYPE checker
        nowhere and dropped silently at runtime, so a well-meaning rename would break replies with no
        error anywhere. */
     it('uses the SDK spelling of the reply-to header', async () => {

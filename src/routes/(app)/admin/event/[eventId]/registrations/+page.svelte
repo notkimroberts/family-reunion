@@ -60,9 +60,9 @@ import { urlForLens } from './urlForLens'
 /* The filter buttons wear the same badge each status wears in the rows, from the same palette — click the
    green one to see the green ones. `undefined` is the unfiltered chip, because "All" is not a status.
 
-   Colour on every button rather than only the selected one: the row doubles as the legend, so an organiser
+   Color on every button rather than only the selected one: the row doubles as the legend, so an organizer
    can learn what amber means without hunting for a pending row. The selection is marked by a ring instead,
-   which is the only thing that still reads when four buttons are already four different colours.
+   which is the only thing that still reads when four buttons are already four different colors.
 
    Spelled out rather than derived from the style map's keys, because the order is a decision — money in,
    money owed, comped, cancelled — and Object.keys would also widen the union back to string. */
@@ -93,7 +93,7 @@ const HOTEL_STAY_LABELS = {
     unasked: '—',
 }
 
-/* Gift states in the organiser's words. "Pending" on a gift means a checkout nobody finished, which
+/* Gift states in the organizer's words. "Pending" on a gift means a checkout nobody finished, which
    is not the same thing a pending BOOKING means — hence its own wording rather than the shared
    registration status badge. */
 const DONATION_STATUS_LABELS = {
@@ -102,14 +102,14 @@ const DONATION_STATUS_LABELS = {
     refunded: 'Refunded',
 }
 
-/* The details an organiser fills in from a phone call or a paper form, editable in place on the
+/* The details an organizer fills in from a phone call or a paper form, editable in place on the
    People lens. Declared once and rendered by both the table and the mobile cards — and the table's
    own headers come off this list too, so the columns cannot end up in a different order from the
    cells beneath them.
 
    Shirt size offers one list, SHIRT_SIZES, to everyone. The tiers table used to carry an adult/child
    flag alongside it, which no size list ever read; it is gone rather than wired up, because the tier
-   LABEL already tells an organiser which shirts a row means and the order sheet groups by it — "Adult:
+   LABEL already tells an organizer which shirts a row means and the order sheet groups by it — "Adult:
    S 1 M 3 · Child: S 1 M 1" is a youth count without a youth vocabulary. PersonFieldForm keeps any
    existing value that is not on the list, so nothing already recorded is hidden. */
 const PERSON_FIELDS = [
@@ -176,9 +176,9 @@ function setView(next: RegistrationsLens) {
 }
 
 /* Which rows each lens shows is decided in filterBookings / filterPeople rather than inline here. The
-   two rules genuinely differ — Bookings honours the status chips, People deliberately ignores them —
+   two rules genuinely differ — Bookings honors the status chips, People deliberately ignores them —
    and a rule that exists only inside a $derived cannot be tested in a project with no component
-   harness. The coloured left edge lives in rowAccent.ts for the same reason: refunded silently had
+   harness. The colored left edge lives in rowAccent.ts for the same reason: refunded silently had
    none until it was extracted and every state had to be decided. */
 let visibleBookings = $derived(filterBookings(data.registrations, { search, status: statusFilter }))
 let visiblePeople = $derived(filterPeople(data.people, { search }))
@@ -277,7 +277,7 @@ $effect(() => {
     <div class="flex min-w-0 flex-col gap-3">
         <div class="flex flex-wrap items-center gap-2">
             <!-- Leftmost, ahead of the search box and the chips, because the lens decides what those two
-                 even mean. Two labelled halves rather than a switch: "Show people" as a switch leaves you
+                 even mean. Two labeled halves rather than a switch: "Show people" as a switch leaves you
                  guessing what the off state shows. -->
             <div class="bg-muted flex gap-1 rounded-full p-1">
                 <button
@@ -371,8 +371,8 @@ $effect(() => {
                                 /* Same border/background/text triple the row badge wears, so the chip and
                                    the rows it selects are visibly the same thing. */
                                 style?.class ?? 'text-muted-foreground bg-muted border-transparent',
-                                /* Selection is a ring, not a colour change — four buttons are already
-                                   four colours, so there is no colour left to mean "chosen". */
+                                /* Selection is a ring, not a color change — four buttons are already
+                                   four colors, so there is no color left to mean "chosen". */
                                 selected
                                     ? 'ring-ring ring-offset-background ring-2 ring-offset-1'
                                     : 'opacity-70 hover:opacity-100',
@@ -588,7 +588,7 @@ $effect(() => {
                                 <Table.Row>
                                     <Table.Head>Person</Table.Head>
                                     <Table.Head>Registration Tier</Table.Head>
-                                    <!-- Off PERSON_FIELDS, so a column cannot end up labelling the
+                                    <!-- Off PERSON_FIELDS, so a column cannot end up labeling the
                                          wrong control. -->
                                     {#each PERSON_FIELDS as field (field.field)}
                                         <Table.Head>{field.label}</Table.Head>

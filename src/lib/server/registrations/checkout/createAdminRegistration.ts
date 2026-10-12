@@ -22,7 +22,7 @@ export async function createAdminRegistration(params: {
     stayingAtHostHotel?: HotelStayAnswer
     status: (typeof registrationStatusEnum.enumValues)[number]
     members: MemberInput[]
-    /* A gift that came with the paper form or the cheque. Zero and undefined both mean none. */
+    /* A gift that came with the paper form or the check. Zero and undefined both mean none. */
     donationCents?: number
 }): Promise<{ registrationId: string; viewToken: string }> {
     const pricingByTierId = await resolveTierPricing(
@@ -62,12 +62,12 @@ export async function createAdminRegistration(params: {
         }),
     )
 
-    /* No Stripe here, so the gift's state follows the registration's: money an organiser has in
-       hand is paid, and a booking still awaiting a cheque carries a gift still awaiting it too. A
+    /* No Stripe here, so the gift's state follows the registration's: money an organizer has in
+       hand is paid, and a booking still awaiting a check carries a gift still awaiting it too. A
        waived registration cannot have brought money with it, so its gift is recorded as pending
        rather than silently claimed as received.
 
-       stripeFeeCents stays null and means what it always means: not known. Cash and cheques lose
+       stripeFeeCents stays null and means what it always means: not known. Cash and checks lose
        nothing to Stripe, and the admin totals only ever apply a fee to card money. */
     if (params.donationCents && params.donationCents > 0) {
         await db.insert(donations).values({

@@ -16,15 +16,15 @@ describe('isOwner', () => {
     /* Email is case- and whitespace-insensitive in practice: a Railway variable pasted with a trailing
        space, or an address typed with a capital, must not silently lock the owner out. */
     it.each([
-        ['a capitalised stored address', { email: 'Kim@Example.com' }, 'kim@example.com'],
-        ['a capitalised configured address', OWNER, 'KIM@EXAMPLE.COM'],
+        ['a capitalized stored address', { email: 'Kim@Example.com' }, 'kim@example.com'],
+        ['a capitalized configured address', OWNER, 'KIM@EXAMPLE.COM'],
         ['a padded configured address', OWNER, '  kim@example.com  '],
         ['a padded stored address', { email: ' kim@example.com' }, 'kim@example.com'],
     ])('matches despite %s', (_label, user, configured) => {
         expect(isOwner(user, configured)).toBe(true)
     })
 
-    /* The deliberate fail-open. The degraded state is today's behaviour — any admin — because the
+    /* The deliberate fail-open. The degraded state is today's behavior — any admin — because the
        group layout still requires role 'admin' before this is ever consulted. Failing closed would let
        one forgotten Railway variable lock the owner out of pricing days before a launch. */
     it.each([

@@ -9,7 +9,7 @@ import { REUNION_TIME_ZONE } from '$lib/general/constants'
    had closed two hours before they expected.
 
    NOT formatViewerDateTime, which resolves to the reader's own zone. That is right for an audit trail
-   ("when did this payment land, my time") and wrong for a time the organisers set once.
+   ("when did this payment land, my time") and wrong for a time the organizers set once.
 
    ONE module owns reunion-zone formatting. DateTimeField built a second Intl.DateTimeFormat with the
    same zone and the same timeZoneName, differing only in field widths — two places to keep in step

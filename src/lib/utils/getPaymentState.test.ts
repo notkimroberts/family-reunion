@@ -5,9 +5,9 @@ import { getPaymentState } from './getPaymentState'
 /* These two replace reading partyMembers.stripePaymentIntentId as "was this paid online".
 
    The bug they exist for, seen on a real admin page: a public registration that reached Stripe
-   Checkout and was abandoned rendered as "Offline" — the same label a family paying by cheque gets.
+   Checkout and was abandoned rendered as "Offline" — the same label a family paying by check gets.
    Its adult member also showed $165.09, the Stripe gross-up of the $160.00 tier, next to a $100.00
-   net member added by an organiser, with nothing to explain the difference. Two opposite
+   net member added by an organizer, with nothing to explain the difference. Two opposite
    follow-ups, presented identically. */
 
 const ONLINE = { stripeSessionId: 'cs_test_123' }
@@ -66,7 +66,7 @@ describe('getMemberPaymentOrigin', () => {
     })
 
     /* A comped party has a price on every member and no payment columns anywhere, which by Stripe data
-       alone is identical to a cheque payer. It rendered "Recorded offline" next to a "Waived" badge —
+       alone is identical to a check payer. It rendered "Recorded offline" next to a "Waived" badge —
        two different claims about the same money on one screen. */
     it('reports a waived party as comped, not as recorded offline', () => {
         expect(getMemberPaymentOrigin(NO_PAYMENT, { ...OFFLINE, status: 'waived' })).toBe('comped')

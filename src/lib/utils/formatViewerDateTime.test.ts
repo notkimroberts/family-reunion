@@ -17,7 +17,7 @@ describe('formatViewerDateTime', () => {
         expect(() => formatViewerDateTime(NINE_OH_SIX_PM_PACIFIC)).not.toThrow()
     })
 
-    /* Naming the zone is what makes a viewer-local time unambiguous when an organiser screenshots it
+    /* Naming the zone is what makes a viewer-local time unambiguous when an organizer screenshots it
        for someone in another one. */
     it('names the reader’s zone', () => {
         expect(formatViewerDateTime(NINE_OH_SIX_PM_PACIFIC)).toMatch(/[A-Z]{2,5}|GMT[+-]\d/)

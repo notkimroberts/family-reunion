@@ -10,7 +10,7 @@
 
    '/photos' covers the gallery grid and '/photos/contribute', the upload form — one prefix for
    both, as '/register' covers view and recover. Contributing carries no credential at all, so
-   nothing uploaded is publicly reachable until an organiser approves it; see ADR 0009. The byte
+   nothing uploaded is publicly reachable until an organizer approves it; see ADR 0009. The byte
    proxy at /api/photos/* sits outside the (app) group and enforces that itself.
 
    SCOPE, so this is not mistaken for a complete lock:

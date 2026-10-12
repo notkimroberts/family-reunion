@@ -128,7 +128,7 @@ describe('getRegistrationMoney', () => {
             expect(getRegistrationMoney(reg()).netCents).toBe(16000)
         })
 
-        it('keeps a cheque in full', () => {
+        it('keeps a check in full', () => {
             const money = getRegistrationMoney(reg({ stripeSessionId: null, totalCents: 16000 }))
 
             expect(money.feeCents).toBe(0)
@@ -151,7 +151,7 @@ describe('getRegistrationMoney', () => {
             expect(money.netCents).toBe(0)
         })
 
-        it('loses nothing on a cancelled cheque', () => {
+        it('loses nothing on a cancelled check', () => {
             const money = getRegistrationMoney(reg({ status: 'refunded', stripeSessionId: null }))
 
             expect(money.lostFeeCents).toBe(0)

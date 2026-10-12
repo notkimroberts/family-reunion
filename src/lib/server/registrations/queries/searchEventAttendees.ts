@@ -52,7 +52,7 @@ export async function searchEventAttendees(
                    'refunded' — there is no separate cancelled status. */
                     inArray(registrations.status, ['pending', 'refunded']),
                     /* The person AND whoever booked them, matching the check-in list's own search: an
-                   organiser is as likely to be handed "the Pattersons" as a first name. */
+                   organizer is as likely to be handed "the Pattersons" as a first name. */
                     or(
                         ilike(partyMembers.name, pattern),
                         ilike(registrations.contactName, pattern),

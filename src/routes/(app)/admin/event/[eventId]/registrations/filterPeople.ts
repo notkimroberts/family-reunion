@@ -6,7 +6,7 @@ import type { EventPerson } from '$lib/server/registrations'
    No status filter, and that is deliberate rather than missing. getEventPeople already returns
    paid-and-waived attendees only, so a chip here could only ever remove rows without saying why.
 
-   Matches the person AND whoever registered them: an organiser is as likely to be handed "the
+   Matches the person AND whoever registered them: an organizer is as likely to be handed "the
    Pattersons" as a first name, and a child's own name may not be the one on the booking. */
 export function filterPeople(
     people: readonly EventPerson[],

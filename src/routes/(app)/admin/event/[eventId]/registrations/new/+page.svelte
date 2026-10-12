@@ -77,7 +77,7 @@ const blankSelf = (): PersonDetails => ({
 
 let self = $state<PersonDetails>(blankSelf())
 let members = $state<FormMember[]>([])
-/* A gift that arrived with the paper form or the cheque. Cents, like the public form. */
+/* A gift that arrived with the paper form or the check. Cents, like the public form. */
 let donationCents = $state(0)
 let copied = $state(false)
 /* The confirmation and the form are mutually exclusive: a success replaces the form with the

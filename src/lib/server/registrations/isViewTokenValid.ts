@@ -1,5 +1,5 @@
 /* How long a rotated-away token keeps working. Long enough that a link emailed before an
-   organiser's edit is still usable when the registrant gets round to opening it. */
+   organizer's edit is still usable when the registrant gets round to opening it. */
 export const VIEW_TOKEN_GRACE_PERIOD_MS = 7 * 24 * 60 * 60 * 1000
 
 export type ViewTokenColumns = {
@@ -20,7 +20,7 @@ export type ViewTokenColumns = {
    expiry rule — the part that matters — in exactly one place, and fails closed if the fetch is ever
    broader than it should be.
 
-   Only ONE generation is honoured. Two rotations in quick succession drop the oldest token
+   Only ONE generation is honored. Two rotations in quick succession drop the oldest token
    immediately, which is correct: the registrant has been sent a newer link twice by then. */
 export function isViewTokenValid(
     row: ViewTokenColumns,

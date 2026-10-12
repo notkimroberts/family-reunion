@@ -5,7 +5,7 @@ import {
     type ViewTokenColumns,
 } from './isViewTokenValid'
 
-/* This predicate is the whole authorisation check for the registrant-facing surface: it decides who
+/* This predicate is the whole authorization check for the registrant-facing surface: it decides who
    may view a party, change its details, remove someone, and trigger a refund. There is no session
    behind it. So the expiry has to be exercised directly — a grace period that never ends is
    indistinguishable from a working one until an old link is used months later. */
@@ -59,7 +59,7 @@ describe('isViewTokenValid', () => {
     })
 
     /* A previous hash with no expiry cannot be shown to have ever been current, so it must not be
-       honoured — fail closed rather than trusting a half-written row. */
+       honored — fail closed rather than trusting a half-written row. */
     it('rejects a previous token that carries no expiry', () => {
         const noExpiry = row({ previousViewToken: PREVIOUS, previousTokenExpiresAt: null })
         expect(isViewTokenValid(noExpiry, PREVIOUS, NOW)).toBe(false)
@@ -74,8 +74,8 @@ describe('isViewTokenValid', () => {
     })
 
     /* Two rotations in a row drop the oldest token immediately: it is no longer in either column.
-       Documented behaviour, not an accident — by then the registrant has had two newer links. */
-    it('does not honour a token two generations old', () => {
+       Documented behavior, not an accident — by then the registrant has had two newer links. */
+    it('does not honor a token two generations old', () => {
         const twiceRotated = row({
             viewToken: 'hash-newest',
             previousViewToken: CURRENT,

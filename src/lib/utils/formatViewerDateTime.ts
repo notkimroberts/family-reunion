@@ -1,4 +1,4 @@
-/* Formats an instant in the READER's own timezone and locale, labelled with the zone.
+/* Formats an instant in the READER's own timezone and locale, labeled with the zone.
 
    MUST be called from the browser, not during SSR. With no timeZone option Intl resolves to the
    environment's zone, and on Railway that is Node running in UTC — a server-rendered string would

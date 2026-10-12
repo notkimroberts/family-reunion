@@ -6,14 +6,14 @@ import { memberSchema } from '../../../../../register/schema'
 
    vegetarianMeal/attendedReunion2025 admit '' for the same reason personDetailsSchema does: the form
    holds them as strings and an unanswered value has to be representable. Unlike the public form they
-   are NOT required here — an organiser correcting a birthday must not be forced to invent a dietary
+   are NOT required here — an organizer correcting a birthday must not be forced to invent a dietary
    answer for a member who never gave one. */
 export const adminEditMemberSchema = z.object({
     memberId: z.string().min(1),
     name: z.string().trim().min(2, 'Please enter a name'),
-    /* OPTIONAL, and the form omits it unless the organiser actually changed the tier.
+    /* OPTIONAL, and the form omits it unless the organizer actually changed the tier.
 
-       party_members stores only the denormalised tierLabel and priceCents — there is no tier_id
+       party_members stores only the denormalized tierLabel and priceCents — there is no tier_id
        column — so the member's tier can only be guessed by matching the label against the event's
        current tiers, and a renamed tier breaks that match. Posting a guessed id on every save would
        silently move a member onto whatever tier the select happened to land on. Sending it only on a
@@ -27,7 +27,7 @@ export const adminEditMemberSchema = z.object({
     attendedReunion2025: z.enum(['yes', 'no', '']),
 })
 
-/* One save covers everything an organiser can change: contact, status, and every existing member.
+/* One save covers everything an organizer can change: contact, status, and every existing member.
 
    Batched deliberately. Each save that matters to the registrant rotates their view token and
    emails them, so four separate actions would mean four rotations and four emails for one sitting's
@@ -37,14 +37,14 @@ export const adminEditRegistrationSchema = z.object({
     contactEmail: z.email('Please enter a valid email'),
     contactPhone: z.string().optional(),
     /* Admits '' — unlike the public form, where it is required. A booking taken before the question
-       existed has no answer, and an organiser correcting an email must not be forced to invent one on
+       existed has no answer, and an organizer correcting an email must not be forced to invent one on
        the family's behalf. Saving '' leaves the column alone rather than writing a guess. */
     stayingAtHostHotel: z.enum(['', ...HOTEL_STAY_ANSWERS]),
     status: z.enum(['pending', 'paid', 'waived'], 'Please choose a status'),
     members: z.array(adminEditMemberSchema),
     /* People staged for addition during this sitting.
 
-       memberSchema is the PUBLIC form's member shape, reused deliberately: an organiser adding someone
+       memberSchema is the PUBLIC form's member shape, reused deliberately: an organizer adding someone
        must not be held to a weaker standard than a registrant adding the same person, or catering and
        shirt counts end up complete only for people who registered themselves. */
     newMembers: z.array(memberSchema),

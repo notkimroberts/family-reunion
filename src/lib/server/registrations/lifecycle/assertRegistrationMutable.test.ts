@@ -11,7 +11,7 @@ describe('assertRegistrationMutable', () => {
         expect(() => assertRegistrationMutable('refunded', 'nope')).toThrow()
     })
 
-    /* The message belongs to the caller: what an organiser should do next differs between adding
+    /* The message belongs to the caller: what an organizer should do next differs between adding
        someone and renaming the contact, and a single generic 409 would lose that. */
     it('raises a 409 carrying the caller’s own message', () => {
         expect(() =>

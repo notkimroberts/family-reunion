@@ -5,7 +5,7 @@ import { planRefunds } from './_planRefunds'
 
    The rule this pins: a gift is KEPT, and Stripe refunds charges rather than line items, so keeping
    one means refunding less than the charge. Everything without a gift must keep refunding in full —
-   `undefined`, Stripe's own default — because that is the behaviour every existing booking has and
+   `undefined`, Stripe's own default — because that is the behavior every existing booking has and
    an arithmetic answer that merely happens to equal the charge is a figure that can drift. */
 
 const member = (priceCents: number, stripePaymentIntentId: string | null = 'pi_1') => ({
