@@ -29,9 +29,9 @@ function createAuthInstance() {
             disableSignUp: true,
         },
         /* TOTP for every account. The plugin only CHALLENGES accounts that have enrolled; making
-           enrolment compulsory is hooks.server.ts's job (see needsTwoFactorSetup). The login page never
-           asks to trust the device: there are few admins and they sign in rarely, so a code every
-           time costs little, and a stolen laptop stays a password-plus-phone problem. */
+           enrollment compulsory is hooks.server.ts's job (see needsTwoFactorSetup). The login page
+           never asks to trust the device: there are few admins and they sign in rarely, so a code
+           every time costs little, and a stolen laptop stays a password-plus-phone problem. */
         plugins: [admin(), twoFactor({ issuer: REUNION_NAME }), sveltekitCookies(getRequestEvent)],
         session: {
             cookieCache: {

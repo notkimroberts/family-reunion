@@ -68,13 +68,13 @@ async function signIn(email: string) {
 }
 
 /* Signs in, enables 2FA and verifies the first code: what /login/setup-2fa does. */
-async function enrol(email: string) {
+async function enroll(email: string) {
     await createAdminAccount(email)
     const signedIn = await signIn(email)
     const headers = cookieHeader(signedIn.headers)
     const enabled = await auth.api.enableTwoFactor({ body: { password: PASSWORD }, headers })
     if (enabled.method !== 'totp') {
-        throw new Error('expected a TOTP enrolment')
+        throw new Error('expected a TOTP enrollment')
     }
     const verified = await auth.api.verifyTOTP({
         body: { code: totpFromUri(enabled.totpURI) },
@@ -111,7 +111,7 @@ describe('admin 2FA', () => {
     /* The cookie cache lasts 5 minutes; the session cookie verifyTOTP sets must already carry the
        flag, or the gate would keep a freshly enrolled admin out for that long. */
     it('turns 2FA on with the first code, in the session the response sets', async () => {
-        const { sessionHeaders } = await enrol('enrolled@example.com')
+        const { sessionHeaders } = await enroll('enrolled@example.com')
 
         const session = await auth.api.getSession({ headers: sessionHeaders })
 
@@ -121,7 +121,7 @@ describe('admin 2FA', () => {
 
     it('asks an enrolled account for a code, with no session from the password alone', async () => {
         const email = 'challenged@example.com'
-        await enrol(email)
+        await enroll(email)
 
         const result = await auth.api.signInEmail({ body: { email, password: PASSWORD } })
 
@@ -144,7 +144,7 @@ describe('admin 2FA', () => {
         expect(row.twoFactorEnabled).toBe(false)
     })
 
-    it('needs the password to start enrolment, so a stolen session cannot enrol', async () => {
+    it('needs the password to start enrollment, so a stolen session cannot enroll', async () => {
         const email = 'stolen@example.com'
         await createAdminAccount(email)
         const headers = cookieHeader((await signIn(email)).headers)
@@ -154,9 +154,9 @@ describe('admin 2FA', () => {
         ).rejects.toThrow()
     })
 
-    it('reset removes the enrolment, signs every session out, and sends the next sign-in to setup', async () => {
+    it('reset removes the enrollment, signs every session out, and sends the next sign-in to setup', async () => {
         const email = 'lost-phone@example.com'
-        const { sessionHeaders } = await enrol(email)
+        const { sessionHeaders } = await enroll(email)
 
         const reset = await resetTwoFactor(db, email)
 
@@ -213,7 +213,7 @@ describe('/login/setup-2fa load', () => {
     })
 
     it('sends an enrolled session on to /admin', async () => {
-        const { sessionHeaders } = await enrol('done@example.com')
+        const { sessionHeaders } = await enroll('done@example.com')
 
         await expect(loadWith(sessionHeaders)).rejects.toMatchObject({
             status: 302,

@@ -1,4 +1,4 @@
-/* Removes an admin's 2FA enrolment, after a lost phone AND lost backup codes.
+/* Removes an admin's 2FA enrollment, after a lost phone AND lost backup codes.
    Usage: bun scripts/resetAdminTwoFactor.ts <email>
 
    Thin wrapper: the logic lives in $lib/server/auth/resetTwoFactor, where it is tested against a real

@@ -7,10 +7,10 @@ type SignedIn = {
 
 /* What hooks.server.ts puts on `locals` for a request's session.
 
-   A session from an account that has not finished 2FA enrolment counts as signed out, so every guard
-   refuses it (see needsTwoFactorSetup). `fallbackUser` is the dev admin, used only when there is NO
-   session: a session awaiting setup does not fall back to it, because locally that is how the
-   enrolment flow is exercised. */
+   A session from an account that has not finished 2FA enrollment counts as signed out, so every
+   guard refuses it (see needsTwoFactorSetup). `fallbackUser` is the dev admin, used only when there
+   is NO session: a session awaiting setup does not fall back to it, because locally that is how the
+   enrollment flow is exercised. */
 export function sessionLocals(
     signedIn: SignedIn | null,
     fallbackUser: App.Locals['user'],

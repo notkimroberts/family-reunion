@@ -30,7 +30,7 @@ async function handleSubmit(e: SubmitEvent) {
         return
     }
     /* 2FA on: no session yet, only a challenge cookie. 2FA off: a session that hooks.server.ts
-       treats as signed out until enrolment, so it goes to the setup page, never to /admin. */
+       treats as signed out until enrollment, so it goes to the setup page, never to /admin. */
     if ('twoFactorRedirect' in result.data && result.data.twoFactorRedirect) {
         awaitingCode = true
         return
