@@ -4,7 +4,7 @@ These checks need a person to do them: dashboards, DNS, money, phones and judgme
 
 **Tick the boxes in the description of the draft PR that adds this file. Do not merge that PR**, because it only exists to give the checklist a UI. This file is a copy taken when the PR was last updated.
 
-**Progress: 66 of 113 done (58%)** — counted 2026-10-12.
+**Progress: 68 of 113 done (60%)** — counted 2026-10-15.
 
 | Section                                                       | Done  |
 | ------------------------------------------------------------- | ----- |
@@ -17,7 +17,7 @@ These checks need a person to do them: dashboards, DNS, money, phones and judgme
 | 3d. Services that call the site (before #88)                  | 3/4   |
 | 3e. Switch the app (merge #88)                                | 3/3   |
 | 3f. Check everything on the new domain                        | 4/6   |
-| 3h. Everywhere the domain is printed                          | 2/4   |
+| 3h. Everywhere the domain is printed                          | 3/4   |
 | 4. Stripe (before any real money)                             | 5/6   |
 | 5. Railway                                                    | 4/4   |
 | 6. Content                                                    | 2/7   |
@@ -25,7 +25,7 @@ These checks need a person to do them: dashboards, DNS, money, phones and judgme
 | 8. Devices                                                    | 2/3   |
 | 9. People                                                     | 0/3   |
 | 10. Housekeeping                                              | 2/3   |
-| 11. Scam protection                                           | 7/12  |
+| 11. Scam protection                                           | 8/12  |
 | 12. Scam protection: later                                    | 2/8   |
 
 Pull requests:
@@ -158,7 +158,7 @@ Not needed: `pattersonfamilyreunion27.com` was only used for testing, never live
 
 - [ ] Facebook: update the event, the group and the pinned payment post.
 - [x] Reprint the paper forms, because they print the domain. Replace the save-the-date flyer if it shows the old domain.
-- [ ] Rebuild the Facebook FAQ carousel (`bun social/facebook-faq/build.ts`) if it should show `organizers@pattersonfamilyreunion.com` in place of the committee Gmail.
+- [x] Rebuild the Facebook FAQ carousel (`bun social/facebook-faq/build.ts`). **Done 2026-10-15:** every slide now shows `organizers@pattersonfamilyreunion.com` in place of the committee Gmail, and the phone number is gone. Commit the regenerated PNGs and upload the 4 slides to Facebook.
 - [x] Update email signatures and anything the committee has already printed or posted.
 
 ## 4. Stripe (before any real money)
@@ -182,7 +182,7 @@ Not needed: `pattersonfamilyreunion27.com` was only used for testing, never live
 - [ ] In the event settings, in the program JSON, set `venue.address` to `2323 Broadway, Oakland, CA`. Confirmation emails read the venue from the database, not from the code.
 - [ ] Check that the event status is `open`, and that the tiers, prices, lock date and start and end dates are correct. Check that no seed text remains, for example "TBD" or "Mountain resort".
 - [ ] The venue is at 2323 Broadway and the hotel at 2455 Broadway, about one block apart. The site says "half a block" in the hotel tagline, on the register page and on the paper form. Choose the correct words.
-- [ ] Check that the new phone number `(510) 809-8309` appears everywhere: the site, the emails, the paper form and the Facebook carousel.
+- [ ] Check that the new phone number `(510) 809-8309` appears everywhere: the site, the emails, and the paper form. The Facebook carousel deliberately shows no phone number.
 - [x] **Find out the correct payee name for checks.** It is **Patterson Reunion Association**, the name on the PNC deposit account.
 - [x] **Ship the payee change: merge #93.** Production still says checks go to "Patterson Family Reunion" until it merges. Then check that the payment box on `/`, `/register` and `/donate`, the paper form, the confirmation email and the pinned Facebook post all say "Patterson Reunion Association".
 - [ ] Read every email on an iPhone and in Gmail, in light mode and in dark mode. To send them all now from the verified domain:
@@ -223,7 +223,7 @@ Not needed: `pattersonfamilyreunion27.com` was only used for testing, never live
 ## 11. Scam protection
 
 - **2FA is PR #104, tested locally 2026-10-12 and ready to merge.** Merging signs every admin out of `/admin` until they enroll; the owner enrolls first.
-- [ ] Before the 2FA change deploys, tell every admin to have an authenticator app ready. Each admin must set up 2FA at the next sign-in. The owner goes first.
+- [x] Before the 2FA change deploys, tell every admin to have an authenticator app ready. Each admin must set up 2FA at the next sign-in. The owner goes first.
 - [x] Store every admin's backup codes in a safe place. If an admin loses the phone and the codes, run `bun run admin:reset-2fa <email>` through `railway ssh`.
 - [ ] After the deploy, run `curl -sI https://<domain>/` and look for the security headers. Then check that Stripe Checkout opens, the map loads, and photos and the photo zip load. **Headers verified 2026-10-12:** all six present (`frame-ancestors 'none'`, `X-Frame-Options: DENY`, `nosniff`, `Referrer-Policy`, `Permissions-Policy`, HSTS 1 year).
 - [x] Check that section 5's `ADDRESS_HEADER` and `XFF_DEPTH` are set. Without them, the recovery-email limit treats all visitors as one IP address.
