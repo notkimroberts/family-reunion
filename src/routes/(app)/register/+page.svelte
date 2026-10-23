@@ -27,6 +27,7 @@ import HostHotelStayCard from './HostHotelStayCard.svelte'
 import OrderSummaryCard from './OrderSummaryCard.svelte'
 import PartyMembersBuilder from './PartyMembersBuilder.svelte'
 import RegistrationOpensNotice from './RegistrationOpensNotice.svelte'
+import RegistrationPreviewBanner from './RegistrationPreviewBanner.svelte'
 import YourInformationCard from './YourInformationCard.svelte'
 import { contactSaveProblems } from './contactSaveProblems'
 import { isContactComplete } from './isContactComplete'
@@ -195,9 +196,10 @@ onMount(() => {
    work. */
 let isLocked = $derived(isRegistrationClosed(data.event?.registrationLockDate ?? null))
 /* Before opening day the page says when to come back instead of showing a form the server would
-   refuse (assertRegistrationOpen). */
+   refuse (assertRegistrationOpen) — unless this browser holds the preview link, which the server
+   accepts. */
 let opensAt = $derived(data.event?.registrationOpensAt ?? null)
-let notYetOpen = $derived(isBeforeRegistrationOpens(opensAt))
+let notYetOpen = $derived(isBeforeRegistrationOpens(opensAt) && !data.preview)
 </script>
 
 <svelte:head>
@@ -274,6 +276,9 @@ let notYetOpen = $derived(isBeforeRegistrationOpens(opensAt))
             </div>
         </section>
     {:else}
+        {#if data.preview && opensAt}
+            <RegistrationPreviewBanner {opensAt} stripeTestMode={data.preview.stripeTestMode} />
+        {/if}
         {#if cancelled}
             <div role="status" class="bg-card col-span-12 rounded-md border px-4 py-3 text-sm">
                 Checkout cancelled — nothing was charged.

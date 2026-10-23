@@ -41,6 +41,9 @@ export async function createPendingRegistration(params: {
     donationCents?: number
     successUrl: (token: string) => string
     cancelUrl: (token: string) => string
+    /* True only for a tester holding the preview link (hasRegistrationPreview). Skips the opening
+       date and nothing else: the lock date, tier prices and the contact's tier still apply. */
+    allowBeforeOpening?: boolean
 }): Promise<{ registrationId: string; viewToken: string; checkoutUrl: string }> {
     /* Freeze new registrations once the lock date passes, not just changes to existing ones.
        Without this the add/edit/remove/cancel paths are closed while the front door stays
@@ -48,7 +51,9 @@ export async function createPendingRegistration(params: {
        Admin paper entry deliberately skips this check — see admin/registrations. */
     const checkoutEvent = await getCheckoutEvent(params.eventId)
     /* Nor before it opens: the form is hidden until then, but a hidden form is not a guard. */
-    assertRegistrationOpen(checkoutEvent?.registrationOpensAt ?? null)
+    if (!params.allowBeforeOpening) {
+        assertRegistrationOpen(checkoutEvent?.registrationOpensAt ?? null)
+    }
     assertRegistrationNotClosed(checkoutEvent?.registrationLockDate ?? null)
 
     const pricingByTierId = await resolveTierPricing(
