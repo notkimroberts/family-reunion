@@ -39,6 +39,8 @@ const cspReportOnlyValue = {
     'report-uri': [SENTRY_CSP_REPORT_URI],
 }
 
+const VERSION_POLL_INTERVAL_MS = 5 * 60 * 1000
+
 /** @type {import('@sveltejs/kit').Config} */
 const config = {
     preprocess: vitePreprocess(),
@@ -53,6 +55,12 @@ const config = {
         csp: {
             mode: 'auto',
             reportOnly: cspReportOnlyValue,
+        },
+
+        /* Off by default in this SvelteKit, so a tab left open across a deploy never learned of it
+           until a load failed. With it, +layout.svelte's beforeNavigate reloads that tab instead. */
+        version: {
+            pollInterval: VERSION_POLL_INTERVAL_MS,
         },
 
         experimental: {
