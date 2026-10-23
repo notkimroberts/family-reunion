@@ -8,6 +8,8 @@ import { defineConfig, loadEnv } from 'vite'
 const pkg = JSON.parse(readFileSync('./package.json', 'utf-8'))
 const org = '22aae0d29adf'
 const project = 'family-reunion'
+const repo = 'notkimroberts/family-reunion'
+const SHORT_SHA_LENGTH = 7
 
 export default defineConfig(({ mode }) => {
     const env = loadEnv(mode, process.cwd(), '')
@@ -16,6 +18,15 @@ export default defineConfig(({ mode }) => {
        production. SENTRY_ENVIRONMENT is 'production' on Railway (build and runtime) and
        'development' in .env.example. */
     const sentryEnvironment = env.SENTRY_ENVIRONMENT || mode
+
+    /* One release per commit. The package.json version changes only on `bun run release`, so
+       every deploy between bumps went into one release. Railway's build has no .git, so
+       `setCommits: { auto: true }` failed there, and that failure skipped finalize and the deploy
+       record too. Railway names the commit in RAILWAY_GIT_COMMIT_SHA; a local build has git. */
+    const commitSha = env.RAILWAY_GIT_COMMIT_SHA
+    const release = commitSha
+        ? `${pkg.version}+${commitSha.slice(0, SHORT_SHA_LENGTH)}`
+        : pkg.version
 
     // Forward DEBUG into process.env so the `debug` package can read it.
     // Also call Debug.enable() directly — Vite loads the debug package before
@@ -32,28 +43,34 @@ export default defineConfig(({ mode }) => {
                 project,
                 // vite.config.ts runs before Vite loads .env into process.env, so loadEnv is needed to read it
                 authToken: env.SENTRY_AUTH_TOKEN ?? process.env.SENTRY_AUTH_TOKEN,
-                // adapter-node produces a 3-level source map chain:
-                //   build/ → .svelte-kit/adapter-node/ → src/
-                // sorcery only resolves one level, so we upload both levels and let Sentry chain them.
                 sourcemaps: {
-                    assets: ['./build/**', './.svelte-kit/adapter-node/**'],
+                    /* Explicit because `build.sourcemap` is: the plugin deletes maps after upload
+                       only when that is unset, and the client's maps would otherwise be public. */
+                    filesToDeleteAfterUpload: ['./build/**/*.map', './.svelte-kit/**/*.map'],
                 },
                 release: {
-                    name: pkg.version,
+                    name: release,
                     deploy: {
                         env: sentryEnvironment,
                     },
-                    setCommits: {
-                        auto: true,
-                    },
+                    setCommits: commitSha
+                        ? { repo, commit: commitSha, ignoreMissing: true }
+                        : { auto: true },
                 },
             }),
             tailwindcss(),
             sveltekit(),
         ],
+        /* Server maps chain twice: build/ (adapter-node's rollup) → .svelte-kit/output/server/
+           (Vite) → src/. The plugin flattens them with sorcery, which finds each next map only
+           through a `//# sourceMappingURL` comment. Left unset, the plugin picks 'hidden', which
+           omits the comment, so server frames in Sentry stopped at .svelte-kit/output/server/. */
+        build: {
+            sourcemap: true,
+        },
         define: {
             __APP_VERSION__: JSON.stringify(pkg.version),
-            'import.meta.env.VITE_SENTRY_RELEASE': JSON.stringify(pkg.version),
+            'import.meta.env.VITE_SENTRY_RELEASE': JSON.stringify(release),
             'import.meta.env.VITE_SENTRY_ENVIRONMENT': JSON.stringify(sentryEnvironment),
         },
     }

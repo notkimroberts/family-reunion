@@ -2,6 +2,8 @@ import { handleErrorWithSentry, replayIntegration } from '@sentry/sveltekit'
 import * as Sentry from '@sentry/sveltekit'
 import { SENTRY_DSN } from '$lib/general/constants'
 
+const FACEBOOK_IN_APP_BROWSER_SCRIPT = /^iabjs:\/\//
+
 Sentry.init({
     dsn: SENTRY_DSN,
     enabled: import.meta.env.PROD,
@@ -28,6 +30,10 @@ Sentry.init({
     // Enable sending user PII (Personally Identifiable Information)
     // https://docs.sentry.io/platforms/javascript/guides/sveltekit/configuration/options/#sendDefaultPii
     sendDefaultPii: true,
+
+    /* Facebook's Android in-app browser injects its own scripts under iabjs:// and reports their
+       failures as ours ("Java object is gone"). The family shares links on Facebook, so they recur. */
+    denyUrls: [FACEBOOK_IN_APP_BROWSER_SCRIPT],
 })
 
 // If you have a custom error handler, pass it to `handleErrorWithSentry`
