@@ -5,8 +5,8 @@ import { PAPER_ATTENDEE_ROWS } from './PAPER_ATTENDEE_ROWS'
 /* Section numbers, derived rather than written in, because the hotel section renders only when a host
    hotel is listed — hard-coded numbers would leave a sheet reading 1, 2, 4, 5 in that state. The
    contact note also points at the attendee section by number, so there is one source for it. */
-const ATTENDEE_SECTION = HOST_HOTEL ? 4 : 3
-const AMOUNT_SECTION = ATTENDEE_SECTION + 1
+const PRICES_SECTION = HOST_HOTEL ? 4 : 3
+const ATTENDEE_SECTION = PRICES_SECTION + 1
 
 const ATTENDEE_NUMBERS = Array.from({ length: PAPER_ATTENDEE_ROWS }, (_, index) => index + 1)
 const SECTION = 'flex break-inside-avoid flex-col gap-1.5'
@@ -15,25 +15,21 @@ const NOTE = 'text-[9px] leading-snug text-neutral-600'
 </script>
 
 <script lang="ts">
-import {
-    APP_DOMAIN,
-    APP_NAME,
-    CONTACT_EMAIL,
-    CONTACT_PHONE,
-    ZELLE_RECIPIENT,
-    zelleQrCodeValue,
-} from '$lib/general/constants'
-import { offlinePaymentMethods } from '$lib/general/scamSafety'
-import { formatPrice } from '$lib/utils'
+import { APP_NAME, CONTACT_EMAIL, CONTACT_PHONE } from '$lib/general/constants'
 import type { TierOption } from '../types'
 import PaperAttendeeBlock from './PaperAttendeeBlock.svelte'
 import PaperCheckbox from './PaperCheckbox.svelte'
 import PaperField from './PaperField.svelte'
+import PaperPrices from './PaperPrices.svelte'
+import PaperRegisterOnline from './PaperRegisterOnline.svelte'
+import { REGISTER_ADDRESS } from './REGISTER_ADDRESS'
 
 /* The paper form itself: a fixed Letter-width sheet that renders identically on screen and on
    paper, so what an organizer sees before pressing Print is what comes out. It runs to two pages —
    every field is sized for handwriting, and sections carry break-inside-avoid so a page break lands
-   between blocks rather than through one. */
+   between blocks rather than through one. Page 1 is the household and the prices, page 2 the
+   attendees, the total and the signature. Prices sit on page 1 because page 2 is full: with them
+   after the attendees, the signature spilled onto a third page by itself. */
 let {
     title,
     year,
@@ -70,16 +66,25 @@ let {
                 {dateRange}{venueName ? ` · ${venueName}` : ''}
             </p>
         </div>
-        <div class="min-w-0 text-right">
+        <div class="flex min-w-0 flex-col items-end gap-1.5">
             <p class="text-[12px] font-bold tracking-widest uppercase">Registration form</p>
-            <p class="{NOTE} break-words">Or register online at {APP_DOMAIN}/register</p>
+            <div class="w-[2.6in] border border-dashed border-neutral-500 px-2 py-1">
+                <p class="text-[9px] font-semibold tracking-widest text-neutral-500 uppercase">
+                    Committee use only
+                </p>
+                <div class="grid grid-cols-2 gap-x-4">
+                    <PaperField label="Received by" />
+                    <PaperField label="Entered on" />
+                </div>
+            </div>
         </div>
     </header>
 
+    <PaperRegisterOnline />
+
     <p class={NOTE}>
-        Please print clearly in ink and mark one box in each group. Give the completed form to a
-        reunion committee member, and pay {offlinePaymentMethods(ZELLE_RECIPIENT)}. Never make a
-        check out to a person. Questions: {CONTACT_EMAIL} or {CONTACT_PHONE}.
+        Please print clearly in ink and mark one box in each group. Give the completed form and your
+        payment to a reunion committee member. Questions: {CONTACT_EMAIL} or {CONTACT_PHONE}.
     </p>
 
     <section class={SECTION}>
@@ -140,10 +145,24 @@ let {
         </section>
     {/if}
 
+    <section class={SECTION}>
+        <h2 class={SECTION_TITLE}>{PRICES_SECTION} · Prices and how to pay</h2>
+        <PaperPrices {tiers} />
+    </section>
+
     <!-- A page of its own. Five hand-writable blocks do not fit under the contact and address
          sections, so the section began mid-page and the block straddling the boundary was cut in
          half. Starting it on a fresh page keeps every row whole and puts all five together. -->
     <section class="flex break-before-page flex-col gap-2">
+        <!-- Page 2 is handed around on its own, so it repeats the address. Text only: a second QR
+             code costs the height that keeps the signature off a third page. -->
+        <div
+            class="flex flex-wrap items-baseline justify-center gap-x-3 border-2 border-black px-3 py-1.5">
+            <span class="text-[10px] font-bold tracking-widest uppercase">
+                Register online instead
+            </span>
+            <span class="text-[15px] font-bold">{REGISTER_ADDRESS}</span>
+        </div>
         <h2 class={SECTION_TITLE}>
             {ATTENDEE_SECTION} · Everyone attending — write yourself on line 1 (up to {PAPER_ATTENDEE_ROWS}
             people)
@@ -157,54 +176,20 @@ let {
         </p>
     </section>
 
-    <section class={SECTION}>
-        <h2 class={SECTION_TITLE}>{AMOUNT_SECTION} · Amount due</h2>
-        <div class="flex items-end justify-between gap-6">
-            <ul class="flex flex-wrap gap-x-5 gap-y-0.5 text-[10px]">
-                {#each tiers as tier (tier.id)}
-                    <li class="whitespace-nowrap">
-                        <span class="font-semibold">{tier.label}</span>
-                        · ${formatPrice(tier.priceCents)} per person
-                    </li>
-                {/each}
-            </ul>
-            <!-- Paper is where the code earns its place: the reader holds the sheet and scans it
-                 with the phone that pays. -->
-            <div class="flex shrink-0 items-center gap-2">
-                <img
-                    src={zelleQrCodeValue.qrPath}
-                    alt={zelleQrCodeValue.alt}
-                    class="size-[0.85in]" />
-                <div class="flex max-w-[1.5in] flex-col gap-0.5">
-                    <img
-                        src={zelleQrCodeValue.logoPath}
-                        alt="Zelle"
-                        class="h-4 w-auto self-start" />
-                    <p class={NOTE}>{zelleQrCodeValue.scanHint}</p>
-                    <p class="text-[10px] font-semibold">{zelleQrCodeValue.accountName}</p>
-                </div>
-            </div>
-            <div class="flex items-end gap-2 whitespace-nowrap">
-                <span class="text-[11px] font-bold tracking-widest uppercase">Total enclosed</span>
+    <!-- A footer, not a section: app.css flattens the sheet's sections to block layout for print,
+         which would stack these three fields. The total shares the signature row, and the
+         committee box lives in the header, because page 2 has no height to spare: with long tier
+         labels each attendee block wraps an extra line. -->
+    <footer
+        class="grid break-inside-avoid grid-cols-[1fr_2fr_1fr] items-end gap-x-5 border-t border-neutral-400 pt-2">
+        <div class="flex flex-col gap-0.5">
+            <span class="text-[10px] font-bold tracking-widest uppercase">Total enclosed</span>
+            <div class="flex items-end gap-1">
                 <span class="text-[13px] font-bold">$</span>
-                <span class="inline-block h-8.5 w-32 border-b-2 border-black"></span>
+                <span class="h-8.5 flex-1 border-b-2 border-black"></span>
             </div>
         </div>
-    </section>
-
-    <section class="flex break-inside-avoid items-end gap-6 border-t border-neutral-400 pt-2">
-        <div class="grid flex-1 grid-cols-[2fr_1fr] gap-x-5">
-            <PaperField label="Signature" />
-            <PaperField label="Date" />
-        </div>
-        <div class="w-[2.6in] border border-dashed border-neutral-500 px-2 py-1">
-            <p class="text-[9px] font-semibold tracking-widest text-neutral-500 uppercase">
-                Committee use only
-            </p>
-            <div class="grid grid-cols-2 gap-x-4">
-                <PaperField label="Received by" />
-                <PaperField label="Entered on" />
-            </div>
-        </div>
-    </section>
+        <PaperField label="Signature" />
+        <PaperField label="Date" />
+    </footer>
 </div>
