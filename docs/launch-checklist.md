@@ -4,13 +4,13 @@ These checks need a person to do them: dashboards, DNS, money, phones and judgme
 
 **Tick the boxes in the description of the draft PR that adds this file. Do not merge that PR**, because it only exists to give the checklist a UI. This file is a copy taken when the PR was last updated.
 
-**Progress: 68 of 113 done (60%)** — counted 2026-10-15.
+**Progress: 68 of 117 done (58%)** — counted 2026-10-22.
 
 | Section                                                       | Done  |
 | ------------------------------------------------------------- | ----- |
 | 1. Photos (now)                                               | 4/4   |
 | 2. Merge the release PR (#87)                                 | 3/5   |
-| 2a. Registration opens on October 31 (#92)                    | 4/6   |
+| 2a. Registration opens on October 31 (#92)                    | 4/10  |
 | 3a. Take control of the domain                                | 5/5   |
 | 3b. Email (before #88)                                        | 10/16 |
 | 3c. Website (before #88)                                      | 4/4   |
@@ -44,6 +44,7 @@ Pull requests:
 - **#106** report-only Content Security Policy, reported to Sentry. Merged 2026-10-12.
 - **#107** `chore/american-spelling-cleanup`: American spelling across the codebase. Merged 2026-10-12.
 - **#108** Sentry: a local build's errors and CSP reports go under `SENTRY_ENVIRONMENT`. Merged 2026-10-12.
+- **#110** `feat/registration-preview`: secret preview link for testers before opening, and `admin:purge-test-registrations`. Open.
 
 ---
 
@@ -70,6 +71,10 @@ Pull requests:
 - [x] Open the home page. In place of **Register Now** it must say "Registration opens Saturday, October 31, 2026 at 9:00 AM PDT".
 - [x] Settings → **Registration opens** shows `2026-10-31 09:00`. To move the date, change it there; leave it blank to open registration at once.
 - [ ] Tell the family the date: a Facebook post, and the same time on anything already shared.
+- [ ] **Preview testing (PR #110).** Merge #110. On Railway set `REGISTRATION_PREVIEW_KEY` to the output of `openssl rand -base64 32`.
+  - [ ] Send 3–5 testers `https://pattersonfamilyreunion.com/register?preview=<key>` privately, not in the Facebook group. They pay with the test card `4242 4242 4242 4242`. Each must get the confirmation email.
+  - [ ] **Before Oct 31, 9:00 AM Pacific:** run `railway ssh --service family-reunion-app --environment production -- bun run admin:purge-test-registrations`, read the list, then run it again with `--confirm`. Without this, the practice bookings count in the admin totals and in the public "already registered" number.
+  - [ ] Delete `REGISTRATION_PREVIEW_KEY` from Railway.
 - [ ] On October 31 after 9:00 AM Pacific, check that the form is back and do one test registration.
 
 ## 3. Cut over everything to `pattersonfamilyreunion.com`
@@ -190,6 +195,8 @@ Not needed: `pattersonfamilyreunion27.com` was only used for testing, never live
       The header photo shows after #87 deploys.
 
 ## 7. Payment rehearsal (with live keys, real card, then refund)
+
+Before opening day, do this through the preview link: change `REGISTRATION_PREVIEW_KEY` first so testers' old links stop working, put the live Stripe keys on Railway, and keep the new link to yourself. Cancel each booking with a refund from the admin page; the purge script does not touch live bookings.
 
 - [ ] Register 1 adult. You receive one confirmation email, and the card statement reads `PATTERSON* REUNION`.
 - [ ] Register 1 adult, 1 child and a gift. The total includes the gift and the email lists the gift.
