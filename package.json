@@ -17,6 +17,7 @@
         "admin:create": "bun scripts/createAdmin.ts",
         "admin:reset-password": "bun scripts/resetAdminPassword.ts",
         "admin:reset-2fa": "bun scripts/resetAdminTwoFactor.ts",
+        "admin:purge-test-registrations": "bun scripts/purgeTestRegistrations.ts",
         "email:preview": "svelte-kit sync && bun scripts/previewEmails.ts",
         "format": "prettier --write .",
         "lint:spelling": "bun scripts/checkAmericanSpelling.ts --base origin/main",

@@ -1,6 +1,6 @@
 import { stringify } from 'devalue'
 import { eq } from 'drizzle-orm'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { donations, partyMembers, registrations, reunionEvents } from '$lib/server/db/schema'
 import { resetTestDb } from '$lib/server/db/testing/resetTestDb'
 import { seedEvent } from '$lib/server/testing/seedEvent'
@@ -17,7 +17,25 @@ const mockCreateCheckout = vi.fn()
 
 vi.mock('$lib/server/payments', () => ({ createRegistrationCheckout: mockCreateCheckout }))
 
-const { actions } = await import('./+page.server')
+const { actions, load } = await import('./+page.server')
+const { env } = await import('$env/dynamic/private')
+
+const PREVIEW_KEY = 'preview-key-for-tests-0123456789abcdef'
+
+/* Enough of SvelteKit's Cookies for the preview: what was set, and what a later request sends. */
+function fakeCookies(sent: Record<string, string> = {}) {
+    const set: { name: string; value: string; options: Record<string, unknown> }[] = []
+    return {
+        set,
+        get: (name: string) => sent[name],
+        cookies: {
+            get: (name: string) => sent[name],
+            set: (name: string, value: string, options: Record<string, unknown>) => {
+                set.push({ name, value, options })
+            },
+        },
+    }
+}
 
 let db: Awaited<ReturnType<typeof resetTestDb>>
 let eventId: string
@@ -41,7 +59,7 @@ const SELF = {
    FormData carrying one `__superform_json` field of devalue-encoded data — not a JSON body. Building
    it any other way makes superValidate ignore the payload entirely and validate a blank form, which
    fails as a 400 that looks like a schema problem. */
-function submit(overrides: Record<string, unknown> = {}) {
+function submit(overrides: Record<string, unknown> = {}, sentCookies: Record<string, string> = {}) {
     const body = {
         eventId,
         contactFirstName: 'Alice',
@@ -59,6 +77,7 @@ function submit(overrides: Record<string, unknown> = {}) {
     return actions.register({
         request,
         url: new URL('http://localhost/register'),
+        cookies: fakeCookies(sentCookies).cookies,
     } as unknown as Parameters<typeof actions.register>[0])
 }
 
@@ -221,6 +240,122 @@ describe('POST /register?/register', () => {
             expect(result).toMatchObject({ status: 400 })
             expect(await db.select().from(registrations)).toHaveLength(0)
             expect(await db.select().from(donations)).toHaveLength(0)
+        })
+    })
+})
+
+/* The preview link lets a few testers register before the opening date, and nobody else. */
+describe('the registration preview link', () => {
+    beforeEach(async () => {
+        vi.clearAllMocks()
+        mockCreateCheckout.mockResolvedValue({
+            url: 'https://checkout.stripe.test/session',
+            sessionId: 'cs_test_preview',
+        })
+        env.REGISTRATION_PREVIEW_KEY = PREVIEW_KEY
+        db = await resetTestDb()
+        eventId = await seedEvent(db, { title: 'Reunion 2027' })
+        adultTierId = await seedTier(db, eventId, { label: 'Adult', priceCents: 16000 })
+        await db
+            .update(reunionEvents)
+            .set({ registrationOpensAt: new Date(Date.now() + 24 * 60 * 60 * 1000) })
+            .where(eq(reunionEvents.id, eventId))
+    })
+
+    afterEach(() => {
+        delete env.REGISTRATION_PREVIEW_KEY
+    })
+
+    function loadPage(path: string, sentCookies: Record<string, string> = {}) {
+        const jar = fakeCookies(sentCookies)
+        const result = load({
+            url: new URL(`https://pattersonfamilyreunion.com${path}`),
+            cookies: jar.cookies,
+            locals: { user: null },
+        } as unknown as Parameters<typeof load>[0])
+        return { result, jar }
+    }
+
+    async function previewOf(result: ReturnType<typeof load>) {
+        const data = await result
+        if (!data) {
+            throw new Error('load returned nothing')
+        }
+        return data.preview
+    }
+
+    it('moves a correct key into a /register-only cookie and out of the address bar', async () => {
+        const { result, jar } = loadPage(`/register?preview=${PREVIEW_KEY}`)
+
+        await expect(result).rejects.toMatchObject({
+            status: 303,
+            location: 'https://pattersonfamilyreunion.com/register',
+        })
+        expect(jar.set).toEqual([
+            {
+                name: 'reg_preview',
+                value: PREVIEW_KEY,
+                options: expect.objectContaining({
+                    path: '/register',
+                    httpOnly: true,
+                    secure: true,
+                }),
+            },
+        ])
+    })
+
+    it('strips a wrong key and sets nothing', async () => {
+        const { result, jar } = loadPage('/register?preview=guess')
+
+        await expect(result).rejects.toMatchObject({ status: 303 })
+        expect(jar.set).toEqual([])
+    })
+
+    it('shows the preview, in test mode, to a browser holding the key', async () => {
+        const { result } = loadPage('/register', { reg_preview: PREVIEW_KEY })
+
+        expect(await previewOf(result)).toEqual({ stripeTestMode: true })
+    })
+
+    it.each([
+        ['no cookie', {}],
+        ['an old key', { reg_preview: 'an-old-key-that-was-rotated-away-0000' }],
+    ])('shows nothing with %s', async (_case, sentCookies) => {
+        const { result } = loadPage('/register', sentCookies)
+
+        expect(await previewOf(result)).toBeNull()
+    })
+
+    it('shows nothing once registration is open for everyone', async () => {
+        await db
+            .update(reunionEvents)
+            .set({ registrationOpensAt: new Date('2020-01-01') })
+            .where(eq(reunionEvents.id, eventId))
+
+        const { result } = loadPage('/register', { reg_preview: PREVIEW_KEY })
+
+        expect(await previewOf(result)).toBeNull()
+    })
+
+    it('accepts a submission from a browser holding the key', async () => {
+        await expect(submit({}, { reg_preview: PREVIEW_KEY })).rejects.toMatchObject({
+            status: 303,
+            location: 'https://checkout.stripe.test/session',
+        })
+        expect(await db.select().from(registrations)).toHaveLength(1)
+    })
+
+    it('refuses a submission without it, and writes nothing', async () => {
+        await expect(submit()).rejects.toMatchObject({ status: 403 })
+        expect(await db.select().from(registrations)).toHaveLength(0)
+    })
+
+    /* Deleting the Railway variable ends every preview at once. */
+    it('refuses a held key once REGISTRATION_PREVIEW_KEY is removed', async () => {
+        delete env.REGISTRATION_PREVIEW_KEY
+
+        await expect(submit({}, { reg_preview: PREVIEW_KEY })).rejects.toMatchObject({
+            status: 403,
         })
     })
 })

@@ -281,6 +281,24 @@ describe('createPendingRegistration', () => {
         expect(await db.select().from(registrations)).toHaveLength(0)
     })
 
+    /* The preview link's tester. Only the opening date is skipped: the lock date still refuses. */
+    it('accepts a preview registration before opening, but not after the lock date', async () => {
+        await db
+            .update(reunionEvents)
+            .set({ registrationOpensAt: new Date(Date.now() + 24 * 60 * 60 * 1000) })
+            .where(eq(reunionEvents.id, eventId))
+
+        await register({ allowBeforeOpening: true })
+        expect(mockCreateCheckout).toHaveBeenCalledOnce()
+
+        await db
+            .update(reunionEvents)
+            .set({ registrationLockDate: new Date('2020-01-01') })
+            .where(eq(reunionEvents.id, eventId))
+        await expect(register({ allowBeforeOpening: true })).rejects.toMatchObject({ status: 403 })
+        expect(mockCreateCheckout).toHaveBeenCalledOnce()
+    })
+
     it('accepts once the opening date has passed', async () => {
         await db
             .update(reunionEvents)
