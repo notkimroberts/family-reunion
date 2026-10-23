@@ -1,5 +1,6 @@
 import { handleErrorWithSentry, replayIntegration } from '@sentry/sveltekit'
 import * as Sentry from '@sentry/sveltekit'
+import { updated } from '$app/state'
 import { SENTRY_DSN } from '$lib/general/constants'
 
 const FACEBOOK_IN_APP_BROWSER_SCRIPT = /^iabjs:\/\//
@@ -34,6 +35,13 @@ Sentry.init({
     /* Facebook's Android in-app browser injects its own scripts under iabjs:// and reports their
        failures as ours ("Java object is gone"). The family shares links on Facebook, so they recur. */
     denyUrls: [FACEBOOK_IN_APP_BROWSER_SCRIPT],
+
+    /* A tab still running a superseded build reports errors about code the deploy removed
+       ("Importing a module script failed", "Load failed"). When it preloads a link on hover,
+       SvelteKit reports them without checking for a new version. That tab reloads on its next link
+       (+layout.svelte), so drop them. check() asks the server: updated.current is only as fresh as
+       the last poll. */
+    beforeSend: async (event) => ((await updated.check()) ? null : event),
 })
 
 // If you have a custom error handler, pass it to `handleErrorWithSentry`

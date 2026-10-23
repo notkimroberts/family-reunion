@@ -1,6 +1,8 @@
 <script lang="ts">
 import * as Sentry from '@sentry/sveltekit'
 import { onMount } from 'svelte'
+import { beforeNavigate } from '$app/navigation'
+import { updated } from '$app/state'
 import { Button } from '$lib/components/ui/button'
 import { CONTACT_EMAIL } from '$lib/general/constants'
 import { theme } from '$lib/stores/theme.svelte'
@@ -11,6 +13,16 @@ let { children } = $props()
 
 onMount(() => {
     theme.init()
+})
+
+/* A tab opened before a deploy runs the old router, whose next page may be a chunk the deploy
+   removed. Once SvelteKit knows a newer build exists (the version poll in svelte.config.js, a failed
+   load, or the check in hooks.client.ts before an error is reported), the next link loads as a full
+   page instead. */
+beforeNavigate(({ willUnload, to }) => {
+    if (updated.current && !willUnload && to?.url) {
+        location.href = to.url.href
+    }
 })
 
 /* Reports errors thrown while rendering or running effects.
