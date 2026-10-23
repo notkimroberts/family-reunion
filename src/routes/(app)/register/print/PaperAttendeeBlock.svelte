@@ -75,9 +75,12 @@ let nameLabel = $derived(isContact ? 'Full name — you, the person we contact' 
         </div>
     </div>
 
-    <div class="flex flex-wrap items-center gap-x-5 gap-y-1.5">
+    <!-- One line, or page 2 overflows: a wrap here adds a line to all five blocks. Tier labels carry
+         age ranges ("Adult 14–74 · Child 4–13 · Senior 75+"), which measured 723px against 692px
+         available, so the caption is "Age" and the gap is tighter — 666px. -->
+    <div class="flex flex-wrap items-center gap-x-3 gap-y-1.5">
         <span class="flex items-center gap-2">
-            <span class={GROUP_LABEL}>Age group</span>
+            <span class={GROUP_LABEL}>Age</span>
             {#each tiers as tier (tier.id)}
                 <PaperCheckbox label={tier.label} />
             {/each}
