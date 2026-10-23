@@ -3,7 +3,7 @@ import { includeIgnoreFile } from '@eslint/compat'
 import js from '@eslint/js'
 import prettier from 'eslint-config-prettier'
 import svelte from 'eslint-plugin-svelte'
-import { defineConfig } from 'eslint/config'
+import { defineConfig, globalIgnores } from 'eslint/config'
 import globals from 'globals'
 import ts from 'typescript-eslint'
 import svelteConfig from './svelte.config'
@@ -12,6 +12,9 @@ const gitignorePath = path.resolve(import.meta.dirname, '.gitignore')
 
 export default defineConfig(
     includeIgnoreFile(gitignorePath),
+    /* Agent tooling, not app code — .prettierignore skips the same two. The security-audit skill
+       ships CommonJS validators that fail no-require-imports. */
+    globalIgnores(['.claude/', '.agents/']),
     js.configs.recommended,
     ts.configs.recommended,
     svelte.configs.recommended,
