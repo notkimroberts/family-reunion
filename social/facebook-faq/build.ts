@@ -1,6 +1,6 @@
 import { join } from 'node:path'
 import sharp from 'sharp'
-import { CONTACT_PHONE } from '../../src/lib/general/constants/CONTACT_PHONE'
+import { CONTACT_EMAIL } from '../../src/lib/general/constants/CONTACT_EMAIL'
 
 /* Renders the Facebook FAQ carousel: one HTML page of stacked 1080×1350 (4:5) slides, screenshotted
    at 2× by a headless Chromium, then cut into one PNG per slide.
@@ -18,8 +18,6 @@ const LUCIDE_DIR = join(OUT_DIR, '../../node_modules/@lucide/svelte/dist/icons')
 const CHROME_BIN =
     Bun.env.CHROME_BIN ??
     `${Bun.env.HOME}/Library/Caches/ms-playwright/chromium_headless_shell-1228/chrome-headless-shell-mac-arm64/chrome-headless-shell`
-// The committee inbox, not CONTACT_EMAIL: that address is on the domain the new site has not moved to yet
-const COMMITTEE_EMAIL = 'pattersonreunioncommittee@gmail.com'
 
 type IconNode = [string, Record<string, string>][]
 
@@ -44,7 +42,6 @@ const icon = async (name: string) => {
 
 const asset = (file: string) => `file://${join(STATIC_DIR, file)}`
 
-const PHONE_ICON = await icon('phone')
 const MAIL_ICON = await icon('mail')
 
 type Faq = { icon: string; question: string; answer: string }
@@ -93,7 +90,7 @@ const FAQ_SLIDES: FaqSlide[] = [
                 icon: 'mail',
                 question: 'Can I register by mail?',
                 answer: `Yes. We will mail paper registration, but we prefer you register online if you’re able. To request a paper registration or update your mailing address, email:
-                    <span class="chips"><span class="chip email">${MAIL_ICON}${COMMITTEE_EMAIL}</span></span>`,
+                    <span class="chips"><span class="chip email">${MAIL_ICON}${CONTACT_EMAIL}</span></span>`,
             },
             {
                 icon: 'shirt',
@@ -147,12 +144,11 @@ const brandRow = (index: number) => `
         <span class="counter">${index} / ${TOTAL_SLIDES}</span>
     </header>`
 
-// Committee contact on every slide, since any one of them may be shared on its own
+// Organizer contact on every slide, since any one of them may be shared on its own
 const footer = (isLast: boolean) => `
     <footer class="footer">
         <div class="contact">
-            <span>${PHONE_ICON}${CONTACT_PHONE}</span>
-            <span>${MAIL_ICON}${COMMITTEE_EMAIL}</span>
+            <span>${MAIL_ICON}${CONTACT_EMAIL}</span>
         </div>
         ${isLast ? '' : '<span class="hint">Swipe →</span>'}
     </footer>`
