@@ -221,6 +221,12 @@ let notYetOpen = $derived(isBeforeRegistrationOpens(opensAt) && !data.preview)
         </div>
     </div>
 {:else}
+    <!-- Above the event card, so a tester cannot mistake the preview for open registration. Not when
+         the lock date has passed: there is no form to test then. -->
+    {#if data.preview && opensAt && !isLocked}
+        <RegistrationPreviewBanner {opensAt} stripeTestMode={data.preview.stripeTestMode} />
+    {/if}
+
     <!-- Event hero banner -->
     <section class="col-span-12">
         <div class="bg-card rounded-xl border shadow-xs">
@@ -282,9 +288,6 @@ let notYetOpen = $derived(isBeforeRegistrationOpens(opensAt) && !data.preview)
             </div>
         </section>
     {:else}
-        {#if data.preview && opensAt}
-            <RegistrationPreviewBanner {opensAt} stripeTestMode={data.preview.stripeTestMode} />
-        {/if}
         {#if cancelled}
             <div role="status" class="bg-card col-span-12 rounded-md border px-4 py-3 text-sm">
                 Checkout cancelled — nothing was charged.
