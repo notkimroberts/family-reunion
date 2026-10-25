@@ -6,7 +6,7 @@ import { superForm } from 'sveltekit-superforms'
 import { zod4Client as zodClient } from 'sveltekit-superforms/adapters'
 import { replaceState } from '$app/navigation'
 import { page } from '$app/state'
-import { PaymentSafetyNotice, RegistrationDeadline } from '$lib/components'
+import { RegistrationDeadline } from '$lib/components'
 import { APP_NAME, CONTACT_EMAIL, CONTACT_PHONE } from '$lib/general/constants'
 import { quotePartyTotal } from '$lib/general/pricing'
 import { isBeforeRegistrationOpens, isRegistrationClosed } from '$lib/general/registration'
@@ -15,11 +15,13 @@ import { defaultAdultTierId } from '$lib/general/tiers'
 import {
     checkoutErrorMessage,
     formatDateRange,
-    formatPrice,
+    formatUsd,
     getTierPriceCents,
     isValidPhone,
     toE164,
 } from '$lib/utils'
+import CheckoutBar from './CheckoutBar.svelte'
+import CheckoutSafetyNotice from './CheckoutSafetyNotice.svelte'
 import DonationCard from './DonationCard.svelte'
 import { EMPTY_PERSON_DETAILS } from './EMPTY_PERSON_DETAILS'
 import FormErrorSummary from './FormErrorSummary.svelte'
@@ -105,6 +107,8 @@ let donationCents = $state(0)
 /* Mirrors YourInformationCard's internal Save state — the registrant must commit their own
    details before paying. UI state, so it stays out of $form. */
 let contactSaved = $state(false)
+/* For CheckoutBar, whose button runs the card's own Save. */
+let informationCard = $state<ReturnType<typeof YourInformationCard>>()
 
 let contactName = $derived(
     `${$form.contactFirstName.trim()} ${$form.contactLastName.trim()}`.trim(),
@@ -128,6 +132,8 @@ let quote = $derived(
         { donationCents },
     ),
 )
+
+let payLabel = $derived(`Pay ${formatUsd(quote.totalCents)} & Register`)
 
 let canSubmit = $derived(
     contactSaved &&
@@ -287,15 +293,14 @@ let notYetOpen = $derived(isBeforeRegistrationOpens(opensAt) && !data.preview)
                 {/if}
             </div>
         {/if}
-        <form method="POST" action="?/register" use:enhance class="col-span-12">
-            <div class="mb-4">
-                <FormErrorSummary errors={$errors} />
-            </div>
+        <form method="POST" action="?/register" use:enhance class="col-span-12 flex flex-col gap-6">
+            <FormErrorSummary errors={$errors} />
 
             <div class="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_minmax(0,22rem)]">
                 <!-- Left: party builder -->
                 <div class="flex flex-col gap-4">
                     <YourInformationCard
+                        bind:this={informationCard}
                         bind:email={$form.contactEmail}
                         bind:phone={$form.contactPhone}
                         bind:firstName={$form.contactFirstName}
@@ -322,12 +327,12 @@ let notYetOpen = $derived(isBeforeRegistrationOpens(opensAt) && !data.preview)
                     {#key draftGeneration}
                         <DonationCard bind:donationCents error={$errors.donationCents?.[0]} />
                     {/key}
-
-                    <PaymentSafetyNotice />
                 </div>
 
-                <!-- Right: order summary (sticky on desktop) -->
-                <div class="self-start lg:sticky lg:top-6">
+                <!-- Right: order summary, then the scam notice. Not sticky: CheckoutBar keeps the
+                     total and the next action on screen, and with the notice under it this column
+                     can be taller than a laptop screen, so a sticky one hid its own bottom. -->
+                <div class="flex flex-col gap-3 self-start">
                     <OrderSummaryCard
                         {contactName}
                         selfTierId={self.tierId}
@@ -335,17 +340,26 @@ let notYetOpen = $derived(isBeforeRegistrationOpens(opensAt) && !data.preview)
                         {tiers}
                         {quote}
                         {canSubmit}
-                        submitLabel={`Pay $${formatPrice(quote.totalCents)} & Register`}
+                        submitLabel={payLabel}
                         submitting={$submitting}
-                        placeholderText="Fill in your details above and press Save to continue."
+                        placeholderText="Fill in your details, then press “Save your details” at the bottom of the screen."
                         submitFootnote={STRIPE_CHECKOUT_NOTE}
                         submitError={$message} />
-                    <p class="text-muted-foreground mt-3 text-center text-xs">
+                    <CheckoutSafetyNotice />
+                    <p class="text-muted-foreground text-center text-xs">
                         Already registered? <a class="underline" href="/register/recover"
                             >Resend your registration link</a>
                     </p>
                 </div>
             </div>
+
+            <CheckoutBar
+                totalCents={quote.totalCents}
+                peopleCount={1 + members.length}
+                hasGift={quote.donationCents > 0}
+                {canSubmit}
+                submitting={$submitting}
+                onsave={() => informationCard?.save()} />
         </form>
     {/if}
 {/if}

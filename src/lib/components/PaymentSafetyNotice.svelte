@@ -11,7 +11,12 @@ import {
 import { onMount } from 'svelte'
 import { Card, CardContent } from '$lib/components/ui/card'
 import { ZELLE_RECIPIENT } from '$lib/general/constants'
-import { paymentMethods, paymentSafetyCopyValue, type PaymentMethod } from '$lib/general/scamSafety'
+import {
+    ZELLE_RECIPIENT_PLACEHOLDER,
+    paymentMethods,
+    paymentSafetyCopyValue,
+    type PaymentMethod,
+} from '$lib/general/scamSafety'
 import ZelleQrCode from './ZelleQrCode.svelte'
 
 const methodIconValue = {
@@ -20,11 +25,9 @@ const methodIconValue = {
     check: PenLine,
 } satisfies Record<PaymentMethod['kind'], typeof CreditCard>
 
-/* Until mount, the Zelle line names no address. */
-const ZELLE_RECIPIENT_PLACEHOLDER = 'the reunion email address'
-
 /* How the reunion asks for money, and what it never asks for. Many visitors are elders, the people
-   a fake "organizer" message is aimed at, so this sits on every page that takes money.
+   a fake "organizer" message is aimed at, so this sits on every page that takes money — on /register
+   as its one-column form, CheckoutSafetyNotice, under the order summary.
 
    Two panels rather than a list of sentences: the accepted ways to pay and the never-list are
    different kinds of fact, and green beside red says which is which before a word is read.
