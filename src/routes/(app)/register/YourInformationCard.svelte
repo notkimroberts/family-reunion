@@ -62,9 +62,21 @@ function handleSave() {
         saveAttempted = false
     }
 }
+
+let card = $state<HTMLDivElement | null>(null)
+
+/* Save from outside the card — CheckoutBar's button, which may be a screen away. When something is
+   missing, scrolls the card's top (and the problem list just under it) into view. */
+export function save() {
+    handleSave()
+    if (!saved) {
+        card?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
+}
 </script>
 
-<Card>
+<!-- scroll-mt clears the sticky AppHeader (h-16, md:h-20). -->
+<Card bind:ref={card} class="scroll-mt-20 md:scroll-mt-24">
     <CardHeader class="pb-3">
         <CardTitle class="flex items-center gap-2 text-base">
             <UserCircle class="text-muted-foreground h-5 w-5" />

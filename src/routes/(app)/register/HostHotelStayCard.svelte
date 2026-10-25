@@ -59,9 +59,10 @@ let {
                 {/if}
             </div>
             <p class="text-muted-foreground text-sm">
-                {HOST_HOTEL.name} is <strong class="text-foreground">half a block</strong> from the reunion.
-                Your answer tells us how much of the block to hold, so please answer even if you are not
-                certain — "not sure yet" is genuinely useful.
+                {HOST_HOTEL.name} is only <strong class="text-foreground">half a block</strong> from
+                the main venue for the reunion. Your answer helps estimate how many rooms in our
+                hotel reservation block will be used. Choosing "{ANSWER_LABELS.undecided}" is useful
+                too.
             </p>
         </CardContent>
     </Card>
