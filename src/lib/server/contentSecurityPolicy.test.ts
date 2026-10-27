@@ -45,6 +45,7 @@ describe('report-only Content Security Policy', () => {
 
     it('lets Umami load its script and send events', () => {
         expect(reportOnly['script-src']).toContain('https://cloud.umami.is')
+        expect(reportOnly['connect-src']).toContain('https://gateway.umami.is')
         expect(reportOnly['connect-src']).toContain('https://api-gateway.umami.dev')
     })
 
