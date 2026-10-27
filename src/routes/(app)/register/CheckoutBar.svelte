@@ -7,8 +7,9 @@ import { formatUsd } from '$lib/utils'
    view. Registrants watched filling in the form could not find the small Save at the foot of Your
    Information, and Pay does not exist until it is pressed. So until the contact is saved this button
    saves it from wherever the reader is (the card scrolls up to its problem list if anything is
-   missing); after, it is the Pay button. The button leaves the amount out because the total is
-   beside it, and "Pay $1,320.72 & Register" would crowd that total off a 375px screen.
+   missing); then it brings the scam notice's checkbox into view until that is ticked; after, it is
+   the Pay button. The button leaves the amount out because the total is beside it, and
+   "Pay $1,320.72 & Register" would crowd that total off a 375px screen.
 
    Sticky, not fixed: past the end of the form it comes to rest there instead of covering the
    footer, and the page needs no padding to keep its last card clear. */
@@ -18,15 +19,21 @@ let {
     peopleCount,
     hasGift,
     canSubmit,
+    acknowledged,
     submitting,
     onsave,
+    onacknowledge,
 }: {
     totalCents: number
     peopleCount: number
     hasGift: boolean
     canSubmit: boolean
+    /* Whether the scam notice has been confirmed. Between Save and Pay there is this one more step,
+       and the bar names it rather than offering a Pay the server would refuse. */
+    acknowledged: boolean
     submitting: boolean
     onsave: () => void
+    onacknowledge: () => void
 } = $props()
 </script>
 
@@ -39,7 +46,11 @@ let {
             {peopleCount === 1 ? 'person' : 'people'}{hasGift ? ' + gift' : ''}
         </span>
     </div>
-    {#if canSubmit}
+    {#if canSubmit && !acknowledged}
+        <Button type="button" size="lg" class="text-base" onclick={onacknowledge}>
+            Read the safety notice
+        </Button>
+    {:else if canSubmit}
         <Button type="submit" size="lg" class="text-base" disabled={submitting}>
             {#if submitting}
                 <LoaderCircle class="size-4 animate-spin" />

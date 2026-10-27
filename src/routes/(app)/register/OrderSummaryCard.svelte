@@ -35,6 +35,7 @@ let {
     showStatus = false,
     submitFootnote,
     submitError,
+    submitBlockedReason,
 }: {
     contactName: string
     selfTierId: string | ''
@@ -53,6 +54,9 @@ let {
     /* A submit that failed after validation passed. Shown under the button because on a phone that
        is where the reader is; the form's error summary is a screen above. */
     submitError?: string
+    /* Why the submit button cannot be pressed yet, shown under it — /register's unticked scam notice.
+       Disabled with a reason rather than refused after a press. Absent on admin paper entry. */
+    submitBlockedReason?: string
 } = $props()
 </script>
 
@@ -117,7 +121,7 @@ let {
                     </NativeSelect>
                 </div>
             {/if}
-            <Button type="submit" class="w-full" disabled={submitting}>
+            <Button type="submit" class="w-full" disabled={submitting || !!submitBlockedReason}>
                 {#if submitting}
                     <LoaderCircle class="size-4 animate-spin" />
                     {submittingLabel}
@@ -125,6 +129,9 @@ let {
                     {submitLabel}
                 {/if}
             </Button>
+            {#if submitBlockedReason}
+                <p class="text-muted-foreground text-center text-sm">{submitBlockedReason}</p>
+            {/if}
             {#if submitError}
                 <p role="alert" class="text-destructive text-center text-sm">{submitError}</p>
             {/if}

@@ -16,7 +16,8 @@ import { assertRegistrationMutable, touchRegistration } from '../lifecycle'
 
    Note that partyMembers.stripePaymentIntentId is NOT a safe test for "was this charged": it is null
    for an abandoned checkout. The registration status is the reliable signal, so that is what gates
-   this.
+   this — with one exception: a member still flagged paymentDue was added after the booking was paid
+   and nobody has paid for them, so removing them owes nobody anything.
 
    Also refuses to empty a party: a registration with no members is a row nothing can be done with,
    and it silently disappears from any member-joined report. Cancelling is the operation for that,
@@ -29,6 +30,7 @@ export async function removeAdminMember(params: {
             id: partyMembers.id,
             name: partyMembers.name,
             isContact: partyMembers.isContact,
+            paymentDue: partyMembers.paymentDue,
             registrationId: partyMembers.registrationId,
             registrationStatus: registrations.status,
         })
@@ -41,7 +43,7 @@ export async function removeAdminMember(params: {
         throw error(404, 'Party member not found')
     }
 
-    if (member.registrationStatus === 'paid') {
+    if (member.registrationStatus === 'paid' && !member.paymentDue) {
         throw error(
             409,
             'This registration is paid. Removing someone owes them a refund, and nothing here issues one — cancel the registration, which refunds it in full, and re-enter the party without them.',

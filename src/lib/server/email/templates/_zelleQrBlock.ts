@@ -1,4 +1,5 @@
 import { zelleQrCodeValue } from '$lib/general/constants'
+import { emailAssetOrigin } from './_emailAssetOrigin'
 import { emailThemeValue } from './_emailThemeValue'
 import { escapeHtml } from './_escapeHtml'
 
@@ -7,11 +8,11 @@ const LOGO_WIDTH = 63
 const LOGO_HEIGHT = 28
 
 /* The Zelle QR code, for a reader paying from a computer. Image URLs are absolute on siteOrigin, like
-   the header image. The QR image carries its own white margin, so a client that darkens the cell
+   the header image, with the same dev-server fallback (emailAssetOrigin). The QR image carries its own white margin, so a client that darkens the cell
    still leaves it scannable. */
 export function zelleQrBlock(siteOrigin: string): string {
     const { cardBackground, text, fontStack } = emailThemeValue
-    const origin = escapeHtml(siteOrigin)
+    const origin = escapeHtml(emailAssetOrigin(siteOrigin))
 
     return `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 24px 0;">
   <tr>

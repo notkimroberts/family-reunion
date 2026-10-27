@@ -20,6 +20,7 @@ function reg(overrides: Partial<RegistrationSummary>): RegistrationSummary {
         stayingAtHostHotel: null,
         memberCount: 1,
         totalCents: 16000,
+        amountDueCents: 0,
         createdAt: new Date('2026-08-01T00:00:00Z'),
         ...overrides,
     }
@@ -44,6 +45,7 @@ describe('getRegistrationTotals', () => {
             /* Vacuously true, and right: with nothing to estimate there is nothing inexact. */
             feesAreExact: true,
             outstandingCents: 0,
+            owedOnPaidCents: 0,
         })
     })
 
@@ -410,6 +412,39 @@ describe('getRegistrationTotals', () => {
             expect(totals.cardPaidCents).toBe(ADULT_GROSS)
             expect(totals.offlinePaidCents).toBe(0)
             expect(totals.feeCents).toBeGreaterThan(0)
+        })
+    })
+
+    /* Someone added after a booking was paid. Their place is in the booking's total but has not
+       arrived, so it is outstanding — and the fee estimate must not be charged on it either. */
+    describe('places still owed on a paid booking', () => {
+        const ADULT_GROSS = grossUpForStripe(16000)
+
+        it('counts the owed part as outstanding, not collected', () => {
+            const totals = getRegistrationTotals([
+                reg({ id: 'a', totalCents: 26000, amountDueCents: 10000, stripeSessionId: null }),
+                reg({ id: 'b', status: 'pending', totalCents: 16000, stripeSessionId: null }),
+            ])
+
+            expect(totals).toMatchObject({
+                offlinePaidCents: 16000,
+                paidCents: 16000,
+                bankedCents: 16000,
+                outstandingCents: 16000 + 10000,
+                owedOnPaidCents: 10000,
+                /* The booking that owes is still coming, and not among the pending ones. */
+                partyCount: 1,
+                pendingPartyCount: 1,
+            })
+        })
+
+        it('estimates the card fee on what was charged only', () => {
+            const totals = getRegistrationTotals([
+                reg({ totalCents: ADULT_GROSS + 10000, amountDueCents: 10000 }),
+            ])
+
+            expect(totals.cardPaidCents).toBe(ADULT_GROSS)
+            expect(totals.feeCents).toBe(stripeFeeOnChargeCents(ADULT_GROSS))
         })
     })
 })

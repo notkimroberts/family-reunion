@@ -62,6 +62,11 @@ async function seedParty(status: 'pending' | 'paid' | 'refunded' | 'waived' = 'p
     memberId = seeded.memberIds[1]
 }
 
+/* An organizer added this guest after the booking was paid, and nobody has paid for them. */
+async function markOwed(id = memberId) {
+    await db.update(partyMembers).set({ paymentDue: true }).where(eq(partyMembers.id, id))
+}
+
 describe('updateAdminMemberDetails', () => {
     beforeEach(async () => {
         db = await resetTestDb()
@@ -129,6 +134,33 @@ describe('updateAdminMemberDetails', () => {
         expect((await memberRow()).name).toBe('Marcus P')
     })
 
+    /* Nothing was charged for an owed place, so changing its tier changes what they owe and refunds
+       nobody. */
+    it('allows a tier change for a person still owed on a paid registration', async () => {
+        await seedParty('paid')
+        await markOwed()
+
+        await updateAdminMemberDetails({ memberId, tierId: childTierId })
+
+        expect(await memberRow()).toMatchObject({
+            tierLabel: 'Child',
+            priceCents: CHILD_NET,
+            paymentDue: true,
+        })
+    })
+
+    /* The tier's net carries no card fee, so a reprice clears the fee a gross snapshot carried. */
+    it('clears the card fee when the tier price is replaced', async () => {
+        await db
+            .update(partyMembers)
+            .set({ priceCents: 16509, cardFeeCents: 509 })
+            .where(eq(partyMembers.id, memberId))
+
+        await updateAdminMemberDetails({ memberId, tierId: childTierId })
+
+        expect(await memberRow()).toMatchObject({ priceCents: CHILD_NET, cardFeeCents: 0 })
+    })
+
     it('allows a tier change while payment is still outstanding', async () => {
         await updateAdminMemberDetails({ memberId, tierId: childTierId })
 
@@ -178,6 +210,26 @@ describe('removeAdminMember', () => {
        without that keeps the money and drops the attendee. */
     it('REFUSES to remove from a paid registration', async () => {
         await seedParty('paid')
+
+        await expect(removeAdminMember({ memberId })).rejects.toThrow()
+
+        expect(await partySize()).toBe(3)
+    })
+
+    /* Nobody paid for an owed place, so removing it owes nobody a refund. */
+    it('removes a person still owed from a paid registration', async () => {
+        await seedParty('paid')
+        await markOwed()
+
+        await removeAdminMember({ memberId })
+
+        expect(await partySize()).toBe(2)
+    })
+
+    /* The exception is the owed person only — the people who paid stay locked. */
+    it('still refuses a paid person on a booking that also has an owed one', async () => {
+        await seedParty('paid')
+        await markOwed(seeded.memberIds[2])
 
         await expect(removeAdminMember({ memberId })).rejects.toThrow()
 

@@ -1,4 +1,23 @@
-import type { StripeSessionMetadata } from './types'
+import { MEMBER_CHARGES_SEPARATORS } from './MEMBER_CHARGES_SEPARATORS'
+import type { MemberCharge, StripeSessionMetadata } from './types'
+
+/* Parses the packed "id:cents,id:cents" value; undefined when any part of it is malformed, so the
+   whole session fails closed rather than settling some members and silently dropping others. */
+function decodeMemberCharges(packed: string | undefined): MemberCharge[] | undefined {
+    if (!packed) {
+        return undefined
+    }
+    const charges = packed.split(MEMBER_CHARGES_SEPARATORS.charge).map((pair) => {
+        const [memberId, cents, extra] = pair.split(MEMBER_CHARGES_SEPARATORS.field)
+        const grossCents = Number(cents)
+        return memberId && extra === undefined && Number.isInteger(grossCents) && grossCents > 0
+            ? { memberId, grossCents }
+            : undefined
+    })
+    return charges.every((charge): charge is MemberCharge => charge !== undefined)
+        ? charges
+        : undefined
+}
 
 /* Parses raw Stripe session metadata into a typed StripeSessionMetadata; returns null when
    any required field is missing. Fail-closed — never default a token or id to '' since
@@ -30,6 +49,18 @@ export function decodeSessionMetadata(
             return null
         }
         return { type: 'donation', donationId: raw.donationId }
+    }
+    if (raw.type === 'member_payment') {
+        const charges = decodeMemberCharges(raw.memberCharges)
+        if (!raw.registrationId || !raw.viewToken || !charges) {
+            return null
+        }
+        return {
+            type: 'member_payment',
+            registrationId: raw.registrationId,
+            viewToken: raw.viewToken,
+            charges,
+        }
     }
     if (raw.type === 'add_member') {
         if (

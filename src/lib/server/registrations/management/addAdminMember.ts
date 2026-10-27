@@ -24,7 +24,13 @@ import { assertRegistrationMutable, touchRegistration } from '../lifecycle'
      never having been charged online.
 
    Also deliberately does NOT call assertRegistrationNotClosed: an admin must be able to record a
-   late arrival after the public lock date, consistent with createAdminRegistration. */
+   late arrival after the public lock date, consistent with createAdminRegistration.
+
+   ON A PAID BOOKING THE NEW PERSON IS MARKED paymentDue. The booking stays 'paid' for everyone who
+   did pay, so without the flag nothing would record that this place is owed: the update email said
+   "your payment has gone through" and the money panel counted the price as banked. A pending booking
+   is owed as a whole already, and a waived one is comped, so neither gets the flag. Nor does a free
+   place — there is nothing to collect. */
 export async function addAdminMember(params: {
     registrationId: string
     member: MemberInput
@@ -46,25 +52,29 @@ export async function addAdminMember(params: {
     const pricingByTierId = await resolveTierPricing(registration.eventId, [params.member.tierId])
     const pricing = pricingByTierId[params.member.tierId]
 
+    const paymentDue = registration.status === 'paid' && pricing.priceCents > 0
+
     const [inserted] = await db
         .insert(partyMembers)
-        .values(
-            buildPartyMemberRow({
+        .values({
+            ...buildPartyMemberRow({
                 registrationId: params.registrationId,
                 member: params.member,
                 tierLabel: pricing.label,
                 priceCents: pricing.priceCents,
             }),
-        )
+            paymentDue,
+        })
         .returning({ id: partyMembers.id })
 
     await touchRegistration(params.registrationId)
 
     dbg.register(
-        'admin added member %s to registration %s at net %d',
+        'admin added member %s to registration %s at net %d (payment due: %s)',
         inserted.id,
         params.registrationId,
         pricing.priceCents,
+        paymentDue,
     )
 
     return { memberId: inserted.id }

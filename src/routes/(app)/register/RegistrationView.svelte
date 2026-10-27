@@ -11,6 +11,7 @@ const mealLabel = (vegetarianMeal: boolean | null) => {
 
 <script lang="ts">
 import { CheckCircle2 } from '@lucide/svelte'
+import { PriceWithCardFee } from '$lib/components'
 import { Badge } from '$lib/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card'
 import { Separator } from '$lib/components/ui/separator'
@@ -23,8 +24,9 @@ import {
     TableRow,
 } from '$lib/components/ui/table'
 import { CONTACT_EMAIL, CONTACT_PHONE } from '$lib/general/constants'
-import { sumMemberPrices } from '$lib/general/pricing'
-import { formatPrice, toE164 } from '$lib/utils'
+import { REGISTRATION_STATUS_STYLES } from '$lib/general/constants/REGISTRATION_STATUS_STYLES'
+import { sumAmountDue, sumMemberPrices } from '$lib/general/pricing'
+import { formatPrice, getBookingDisplayStatus, toE164 } from '$lib/utils'
 import { formatPartialBirthDate } from '$lib/utils/age'
 import type { EventDetails, RegistrationDetails, RegistrationViewMember } from './types'
 
@@ -42,6 +44,15 @@ let {
 } = $props()
 
 let totalCents = $derived(sumMemberPrices(members))
+/* People an organizer added after the booking was paid. Their places are in the total but have not
+   been paid, so "paid" must leave them out. */
+let amountDueCents = $derived(sumAmountDue(members))
+let paidCents = $derived(totalCents - amountDueCents)
+/* "Paid" beside "$165.00 still to pay" contradicts itself, so a paid booking that still owes shows
+   Partly paid — the same rule as the organizers' list (getBookingDisplayStatus). */
+let displayStatus = $derived(
+    getBookingDisplayStatus({ status: registration.status, amountDueCents }),
+)
 </script>
 
 <!-- Success banner -->
@@ -56,15 +67,21 @@ let totalCents = $derived(sumMemberPrices(members))
                     {members.length}
                     {members.length === 1 ? 'person' : 'people'} registered ·
                     <span class="text-foreground font-medium">
-                        ${formatPrice(totalCents)} paid
+                        ${formatPrice(paidCents)} paid
                     </span>
+                    {#if amountDueCents > 0}
+                        ·
+                        <span class="font-medium text-amber-700 dark:text-amber-400">
+                            ${formatPrice(amountDueCents)} still to pay
+                        </span>
+                    {/if}
                 </p>
             </div>
         </div>
         <Badge
-            variant={registration.status === 'paid' ? 'default' : 'secondary'}
-            class="self-start capitalize sm:self-auto">
-            {registration.status}
+            variant={displayStatus === 'paid' ? 'default' : 'secondary'}
+            class="self-start sm:self-auto">
+            {REGISTRATION_STATUS_STYLES[displayStatus].label}
         </Badge>
     </div>
 </div>
@@ -96,7 +113,14 @@ let totalCents = $derived(sumMemberPrices(members))
                             ) ?? '—'}
                         </p>
                         <p class="mt-0.5 text-sm tabular-nums">
-                            ${formatPrice(member.priceCents)}
+                            <PriceWithCardFee
+                                priceCents={member.priceCents}
+                                cardFeeCents={member.cardFeeCents} />
+                            {#if member.paymentDue}
+                                <span class="text-amber-700 dark:text-amber-400">
+                                    · Payment needed
+                                </span>
+                            {/if}
                         </p>
                     </div>
                 {/each}
@@ -129,8 +153,17 @@ let totalCents = $derived(sumMemberPrices(members))
                                 <TableCell>{member.tierLabel}</TableCell>
                                 <TableCell>{member.shirtSize || '—'}</TableCell>
                                 <TableCell>{mealLabel(member.vegetarianMeal)}</TableCell>
-                                <TableCell class="tabular-nums"
-                                    >${formatPrice(member.priceCents)}</TableCell>
+                                <TableCell class="tabular-nums">
+                                    <PriceWithCardFee
+                                        priceCents={member.priceCents}
+                                        cardFeeCents={member.cardFeeCents} />
+                                    {#if member.paymentDue}
+                                        <span
+                                            class="block text-xs text-amber-700 dark:text-amber-400">
+                                            Payment needed
+                                        </span>
+                                    {/if}
+                                </TableCell>
                             </TableRow>
                         {/each}
                     </TableBody>
@@ -139,11 +172,17 @@ let totalCents = $derived(sumMemberPrices(members))
 
             <Separator class="my-4" />
 
-            <div class="flex items-center justify-between">
+            <div class="flex flex-col gap-1">
                 <p class="text-sm font-medium">
                     Total paid:
-                    <span class="tabular-nums">${formatPrice(totalCents)}</span>
+                    <span class="tabular-nums">${formatPrice(paidCents)}</span>
                 </p>
+                {#if amountDueCents > 0}
+                    <p class="text-sm font-medium text-amber-700 dark:text-amber-400">
+                        Still to pay:
+                        <span class="tabular-nums">${formatPrice(amountDueCents)}</span>
+                    </p>
+                {/if}
             </div>
         </CardContent>
     </Card>

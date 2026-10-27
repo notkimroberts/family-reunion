@@ -20,6 +20,8 @@ export {
     type RegistrationStatus,
 } from './utils/getPaymentState'
 export { getMemberPaymentOrigin, type MemberPaymentOrigin } from './utils/getMemberPaymentOrigin'
+export { getBookingDisplayStatus, type DisplayStatus } from './utils/getBookingDisplayStatus'
+export { getPersonDisplayStatus } from './utils/getPersonDisplayStatus'
 export {
     cn,
     type WithoutChild,

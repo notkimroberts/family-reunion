@@ -3,14 +3,19 @@ import { Ban, Check, Copy, Mail, Pencil, TriangleAlert } from '@lucide/svelte'
 import { toast } from 'svelte-sonner'
 import { enhance } from '$app/forms'
 import { page } from '$app/state'
-import { AdminDataView } from '$lib/components'
+import { AdminDataView, PriceWithCardFee } from '$lib/components'
 import { Alert, AlertDescription, AlertTitle } from '$lib/components/ui/alert'
 import { Button } from '$lib/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card'
 import { Separator } from '$lib/components/ui/separator'
 import * as Table from '$lib/components/ui/table'
 import { Tooltip, TooltipContent, TooltipTrigger } from '$lib/components/ui/tooltip'
-import { formatPrice, getMemberPaymentOrigin, getPaymentState } from '$lib/utils'
+import {
+    formatPrice,
+    getBookingDisplayStatus,
+    getMemberPaymentOrigin,
+    getPaymentState,
+} from '$lib/utils'
 import { formatPartialBirthDate } from '$lib/utils/age'
 import RegistrationStatusBadge from '../RegistrationStatusBadge.svelte'
 import { getRegistrationMoney } from '../registrationMoney'
@@ -18,6 +23,7 @@ import AdminCancelDialog from './AdminCancelDialog.svelte'
 import RegistrationEditForm from './RegistrationEditForm.svelte'
 import RegistrationHistory from './RegistrationHistory.svelte'
 import RegistrationMoneyCard from './RegistrationMoneyCard.svelte'
+import SettleMemberPayment from './SettleMemberPayment.svelte'
 
 /* The one thing the status badge cannot say. 'pending' covers both a paper form awaiting a check and
    a public registration abandoned at Stripe Checkout, and those need opposite follow-ups — see
@@ -34,6 +40,7 @@ const originCopyValue = {
     recorded_offline: 'Recorded offline',
     unpaid: 'Not paid',
     comped: 'Comped',
+    payment_due: 'Payment due',
 }
 
 let { data, form: actionData } = $props()
@@ -96,6 +103,18 @@ $effect(() => {
         })
     }
 
+    if (actionData.settleError) {
+        toast.error(actionData.settleError, { duration: Number.POSITIVE_INFINITY })
+    }
+
+    if (actionData.settled) {
+        toast.success(actionData.settled, {
+            description: actionData.notifyError
+                ? undefined
+                : `${data.registration.contactEmail} was emailed to say so.`,
+        })
+    }
+
     if (actionData.linkReissued) {
         toast.success('New registration link sent', {
             description:
@@ -115,25 +134,18 @@ let isPaid = $derived(data.registration.status === 'paid')
 /* The same function the money panel beside the list sums, so a booking's fee reads identically in
    both places. totalCents is passed separately because the registration row does not carry it — it
    is the sum of the snapshotted member prices. */
-let money = $derived(getRegistrationMoney({ ...data.registration, totalCents: data.totalCents }))
-
-/* A party that came through Stripe carries grossed-up prices; one entered by hand carries net tier
-   prices. Both are honest records of what that person cost, but side by side in one total they look
-   like an error, so name the reason rather than leaving it to be puzzled out. */
-let origins = $derived(
-    data.members.map((member) => getMemberPaymentOrigin(member, data.registration)),
+let money = $derived(
+    getRegistrationMoney({
+        ...data.registration,
+        totalCents: data.totalCents,
+        amountDueCents: data.amountDueCents,
+    }),
 )
 
-/* Only these two are certainly grossed up. Testing for "not recorded offline" was wrong the moment
-   'comped' existed: a waived party carries the net tier price and read "$160.00 incl. card fee". An
-   abandoned checkout is grossed up too, but nothing was charged, so a fee note there says nothing. */
-const GROSSED_UP_ORIGINS = ['paid_online', 'added_online']
-
-function includesCardFee(origin: string): boolean {
-    return GROSSED_UP_ORIGINS.includes(origin)
-}
-let hasMixedPriceBasis = $derived(
-    origins.includes('recorded_offline') && origins.some(includesCardFee),
+/* How each person's place was paid for, which decides both the Payment column and whether their
+   stored price includes a card fee. */
+let origins = $derived(
+    data.members.map((member) => getMemberPaymentOrigin(member, data.registration)),
 )
 
 async function handleCopyEmail() {
@@ -154,7 +166,11 @@ async function handleCopyEmail() {
                 class="text-muted-foreground hover:text-foreground text-sm">← Registrations</a>
             <div class="flex flex-wrap items-center gap-3">
                 <h1>{data.registration.contactName}</h1>
-                <RegistrationStatusBadge status={data.registration.status} />
+                <RegistrationStatusBadge
+                    status={getBookingDisplayStatus({
+                        status: data.registration.status,
+                        amountDueCents: data.amountDueCents,
+                    })} />
             </div>
             <!-- Contact details live here rather than in a card of their own: an email and a phone
                  number are not worth a titled panel, and reading them next to the name is how an
@@ -276,20 +292,28 @@ async function handleCopyEmail() {
                                 <div class="rounded-lg border p-3">
                                     <div class="flex items-start justify-between gap-2">
                                         <p class="font-medium">{member.name}</p>
-                                        <span class="tabular-nums"
-                                            >${formatPrice(member.priceCents)}</span>
+                                        <PriceWithCardFee
+                                            priceCents={member.priceCents}
+                                            cardFeeCents={member.cardFeeCents} />
                                     </div>
                                     <p class="text-muted-foreground mt-0.5 text-xs">
                                         {member.tierLabel}{#if born}
                                             · b. {born}{/if}{#if member.shirtSize}
                                             · shirt {member.shirtSize}{/if}
                                     </p>
-                                    <p class="text-muted-foreground mt-1 text-xs">
-                                        {originCopyValue[
-                                            origins[index]
-                                        ]}{#if origins[index] !== 'recorded_offline'}
-                                            · incl. card fee{/if}
-                                    </p>
+                                    {#if origins[index] === 'payment_due'}
+                                        <div class="mt-2">
+                                            <SettleMemberPayment
+                                                memberId={member.id}
+                                                name={member.name}
+                                                priceCents={member.priceCents}
+                                                contactEmail={data.registration.contactEmail} />
+                                        </div>
+                                    {:else}
+                                        <p class="text-muted-foreground mt-1 text-xs">
+                                            {originCopyValue[origins[index]]}
+                                        </p>
+                                    {/if}
                                 </div>
                             {/each}
                         </div>
@@ -323,16 +347,20 @@ async function handleCopyEmail() {
                                             {member.shirtSize ?? '—'}
                                         </Table.Cell>
                                         <Table.Cell class="text-muted-foreground">
-                                            {originCopyValue[origins[index]]}
+                                            {#if origins[index] === 'payment_due'}
+                                                <SettleMemberPayment
+                                                    memberId={member.id}
+                                                    name={member.name}
+                                                    priceCents={member.priceCents}
+                                                    contactEmail={data.registration.contactEmail} />
+                                            {:else}
+                                                {originCopyValue[origins[index]]}
+                                            {/if}
                                         </Table.Cell>
                                         <Table.Cell class="text-right tabular-nums">
-                                            ${formatPrice(member.priceCents)}
-                                            {#if includesCardFee(origins[index])}
-                                                <span
-                                                    class="text-muted-foreground block text-xs font-normal">
-                                                    incl. card fee
-                                                </span>
-                                            {/if}
+                                            <PriceWithCardFee
+                                                priceCents={member.priceCents}
+                                                cardFeeCents={member.cardFeeCents} />
                                         </Table.Cell>
                                     </Table.Row>
                                 {/each}
@@ -343,13 +371,6 @@ async function handleCopyEmail() {
 
                 <Separator class="my-4" />
                 <RegistrationMoneyCard {money} status={data.registration.status} />
-                {#if hasMixedPriceBasis}
-                    <p class="text-muted-foreground mt-2 text-xs">
-                        This party mixes online prices, which include the card processing fee, with
-                        offline ones at the tier's face value. Each row records what that person
-                        actually cost.
-                    </p>
-                {/if}
             </CardContent>
         </Card>
 
@@ -361,7 +382,7 @@ async function handleCopyEmail() {
     <AdminCancelDialog
         contactName={data.registration.contactName}
         paymentState={payment}
-        totalCents={data.totalCents}
+        totalCents={money.collectedCents}
         memberCount={data.members.length}
         bind:open={cancelDialogOpen} />
 {/if}

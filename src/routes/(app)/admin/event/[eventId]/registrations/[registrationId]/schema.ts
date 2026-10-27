@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { HOTEL_STAY_ANSWERS } from '$lib/general/constants'
+import { HOTEL_STAY_ANSWERS, MEMBER_SETTLEMENTS } from '$lib/general/constants'
 import { memberSchema } from '../../../../../register/schema'
 
 /* One member's editable fields.
@@ -51,4 +51,12 @@ export const adminEditRegistrationSchema = z.object({
     /* Ids removed during this sitting. Collected rather than acted on immediately, so the whole edit
        stays one save the registrant hears about once. */
     removedMemberIds: z.array(z.string()),
+})
+
+/* One owed place settled by an organizer from the Party table: money arrived by hand, or the place
+   is covered. Posted by SettleMemberPayment, outside the edit form, because it is a single fact about
+   one person rather than an edit to the booking. */
+export const settleMemberSchema = z.object({
+    memberId: z.string().min(1),
+    settlement: z.enum(MEMBER_SETTLEMENTS),
 })

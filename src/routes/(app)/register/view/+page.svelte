@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/car
 import { APP_NAME, CONTACT_EMAIL, CONTACT_PHONE, ZELLE_RECIPIENT } from '$lib/general/constants'
 import { offlinePaymentMethods } from '$lib/general/scamSafety'
 import { toE164 } from '$lib/utils'
+import AmountDuePanel from '../AmountDuePanel.svelte'
 import HostHotelPrompt from '../HostHotelPrompt.svelte'
 import RegistrationView from '../RegistrationView.svelte'
 import { clearRegistrationDraft } from '../clearRegistrationDraft'
@@ -156,6 +157,9 @@ $effect(() => {
             <ZelleQrCode class="self-start border" />
         </section>
     {/if}
+
+    <!-- Directly under the heading: money owed outranks everything below it. -->
+    <AmountDuePanel members={data.members} />
 
     <!-- Below the outstanding-payment alert on purpose: an unpaid place outranks a hotel booking. -->
     <section class="col-span-12">

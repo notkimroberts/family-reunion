@@ -69,6 +69,7 @@ function submit(overrides: Record<string, unknown> = {}, sentCookies: Record<str
         self: { ...SELF, tierId: adultTierId },
         members: [],
         stayingAtHostHotel: 'yes',
+        paymentSafetyAcknowledged: true,
         ...overrides,
     }
     const formData = new FormData()
@@ -105,6 +106,22 @@ describe('POST /register?/register', () => {
             location: 'https://checkout.stripe.test/session',
         })
     })
+
+    /* The scam notice protects only someone who has read it, so the server refuses a submission that
+       skips the checkbox rather than trusting the disabled button. */
+    it.each([
+        ['unticked', { paymentSafetyAcknowledged: false }],
+        ['missing', { paymentSafetyAcknowledged: undefined }],
+    ])(
+        'refuses a submission with the safety notice %s, and writes nothing',
+        async (_, overrides) => {
+            const result = await submit(overrides)
+
+            expect(result).toMatchObject({ status: 400 })
+            expect(await db.select().from(registrations)).toEqual([])
+            expect(mockCreateCheckout).not.toHaveBeenCalled()
+        },
+    )
 
     it('creates the party with the contact flagged first', async () => {
         await expect(

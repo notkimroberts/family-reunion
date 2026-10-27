@@ -7,11 +7,16 @@ import { emailLayout } from './_emailLayout'
 import { emailThemeValue } from './_emailThemeValue'
 import { escapeHtml } from './_escapeHtml'
 import { hotelSection } from './_hotelSection'
+import { owedPaymentRequest } from './_owedPaymentRequest'
 import { primaryButton } from './_primaryButton'
 import { SAFETY_NOTICE_TEXT } from './_safetyNoticeText'
 import { sectionLabel } from './_sectionLabel'
 import { zelleQrBlock } from './_zelleQrBlock'
-import type { ConfirmationStatus, RegistrationConfirmationData } from './types'
+import type {
+    ConfirmationPartyMember,
+    ConfirmationStatus,
+    RegistrationConfirmationData,
+} from './types'
 
 /* Copy keyed off registration status. One template serves both the online (always 'paid')
    and admin paper-entry paths ('paid', 'waived' for a comped place, 'pending' when money is
@@ -51,14 +56,26 @@ const STATUS_COPY: Record<
    gone through" reads as a card charge to someone who handed over a check. */
 const PAID_BY_HAND_LEAD = 'Your registration is confirmed and we have received your payment.'
 
-/* Online prices are snapshotted with the card fee folded in, while the register page lists the fee
-   on its own line — without this the per-person prices look like a different, higher tier. */
-const CARD_FEE_NOTE = 'Prices include the card processing fee.'
+/* A paid booking with people added after it was paid. The booking is confirmed — the people who paid
+   are coming — but the email must ask for the rest rather than say the payment has gone through. The
+   request itself is owedPaymentRequest. */
+const DUE_LEAD =
+    'Your registration is confirmed. Payment is still needed for anyone marked "Payment needed" below.'
+const DUE_TOTAL_LABEL = 'Party total'
 
 /* Registrants cannot edit their own booking any more (see /register/view), so the email they keep
    has to say who can. */
 const CHANGE_NOTE =
     'Need to add someone or change a detail? Reply to this email and an organizer will update it for you.'
+
+/* A row's tier price: the stored price less any card fee inside it. */
+function tierPriceCents(member: ConfirmationPartyMember): number {
+    return member.priceCents - (member.cardFeeCents ?? 0)
+}
+
+function cardFeeLabel(cardFeeCents: number): string {
+    return `$${formatPrice(cardFeeCents)} card fee`
+}
 
 /* Returns subject, plain-text body and HTML body confirming an event registration.
 
@@ -72,8 +89,14 @@ export function renderRegistrationConfirmation(data: RegistrationConfirmationDat
 } {
     const copy = STATUS_COPY[data.status]
     const isPaid = data.status === 'paid'
-    const lead = isPaid && !data.paidByCard ? PAID_BY_HAND_LEAD : copy.lead
-    const note = isPaid && data.paidByCard ? CARD_FEE_NOTE : copy.note
+    /* The amount is only meaningful on a paid booking; a pending one asks for its whole total. */
+    const owedRequest = isPaid && data.amountDue ? owedPaymentRequest(data.amountDue) : undefined
+    const isOwed = owedRequest !== undefined
+    const paidLead = isPaid && !data.paidByCard ? PAID_BY_HAND_LEAD : copy.lead
+    const lead = isOwed ? DUE_LEAD : paidLead
+    /* No card-fee note: each row shows its tier price with the fee it carried under it. */
+    const note = isOwed ? undefined : copy.note
+    const totalLabel = isOwed ? DUE_TOTAL_LABEL : copy.totalLabel
     const siteOrigin = new URL(data.viewUrl).origin
     const hotel = hotelSection(siteOrigin)
     const { insetBackground, border, text: textColor, muted, fontStack } = emailThemeValue
@@ -99,6 +122,7 @@ export function renderRegistrationConfirmation(data: RegistrationConfirmationDat
         lead,
         '',
         /* Capitals are the only emphasis plain text has. */
+        ...(owedRequest?.textLines ?? []),
         ...(copy.action ? [`PAYMENT NEEDED: ${total}. ${copy.action}`, ''] : []),
         data.eventTitle,
         ...eventLines.map((line) => `  ${line}`),
@@ -106,13 +130,14 @@ export function renderRegistrationConfirmation(data: RegistrationConfirmationDat
         'Your party:',
         ...data.partyMembers.map((member) => {
             const detail = member.detail ? ` — ${member.detail}` : ''
-            return `  - ${member.name} (${member.tierLabel})${detail}  $${formatPrice(member.priceCents)}`
+            const fee = member.cardFeeCents ? ` + ${cardFeeLabel(member.cardFeeCents)}` : ''
+            return `  - ${member.name} (${member.tierLabel})${detail}  $${formatPrice(tierPriceCents(member))}${fee}`
         }),
         ...(data.donationCents
             ? [`  - Gift to the reunion  $${formatPrice(data.donationCents)}`]
             : []),
         '',
-        `${copy.totalLabel}: ${total}`,
+        `${totalLabel}: ${total}`,
         ...(note ? ['', note] : []),
         '',
         'View your registration at any time:',
@@ -153,7 +178,7 @@ export function renderRegistrationConfirmation(data: RegistrationConfirmationDat
       ${escapeHtml(member.name)}
       <span style="display:block;font-size:13px;color:${muted};">${escapeHtml(member.tierLabel)}${member.detail ? ` &middot; ${escapeHtml(member.detail)}` : ''}</span>
     </td>
-    <td align="right" style="padding:10px 0;border-bottom:1px solid ${border};font-family:${fontStack};font-size:15px;line-height:1.4;color:${textColor};white-space:nowrap;">$${formatPrice(member.priceCents)}</td>
+    <td align="right" style="padding:10px 0;border-bottom:1px solid ${border};font-family:${fontStack};font-size:15px;line-height:1.4;color:${textColor};white-space:nowrap;">$${formatPrice(tierPriceCents(member))}${member.cardFeeCents ? `<span style="display:block;font-size:12px;color:${muted};">+ ${cardFeeLabel(member.cardFeeCents)}</span>` : ''}</td>
   </tr>`,
         )
         .join('\n')
@@ -175,7 +200,7 @@ export function renderRegistrationConfirmation(data: RegistrationConfirmationDat
 ${memberRows}
 ${donationRow}
   <tr>
-    <td style="padding:12px 0 0 0;font-family:${fontStack};font-size:15px;font-weight:700;color:${textColor};">${escapeHtml(copy.totalLabel)}</td>
+    <td style="padding:12px 0 0 0;font-family:${fontStack};font-size:15px;font-weight:700;color:${textColor};">${escapeHtml(totalLabel)}</td>
     <td align="right" style="padding:12px 0 0 0;font-family:${fontStack};font-size:15px;font-weight:700;color:${textColor};white-space:nowrap;">${total}</td>
   </tr>
 </table>`
@@ -184,9 +209,10 @@ ${donationRow}
         ? `<p style="margin:0 0 24px 0;font-family:${fontStack};font-size:14px;line-height:1.6;color:${muted};">${escapeHtml(note)}</p>`
         : '<div style="height:16px;"></div>'
 
-    const actionBlock = copy.action
+    const pendingBlock = copy.action
         ? `${actionCallout(`Payment needed: ${total}`, copy.action)}\n${zelleQrBlock(siteOrigin)}`
         : ''
+    const actionBlock = owedRequest?.html ?? pendingBlock
 
     const bodyHtml = [
         paragraph(`Hi ${escapeHtml(data.name)},`),
@@ -212,9 +238,11 @@ ${donationRow}
         subject: `${heading}: ${data.eventTitle}`,
         text: textBody,
         html: emailLayout({
-            preheader: copy.action
-                ? `Payment needed: ${total} — ${copy.action}`
-                : `${copy.totalLabel} ${total} — ${data.partyMembers.length} ${data.partyMembers.length === 1 ? 'person' : 'people'} registered for ${data.eventTitle}.`,
+            preheader: owedRequest
+                ? owedRequest.preheader
+                : copy.action
+                  ? `Payment needed: ${total} — ${copy.action}`
+                  : `${totalLabel} ${total} — ${data.partyMembers.length} ${data.partyMembers.length === 1 ? 'person' : 'people'} registered for ${data.eventTitle}.`,
             heading,
             bodyHtml,
             siteOrigin,

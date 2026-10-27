@@ -1,5 +1,10 @@
 export type { MemberInput } from './checkout'
-export { createPendingRegistration, createAdminRegistration, fulfillCheckout } from './checkout'
+export {
+    createPendingRegistration,
+    createAdminRegistration,
+    createMemberPayment,
+    fulfillCheckout,
+} from './checkout'
 
 export {
     cancelRegistrationAsAdmin,
@@ -14,8 +19,12 @@ export {
     describeRegistrationChange,
     setMemberCheckedIn,
     setShirtGiven,
+    settleMemberPayment,
 } from './management'
 export type { AdminSettableStatus, RegistrationAuditAction } from './management'
+
+export { VIEW_TOKEN_COOKIE } from './VIEW_TOKEN_COOKIE'
+export { rememberViewToken } from './rememberViewToken'
 
 export { rotateViewToken } from './rotateViewToken'
 export { isViewTokenValid, VIEW_TOKEN_GRACE_PERIOD_MS } from './isViewTokenValid'
@@ -27,6 +36,7 @@ export type { EventPerson } from './queries'
 export type { EventSummary } from './queries'
 export type { UnlistedAttendee } from './queries'
 export {
+    getAmountDueByToken,
     getConfirmationEmailData,
     getEventPeople,
     getEventSummaries,

@@ -1,10 +1,20 @@
 import { and, eq } from 'drizzle-orm'
-import { sumMemberPrices } from '$lib/general/pricing'
+import { quoteAmountDue, sumMemberPrices } from '$lib/general/pricing'
 import { db } from '$lib/server/db'
 import { donations, partyMembers, registrations, reunionEvents } from '$lib/server/db/schema'
 import type { ConfirmationStatus, RegistrationConfirmationData } from '$lib/server/email'
 import { formatDateRange } from '$lib/utils'
 import { getAge } from '$lib/utils/age'
+
+const PAY_PATH = '/register/pay'
+
+/* The pay page on the same origin, carrying the same token as the view link. /register/pay accepts
+   ?token= exactly as /register/view does, so callers keep passing one URL. */
+function toPayUrl(viewUrl: string): string {
+    const payUrl = new URL(viewUrl)
+    payUrl.pathname = PAY_PATH
+    return payUrl.toString()
+}
 
 /* Assembles everything the confirmation email needs for one registration: contact, event
    details, the party breakdown, and the total.
@@ -53,6 +63,7 @@ export async function getConfirmationEmailData(params: {
             .limit(1),
         db
             .select({
+                id: partyMembers.id,
                 name: partyMembers.name,
                 birthYear: partyMembers.birthYear,
                 birthMonth: partyMembers.birthMonth,
@@ -60,6 +71,8 @@ export async function getConfirmationEmailData(params: {
                 shirtSize: partyMembers.shirtSize,
                 tierLabel: partyMembers.tierLabel,
                 priceCents: partyMembers.priceCents,
+                paymentDue: partyMembers.paymentDue,
+                cardFeeCents: partyMembers.cardFeeCents,
             })
             .from(partyMembers)
             .where(eq(partyMembers.registrationId, params.registrationId)),
@@ -87,6 +100,9 @@ export async function getConfirmationEmailData(params: {
 
     const donationCents = gifts.reduce((sum, gift) => sum + gift.amountCents, 0)
 
+    /* People an organizer added after the booking was paid, and not paid for since. */
+    const owed = quoteAmountDue(members)
+
     return {
         to: registration.contactEmail,
         data: {
@@ -109,17 +125,29 @@ export async function getConfirmationEmailData(params: {
                 if (member.shirtSize) {
                     extras.push(`Shirt ${member.shirtSize}`)
                 }
+                if (member.paymentDue) {
+                    extras.push('Payment needed')
+                }
                 return {
                     name: member.name,
                     tierLabel: member.tierLabel,
                     priceCents: member.priceCents,
                     detail: extras.length > 0 ? extras.join(', ') : undefined,
+                    cardFeeCents: member.cardFeeCents,
                 }
             }),
             /* The party plus any gift: this figure has to be what the card was charged, and the
                template prints the gift as its own row so the two agree. */
             totalCents: sumMemberPrices(members) + donationCents,
             donationCents: donationCents > 0 ? donationCents : undefined,
+            amountDue:
+                owed.netCents > 0
+                    ? {
+                          netCents: owed.netCents,
+                          cardTotalCents: owed.cardTotalCents,
+                          payUrl: toPayUrl(params.viewUrl),
+                      }
+                    : undefined,
             viewUrl: params.viewUrl,
         },
     }

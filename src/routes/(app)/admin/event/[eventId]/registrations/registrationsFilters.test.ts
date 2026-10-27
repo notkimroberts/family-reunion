@@ -21,6 +21,7 @@ const booking = (over: Partial<Booking>) =>
         status: 'paid',
         memberCount: 1,
         totalCents: 16509,
+        amountDueCents: 0,
         stripeSessionId: 'cs_1',
         stripeFeeCents: 509,
         createdAt: new Date(),
@@ -89,6 +90,22 @@ describe('filterBookings', () => {
 
     it('returns nothing rather than everything for a term that matches nobody', () => {
         expect(filterBookings(rows, { search: 'nobody', status: undefined })).toHaveLength(0)
+    })
+
+    /* The chips match the status a row shows: a paid booking that still owes wears Partly paid, so
+       the Paid chip must not list it. */
+    it('files a paid booking that still owes under Partly paid, not Paid', () => {
+        const withOwed = [
+            ...rows,
+            booking({ id: 'r3', contactName: 'Ruth', status: 'paid', amountDueCents: 16500 }),
+        ]
+
+        expect(
+            filterBookings(withOwed, { search: '', status: 'paid' }).map((row) => row.id),
+        ).toEqual(['r1'])
+        expect(
+            filterBookings(withOwed, { search: '', status: 'partly_paid' }).map((row) => row.id),
+        ).toEqual(['r3'])
     })
 })
 

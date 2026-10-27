@@ -115,10 +115,32 @@ export const registrationSchema = z.object({
         .default(0),
 })
 
+/* The public form: the shared shape plus the registrant's confirmation that they read how to pay
+   safely (CheckoutSafetyNotice). Many registrants are elders, the target of fake "organizer"
+   messages asking for money, and the notice only protects someone who has read it.
+
+   Required here as well as in the page, so a submit that skips the checkbox is refused by the server
+   rather than trusted to the button being disabled. Kept out of registrationSchema because admin
+   paper entry extends that, and an organizer typing in a paper form has no notice to confirm.
+
+   `Boolean(acknowledged)` rather than `acknowledged` or `=== true`: TypeScript 5.5+ infers a type
+   predicate from those, which would narrow zod's output — and so $form — to `true`, unable to hold
+   the unticked starting state. Same reason as the yes/no answers above. */
+export const publicRegistrationSchema = registrationSchema.extend({
+    paymentSafetyAcknowledged: z
+        .boolean()
+        .refine(
+            (acknowledged) => Boolean(acknowledged),
+            'Please confirm you have read how to pay safely',
+        ),
+})
+
 /* Admin paper entry validates identically to the public form — address, ZIP, state and both
    yes/no answers required — so catering and shirt counts are complete whichever way a
    registration arrives. Extends registrationSchema rather than restating the rules, so the two
    can only ever agree.
+
+   Not publicRegistrationSchema: nothing asks an organizer to confirm the scam notice.
 
    The one addition is status: an admin records whether the money already arrived, was waived, or
    is still outstanding, since this path bypasses Stripe entirely. */

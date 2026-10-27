@@ -39,6 +39,9 @@ export type EventMoney = {
     lostToRefundsCents: number
     /* Money owed. NOT part of the sum above, and rendered below a rule for that reason. */
     outstandingCents: number
+    /* The part of outstandingCents owed on paid bookings for people added after they paid. Drives one
+       sentence of the tooltip. */
+    owedOnPaidCents: number
     /* Cash and checks counted in bankedCents that are not literally banked yet. Nothing here knows
        whether they have been deposited, which is exactly what the tooltip says. */
     toDepositCents: number
@@ -60,6 +63,7 @@ export function getEventMoney(totals: RegistrationTotals, gifts: DonationTotals)
         feeCents: totals.feeCents + gifts.feeCents,
         lostToRefundsCents: totals.lostToRefundsCents,
         outstandingCents: totals.outstandingCents,
+        owedOnPaidCents: totals.owedOnPaidCents,
         toDepositCents: totals.offlinePaidCents,
         feesAreExact: totals.feesAreExact && gifts.feesAreExact,
         hasActivity:

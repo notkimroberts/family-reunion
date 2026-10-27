@@ -3,6 +3,7 @@ import {
     STRIPE_FEE_FIXED_CENTS,
     STRIPE_FEE_PERCENT,
     grossUpForStripe,
+    netBeforeGrossUp,
     stripeFeeCents,
     stripeFeeOnChargeCents,
 } from './stripeFee'
@@ -92,5 +93,26 @@ describe('stripeFeeOnChargeCents', () => {
         expect(stripeFeeOnChargeCents(100000)).toBe(
             Math.round(100000 * STRIPE_FEE_PERCENT) + STRIPE_FEE_FIXED_CENTS,
         )
+    })
+})
+
+describe('netBeforeGrossUp', () => {
+    /* Every price this app has snapshotted came out of grossUpForStripe, so the round trip must be
+       exact for all of them — checked across every net up to $2,000 rather than a few examples. */
+    it('recovers the net from every grossed-up price', () => {
+        const mismatches = Array.from({ length: 200000 }, (_, index) => index + 1).filter(
+            (netCents) => netBeforeGrossUp(grossUpForStripe(netCents)) !== netCents,
+        )
+        expect(mismatches).toEqual([])
+    })
+
+    it('recovers the real tier prices', () => {
+        expect(netBeforeGrossUp(17024)).toBe(16500)
+        expect(netBeforeGrossUp(grossUpForStripe(16000))).toBe(16000)
+    })
+
+    it('is zero for nothing, and for an amount below any gross-up', () => {
+        expect(netBeforeGrossUp(0)).toBe(0)
+        expect(netBeforeGrossUp(1)).toBe(0)
     })
 })

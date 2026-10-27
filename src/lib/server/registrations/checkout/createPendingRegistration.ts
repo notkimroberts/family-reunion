@@ -5,7 +5,7 @@ import { donations, partyMembers, registrations } from '$lib/server/db/schema'
 import { dbg } from '$lib/server/debug'
 import { createRegistrationCheckout } from '$lib/server/payments'
 import { resolveTierPricing } from '$lib/server/tiers'
-import { grossUpForStripe } from '$lib/utils/stripeFee'
+import { grossUpForStripe, stripeFeeCents } from '$lib/utils/stripeFee'
 import { assertRegistrationNotClosed } from '../assertRegistrationNotClosed'
 import { assertRegistrationOpen } from '../assertRegistrationOpen'
 import { generateViewToken } from '../hashViewToken'
@@ -89,6 +89,7 @@ export async function createPendingRegistration(params: {
                 tierLabel: pricing.label,
                 /* Snapshot the GROSS — what the card is charged. Refund maths reads this directly. */
                 priceCents: grossUpForStripe(pricing.priceCents),
+                cardFeeCents: stripeFeeCents(pricing.priceCents),
                 /* Index 0 is the contact attending their own reunion, flagged so their name has one
                    editable field rather than two copies that drift — see party_members.isContact. */
                 isContact: index === 0,

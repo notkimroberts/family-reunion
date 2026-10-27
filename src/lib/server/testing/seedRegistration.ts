@@ -13,6 +13,10 @@ type SeedMember = {
     stripePaymentIntentId?: string | null
     isContact?: boolean
     tierLabel?: string
+    /* An organizer added this person to a paid booking and nobody has paid for them yet. */
+    paymentDue?: boolean
+    /* The card fee inside priceCents, for a place stored at the gross. */
+    cardFeeCents?: number
 }
 
 type SeedOptions = {
@@ -75,6 +79,8 @@ export async function seedRegistration(db: TestDb, options: SeedOptions = {}) {
                 priceCents: member.priceCents,
                 stripePaymentIntentId: member.stripePaymentIntentId ?? null,
                 isContact: member.isContact ?? index === 0,
+                paymentDue: member.paymentDue ?? false,
+                cardFeeCents: member.cardFeeCents ?? 0,
             })),
         )
         .returning()

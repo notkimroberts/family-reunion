@@ -53,8 +53,8 @@ function actionLabel(action: string): string {
     return actionCopyValue[action as keyof typeof actionCopyValue] ?? action
 }
 
-/* Renders the parts of detail worth reading — a status transition and a person's name. Anything else
-   stays out rather than dumping raw JSON at an organizer. */
+/* Renders the parts of detail worth reading — a status transition, a person's name, and how an owed
+   place was settled. Anything else stays out rather than dumping raw JSON at an organizer. */
 function detailLabel(detail: unknown): string {
     if (typeof detail !== 'object' || detail === null) {
         return ''
@@ -62,6 +62,9 @@ function detailLabel(detail: unknown): string {
     const record = detail as Record<string, unknown>
     if (typeof record.from === 'string' && typeof record.to === 'string') {
         return `${record.from} → ${record.to}`
+    }
+    if (typeof record.name === 'string' && typeof record.payment === 'string') {
+        return `${record.name} — ${record.payment}`
     }
     if (typeof record.name === 'string') {
         return record.name

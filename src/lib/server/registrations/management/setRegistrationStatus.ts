@@ -1,7 +1,7 @@
 import { error } from '@sveltejs/kit'
-import { eq } from 'drizzle-orm'
+import { and, eq, gt, isNull, sql } from 'drizzle-orm'
 import { db } from '$lib/server/db'
-import { registrationStatusEnum, registrations } from '$lib/server/db/schema'
+import { partyMembers, registrationStatusEnum, registrations } from '$lib/server/db/schema'
 import { dbg } from '$lib/server/debug'
 import { assertRegistrationMutable } from '../lifecycle'
 
@@ -50,18 +50,52 @@ export async function setRegistrationStatus(params: {
         return
     }
 
-    await db
-        .update(registrations)
-        .set({
-            status: params.status,
-            /* Recorded when the organizer says the money arrived, and CLEARED when they take it back.
-               A registration moved from paid to pending is owed again, and a stale paid date beside a
-               Pending badge is worse than no date — it reads as a payment that has gone missing. Waived
-               gets none: nothing was paid, so there is no payment date to show. */
-            paidAt: params.status === 'paid' ? new Date() : null,
-            updatedAt: new Date(),
-        })
-        .where(eq(registrations.id, params.registrationId))
+    await db.transaction(async (tx) => {
+        await tx
+            .update(registrations)
+            .set({
+                status: params.status,
+                /* Recorded when the organizer says the money arrived, and CLEARED when they take it
+                   back. A registration moved from paid to pending is owed again, and a stale paid date
+                   beside a Pending badge is worse than no date — it reads as a payment that has gone
+                   missing. Waived gets none: nothing was paid, so there is no payment date to show. */
+                paidAt: params.status === 'paid' ? new Date() : null,
+                updatedAt: new Date(),
+            })
+            .where(eq(registrations.id, params.registrationId))
+
+        /* payment_due means "owed now", and only a paid booking has places owed separately: a pending
+           one owes its whole total, a waived one is comped. So leaving 'paid' clears it, as it clears
+           paidAt — and setting 'paid' again means everyone is paid, not that the old flags return. */
+        if (params.status !== 'paid') {
+            await tx
+                .update(partyMembers)
+                .set({ paymentDue: false })
+                .where(eq(partyMembers.registrationId, params.registrationId))
+        }
+
+        /* Marked paid by hand: the money came by Zelle or check, so no card fee was paid. A public
+           checkout snapshots card prices before anyone pays, so an abandoned checkout settled by check
+           still held them — "$165.00 + $5.24 card fee" for a family who never used a card, and $5.24
+           too much in the money panel. Those places go back to the tier price. Only places no card paid
+           for (no payment intent on the member); this booking was not pending → paid by the webhook,
+           which never comes through here. */
+        if (params.status === 'paid') {
+            await tx
+                .update(partyMembers)
+                .set({
+                    priceCents: sql`${partyMembers.priceCents} - ${partyMembers.cardFeeCents}`,
+                    cardFeeCents: 0,
+                })
+                .where(
+                    and(
+                        eq(partyMembers.registrationId, params.registrationId),
+                        isNull(partyMembers.stripePaymentIntentId),
+                        gt(partyMembers.cardFeeCents, 0),
+                    ),
+                )
+        }
+    })
 
     dbg.register(
         'admin set registration %s status %s -> %s',

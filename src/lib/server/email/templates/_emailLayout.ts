@@ -1,4 +1,5 @@
 import { REUNION_NAME } from '$lib/general/constants'
+import { emailAssetOrigin } from './_emailAssetOrigin'
 import { emailThemeValue } from './_emailThemeValue'
 import { escapeHtml } from './_escapeHtml'
 import { safetyNoticeHtml } from './_safetyNoticeHtml'
@@ -24,7 +25,7 @@ const HEADER_IMAGE_HEIGHT = 87
    - A hidden preheader sets the inbox preview line, which otherwise samples the first visible
      text — here the wordmark, which tells the reader nothing.
    - The header image is an absolute URL on siteOrigin, the origin the email's own links use, so it
-     loads from whichever domain sent it. Clients that block images show the alt text, and the
+     loads from whichever domain sent it — except from a dev server, see emailAssetOrigin. Clients that block images show the alt text, and the
      reunion's name sits under it as text, so nothing is lost without it. */
 export function emailLayout(params: {
     preheader: string
@@ -52,7 +53,7 @@ export function emailLayout(params: {
       <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="600" style="width:100%;max-width:600px;">
         <tr>
           <td align="center" style="padding:0 0 20px 0;font-family:${fontStack};font-size:13px;font-weight:700;letter-spacing:0.22em;text-transform:uppercase;color:${muted};">
-            <img src="${escapeHtml(params.siteOrigin)}${HEADER_IMAGE_PATH}" width="${HEADER_IMAGE_WIDTH}" height="${HEADER_IMAGE_HEIGHT}" alt="Will and Roxie Patterson" style="display:block;margin:0 auto 12px auto;border:0;border-radius:8px;outline:none;text-decoration:none;">
+            <img src="${escapeHtml(emailAssetOrigin(params.siteOrigin))}${HEADER_IMAGE_PATH}" width="${HEADER_IMAGE_WIDTH}" height="${HEADER_IMAGE_HEIGHT}" alt="Will and Roxie Patterson" style="display:block;margin:0 auto 12px auto;border:0;border-radius:8px;outline:none;text-decoration:none;">
             ${escapeHtml(REUNION_NAME)}
           </td>
         </tr>

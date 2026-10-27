@@ -33,6 +33,18 @@ const FEE_NOTE = {
         <span class="tabular-nums">${formatPrice(money.totalCents)}</span>
     </div>
 
+    <!-- People added after the booking was paid. Their places are in the party total and not in what
+         the reunion keeps, so the gap between the two is named rather than left to look like a
+         missing payment. -->
+    {#if money.unpaidCents > 0}
+        <div class="flex items-baseline justify-between gap-3">
+            <span class="text-amber-700 dark:text-amber-400">Not yet paid</span>
+            <span class="text-amber-700 tabular-nums dark:text-amber-400">
+                −${formatPrice(money.unpaidCents)}
+            </span>
+        </div>
+    {/if}
+
     {#if money.wasCharged}
         <div class="flex items-baseline justify-between gap-3">
             <span class="text-amber-700 dark:text-amber-400">Stripe fee</span>

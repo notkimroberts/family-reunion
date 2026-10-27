@@ -23,7 +23,8 @@ import { diffMemberDetails, type MemberDetailValues } from './_diffMemberDetails
    nothing to reconcile it and no refund issued. Nothing in the app issues a partial refund, so
    repricing is cancel (full refund) and re-enter, as in removeAdminMember. Non-financial
    corrections stay available at every status, since a wrong birthday or shirt size has to be
-   fixable.
+   fixable. A member still flagged paymentDue is the exception: nothing was charged for them, so
+   their tier can move and the new net price is what they owe.
 
    Returns what actually changed, value by value, for the update email — and writes nothing when no
    value differs. The edit form resubmits every attendee on each save, so "a field was passed" is not
@@ -49,6 +50,7 @@ export async function updateAdminMemberDetails(params: {
             shirtSize: partyMembers.shirtSize,
             vegetarianMeal: partyMembers.vegetarianMeal,
             attendedReunion2025: partyMembers.attendedReunion2025,
+            paymentDue: partyMembers.paymentDue,
             registrationId: partyMembers.registrationId,
             registrationStatus: registrations.status,
             eventId: registrations.eventId,
@@ -79,7 +81,7 @@ export async function updateAdminMemberDetails(params: {
         /* Only refuse when the tier actually moves the price. Re-submitting the same tier, which the
            edit form does on every save, must not be mistaken for a repricing attempt. */
         const repricing = pricing.priceCents !== member.priceCents
-        if (repricing && member.registrationStatus === 'paid') {
+        if (repricing && member.registrationStatus === 'paid' && !member.paymentDue) {
             throw error(
                 409,
                 'This registration is paid. Changing a tier would change what they owe, and nothing here issues a partial refund — cancel the registration, which refunds it in full, and re-enter the party on the new tier.',
@@ -88,6 +90,8 @@ export async function updateAdminMemberDetails(params: {
 
         updates.tierLabel = pricing.label
         updates.priceCents = pricing.priceCents
+        /* The tier's net, so no card fee rides inside it any more. */
+        updates.cardFeeCents = 0
     }
 
     if (params.birthDate !== undefined) {

@@ -1,0 +1,1 @@
+ALTER TABLE "party_members" ADD COLUMN "payment_due" boolean DEFAULT false NOT NULL;

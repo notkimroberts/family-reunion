@@ -34,18 +34,42 @@ export function emailPreviewFixtures(
         venueAddress: '2323 Broadway, Oakland, CA',
         status: 'paid',
         paidByCard: true,
+        /* Card prices are stored gross; the row shows the tier price with cardFeeCents under it. */
         partyMembers: [
-            { name: 'Alice Patterson', tierLabel: 'Adult', priceCents: 17030, detail: 'Shirt M' },
-            { name: 'Marcus Patterson', tierLabel: 'Adult', priceCents: 17030, detail: 'Shirt XL' },
+            {
+                name: 'Alice Patterson',
+                tierLabel: 'Adult',
+                priceCents: 17024,
+                detail: 'Shirt M',
+                cardFeeCents: 524,
+            },
+            {
+                name: 'Marcus Patterson',
+                tierLabel: 'Adult',
+                priceCents: 17024,
+                detail: 'Shirt XL',
+                cardFeeCents: 524,
+            },
             {
                 name: 'Jada Patterson',
                 tierLabel: 'Child',
                 priceCents: 10330,
                 detail: 'Age 9, Shirt YM',
+                cardFeeCents: 330,
             },
         ],
-        totalCents: 44390,
+        totalCents: 44378,
         viewUrl,
+    }
+
+    /* The same party paid by hand, waived or still owed: tier prices, no card fee. */
+    const offlineParty: Pick<RegistrationConfirmationData, 'partyMembers' | 'totalCents'> = {
+        partyMembers: confirmation.partyMembers.map((member) => ({
+            ...member,
+            priceCents: member.priceCents - (member.cardFeeCents ?? 0),
+            cardFeeCents: undefined,
+        })),
+        totalCents: 43000,
     }
 
     const cancellation: CancellationEmailData = {
@@ -76,13 +100,19 @@ export function emailPreviewFixtures(
         },
         {
             name: 'confirmation-paid-by-hand',
-            render: () => renderRegistrationConfirmation({ ...confirmation, paidByCard: false }),
+            render: () =>
+                renderRegistrationConfirmation({
+                    ...confirmation,
+                    ...offlineParty,
+                    paidByCard: false,
+                }),
         },
         {
             name: 'confirmation-waived',
             render: () =>
                 renderRegistrationConfirmation({
                     ...confirmation,
+                    ...offlineParty,
                     status: 'waived',
                     paidByCard: false,
                 }),
@@ -92,6 +122,7 @@ export function emailPreviewFixtures(
             render: () =>
                 renderRegistrationConfirmation({
                     ...confirmation,
+                    ...offlineParty,
                     status: 'pending',
                     paidByCard: false,
                 }),
@@ -112,6 +143,30 @@ export function emailPreviewFixtures(
                         },
                         { summary: 'Payment status', before: 'Awaiting payment', after: 'Paid' },
                     ],
+                }),
+        },
+        {
+            name: 'confirmation-update-payment-due',
+            render: () =>
+                renderRegistrationConfirmation({
+                    ...confirmation,
+                    isUpdate: true,
+                    changeSummary: [{ summary: 'Jada Patterson was added to your party' }],
+                    partyMembers: [
+                        ...confirmation.partyMembers.slice(0, 2),
+                        {
+                            name: 'Jada Patterson',
+                            tierLabel: 'Child',
+                            priceCents: 10000,
+                            detail: 'Age 9, Shirt YM, Payment needed',
+                        },
+                    ],
+                    totalCents: 44048,
+                    amountDue: {
+                        netCents: 10000,
+                        cardTotalCents: 10330,
+                        payUrl: `${siteOrigin}/register/pay?token=preview-token`,
+                    },
                 }),
         },
         { name: 'cancellation-stripe', render: () => renderCancellationEmail(cancellation) },

@@ -1,7 +1,7 @@
 <script lang="ts">
 import { Check, Shirt } from '@lucide/svelte'
 import type { EventPerson } from '$lib/server/registrations'
-import { cn, formatReunionDateTime } from '$lib/utils'
+import { cn, formatPrice, formatReunionDateTime, getPersonDisplayStatus } from '$lib/utils'
 
 type Props = {
     person: EventPerson
@@ -15,6 +15,10 @@ type Props = {
 
 let { person, arrived, shirtGiven, pending, shirtPending, onToggle, onToggleShirt }: Props =
     $props()
+
+/* Added to a paid booking and not paid for. Said at the door because that is where the money can be
+   collected — the place itself is still theirs, so the row stays tappable. */
+let owes = $derived(getPersonDisplayStatus(person) === 'payment_due')
 </script>
 
 <!-- Two controls, side by side, because arriving and getting a shirt are two facts: shirts run out, or a
@@ -54,6 +58,11 @@ let { person, arrived, shirtGiven, pending, shirtPending, onToggle, onToggleShir
                      a 9:40 tick displayed as 16:40 would read as a wrong record, not a wrong zone. -->
                 {#if arrived && person.checkedInAt}
                     · arrived {formatReunionDateTime(person.checkedInAt, 'time')}
+                {/if}
+                {#if owes}
+                    <span class="font-medium text-amber-700 dark:text-amber-400">
+                        · owes ${formatPrice(person.priceCents)}
+                    </span>
                 {/if}
             </span>
         </span>

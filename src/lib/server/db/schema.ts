@@ -12,7 +12,7 @@ import {
     uniqueIndex,
     uuid,
 } from 'drizzle-orm/pg-core'
-import { HOTEL_STAY_ANSWERS } from '$lib/general/constants'
+import { HOTEL_STAY_ANSWERS, MEMBER_SETTLEMENTS } from '$lib/general/constants'
 import type { ReunionMetadata } from '$lib/general/reunionMetadata'
 
 export const eventStatusEnum = pgEnum('event_status', ['draft', 'open', 'closed', 'archived'])
@@ -26,6 +26,9 @@ export const registrationStatusEnum = pgEnum('registration_status', [
 /* Values from HOTEL_STAY_ANSWERS, so the column, the form's zod schema and the admin summary cannot
    drift apart. See that constant for why there are three and not two. */
 export const hotelStayEnum = pgEnum('hotel_stay', HOTEL_STAY_ANSWERS)
+
+/* How an organizer settled an owed place by hand — see party_members.settlement. */
+export const memberSettlementEnum = pgEnum('member_settlement', MEMBER_SETTLEMENTS)
 
 /* Better Auth tables */
 export const user = pgTable('user', {
@@ -270,6 +273,16 @@ export const partyMembers = pgTable(
         attendedReunion2025: boolean('attended_reunion_2025'),
         tierLabel: text('tier_label').notNull(),
         priceCents: integer('price_cents').notNull(),
+        /* The card processing fee INSIDE priceCents, written wherever a gross is snapshotted: the
+           public checkout, a card payment for an owed place, the legacy add_member webhook. Zero for
+           everything stored at the tier price — paper entry, an organizer's addition, a reprice,
+           Zelle, check, covered.
+
+           Recorded by the writer because only the writer knows whether it grossed the price up. The
+           display (tier price, fee under it) used to recover it on read, by inverting the gross-up and
+           guessing which rows had been grossed from a payment intent or a payment origin — two
+           guesses that disagreed. priceCents stays the gross, because refunds read it. */
+        cardFeeCents: integer('card_fee_cents').notNull().default(0),
         stripePaymentIntentId: text('stripe_payment_intent_id'),
         /* Idempotency key for add_member inserts. One Stripe Checkout session per added
            member, stable across webhook redeliveries, so a UNIQUE index on it lets the
@@ -295,6 +308,23 @@ export const partyMembers = pgTable(
            is that person, so their name has one editable field and one writer rather than two copies
            quietly disagreeing. See updateRegistrationContact. */
         isContact: boolean('is_contact').notNull().default(false),
+        /* True for a person an organizer added to an ALREADY-PAID booking whose place nobody has paid
+           for yet. The registration status cannot say this: it stays 'paid' for everyone who did pay,
+           and moving it to 'pending' would drop them off the check-in list.
+
+           priceCents holds the net tier price while this is true. A card payment through /register/pay
+           clears it and rewrites priceCents to the gross that was charged, so cancellation refunds the
+           right amount; an organizer recording Zelle or a check clears it and keeps the net. Never set
+           on a pending or waived booking — the first is owed as a whole, the second is comped. */
+        paymentDue: boolean('payment_due').notNull().default(false),
+        /* How an organizer settled an owed place by hand: 'paid' (Zelle or check) or 'covered' (price
+           set to zero). NULL for everyone else, including a place a card payment settled — that one
+           carries its own payment intent.
+
+           Needed because clearing paymentDue alone left the row looking like an abandoned checkout:
+           no payment intent on a booking that has a Stripe session, which getMemberPaymentOrigin
+           reads as "Not paid". */
+        settlement: memberSettlementEnum('settlement'),
         /* When this attendee arrived at the reunion, recorded from the door by an organizer.
 
            A TIMESTAMP, not a boolean: "who was here by 11am" and "who arrived after the food ran

@@ -2,6 +2,7 @@ import { count, desc, eq, sum } from 'drizzle-orm'
 import type { HotelStayAnswer } from '$lib/general/constants'
 import { db } from '$lib/server/db'
 import { partyMembers, registrationStatusEnum, registrations } from '$lib/server/db/schema'
+import { amountDueSum } from './_amountDueSum'
 
 export type RegistrationSummary = {
     id: string
@@ -28,6 +29,10 @@ export type RegistrationSummary = {
     stayingAtHostHotel: HotelStayAnswer | null
     memberCount: number
     totalCents: number
+    /* The part of totalCents nobody has paid yet: people an organizer added after the booking was
+       paid. Summed whatever the status, so read it on a paid booking only — see
+       party_members.paymentDue. */
+    amountDueCents: number
     createdAt: Date
 }
 
@@ -63,6 +68,7 @@ export async function getRegistrationsForEvent(eventId: string): Promise<Registr
             createdAt: registrations.createdAt,
             memberCount: count(partyMembers.id),
             totalCents: sum(partyMembers.priceCents),
+            amountDueCents: amountDueSum(),
         })
         .from(registrations)
         /* Left join: a registration whose members were all removed still has to appear. */
@@ -76,5 +82,6 @@ export async function getRegistrationsForEvent(eventId: string): Promise<Registr
         memberCount: Number(row.memberCount ?? 0),
         /* sum() comes back as a string (or null for no rows) from postgres. */
         totalCents: Number(row.totalCents ?? 0),
+        amountDueCents: Number(row.amountDueCents ?? 0),
     }))
 }

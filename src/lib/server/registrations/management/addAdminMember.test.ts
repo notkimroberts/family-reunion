@@ -173,4 +173,48 @@ describe('addAdminMember', () => {
             .where(eq(registrations.id, seeded.registrationId))
         expect(after.updatedAt.getTime()).toBeGreaterThanOrEqual(before.updatedAt.getTime())
     })
+
+    /* Without the flag a paid booking had no record that this place was owed: the update email said
+       the payment had gone through and the money panel counted the price as banked. */
+    describe('marking the place as owed', () => {
+        it('marks a person added to a paid booking as payment due', async () => {
+            await addAdminMember({
+                registrationId: seeded.registrationId,
+                member: { ...MEMBER, tierId },
+            })
+
+            expect((await addedRow(seeded.registrationId))?.paymentDue).toBe(true)
+        })
+
+        /* A pending booking is owed as a whole already; a waived one is comped. */
+        it.each(['pending', 'waived'] as const)(
+            'does not mark a person added to a %s booking',
+            async (status) => {
+                db = await resetTestDb()
+                seeded = await seedRegistration(db, { status })
+                tierId = await seedTier(db, seeded.eventId, { label: 'Adult', priceCents: 16000 })
+
+                await addAdminMember({
+                    registrationId: seeded.registrationId,
+                    member: { ...MEMBER, tierId },
+                })
+
+                expect((await addedRow(seeded.registrationId))?.paymentDue).toBe(false)
+            },
+        )
+
+        it('does not mark a free place, since there is nothing to collect', async () => {
+            const freeTierId = await seedTier(db, seeded.eventId, {
+                label: 'Infant',
+                priceCents: 0,
+            })
+
+            await addAdminMember({
+                registrationId: seeded.registrationId,
+                member: { ...MEMBER, tierId: freeTierId },
+            })
+
+            expect((await addedRow(seeded.registrationId))?.paymentDue).toBe(false)
+        })
+    })
 })

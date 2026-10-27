@@ -20,6 +20,7 @@ function person(overrides: Partial<EventPerson> & Pick<EventPerson, 'id'>): Even
         contactName: 'Alice Patterson',
         contactEmail: 'alice@example.com',
         status: 'paid',
+        paymentDue: false,
         checkedInAt: null,
         checkedInBy: null,
         shirtGivenAt: null,
