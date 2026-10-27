@@ -21,10 +21,10 @@ and the status of a fix. Fixes go in their own PR after the run is complete.
 - **Confirmed affected (run 2, 2026-10-27):** every card path. One adult (fee 524, recorded null);
   adult + child + gift (968, null); the `/register/pay` second charge (booking fee stays null; the two
   real fees sum to 854); a standalone gift at `/donate` (320, null).
-- **Fix (proposed, not started):** also handle `charge.updated` and record the fee once the balance
-  transaction exists, added at most once per payment intent; add the event to both Stripe webhook
-  endpoints (test and live).
-- **Status:** open. The scenarios check it with `expect.soft`, so they keep running.
+- **Fix:** branch `fix/stripe-fee-and-first-email` — the webhook handles `charge.updated`;
+  `recordPaymentFee` counts each payment's fee once (`stripe_fees`, keyed by payment intent). Needs
+  `charge.updated` enabled on both Stripe webhook endpoints (test and live).
+- **Status:** fixed on the branch; the scenarios now assert the fee strictly. Verify in run 3.
 
 ## 2. The estimated fee for a cancelled booking with a gift leaves out the gift's share
 
@@ -34,7 +34,7 @@ and the status of a fix. Fixes go in their own PR after the run is complete.
   and Stripe kept the fee on all of it: 896. So In the bank reads 73¢ high for every such cancellation.
 - **Effect:** only while issue 1 stands — a recorded fee is the whole charge's, so fixing issue 1 fixes
   this. Worth a unit test on the estimate path either way.
-- **Status:** open; resolves with issue 1.
+- **Status:** resolves with issue 1 (a recorded fee is the whole charge's). Verify in run 3.
 
 ## 3. A registrant's first email can be titled "Registration updated" (observation)
 
@@ -43,8 +43,10 @@ and the status of a fix. Fixes go in their own PR after the run is complete.
   "Registration updated: …".
 - **Effect:** copy only — the body is correct (tier price, no card fee). A first email saying
   "updated" may confuse someone who never saw an original.
-- **Status:** open, low priority. Decide whether a booking with no confirmation sent should get the
-  confirmation wording instead.
+- **Fix:** same branch — `neverConfirmed` (a public checkout abandoned at Stripe) makes the organizer's
+  save send the confirmation wording (`firstNotice`).
+- **Status:** fixed on the branch; the scenario asserts the subject "Registration confirmed". Verify in
+  run 3.
 
 ## Checked and correct (run 2)
 

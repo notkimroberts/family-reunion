@@ -33,7 +33,7 @@ test('one adult pays by card', async ({ page }) => {
     expect(charge.amountCents).toBe(expectedCharge)
     expect(ada.priceCents).toBe(expectedCharge)
     expect(ada.cardFeeCents).toBe(expectedCharge - ADULT_CENTS)
-    expect.soft(recorded, 'stripe_fee_cents records Stripe’s actual fee').toBe(charge.feeCents)
+    expect(recorded, 'stripe_fee_cents records Stripe’s actual fee').toBe(charge.feeCents)
 
     const [email] = await waitForEmails(1)
     expect(email.to).toBe('ada@example.com')
@@ -79,7 +79,7 @@ test('adult, child and a gift on one charge', async ({ page }) => {
     )
     expect(charge.amountCents).toBe(places + 5000)
     expect(gift).toMatchObject({ status: 'paid', amountCents: 5000, registrationId: booking.id })
-    expect.soft(recorded, 'stripe_fee_cents records Stripe’s actual fee').toBe(charge.feeCents)
+    expect(recorded, 'stripe_fee_cents records Stripe’s actual fee').toBe(charge.feeCents)
 
     const emails = await waitForEmails(1)
     expect(emails[0].text).toContain(usd(places + 5000))

@@ -21,8 +21,7 @@ export async function bookByCard(page: Page, party: Party): Promise<BookingRow> 
    Stripe attaches the balance transaction to a charge about three seconds AFTER
    checkout.session.completed (charge.succeeded has balance_transaction: null; a later charge.updated
    carries it), so a webhook that reads the fee while handling checkout.session.completed can find
-   none. Scenarios assert on this with expect.soft, so the rest of each scenario still runs and the
-   report shows the fee as its own failure. */
+   none; the webhook now records it from charge.updated, which this waits for. */
 export async function recordedFee(): Promise<number | null> {
     const deadline = Date.now() + 15_000
     while (Date.now() < deadline) {

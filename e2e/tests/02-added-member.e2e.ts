@@ -63,8 +63,11 @@ test('person added to a paid booking pays the rest by card', async ({ page, brow
         cardFeeCents: cardPrice(CHILD_CENTS) - CHILD_CENTS,
     })
     expect(after.status).toBe('paid')
-    expect
-        .soft(after.stripeFeeCents, 'both charges’ fees are added to the booking')
+    /* The second fee arrives with that charge's charge.updated, a few seconds after payment. */
+    await expect
+        .poll(async () => (await onlyBooking()).stripeFeeCents, {
+            message: 'both charges’ fees are added to the booking',
+        })
         .toBe(firstCharge.feeCents + secondCharge.feeCents)
     expect(emails[2].text).not.toContain('PAYMENT NEEDED')
 
@@ -76,7 +79,7 @@ test('person added to a paid booking pays the rest by card', async ({ page, brow
         expectedSecondChargeCents: cardPrice(CHILD_CENTS),
         childStoredPriceCents: paid?.priceCents ?? null,
         bookingFeeBefore: firstFee,
-        bookingFeeAfter: after.stripeFeeCents,
+        bookingFeeAfter: (await onlyBooking()).stripeFeeCents,
         stripeFeesSum: firstCharge.feeCents + secondCharge.feeCents,
         emailsSent: emails.length,
     })

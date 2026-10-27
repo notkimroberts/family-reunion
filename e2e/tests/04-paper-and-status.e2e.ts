@@ -112,6 +112,8 @@ test('abandoned card checkout settled by check drops the card fee', async ({ pag
     const [after] = await membersOf(booking.id)
     const [email] = await waitForEmails(1)
     expect(after).toMatchObject({ priceCents: ADULT_CENTS, cardFeeCents: 0 })
+    /* Their first email: nothing was sent when they abandoned Stripe. */
+    expect(email.subject).toMatch(/^Registration confirmed:/)
     expect(email.text).not.toContain('has gone through')
     expect(email.text).toContain(usd(ADULT_CENTS))
 

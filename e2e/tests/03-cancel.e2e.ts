@@ -8,7 +8,7 @@ import {
     payLinkFrom,
 } from '../support/admin'
 import { cancelOnStripeCheckout, payOnStripeCheckout } from '../support/checkout'
-import { bookByCard } from '../support/flows'
+import { bookByCard, recordedFee } from '../support/flows'
 import { cardPrice, usd } from '../support/money'
 import { expectPanelAddsUp, readMoneyPanel } from '../support/moneyPanel'
 import { waitForEmails } from '../support/outbox'
@@ -36,6 +36,7 @@ test('cancel a card booking with a gift: places refunded, gift kept', async ({ p
         giftCents: 2500,
     })
     const places = cardPrice(ADULT_CENTS) + cardPrice(CHILD_CENTS)
+    const feeBeforeCancel = await recordedFee()
 
     const admin = await adminPage(browser)
     await openBooking(admin, seeded.eventId, booking.id)
@@ -65,6 +66,7 @@ test('cancel a card booking with a gift: places refunded, gift kept', async ({ p
         expectedRefundCents: places,
         giftKeptCents: gift.amountCents,
         stripeFeeLostCents: charge.feeCents,
+        recordedFeeBeforeCancel: feeBeforeCancel,
         panelInTheBank: panel.inTheBank,
         panelGifts: panel.gifts,
         panelLostToRefunds: panel.lostToRefunds,
