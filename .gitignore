@@ -18,3 +18,10 @@ static/uploads
 
 # Rendered email previews from `bun run email:preview` — regenerated on demand, never committed.
 /email-previews/
+
+# End-to-end run output (bun run e2e): emails, admin session, Playwright artifacts and reports.
+/e2e/.outbox/
+/e2e/.state/
+/e2e/.artifacts/
+/e2e/report/
+/e2e/results/

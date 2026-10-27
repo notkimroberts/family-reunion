@@ -3,6 +3,7 @@ import { dev } from '$app/environment'
 import { env } from '$env/dynamic/private'
 import { CONTACT_EMAIL, EMAIL_FROM_ADDRESS, REUNION_NAME } from '$lib/general/constants'
 import { dbg } from '$lib/server/debug'
+import { writeToOutbox } from './_writeToOutbox'
 
 /* Returns a Resend client, or undefined in dev when no key is configured so local work
    doesn't need one. In production a missing key throws instead of skipping: callers commit
@@ -38,6 +39,18 @@ export async function send(params: {
     html?: string
     idempotencyKey?: string
 }): Promise<void> {
+    const from = `${REUNION_NAME} <${EMAIL_FROM_ADDRESS}>`
+    /* The end-to-end tests' outbox. Checked first, so a test run needs no Resend key and sends
+       nothing; see writeToOutbox for why Railway refuses it. */
+    if (env.EMAIL_OUTBOX_DIR) {
+        await writeToOutbox(
+            env.EMAIL_OUTBOX_DIR,
+            { from, replyTo: CONTACT_EMAIL, ...params },
+            env.RAILWAY_ENVIRONMENT,
+        )
+        return
+    }
+
     const resend = getResend()
     if (!resend) {
         return
@@ -45,7 +58,7 @@ export async function send(params: {
 
     const { error } = await resend.emails.send(
         {
-            from: `${REUNION_NAME} <${EMAIL_FROM_ADDRESS}>`,
+            from,
             replyTo: CONTACT_EMAIL,
             to: params.to,
             subject: params.subject,
