@@ -1,4 +1,5 @@
 export type { RegistrationMember } from './RegistrationMember'
+export { getAmountDueByToken } from './getAmountDueByToken'
 export { getConfirmationEmailData } from './getConfirmationEmailData'
 export { getEventPeople, type EventPerson } from './getEventPeople'
 export { getEventSummaries, type EventSummary } from './getEventSummaries'

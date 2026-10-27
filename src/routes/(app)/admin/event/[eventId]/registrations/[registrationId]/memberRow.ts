@@ -16,4 +16,7 @@ export type MemberRow = {
     priceCents: number
     /* The contact's own attendee row. Their name is edited once, in the Contact card. */
     isContact: boolean
+    /* Added after the booking was paid and not paid for, so their tier can still change and they can
+       still be removed — nothing was charged for them. */
+    paymentDue: boolean
 }

@@ -1,3 +1,4 @@
+import type { AmountDueQuote } from '$lib/general/pricing'
 import type { registrationStatusEnum } from '$lib/server/db/schema'
 
 /* The registration states a confirmation email is ever sent for. 'refunded' is excluded —
@@ -8,13 +9,18 @@ export type ConfirmationStatus = Extract<
 >
 
 /* One row of the party table. priceCents is the snapshot from party_members, so it reflects
-   what was actually charged rather than the tier's current price. */
+   what was actually charged rather than the tier's current price — card fee included, which
+   cardFeeCents separates out for display. */
 export type ConfirmationPartyMember = {
     name: string
     tierLabel: string
     priceCents: number
     /* Optional parenthetical, e.g. "Age 8, Shirt M". Already assembled by the caller. */
     detail?: string
+    /* The card processing fee inside priceCents, for someone charged by card. The row shows the tier
+       price (priceCents − this) with the fee under it, so the same tier reads the same whether it
+       was paid by card or by check. Zero or absent when no fee was charged. */
+    cardFeeCents?: number
 }
 
 export type RegistrationConfirmationData = {
@@ -34,6 +40,9 @@ export type RegistrationConfirmationData = {
        part of what the card was charged: a total that silently exceeds the party table reads as an
        overcharge. Absent, not zero, when no gift was given. */
     donationCents?: number
+    /* What is still owed on a PAID booking for people an organizer added after it was paid. Swaps the
+       paid copy for a payment request that leads with paying by card. Absent when nothing is owed. */
+    amountDue?: AmountDue
     viewUrl: string
     /* Set when an organizer changed an existing registration rather than a new one arriving. Swaps
        the heading and adds a lead saying so, but keeps the status money sentence below it — the
@@ -43,6 +52,10 @@ export type RegistrationConfirmationData = {
        copy of their details with no indication of what moved. */
     changeSummary?: RegistrationChange[]
 }
+
+/* The money owed on a paid booking — by Zelle or check (netCents) and by card (cardTotalCents), as
+   quoteAmountDue prices them — and /register/pay carrying the view token, so one tap opens it. */
+export type AmountDue = Pick<AmountDueQuote, 'netCents' | 'cardTotalCents'> & { payUrl: string }
 
 /* One line of "What changed" in an update email. before and after are set when a value was edited,
    so the reader sees what it was and what it is now and can spot a wrong correction; absent for
@@ -60,9 +73,12 @@ export type RegistrationChange = {
    family "a refund has been issued" would be a straightforward lie followed by a phone call. A
    pending registration never paid, and a waived place never had anything to return.
 
+   'mixed' is a booking paid by check with someone added later who paid by card: that card part goes
+   back through Stripe, the rest by hand, and the email has to say both.
+
    Derived from the registration itself rather than passed in by a caller's guess — see
    cancelRegistrationAsAdmin. */
-export type RefundRoute = 'stripe' | 'by_hand' | 'nothing_paid' | 'waived'
+export type RefundRoute = 'stripe' | 'by_hand' | 'mixed' | 'nothing_paid' | 'waived'
 
 export type CancellationEmailData = {
     name: string
@@ -79,6 +95,9 @@ export type CancellationEmailData = {
        for money that is not coming. Zero or absent when there was no gift. */
     keptDonationCents?: number
     refundRoute: RefundRoute
+    /* On a 'mixed' cancellation, the part of totalCents refunded to a card. The rest is returned by
+       hand. Absent on every other route. */
+    cardRefundCents?: number
     /* Where to start again. A cancellation is often a change of plan rather than a decision never to
        come, and the view link is dead by this point. */
     registerUrl: string

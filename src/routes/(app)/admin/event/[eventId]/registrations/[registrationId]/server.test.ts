@@ -362,6 +362,124 @@ describe('save: staged additions', () => {
         expect(result).toMatchObject({ saved: true })
         expect(await members()).toHaveLength(3)
     })
+
+    /* The registrant is asked for the money, not told it has gone through. */
+    it('marks a person added to a PAID registration as owed, and emails the amount', async () => {
+        await db
+            .update(registrations)
+            .set({ status: 'paid' })
+            .where(eq(registrations.id, seeded.registrationId))
+
+        await save(
+            editForm({ status: 'paid', newMembers: [{ ...STAGED_MEMBER, tierId: adultTierId }] }),
+        )
+
+        const added = (await members()).find((member) => member.name === 'Marcus Patterson')
+        expect(added).toMatchObject({ paymentDue: true, priceCents: 16000 })
+        expect(mockSendConfirmation).toHaveBeenCalledWith(
+            'alice@example.com',
+            expect.objectContaining({
+                status: 'paid',
+                amountDue: expect.objectContaining({
+                    netCents: 16000,
+                    payUrl: expect.stringContaining('/register/pay?token='),
+                }),
+            }),
+            expect.any(String),
+        )
+    })
+})
+
+describe('settle_member', () => {
+    function settleEvent(body: Record<string, string>) {
+        const formData = new FormData()
+        for (const [key, value] of Object.entries(body)) {
+            formData.append(key, value)
+        }
+        const url = new URL('http://localhost/admin/event/x/registrations/y')
+        return {
+            request: new Request(url, { method: 'POST', body: formData }),
+            url,
+            params: { eventId, registrationId: seeded.registrationId },
+            locals: { user: ADMIN },
+        } as unknown as Parameters<typeof actions.settle_member>[0]
+    }
+
+    async function seedOwed() {
+        seeded = await seedRegistration(db, {
+            eventId,
+            members: [
+                { name: 'Alice Patterson', priceCents: 16509, stripePaymentIntentId: 'pi_1' },
+                { name: 'Jada Patterson', priceCents: 9000, tierLabel: 'Child', paymentDue: true },
+            ],
+        })
+        return seeded.memberIds[1]
+    }
+
+    async function owedRow(memberId: string) {
+        const [row] = await db.select().from(partyMembers).where(eq(partyMembers.id, memberId))
+        return row
+    }
+
+    it('requires an admin', async () => {
+        const memberId = await seedOwed()
+        const event = settleEvent({ memberId, settlement: 'paid' })
+        Object.assign(event, { locals: { user: undefined } })
+
+        await expect(actions.settle_member(event)).rejects.toBeDefined()
+        expect((await owedRow(memberId)).paymentDue).toBe(true)
+    })
+
+    it('records the payment, audits it and tells the registrant', async () => {
+        const memberId = await seedOwed()
+
+        const result = await actions.settle_member(settleEvent({ memberId, settlement: 'paid' }))
+
+        expect(result).toEqual({ settled: 'Payment received for Jada Patterson' })
+        expect(await owedRow(memberId)).toMatchObject({ paymentDue: false, priceCents: 9000 })
+        expect(await auditActions()).toEqual(['member_updated'])
+        expect(mockSendConfirmation).toHaveBeenCalledWith(
+            'alice@example.com',
+            expect.objectContaining({
+                changeSummary: [{ summary: 'Payment received for Jada Patterson' }],
+                amountDue: undefined,
+            }),
+            expect.any(String),
+        )
+    })
+
+    it('covers a place at zero', async () => {
+        const memberId = await seedOwed()
+
+        await actions.settle_member(settleEvent({ memberId, settlement: 'covered' }))
+
+        expect(await owedRow(memberId)).toMatchObject({ paymentDue: false, priceCents: 0 })
+    })
+
+    it('surfaces the refusal when nothing is owed, and emails nobody', async () => {
+        const memberId = await seedOwed()
+        await actions.settle_member(settleEvent({ memberId, settlement: 'paid' }))
+        vi.clearAllMocks()
+
+        const result = await actions.settle_member(settleEvent({ memberId, settlement: 'paid' }))
+
+        expect(result).toMatchObject({
+            status: 409,
+            data: { settleError: expect.stringContaining('Nothing is owed') },
+        })
+        expect(mockSendConfirmation).not.toHaveBeenCalled()
+    })
+
+    it('rejects a settlement it does not know', async () => {
+        const memberId = await seedOwed()
+
+        const result = await actions.settle_member(
+            settleEvent({ memberId, settlement: 'forgiven' }),
+        )
+
+        expect(result).toMatchObject({ status: 400 })
+        expect((await owedRow(memberId)).paymentDue).toBe(true)
+    })
 })
 
 describe('reissue_link', () => {

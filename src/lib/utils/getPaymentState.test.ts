@@ -46,7 +46,12 @@ describe('getPaymentState', () => {
 })
 
 describe('getMemberPaymentOrigin', () => {
-    const NO_PAYMENT = { stripePaymentIntentId: null, stripeCheckoutSessionId: null }
+    const NO_PAYMENT = {
+        stripePaymentIntentId: null,
+        stripeCheckoutSessionId: null,
+        paymentDue: false,
+        settlement: null,
+    }
 
     it('reports a member of an abandoned checkout as unpaid, not offline', () => {
         expect(getMemberPaymentOrigin(NO_PAYMENT, ONLINE_PENDING)).toBe('unpaid')
@@ -59,7 +64,12 @@ describe('getMemberPaymentOrigin', () => {
     it('reports a settled member as paid online', () => {
         expect(
             getMemberPaymentOrigin(
-                { stripePaymentIntentId: 'pi_1', stripeCheckoutSessionId: null },
+                {
+                    stripePaymentIntentId: 'pi_1',
+                    stripeCheckoutSessionId: null,
+                    paymentDue: false,
+                    settlement: null,
+                },
                 ONLINE_PAID,
             ),
         ).toBe('paid_online')
@@ -80,7 +90,12 @@ describe('getMemberPaymentOrigin', () => {
     it('prefers the member’s own checkout session over the backfilled intent', () => {
         expect(
             getMemberPaymentOrigin(
-                { stripePaymentIntentId: 'pi_1', stripeCheckoutSessionId: 'cs_member_1' },
+                {
+                    stripePaymentIntentId: 'pi_1',
+                    stripeCheckoutSessionId: 'cs_member_1',
+                    paymentDue: false,
+                    settlement: null,
+                },
                 ONLINE_PAID,
             ),
         ).toBe('added_online')
@@ -90,5 +105,24 @@ describe('getMemberPaymentOrigin', () => {
        row has no payment columns of its own and was never charged. */
     it('does not claim an offline addition was paid because the party was', () => {
         expect(getMemberPaymentOrigin(NO_PAYMENT, ONLINE_PAID)).not.toBe('paid_online')
+    })
+
+    /* The flag says what "Not paid" could not: this person is owed, and the booking around them is
+       not. Read on a paid booking only — on any other status the flag is dormant. */
+    it('reports a member added to a paid booking and not yet paid for as payment due', () => {
+        const due = { ...NO_PAYMENT, paymentDue: true }
+        expect(getMemberPaymentOrigin(due, ONLINE_PAID)).toBe('payment_due')
+        expect(getMemberPaymentOrigin(due, { ...OFFLINE, status: 'paid' })).toBe('payment_due')
+    })
+
+    /* Settled by hand on a booking that paid by card: no intent and a Stripe session, which on its
+       own reads as an abandoned checkout. */
+    it('reports a place an organizer settled by hand as offline, or comped when covered', () => {
+        expect(getMemberPaymentOrigin({ ...NO_PAYMENT, settlement: 'paid' }, ONLINE_PAID)).toBe(
+            'recorded_offline',
+        )
+        expect(getMemberPaymentOrigin({ ...NO_PAYMENT, settlement: 'covered' }, ONLINE_PAID)).toBe(
+            'comped',
+        )
     })
 })

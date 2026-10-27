@@ -23,11 +23,20 @@ export type RegistrationMoneyInput = {
     stripeFeeCents: number | null
     paidAt: Date | null
     totalCents: number
+    /* The part of totalCents belonging to people added after the booking was paid, whom nobody has
+       paid for — see party_members.paymentDue. */
+    amountDueCents: number
 }
 
 export type RegistrationMoney = {
     /* The sum of the snapshotted member prices — what the party is worth, whoever paid or did not. */
     totalCents: number
+    /* The part of totalCents still owed by people added after the booking was paid. Only a paid
+       booking has any: leaving 'paid' clears the flag, and cancelling zeroes those never-charged
+       places. */
+    unpaidCents: number
+    /* totalCents less unpaidCents: what was actually collected. */
+    collectedCents: number
     /* Whether a card was really charged, as opposed to a Checkout session merely having been opened. */
     wasCharged: boolean
     /* Stripe's cut on that charge. Zero when there was no charge. */
@@ -70,23 +79,29 @@ function wasCardCharged(registration: RegistrationMoneyInput): boolean {
 
 export function getRegistrationMoney(registration: RegistrationMoneyInput): RegistrationMoney {
     const wasCharged = wasCardCharged(registration)
+    const refunded = registration.status === 'refunded'
+    const paid = registration.status === 'paid'
+
+    const unpaidCents = registration.amountDueCents
+    const collectedCents = registration.totalCents - unpaidCents
 
     /* The recorded fee when there is one, the estimate when there is not. `?? undefined` semantics
        matter: the column is `number | null` and 0 is a real fee, so a truthiness test here would
-       silently re-estimate a genuinely free charge. */
+       silently re-estimate a genuinely free charge. Estimated on what was collected — nobody's card
+       was charged for an unpaid place. */
     const feeCents = wasCharged
-        ? (registration.stripeFeeCents ?? stripeFeeOnChargeCents(registration.totalCents))
+        ? (registration.stripeFeeCents ?? stripeFeeOnChargeCents(collectedCents))
         : 0
-
-    const refunded = registration.status === 'refunded'
 
     return {
         totalCents: registration.totalCents,
+        unpaidCents,
+        collectedCents,
         wasCharged,
         feeCents,
         /* Vacuously exact when there is no fee — nothing was estimated. */
         feeIsExact: !wasCharged || registration.stripeFeeCents !== null,
-        netCents: registration.status === 'paid' ? registration.totalCents - feeCents : 0,
+        netCents: paid ? collectedCents - feeCents : 0,
         lostFeeCents: refunded ? feeCents : 0,
     }
 }

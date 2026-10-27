@@ -12,6 +12,7 @@ const CONTACT_ROW: MemberRow = {
     vegetarianMeal: 'no',
     attendedReunion2025: 'yes',
     priceCents: 16000,
+    paymentDue: false,
     isContact: true,
 }
 
@@ -25,6 +26,7 @@ const OTHER_ROW: MemberRow = {
     vegetarianMeal: '',
     attendedReunion2025: '',
     priceCents: 10000,
+    paymentDue: false,
     isContact: false,
 }
 

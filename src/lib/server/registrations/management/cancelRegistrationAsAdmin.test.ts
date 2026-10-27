@@ -1,6 +1,6 @@
 import { eq } from 'drizzle-orm'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { donations, registrations } from '$lib/server/db/schema'
+import { donations, partyMembers, registrations } from '$lib/server/db/schema'
 import { resetTestDb } from '$lib/server/db/testing/resetTestDb'
 import { seedRegistration } from '$lib/server/testing/seedRegistration'
 
@@ -102,6 +102,91 @@ describe('cancelRegistrationAsAdmin', () => {
             undefined,
             expect.stringContaining(seeded.registrationId),
         )
+    })
+
+    /* Someone added after the booking was paid and never paid for gets nothing back. The email still
+       names them as cancelled, at zero, so its refund line adds up to the money that went out. */
+    it('leaves an unpaid added person out of the refund the email states', async () => {
+        const seeded = await seedRegistration(db, {
+            members: [
+                { name: 'Wanda', priceCents: 16509, stripePaymentIntentId: 'pi_1' },
+                { name: 'Jada', priceCents: 10000, tierLabel: 'Child', paymentDue: true },
+            ],
+        })
+
+        await cancelRegistrationAsAdmin({
+            registrationId: seeded.registrationId,
+            eventId: seeded.eventId,
+            registerUrl: REGISTER_URL,
+        })
+
+        expect(mockRefund).toHaveBeenCalledTimes(1)
+        expect(mockSendCancellation.mock.calls[0][1]).toMatchObject({
+            partyMembers: [
+                { name: 'Wanda', priceCents: 16509 },
+                { name: 'Jada', priceCents: 0 },
+            ],
+            totalCents: 16509,
+        })
+        /* And recorded so: never charged, so it cost nothing, and a cancelled booking owes nothing. */
+        const [jada] = await db
+            .select()
+            .from(partyMembers)
+            .where(eq(partyMembers.id, seeded.memberIds[1]))
+        expect(jada).toMatchObject({ paymentDue: false, priceCents: 0, cardFeeCents: 0 })
+    })
+
+    /* An added person who paid by card from /register/pay has their own payment intent, and gets it
+       back in full alongside the original charge. */
+    it('refunds an added person’s own card payment too', async () => {
+        const seeded = await seedRegistration(db, {
+            members: [
+                { name: 'Wanda', priceCents: 16509, stripePaymentIntentId: 'pi_1' },
+                {
+                    name: 'Jada',
+                    priceCents: 10330,
+                    tierLabel: 'Child',
+                    stripePaymentIntentId: 'pi_2',
+                },
+            ],
+        })
+
+        await cancelRegistrationAsAdmin({
+            registrationId: seeded.registrationId,
+            eventId: seeded.eventId,
+            registerUrl: REGISTER_URL,
+        })
+
+        expect(mockRefund.mock.calls.map(([intentId, amount]) => [intentId, amount])).toEqual([
+            ['pi_1', undefined],
+            ['pi_2', undefined],
+        ])
+        expect(mockSendCancellation.mock.calls[0][1].totalCents).toBe(16509 + 10330)
+    })
+
+    /* Paid by check, then someone added who paid by card at /register/pay. Stripe refunds that
+       part; only the rest is arranged by hand, and the email says so. */
+    it('refunds the card part of a check-paid booking and tells them the rest is by hand', async () => {
+        const seeded = await seedRegistration(db, {
+            ...PAPER_PAID,
+            members: [
+                { name: 'Wanda', priceCents: 16000, stripePaymentIntentId: null },
+                { name: 'Jada', priceCents: 10330, stripePaymentIntentId: 'pi_2' },
+            ],
+        })
+
+        await cancelRegistrationAsAdmin({
+            registrationId: seeded.registrationId,
+            eventId: seeded.eventId,
+            registerUrl: REGISTER_URL,
+        })
+
+        expect(mockRefund).toHaveBeenCalledWith('pi_2', undefined, expect.any(String))
+        expect(mockSendCancellation.mock.calls[0][1]).toMatchObject({
+            refundRoute: 'mixed',
+            totalCents: 26330,
+            cardRefundCents: 10330,
+        })
     })
 
     /* The pairing invariant, enforced at the write rather than trusted from the route: a URL naming one

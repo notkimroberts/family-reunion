@@ -145,6 +145,15 @@ describe('createPendingRegistration', () => {
         expect(contact.priceCents).toBe(16509)
     })
 
+    /* The fee inside that gross, recorded by the writer, which is the only code that knows it grossed
+       the price up. Every party table shows the tier price with this under it. */
+    it('records the card fee inside the snapshot', async () => {
+        const result = await register()
+
+        const [contact] = await membersOf(result.registrationId)
+        expect(contact.cardFeeCents).toBe(509)
+    })
+
     it('inserts guests unflagged, each on their own tier', async () => {
         const result = await register({
             members: [

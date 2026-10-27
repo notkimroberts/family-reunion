@@ -180,16 +180,33 @@ describe('renderRegistrationConfirmation', () => {
     /* One template serves the online path and admin paper entry, so the money sentence is the
        thing that has to change per status. */
     describe('status-aware copy', () => {
-        it('paid by card says the payment went through and that prices include the fee', () => {
-            const { subject, text, html } = renderRegistrationConfirmation({
+        it('paid by card says the payment went through', () => {
+            const { subject, text } = renderRegistrationConfirmation({
                 ...data,
                 status: 'paid',
             })
             expect(subject).toContain('Registration confirmed')
             expect(text).toContain('payment has gone through')
             expect(text).toContain('Total paid')
-            expect(text).toContain('Prices include the card processing fee.')
-            expect(html).toContain('Prices include the card processing fee.')
+        })
+
+        /* A card place is stored gross; shown as stored, the same tier read $170.24 on one row and
+           $165.00 on the next. Each row shows the tier price, with its fee under it. */
+        it('shows each card price as the tier price with the fee under it', () => {
+            const { text, html } = renderRegistrationConfirmation({
+                ...data,
+                partyMembers: [
+                    { name: 'Alice', tierLabel: 'Adult', priceCents: 17024, cardFeeCents: 524 },
+                    { name: 'Bob', tierLabel: 'Child', priceCents: 10000 },
+                ],
+                totalCents: 27024,
+            })
+            expect(text).toContain('  - Alice (Adult)  $165.00 + $5.24 card fee')
+            expect(text).toContain('  - Bob (Child)  $100.00')
+            expect(html).toContain('$165.00<span')
+            expect(html).toContain('+ $5.24 card fee')
+            /* The total is still what was charged. */
+            expect(text).toContain('Total paid: $270.24')
         })
 
         /* An organizer recording a check marks it 'paid' too, and "gone through" reads as a card
@@ -257,6 +274,59 @@ describe('renderRegistrationConfirmation', () => {
                 const { text } = renderRegistrationConfirmation({ ...data, status })
                 expect(text).not.toContain('PAYMENT NEEDED')
             }
+        })
+    })
+
+    /* A paid booking with people added after it was paid. Before this the email said "your payment
+       has gone through" over a place nobody had paid for. */
+    describe('a paid booking with people still owed', () => {
+        const owed: RegistrationConfirmationData = {
+            ...data,
+            amountDue: {
+                netCents: 5000,
+                cardTotalCents: 5180,
+                payUrl: 'https://example.com/register/pay?token=tok',
+            },
+        }
+
+        /* The card settles itself; Zelle and checks wait for an organizer. So the card leads, as a
+           button straight to the payment page. */
+        it('leads with a button to pay the owed amount by card', () => {
+            const { text, html } = renderRegistrationConfirmation(owed)
+            expect(html).toContain('Payment needed: $50.00')
+            expect(html).toContain('href="https://example.com/register/pay?token=tok"')
+            expect(html).toContain('Pay $51.80 by card')
+            expect(html).toContain('$51.80 includes the card processing fee.')
+            expect(text).toContain('PAYMENT NEEDED: $50.00.')
+            expect(text).toContain('https://example.com/register/pay?token=tok')
+            expect(text.indexOf('PAYMENT NEEDED')).toBeLessThan(text.indexOf('Your party:'))
+        })
+
+        /* Every request for money names all three ways, so a relative without a card is not left
+           thinking there is no other way — but after the card, and without the big QR block. */
+        it('still names Zelle and check, after the card, without the QR code', () => {
+            const { text, html } = renderRegistrationConfirmation(owed)
+            expect(text).toContain(
+                'Prefer not to pay by card? Pay $50.00 by Zelle to organizer@example.com, or by check made out to "Roberts Family Reunion".',
+            )
+            expect(text.indexOf('Prefer not to pay by card')).toBeGreaterThan(
+                text.indexOf('https://example.com/register/pay'),
+            )
+            expect(html).not.toContain('zelle_qr.png')
+        })
+
+        it('does not say the payment went through, or call the total paid', () => {
+            const { text } = renderRegistrationConfirmation(owed)
+            expect(text).not.toContain('gone through')
+            expect(text).not.toContain('Total paid')
+            expect(text).toContain('Party total: $150.00')
+        })
+
+        /* The amount is only meaningful on a paid booking; pending asks for the whole total. */
+        it('ignores an amount due on a pending booking', () => {
+            const { text } = renderRegistrationConfirmation({ ...owed, status: 'pending' })
+            expect(text).toContain('PAYMENT NEEDED: $150.00')
+            expect(text).not.toContain('register/pay')
         })
     })
 

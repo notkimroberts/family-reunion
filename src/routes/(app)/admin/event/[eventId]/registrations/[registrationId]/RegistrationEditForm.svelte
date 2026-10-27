@@ -100,7 +100,14 @@ function toRow(member: RegistrationMember): MemberRow {
             member.attendedReunion2025 === null ? '' : member.attendedReunion2025 ? 'yes' : 'no',
         priceCents: member.priceCents,
         isContact: member.isContact,
+        paymentDue: member.paymentDue,
     }
+}
+
+/* A paid booking locks tiers and removals because either would owe a refund. Someone added after it
+   was paid and not yet paid for owes nothing back, so they stay editable. */
+function isLocked(row: MemberRow): boolean {
+    return isPaid && !row.paymentDue
 }
 
 let rows = $state<MemberRow[]>(members.map(toRow))
@@ -270,7 +277,7 @@ function handleRestore(memberId: string) {
                                 variant="ghost"
                                 size="sm"
                                 class="text-muted-foreground hover:text-destructive"
-                                disabled={isPaid || remainingCount <= 1}
+                                disabled={isLocked(row) || remainingCount <= 1}
                                 onclick={() => handleRemove(row.memberId)}>
                                 <UserMinus class="size-3.5" /> Remove
                             </Button>
@@ -280,7 +287,7 @@ function handleRestore(memberId: string) {
                     <PartyMemberFields
                         bind:row={rows[index]}
                         {tiers}
-                        {isPaid}
+                        isPaid={isLocked(row)}
                         disabled={isRemoved} />
                 </div>
             {/each}
@@ -306,8 +313,15 @@ function handleRestore(memberId: string) {
                 {contactAddress} />
 
             <p class="text-muted-foreground text-xs">
-                Anyone added here joins the party when you save, at the tier's face value. No
-                payment is taken.
+                {#if isPaid}
+                    Anyone added here joins the party when you save, at the tier's face value, and
+                    is marked as owing it. Their email asks for payment and links to a page where
+                    they can pay by card. If they pay by Zelle or check, mark them paid on this
+                    page.
+                {:else}
+                    Anyone added here joins the party when you save, at the tier's face value. No
+                    payment is taken.
+                {/if}
             </p>
         </CardContent>
     </Card>

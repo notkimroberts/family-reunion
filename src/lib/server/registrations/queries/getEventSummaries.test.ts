@@ -71,6 +71,33 @@ describe('getEventSummaries', () => {
     /* postgres returns sum() as a STRING. Adding without coercing concatenates: '80000' + '48000'
        would become '8000048000', a plausible-looking number three orders of magnitude out. This is
        now the driver's real behavior rather than a fixture that says 'cents' is a string. */
+    /* Someone added after a booking was paid: their place has not arrived, so it is owed rather than
+       paid — while the people who did pay are still counted as coming. */
+    it('moves an owed place on a paid booking from paid to outstanding', async () => {
+        const eventId = await seedEvent(db, { year: 2027 })
+        await seedRegistration(db, {
+            eventId,
+            status: 'paid',
+            members: [
+                { name: 'Alice', priceCents: 16509 },
+                { name: 'Jada', priceCents: 10000, paymentDue: true },
+            ],
+        })
+        await seedRegistration(db, {
+            eventId,
+            status: 'pending',
+            members: [{ name: 'Bo', priceCents: 16000 }],
+        })
+
+        const [summary] = await getEventSummaries()
+
+        expect(summary).toMatchObject({
+            attendingPeople: 2,
+            paidCents: 16509,
+            outstandingCents: 10000 + 16000,
+        })
+    })
+
     it('coerces the string sums postgres returns', async () => {
         const eventId = await seedEvent(db, { year: 2027 })
         await seedRegistration(db, {

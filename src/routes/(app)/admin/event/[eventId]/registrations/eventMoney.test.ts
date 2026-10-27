@@ -34,6 +34,7 @@ function reg(overrides: Partial<RegistrationSummary>): RegistrationSummary {
         stayingAtHostHotel: null,
         memberCount: 1,
         totalCents: 16509,
+        amountDueCents: 0,
         createdAt: new Date('2026-08-01T00:00:00Z'),
         ...overrides,
     }
@@ -119,6 +120,21 @@ describe('getEventMoney', () => {
 
         it('holds for a year with nothing in it', () => {
             expectReconciles(money([]))
+        })
+
+        /* An owed place is in the booking's total but not in the bank, and must land on the
+           outstanding side of the rule, not as a term of the sum. */
+        it('holds with a place still owed on a paid booking', () => {
+            const result = money([
+                reg({ totalCents: 16509 + 10000, amountDueCents: 10000, stripeFeeCents: 509 }),
+            ])
+
+            expectReconciles(result)
+            expect(result.registrationsCents).toBe(16509)
+            expect(result).toMatchObject({
+                outstandingCents: 10000,
+                owedOnPaidCents: 10000,
+            })
         })
     })
 

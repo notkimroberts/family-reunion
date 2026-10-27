@@ -1,3 +1,4 @@
+import type { RegistrationStatus } from '$lib/utils'
 import type { MemberInputData } from './schema'
 
 /* Shared domain types for the /register route */
@@ -41,6 +42,8 @@ export type PartyMember = {
     attendedReunion2025: boolean | null
     tierLabel: string
     priceCents: number
+    /* Added after the booking was paid and not paid for yet. */
+    paymentDue: boolean
 }
 
 /* What RegistrationView renders, and all the view load sends. The view link is a
@@ -56,12 +59,17 @@ export type RegistrationViewMember = Pick<
     | 'vegetarianMeal'
     | 'tierLabel'
     | 'priceCents'
->
+    | 'paymentDue'
+> & {
+    /* The card fee inside priceCents, for a place a card paid for; zero otherwise. The page shows the
+       tier price with the fee under it — the Stripe ids that decide it stay on the server. */
+    cardFeeCents: number
+}
 
 /* Registration row summary displayed in RegistrationView */
 export type RegistrationDetails = {
     id: string
-    status: string
+    status: RegistrationStatus
     stripeSessionId: string | null
 }
 

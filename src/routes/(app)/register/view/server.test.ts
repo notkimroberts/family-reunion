@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { partyMembers, reunionEvents } from '$lib/server/db/schema'
 import { resetTestDb } from '$lib/server/db/testing/resetTestDb'
 import { seedRegistration } from '$lib/server/testing/seedRegistration'
+import type { RegistrationViewMember } from '../types'
 
 /* What the view link hands to the browser.
 
@@ -55,5 +56,49 @@ describe('GET /register/view', () => {
         expect(JSON.stringify(result)).not.toContain('12 Elm Street')
         expect(result.event).not.toHaveProperty('metadata')
         expect(result.event.title).toBe('Patterson Family Reunion 2027')
+    })
+
+    it('passes an owed person through to the page', async () => {
+        const seeded = await seedRegistration(db, {
+            members: [
+                { name: 'Alice Patterson', priceCents: 16509 },
+                { name: 'Jada Patterson', priceCents: 10000, paymentDue: true },
+            ],
+        })
+
+        const result = await viewWithCookie(seeded.viewToken)
+
+        if (!result || result.missingToken) {
+            throw new Error('expected the registration to load')
+        }
+        const flags = (members: RegistrationViewMember[]) =>
+            members.map((member) => member.paymentDue)
+        expect(flags(result.members)).toEqual([false, true])
+    })
+
+    /* Card places are stored gross, with the fee inside recorded beside them. The page gets the fee
+       to show the tier price with it underneath, and never the Stripe id. */
+    it('sends the card fee stored on a place a card paid for', async () => {
+        const seeded = await seedRegistration(db, {
+            members: [
+                {
+                    name: 'Alice Patterson',
+                    priceCents: 17024,
+                    cardFeeCents: 524,
+                    stripePaymentIntentId: 'pi_1',
+                },
+                { name: 'Jada Patterson', priceCents: 10000 },
+            ],
+        })
+
+        const result = await viewWithCookie(seeded.viewToken)
+
+        if (!result || result.missingToken) {
+            throw new Error('expected the registration to load')
+        }
+        const fees = (members: RegistrationViewMember[]) =>
+            members.map((member) => member.cardFeeCents)
+        expect(fees(result.members)).toEqual([524, 0])
+        expect(JSON.stringify(result)).not.toContain('pi_1')
     })
 })

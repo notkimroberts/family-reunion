@@ -17,7 +17,7 @@ import { getTiersForEvent } from '$lib/server/tiers'
 import { splitFullName } from '$lib/utils'
 import type { Actions, PageServerLoad } from './$types'
 import { EMPTY_PERSON_DETAILS } from './EMPTY_PERSON_DETAILS'
-import { registrationSchema } from './schema'
+import { publicRegistrationSchema } from './schema'
 import { toRegistrationIntake } from './toRegistrationIntake'
 
 /* Long enough for a round of testing; deleting REGISTRATION_PREVIEW_KEY ends it sooner. */
@@ -69,8 +69,10 @@ export const load: PageServerLoad = async ({ locals, url, cookies }) => {
                and the answer is still required. Otherwise blank, so nothing is pre-chosen. */
             stayingAtHostHotel: HOST_HOTEL ? ('' as const) : ('undecided' as const),
             donationCents: 0,
+            /* Unticked: the registrant confirms the scam notice themselves, every visit. */
+            paymentSafetyAcknowledged: false,
         },
-        zod(registrationSchema),
+        zod(publicRegistrationSchema),
     )
 
     /* Set only while it changes something: before the opening date, for a browser holding the
@@ -93,7 +95,7 @@ export const load: PageServerLoad = async ({ locals, url, cookies }) => {
 
 export const actions: Actions = {
     register: async (event) => {
-        const form = await superValidate(event.request, zod(registrationSchema))
+        const form = await superValidate(event.request, zod(publicRegistrationSchema))
 
         if (!form.valid) {
             return fail(400, { form })

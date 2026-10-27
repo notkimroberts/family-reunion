@@ -1,8 +1,8 @@
-import { error, fail } from '@sveltejs/kit'
+import { error, fail, isHttpError } from '@sveltejs/kit'
 import { desc, eq } from 'drizzle-orm'
 import { zod4 as zod } from 'sveltekit-superforms/adapters'
 import { defaults, superValidate } from 'sveltekit-superforms/server'
-import { sumMemberPrices } from '$lib/general/pricing'
+import { sumAmountDue, sumMemberPrices } from '$lib/general/pricing'
 import { requireAdmin } from '$lib/server/auth/guards'
 import { db } from '$lib/server/db'
 import { registrationAudit, user as userTable } from '$lib/server/db/schema'
@@ -19,6 +19,7 @@ import {
     reissueViewLink,
     removeAdminMember,
     setRegistrationStatus,
+    settleMemberPayment,
     updateAdminMemberDetails,
     updateRegistrationContact,
 } from '$lib/server/registrations'
@@ -27,7 +28,7 @@ import { getTiersForEvent } from '$lib/server/tiers'
 import { parseYesNo } from '$lib/utils'
 import type { Actions, PageServerLoad } from './$types'
 import type { RegistrationActionFeedback } from './registrationActionFeedback'
-import { adminEditRegistrationSchema } from './schema'
+import { adminEditRegistrationSchema, settleMemberSchema } from './schema'
 
 const AUDIT_HISTORY_LIMIT = 50
 
@@ -111,7 +112,16 @@ export const load: PageServerLoad = async (event) => {
         history,
         /* Sum of the price snapshots, so a later tier reprice never rewrites this total. */
         totalCents: sumMemberPrices(members),
+        /* The part of it nobody has paid, for people added after the booking was paid. Counted on a
+           paid booking only — getRegistrationMoney decides. */
+        amountDueCents: sumAmountDue(members),
     }
+}
+
+/* The message an HttpError carries, or a fallback. A guard refusing is the useful case: its reason
+   tells the organizer what to do instead. */
+function refusalMessage(err: unknown, fallback: string): string {
+    return isHttpError(err) ? err.body.message : fallback
 }
 
 export const actions: Actions = {
@@ -250,10 +260,7 @@ export const actions: Actions = {
             /* A guard refusing — a repricing on a paid party, emptying a party — arrives here as an
                HttpError. Surface its message rather than a generic failure: the reason IS the value,
                since it tells the organizer what to do instead. */
-            const message =
-                typeof err === 'object' && err !== null && 'body' in err
-                    ? String((err as { body: { message?: string } }).body?.message ?? 'Save failed')
-                    : 'Save failed'
+            const message = refusalMessage(err, 'Save failed')
             dbg.register(
                 'admin save failed for registration %s: %o',
                 event.params.registrationId,
@@ -303,6 +310,75 @@ export const actions: Actions = {
             changes: changes.map(describeRegistrationChange),
         }
         return { form, ...feedback }
+    },
+
+    /* Settles one person added after the booking was paid: their money arrived by Zelle or check, or
+       the organizer decided not to charge for the place. A card payment settles itself through the
+       webhook and never comes here.
+
+       Its own action rather than part of save: it is one fact about one person, made from the Party
+       table without opening the editor. The registrant is told, as for any other change to their
+       booking — they were asked to pay, and should hear that it is done. */
+    settle_member: async (event) => {
+        const admin = requireAdmin(event)
+
+        await loadPairedRegistration(event.params)
+
+        const parsed = settleMemberSchema.safeParse(
+            Object.fromEntries(await event.request.formData()),
+        )
+        if (!parsed.success) {
+            const feedback: RegistrationActionFeedback = { settleError: 'Nothing to settle.' }
+            return fail(400, feedback)
+        }
+        const { memberId, settlement } = parsed.data
+
+        let name: string
+        try {
+            const settled = await settleMemberPayment({
+                registrationId: event.params.registrationId,
+                memberId,
+                settlement,
+            })
+            name = settled.name
+        } catch (err) {
+            const feedback: RegistrationActionFeedback = {
+                settleError: refusalMessage(err, 'Could not record the payment.'),
+            }
+            return fail(409, feedback)
+        }
+
+        await recordRegistrationAudit({
+            registrationId: event.params.registrationId,
+            actor: admin,
+            action: 'member_updated',
+            detail: { memberId, name, payment: settlement === 'paid' ? 'marked paid' : 'covered' },
+        })
+
+        const summary =
+            settlement === 'paid'
+                ? `Payment received for ${name}`
+                : `${name}'s place is covered, so there is nothing to pay`
+
+        try {
+            await notifyRegistrationUpdated({
+                registrationId: event.params.registrationId,
+                changeSummary: [{ summary }],
+                viewUrl: (token) => `${event.url.origin}/register/view?token=${token}`,
+            })
+        } catch (err) {
+            reportError('registration update notification failed', err, {
+                registrationId: event.params.registrationId,
+            })
+            const feedback: RegistrationActionFeedback = {
+                settled: summary,
+                notifyError: 'Recorded, but the email to the registrant did not send.',
+            }
+            return feedback
+        }
+
+        const feedback: RegistrationActionFeedback = { settled: summary }
+        return feedback
     },
 
     /* Rotates the token and emails a fresh link, for a registrant who has lost theirs. Their previous

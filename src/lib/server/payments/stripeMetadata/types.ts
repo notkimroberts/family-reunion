@@ -36,9 +36,29 @@ export type AddMemberSessionMetadata = {
     memberPriceCents: string
 }
 
+// One owed place on a member-payment checkout, and the gross charged for it
+export type MemberCharge = {
+    memberId: string
+    grossCents: number
+}
+
+// Stripe session metadata for a card payment of the places still owed on a paid booking
+export type MemberPaymentSessionMetadata = {
+    type: 'member_payment'
+    registrationId: string
+    /* Plaintext view token, so the webhook can link the confirmation email, as on a registration. */
+    viewToken: string
+    /* Which members this charge paid for and what each was charged. The webhook records that gross as
+       the member's price, so a later cancellation refunds what the card actually paid. */
+    charges: MemberCharge[]
+}
+
 // Discriminated union of all known Stripe session metadata shapes, keyed by `type`
 export type StripeSessionMetadata =
-    RegistrationSessionMetadata | AddMemberSessionMetadata | DonationSessionMetadata
+    | RegistrationSessionMetadata
+    | AddMemberSessionMetadata
+    | DonationSessionMetadata
+    | MemberPaymentSessionMetadata
 
 // Params for encodeAddMemberMetadata
 export type AddMemberMetadataParams = {

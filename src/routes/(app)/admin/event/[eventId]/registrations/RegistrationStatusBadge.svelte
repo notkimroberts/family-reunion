@@ -1,11 +1,13 @@
 <script lang="ts">
 import { Badge } from '$lib/components/ui/badge'
-import type { RegistrationStatus } from '$lib/utils'
-import { REGISTRATION_STATUS_STYLES } from './registrationStatusStyles'
+import { REGISTRATION_STATUS_STYLES } from '$lib/general/constants/REGISTRATION_STATUS_STYLES'
+import type { DisplayStatus } from '$lib/utils'
 
-let { status }: { status: RegistrationStatus } = $props()
+/* A shown status, not the stored one: callers pass getBookingDisplayStatus or getPersonDisplayStatus,
+   so a booking that still owes does not read Paid. */
+let { status }: { status: DisplayStatus } = $props()
 
-/* No cast and no fallback. The prop is the database's own union, so every key is present — the old
+/* No cast and no fallback. The prop is DisplayStatus, which the style map covers key for key — the old
    `?? pending` quietly rendered an unrecognized status as "Pending", which for a money status is the
    worst possible guess. */
 let style = $derived(REGISTRATION_STATUS_STYLES[status])

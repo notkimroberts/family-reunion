@@ -3,6 +3,7 @@ import {
     decodeSessionMetadata,
     encodeAddMemberMetadata,
     encodeDonationMetadata,
+    encodeMemberPaymentMetadata,
     encodeRegistrationMetadata,
 } from './stripeMetadata'
 
@@ -157,5 +158,69 @@ describe('decodeSessionMetadata edge cases', () => {
 
     it('returns null for unrecognized type with no registrationId', () => {
         expect(decodeSessionMetadata({ type: 'unknown' })).toBeNull()
+    })
+})
+
+describe('encodeMemberPaymentMetadata / decode round-trip', () => {
+    const CHARGES = [
+        { memberId: '11111111-1111-1111-1111-111111111111', grossCents: 10330 },
+        { memberId: '22222222-2222-2222-2222-222222222222', grossCents: 16509 },
+    ]
+
+    it('encodes and decodes the owed places and what each was charged', () => {
+        const encoded = encodeMemberPaymentMetadata({
+            registrationId: 'reg-123',
+            viewToken: 'tok',
+            charges: CHARGES,
+        })
+
+        expect(decodeSessionMetadata(encoded)).toEqual({
+            type: 'member_payment',
+            registrationId: 'reg-123',
+            viewToken: 'tok',
+            charges: CHARGES,
+        })
+    })
+
+    /* Stripe metadata is flat strings with a 500-character value limit. */
+    it('packs every charge into one value under the limit', () => {
+        const encoded = encodeMemberPaymentMetadata({
+            registrationId: 'reg-123',
+            viewToken: 'tok',
+            charges: CHARGES,
+        })
+
+        expect(Object.values(encoded).every((value) => typeof value === 'string')).toBe(true)
+        expect(encoded.memberCharges.length).toBeLessThanOrEqual(500)
+    })
+
+    /* Fail closed: settling some members and silently dropping others would be worse than settling
+       none and letting Sentry hear about the payment. */
+    it.each([
+        ['no charges', ''],
+        ['a missing price', '11111111-1111-1111-1111-111111111111:'],
+        ['a non-integer price', '11111111-1111-1111-1111-111111111111:12.5'],
+        ['a zero price', '11111111-1111-1111-1111-111111111111:0'],
+        ['an extra field', '11111111-1111-1111-1111-111111111111:100:7'],
+        ['one bad charge among good ones', '11111111-1111-1111-1111-111111111111:100,:200'],
+    ])('decodes %s as invalid', (_, memberCharges) => {
+        expect(
+            decodeSessionMetadata({
+                type: 'member_payment',
+                registrationId: 'reg-123',
+                viewToken: 'tok',
+                memberCharges,
+            }),
+        ).toBeNull()
+    })
+
+    it('decodes a session with no view token as invalid', () => {
+        expect(
+            decodeSessionMetadata({
+                type: 'member_payment',
+                registrationId: 'reg-123',
+                memberCharges: '11111111-1111-1111-1111-111111111111:100',
+            }),
+        ).toBeNull()
     })
 })

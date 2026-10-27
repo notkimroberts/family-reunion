@@ -24,9 +24,12 @@ export async function getRegistrationMembers(
             attendedReunion2025: partyMembers.attendedReunion2025,
             tierLabel: partyMembers.tierLabel,
             priceCents: partyMembers.priceCents,
+            cardFeeCents: partyMembers.cardFeeCents,
             stripePaymentIntentId: partyMembers.stripePaymentIntentId,
             stripeCheckoutSessionId: partyMembers.stripeCheckoutSessionId,
             isContact: partyMembers.isContact,
+            paymentDue: partyMembers.paymentDue,
+            settlement: partyMembers.settlement,
         })
         .from(partyMembers)
         .where(eq(partyMembers.registrationId, registrationId))

@@ -19,6 +19,7 @@ function reg(overrides: Partial<RegistrationSummary>): RegistrationSummary {
         stayingAtHostHotel: 'yes',
         memberCount: 1,
         totalCents: 16509,
+        amountDueCents: 0,
         createdAt: new Date('2026-08-01T00:00:00Z'),
         ...overrides,
     }

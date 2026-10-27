@@ -13,6 +13,25 @@ export function grossUpForStripe(netCents: number): number {
     return Math.ceil((netCents + STRIPE_FEE_FIXED_CENTS) / (1 - STRIPE_FEE_PERCENT))
 }
 
+/* The net a grossed-up price was built from — the inverse of grossUpForStripe.
+
+   For a writer that is handed only a gross — the legacy add_member webhook, whose Stripe session
+   carried no net — so it can record party_members.card_fee_cents. Every other writer knows the net,
+   and nothing reads prices through this any more. grossUpForStripe is strictly increasing, since each
+   extra net cent adds more than a cent of gross, so the net is the largest one whose gross does not
+   exceed this. The estimate is that net up to float rounding; the neighbors cover the rounding. */
+export function netBeforeGrossUp(grossCents: number): number {
+    if (grossCents <= 0) {
+        return 0
+    }
+    const estimate = Math.floor(grossCents * (1 - STRIPE_FEE_PERCENT)) - STRIPE_FEE_FIXED_CENTS
+    return (
+        [estimate + 1, estimate, estimate - 1].find(
+            (netCents) => netCents > 0 && grossUpForStripe(netCents) <= grossCents,
+        ) ?? 0
+    )
+}
+
 /* The fee portion of a grossed-up charge, derived from grossUpForStripe so the two stay
    in lockstep and rounding never disagrees. */
 export function stripeFeeCents(netCents: number): number {

@@ -1,15 +1,14 @@
-import { and, eq, sql } from 'drizzle-orm'
+import { and, eq } from 'drizzle-orm'
 import type Stripe from 'stripe'
 import { db } from '$lib/server/db'
 import { partyMembers, registrations } from '$lib/server/db/schema'
 import { dbg } from '$lib/server/debug'
 import { fulfillDonation, markDonationPaid } from '$lib/server/donations'
-import { sendRegistrationConfirmation } from '$lib/server/email'
 import { decodeSessionMetadata, retrievePaymentFee } from '$lib/server/payments'
-import { reportError } from '$lib/server/reportError'
-/* Relative import, not the $lib/server/registrations barrel: that barrel re-exports this
-   folder, so going through it would be a circular import. */
-import { getConfirmationEmailData } from '../queries'
+import { netBeforeGrossUp } from '$lib/utils/stripeFee'
+import { addedChargeFee } from './_addedChargeFee'
+import { fulfillMemberPayment } from './_fulfillMemberPayment'
+import { sendConfirmation } from './_sendConfirmation'
 import { buildPartyMemberRow } from './buildPartyMemberRow'
 
 /* Stripe metadata carries the two yes/no answers as strings: 'true', 'false', or '' for
@@ -19,7 +18,7 @@ function decodeMetadataFlag(value: string | undefined): boolean | undefined {
     return value === '' ? undefined : value === 'true'
 }
 
-/* Webhook handler: branches on metadata.type to either insert an add_member row or mark the registration 'paid'; confirmation email is sent outside the transaction so a send failure never rolls back payment. Stripe redelivers checkout.session.completed on transient failures, so both branches are idempotent at the database level — add_member relies on a UNIQUE index over the checkout session id, and the registration branch on a conditional pending → paid transition. Neither uses a read-then-insert, which a concurrent redelivery could pass. The confirmation email additionally carries a Resend idempotency key. */
+/* Webhook handler: branches on metadata.type to settle a donation, settle owed members (member_payment), insert an add_member row or mark the registration 'paid'; confirmation email is sent outside the transaction so a send failure never rolls back payment. Stripe redelivers checkout.session.completed on transient failures, so both branches are idempotent at the database level — add_member relies on a UNIQUE index over the checkout session id, and the registration branch on a conditional pending → paid transition. Neither uses a read-then-insert, which a concurrent redelivery could pass. The confirmation email additionally carries a Resend idempotency key. */
 export async function fulfillCheckout(
     session: Stripe.Checkout.Session,
     origin: string,
@@ -37,6 +36,12 @@ export async function fulfillCheckout(
        here concerns a registration. */
     if (metadata.type === 'donation') {
         await fulfillDonation(metadata.donationId, paymentIntentId, origin)
+        return
+    }
+
+    /* The places an organizer added to a paid booking, paid by card from /register/pay. */
+    if (metadata.type === 'member_payment') {
+        await fulfillMemberPayment({ session, metadata, paymentIntentId, origin })
         return
     }
 
@@ -109,8 +114,10 @@ export async function fulfillCheckout(
                         },
                         tierLabel: memberTierLabel,
                         /* Grossed up already: this price came off the Checkout session the
-                           registrant just paid. */
+                           registrant just paid. The session carried no net, so the fee inside it
+                           is recovered once, here at the write. */
                         priceCents: memberPriceCents,
+                        cardFeeCents: memberPriceCents - netBeforeGrossUp(memberPriceCents),
                         stripePaymentIntentId: paymentIntentId,
                         stripeCheckoutSessionId: session.id,
                     }),
@@ -130,14 +137,7 @@ export async function fulfillCheckout(
             if (rows.length > 0) {
                 await tx
                     .update(registrations)
-                    .set({
-                        updatedAt: new Date(),
-                        ...(feeCents === undefined
-                            ? {}
-                            : {
-                                  stripeFeeCents: sql`coalesce(${registrations.stripeFeeCents}, 0) + ${feeCents}`,
-                              }),
-                    })
+                    .set(addedChargeFee(feeCents))
                     .where(eq(registrations.id, registrationId))
             }
             return rows
@@ -244,25 +244,9 @@ export async function fulfillCheckout(
 
     /* Email outside the transaction — a transient email failure should not roll back payment.
        Plaintext token came through Stripe metadata; the DB only ever holds the hash. */
-    const viewUrl = `${origin}/register/view?token=${viewToken}`
-    const confirmation = await getConfirmationEmailData({ registrationId, viewUrl })
-    if (!confirmation) {
-        dbg.stripe('no confirmation data for registration %s; skipping email', registrationId)
-        return
-    }
-
-    dbg.stripe('sending confirmation email for registration %s', registrationId)
-    try {
-        await sendRegistrationConfirmation(
-            confirmation.to,
-            confirmation.data,
-            `confirm/${registrationId}`,
-        )
-    } catch (err) {
-        /* Deliberately not rethrown: the payment is captured and the row is correct, and a 500
-           here would make Stripe retry an event whose DB work is already done. But the
-           conditional pending -> paid transition means a redelivery will NOT re-attempt this
-           send, so this is the only attempt — it has to reach a human. */
-        reportError('confirmation email failed', err, { registrationId })
-    }
+    await sendConfirmation({
+        registrationId,
+        viewUrl: `${origin}/register/view?token=${viewToken}`,
+        idempotencyKey: `confirm/${registrationId}`,
+    })
 }

@@ -1,6 +1,6 @@
 import { eq } from 'drizzle-orm'
 import { beforeEach, describe, expect, it } from 'vitest'
-import { registrations } from '$lib/server/db/schema'
+import { partyMembers, registrations } from '$lib/server/db/schema'
 import { resetTestDb } from '$lib/server/db/testing/resetTestDb'
 import { seedRegistration } from '$lib/server/testing/seedRegistration'
 
@@ -121,5 +121,98 @@ describe('setRegistrationStatus', () => {
             .from(registrations)
             .where(eq(registrations.id, seeded.registrationId))
         expect(after.updatedAt).toEqual(before.updatedAt)
+    })
+
+    /* payment_due means "owed now", and only a paid booking has places owed separately. Leaving
+       'paid' clears it, so a booking set back to paid is paid in full rather than owing again. */
+    describe('places owed on a paid booking', () => {
+        async function owedFlags(registrationId: string) {
+            const rows = await db
+                .select({ paymentDue: partyMembers.paymentDue })
+                .from(partyMembers)
+                .where(eq(partyMembers.registrationId, registrationId))
+            return rows.map((row) => row.paymentDue)
+        }
+
+        function seedOwed() {
+            return seedRegistration(db, {
+                members: [
+                    { name: 'Alice', priceCents: 16509 },
+                    { name: 'Jada', priceCents: 10000, paymentDue: true },
+                ],
+            })
+        }
+
+        it.each(['pending', 'waived'] as const)(
+            'clears the flag when the booking goes %s',
+            async (status) => {
+                const seeded = await seedOwed()
+
+                await setRegistrationStatus({ registrationId: seeded.registrationId, status })
+
+                expect(await owedFlags(seeded.registrationId)).toEqual([false, false])
+            },
+        )
+
+        it('does not bring the flag back when the booking returns to paid', async () => {
+            const seeded = await seedOwed()
+
+            await setRegistrationStatus({
+                registrationId: seeded.registrationId,
+                status: 'pending',
+            })
+            await setRegistrationStatus({ registrationId: seeded.registrationId, status: 'paid' })
+
+            expect(await owedFlags(seeded.registrationId)).toEqual([false, false])
+        })
+    })
+
+    /* A public checkout snapshots card prices before anyone pays. Abandoned, then settled by check,
+       the places still held them — a card fee shown, and counted, that nobody paid. */
+    describe('marking an abandoned checkout paid by hand', () => {
+        async function prices(registrationId: string) {
+            const rows = await db
+                .select({
+                    priceCents: partyMembers.priceCents,
+                    cardFeeCents: partyMembers.cardFeeCents,
+                })
+                .from(partyMembers)
+                .where(eq(partyMembers.registrationId, registrationId))
+            return rows
+        }
+
+        it('puts card prices back to the tier price', async () => {
+            const seeded = await seedRegistration(db, {
+                status: 'pending',
+                members: [{ name: 'Alice', priceCents: 16509, cardFeeCents: 509 }],
+            })
+
+            await setRegistrationStatus({ registrationId: seeded.registrationId, status: 'paid' })
+
+            expect(await prices(seeded.registrationId)).toEqual([
+                { priceCents: 16000, cardFeeCents: 0 },
+            ])
+        })
+
+        /* A place a card did pay for keeps what it was charged — refunds read it. */
+        it('leaves a place a card paid for alone', async () => {
+            const seeded = await seedRegistration(db, {
+                status: 'waived',
+                members: [
+                    {
+                        name: 'Alice',
+                        priceCents: 16509,
+                        cardFeeCents: 509,
+                        stripePaymentIntentId: 'pi_1',
+                    },
+                ],
+            })
+
+            await setRegistrationStatus({ registrationId: seeded.registrationId, status: 'paid' })
+
+            expect(await prices(seeded.registrationId)).toEqual([
+                { priceCents: 16509, cardFeeCents: 509 },
+            ])
+        })
     })
 })

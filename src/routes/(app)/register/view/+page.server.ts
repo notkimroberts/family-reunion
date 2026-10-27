@@ -1,14 +1,12 @@
-import { redirect } from '@sveltejs/kit'
 import {
+    VIEW_TOKEN_COOKIE,
     getRegistrationByToken,
     getRegistrationMembers,
     getRegistrationWithEvent,
+    rememberViewToken,
 } from '$lib/server/registrations'
 import type { EventDetails, RegistrationViewMember } from '../types'
 import type { PageServerLoad } from './$types'
-
-const TOKEN_COOKIE = 'reg_token'
-const TOKEN_COOKIE_MAX_AGE = 60 * 60 * 24 * 30 // 30 days
 
 /* Reads the view token from either ?token= (first land from email/Stripe) or the
    reg_token cookie (subsequent visits within the same browser). When the URL carries the
@@ -18,22 +16,9 @@ const TOKEN_COOKIE_MAX_AGE = 60 * 60 * 24 * 30 // 30 days
    Load only: this page has NO actions, and must not gain one — see viewReflectsServerState.test.ts,
    which pins that and says what it costs. */
 export const load: PageServerLoad = async ({ url, cookies }) => {
-    const urlToken = url.searchParams.get('token')
+    rememberViewToken(url, cookies)
 
-    if (urlToken) {
-        cookies.set(TOKEN_COOKIE, urlToken, {
-            path: '/',
-            httpOnly: true,
-            sameSite: 'lax',
-            secure: !url.hostname.includes('localhost'),
-            maxAge: TOKEN_COOKIE_MAX_AGE,
-        })
-        const cleanUrl = new URL(url)
-        cleanUrl.searchParams.delete('token')
-        throw redirect(303, cleanUrl.toString())
-    }
-
-    const token = cookies.get(TOKEN_COOKIE)
+    const token = cookies.get(VIEW_TOKEN_COOKIE)
     if (!token) {
         return { missingToken: true as const }
     }
@@ -42,13 +27,13 @@ export const load: PageServerLoad = async ({ url, cookies }) => {
     if (!registration) {
         /* Token cookie is set but no longer matches a registration (deleted, rotated, or
            cookie carried over from another env). Clear it so a refresh doesn't loop. */
-        cookies.delete(TOKEN_COOKIE, { path: '/' })
+        cookies.delete(VIEW_TOKEN_COOKIE, { path: '/' })
         return { missingToken: true as const }
     }
 
     const result = await getRegistrationWithEvent(registration.id)
     if (!result) {
-        cookies.delete(TOKEN_COOKIE, { path: '/' })
+        cookies.delete(VIEW_TOKEN_COOKIE, { path: '/' })
         return { missingToken: true as const }
     }
 
@@ -85,6 +70,8 @@ export const load: PageServerLoad = async ({ url, cookies }) => {
             vegetarianMeal: member.vegetarianMeal,
             tierLabel: member.tierLabel,
             priceCents: member.priceCents,
+            paymentDue: member.paymentDue,
+            cardFeeCents: member.cardFeeCents,
         })),
     }
 }

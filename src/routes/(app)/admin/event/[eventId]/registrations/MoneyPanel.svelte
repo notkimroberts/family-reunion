@@ -47,6 +47,11 @@ let notes = $derived([
     ...(money.lostToRefundsCents > 0
         ? ['Stripe keeps its fee when a booking is cancelled, so that money does not come back.']
         : []),
+    ...(money.owedOnPaidCents > 0
+        ? [
+              `Outstanding includes ${formatUsd(money.owedOnPaidCents)} for people added to paid bookings after they were paid.`,
+          ]
+        : []),
 ])
 </script>
 

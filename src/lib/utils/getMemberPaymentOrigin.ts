@@ -1,5 +1,7 @@
+import type { MemberSettlement } from '$lib/general/constants'
+
 export type MemberPaymentOrigin =
-    'paid_online' | 'added_online' | 'recorded_offline' | 'unpaid' | 'comped'
+    'paid_online' | 'added_online' | 'recorded_offline' | 'unpaid' | 'comped' | 'payment_due'
 
 /* How one party member's place was paid for.
 
@@ -13,15 +15,40 @@ export type MemberPaymentOrigin =
    — so a waived registration rendered "Recorded offline" beside a "Waived" badge, saying two different
    things about the same money. Nothing was recorded as paid; it was written off.
 
+   paymentDue comes next, and only on a paid booking: an organizer added this person after the money
+   arrived, and nobody has paid for them. On a booking that has paid by card that person has no Stripe
+   columns and read "Not paid" before the flag existed, which was true but gave no next step.
+
+   A place an organizer settled by hand says so next: 'paid' is money that came by Zelle or check,
+   'covered' is a place given away. Without it a settled place still read "Not paid", because it has
+   no payment intent on a booking with a Stripe session — exactly the shape of an abandoned checkout.
+
    After that, order matters. stripeCheckoutSessionId is set only by the add-member checkout, so it is
    the most specific signal and is checked first; stripePaymentIntentId is backfilled onto every member
    of a registration when its payment settles, so it comes second. */
 export function getMemberPaymentOrigin(
-    member: { stripePaymentIntentId: string | null; stripeCheckoutSessionId: string | null },
+    member: {
+        stripePaymentIntentId: string | null
+        stripeCheckoutSessionId: string | null
+        paymentDue: boolean
+        settlement: MemberSettlement | null
+    },
     registration: { stripeSessionId: string | null; status: string },
 ): MemberPaymentOrigin {
     if (registration.status === 'waived') {
         return 'comped'
+    }
+
+    if (member.paymentDue) {
+        return 'payment_due'
+    }
+
+    if (member.settlement === 'covered') {
+        return 'comped'
+    }
+
+    if (member.settlement === 'paid') {
+        return 'recorded_offline'
     }
 
     if (member.stripeCheckoutSessionId) {

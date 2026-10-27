@@ -13,7 +13,8 @@ import type { MemberInput } from './MemberInput'
 
    - priceCents. The online paths snapshot the Stripe GROSS (what the card is charged); the offline
      paths snapshot the tier's NET. Passing it in keeps that decision visible one line from the call
-     rather than buried in the middle of a literal.
+     rather than buried in the middle of a literal. cardFeeCents goes with it: the fee inside a gross,
+     zero for a net.
    - isContact. Only the two paths that create a whole registration know which row is the contact.
      Defaults to false, which is what the two add-one-member paths need.
    - the Stripe ids, which only the webhook has.
@@ -25,6 +26,7 @@ export function buildPartyMemberRow(params: {
     member: Omit<MemberInput, 'tierId'>
     tierLabel: string
     priceCents: number
+    cardFeeCents?: number
     isContact?: boolean
     stripePaymentIntentId?: string | null
     stripeCheckoutSessionId?: string | null
@@ -55,6 +57,7 @@ export function buildPartyMemberRow(params: {
         attendedReunion2025: member.attendedReunion2025 ?? null,
         tierLabel: params.tierLabel,
         priceCents: params.priceCents,
+        cardFeeCents: params.cardFeeCents ?? 0,
         stripePaymentIntentId: params.stripePaymentIntentId ?? null,
         stripeCheckoutSessionId: params.stripeCheckoutSessionId ?? null,
     }

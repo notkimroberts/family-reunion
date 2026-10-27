@@ -18,6 +18,9 @@ export type EventPerson = {
     contactName: string
     contactEmail: string
     status: (typeof registrationStatusEnum.enumValues)[number]
+    /* Added after the booking was paid and not paid for, so the People lens can show Payment due
+       rather than the booking's Paid — see getPersonDisplayStatus. */
+    paymentDue: boolean
     /* When they arrived, recorded from the check-in page. NULL means not arrived. */
     checkedInAt: Date | null
     checkedInBy: string | null
@@ -53,6 +56,7 @@ export async function getEventPeople(eventId: string): Promise<EventPerson[]> {
             contactName: registrations.contactName,
             contactEmail: registrations.contactEmail,
             status: registrations.status,
+            paymentDue: partyMembers.paymentDue,
             checkedInAt: partyMembers.checkedInAt,
             checkedInBy: partyMembers.checkedInBy,
             shirtGivenAt: partyMembers.shirtGivenAt,

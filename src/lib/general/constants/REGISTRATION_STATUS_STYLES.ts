@@ -1,12 +1,15 @@
-import { CircleCheck, CircleX, Clock, Gift } from '@lucide/svelte'
-import type { RegistrationStatus } from '$lib/utils'
+import { CircleCheck, CircleDotDashed, CircleX, Clock, Gift, HandCoins } from '@lucide/svelte'
+import type { DisplayStatus } from '$lib/utils'
+import { WARNING_SURFACE_CLASS } from './WARNING_SURFACE_CLASS'
 
 /* One vocabulary for payment status, and now one palette too.
 
    The labels had drifted once already: the list printed the raw database value ('waived') while the
    detail page printed invented ones — "Covered", "Checkout not completed" — so the same registration
-   read two different ways depending on where you looked. These are the database's four statuses and
-   nothing else.
+   read two different ways depending on where you looked. These are the database's four statuses,
+   plus the two shown statuses below, and nothing else.
+
+   Here rather than beside the admin list because the registrant's view page shows the same labels.
 
    Extracted from RegistrationStatusBadge so the filter buttons can wear the same colors as the rows
    they filter. Two copies of a palette is the same drift with a longer fuse: a green nobody can find in
@@ -15,7 +18,12 @@ import type { RegistrationStatus } from '$lib/utils'
    Color carries the meaning at a glance, which is the whole job in a list of thirty: green is money in,
    amber is money still owed, blue is comped, red is cancelled. Explicit palette classes rather than
    semantic tokens because the theme has no green or amber token, following the paper-entry success
-   banner, and both light and dark are set so auto-inversion cannot wash them out.
+   banner, and both light and dark are set so auto-inversion cannot wash them out. Amber is
+   WARNING_SURFACE_CLASS, the one amber surface every other part of the app uses.
+
+   Two shown statuses are not stored ones (getBookingDisplayStatus): Partly paid, a paid booking that
+   still owes for someone added later, and Payment due, that someone in the People lens. Both are
+   amber — money still owed — with their own icon and label so neither passes for Pending.
 
    Each also carries an icon, so the distinction survives for a reader who cannot separate the greens and
    ambers — roughly one man in twelve. Color and shape say the same thing rather than color alone. */
@@ -25,10 +33,20 @@ export const REGISTRATION_STATUS_STYLES = {
         icon: CircleCheck,
         class: 'border-green-300 bg-green-50 text-green-800 dark:border-green-800 dark:bg-green-950 dark:text-green-200',
     },
+    partly_paid: {
+        label: 'Partly paid',
+        icon: CircleDotDashed,
+        class: WARNING_SURFACE_CLASS,
+    },
+    payment_due: {
+        label: 'Payment due',
+        icon: HandCoins,
+        class: WARNING_SURFACE_CLASS,
+    },
     pending: {
         label: 'Pending',
         icon: Clock,
-        class: 'border-amber-300 bg-amber-50 text-amber-900 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200',
+        class: WARNING_SURFACE_CLASS,
     },
     waived: {
         label: 'Waived',
@@ -40,4 +58,4 @@ export const REGISTRATION_STATUS_STYLES = {
         icon: CircleX,
         class: 'border-destructive/40 bg-destructive/10 text-destructive',
     },
-} as const satisfies Record<RegistrationStatus, { label: string; icon: unknown; class: string }>
+} as const satisfies Record<DisplayStatus, { label: string; icon: unknown; class: string }>

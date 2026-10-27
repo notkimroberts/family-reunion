@@ -62,7 +62,12 @@ export type RegistrationTotals = {
     feesAreExact: boolean
     pendingPeopleCount: number
     pendingPartyCount: number
+    /* Pending bookings' totals plus what is owed on paid ones. */
     outstandingCents: number
+    /* The part of outstandingCents owed on PAID bookings, for people added after they paid. Those
+       bookings are not among the pending counts — the people who paid are coming — so without this
+       the outstanding figure would exceed what the pending bookings could explain. */
+    owedOnPaidCents: number
 }
 
 export function getRegistrationTotals(registrations: RegistrationSummary[]): RegistrationTotals {
@@ -87,8 +92,12 @@ export function getRegistrationTotals(registrations: RegistrationSummary[]): Reg
         .map(getRegistrationMoney)
         .filter((money) => money.wasCharged)
 
-    const cardPaidCents = cardPaid.reduce((sum, r) => sum + r.totalCents, 0)
-    const offlinePaidCents = offlinePaid.reduce((sum, r) => sum + r.totalCents, 0)
+    /* A paid booking's total includes anyone added after it was paid and not yet paid for. That part
+       has not arrived, so it is outstanding rather than collected — getRegistrationMoney splits it. */
+    const collected = (r: RegistrationSummary) => getRegistrationMoney(r).collectedCents
+    const cardPaidCents = cardPaid.reduce((sum, r) => sum + collected(r), 0)
+    const offlinePaidCents = offlinePaid.reduce((sum, r) => sum + collected(r), 0)
+    const owedOnPaidCents = paid.reduce((sum, r) => sum + getRegistrationMoney(r).unpaidCents, 0)
 
     /* Per registration, never on the summed total: the 30¢ is charged once per PAYMENT, so a single
        deduction from the sum would undercount by 30¢ for every registration after the first. */
@@ -118,6 +127,7 @@ export function getRegistrationTotals(registrations: RegistrationSummary[]): Reg
            from status 'refunded', which is not pending, so the filter could never remove anything and
            the two numbers were provably identical. One number, one name. */
         pendingPartyCount: pending.length,
-        outstandingCents: pending.reduce((sum, r) => sum + r.totalCents, 0),
+        outstandingCents: pending.reduce((sum, r) => sum + r.totalCents, 0) + owedOnPaidCents,
+        owedOnPaidCents,
     }
 }

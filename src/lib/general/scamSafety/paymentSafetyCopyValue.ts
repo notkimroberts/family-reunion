@@ -24,5 +24,8 @@ export const paymentSafetyCopyValue = {
         'Your card or bank details by phone, text or email',
     ],
     statementLine: `Card payments show on your statement as ${statementNames.join(' or ')}.`,
+    /* The registrant's own confirmation, ticked before paying on /register. Phrased as a promise
+       about what they will do, because reading a list is not the same as acting on it. */
+    acknowledgment: 'I have read this. I will only pay one of the ways listed above.',
     verifyLine: `Not sure a message is from us? Type ${APP_DOMAIN} into your browser yourself and use Get in Touch. Do not use a phone number or link from the message.`,
 }

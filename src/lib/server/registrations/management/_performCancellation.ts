@@ -72,6 +72,7 @@ export async function _performCancellation(
             tierLabel: partyMembers.tierLabel,
             priceCents: partyMembers.priceCents,
             stripePaymentIntentId: partyMembers.stripePaymentIntentId,
+            paymentDue: partyMembers.paymentDue,
         })
         .from(partyMembers)
         .where(eq(partyMembers.registrationId, registrationId))
@@ -97,7 +98,14 @@ export async function _performCancellation(
         }
     }
 
-    const refundRoute = getRefundRoute(registration)
+    /* A check-paid booking can still hold a card charge: someone added later who paid at
+       /register/pay. That part goes back through Stripe below, so the email must not call the whole
+       refund one to arrange by hand. */
+    const baseRoute = getRefundRoute(registration)
+    const refundRoute = baseRoute === 'by_hand' && uniqueIntents.size > 0 ? 'mixed' : baseRoute
+    const cardRefundCents = sumMemberPrices(
+        members.filter((member) => member.stripePaymentIntentId !== null),
+    )
 
     /* Money definitely arrived through Stripe and we cannot find it. Cancelling now would mark the
        registration refunded with no refund issued anywhere — silent, and unrecoverable without
@@ -166,6 +174,15 @@ export async function _performCancellation(
 
     dbg.register('registration %s cancelled and refunded', registrationId)
 
+    /* A person added after the booking was paid, whom nobody paid for, gets nothing back. Listed at
+       zero so the email still says they were cancelled while the refund line adds up to the money
+       that actually went out. */
+    const cancelledMembers = members.map(({ name, tierLabel, priceCents, paymentDue }) => ({
+        name,
+        tierLabel,
+        priceCents: paymentDue ? 0 : priceCents,
+    }))
+
     const [reunionEvent] = await db
         .select({ title: reunionEvents.title })
         .from(reunionEvents)
@@ -178,17 +195,14 @@ export async function _performCancellation(
             {
                 name: registration.contactName,
                 eventTitle: reunionEvent?.title ?? 'the reunion',
-                partyMembers: members.map(({ name, tierLabel, priceCents }) => ({
-                    name,
-                    tierLabel,
-                    priceCents,
-                })),
-                totalCents: sumMemberPrices(members),
+                partyMembers: cancelledMembers,
+                totalCents: sumMemberPrices(cancelledMembers),
                 /* Named so the donor is not left waiting for money that is not coming: the refund
                    is the places only, and their gift stays with the reunion. Only the gifts on a
                    charge that was actually refunded — a paper entry refunds nothing here. */
                 keptDonationCents: gifts.reduce((sum, gift) => sum + gift.amountCents, 0),
                 refundRoute,
+                cardRefundCents: refundRoute === 'mixed' ? cardRefundCents : undefined,
                 registerUrl,
             },
             `cancel/${registrationId}`,

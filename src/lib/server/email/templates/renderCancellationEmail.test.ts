@@ -14,7 +14,7 @@ const BASE: CancellationEmailData = {
     registerUrl: 'https://example.com/register',
 }
 
-const ALL_ROUTES: RefundRoute[] = ['stripe', 'by_hand', 'nothing_paid', 'waived']
+const ALL_ROUTES: RefundRoute[] = ['stripe', 'by_hand', 'mixed', 'nothing_paid', 'waived']
 
 /* Routes where money is actually going back, and so where an amount must appear. */
 const ROUTES_WITH_MONEY: RefundRoute[] = ['stripe', 'by_hand']
@@ -151,5 +151,25 @@ describe('renderCancellationEmail output is complete', () => {
         expect(result.subject.trim()).not.toBe('')
         expect(result.text.trim()).not.toBe('')
         expect(result.html).toMatch(/<\/html>\s*$/)
+    })
+
+    /* A check-paid booking with someone added later who paid by card: Stripe refunds that part, the
+       organizers the rest. One "amount to refund by hand" would promise them money Stripe is already
+       sending back. */
+    describe('a refund that is part card, part by hand', () => {
+        const mixed = { refundRoute: 'mixed' as const, cardRefundCents: 15988 }
+
+        it('states each part on its own line', () => {
+            const { text, html } = render(mixed)
+            expect(text).toContain('Refunded to your card: $159.88')
+            expect(text).toContain('To be refunded by the organizers: $170.30')
+            expect(html).toContain('Refunded to your card')
+            expect(html).toContain('$170.30')
+            expect(text).not.toContain('Amount to refund:')
+        })
+
+        it('says which part comes back automatically', () => {
+            expect(render(mixed).text).toContain('has been refunded to that card')
+        })
     })
 })

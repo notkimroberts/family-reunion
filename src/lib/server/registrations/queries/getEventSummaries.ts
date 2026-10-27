@@ -2,6 +2,7 @@ import { count, countDistinct, desc, eq, sum } from 'drizzle-orm'
 import type { EventStatus } from '$lib/general/constants'
 import { db } from '$lib/server/db'
 import { partyMembers, registrations, reunionEvents } from '$lib/server/db/schema'
+import { amountDueSum } from './_amountDueSum'
 
 export type EventSummary = {
     id: string
@@ -56,6 +57,8 @@ export async function getEventSummaries(): Promise<EventSummary[]> {
                 /* Left join so a registration whose members were all removed still counts as a party. */
                 people: count(partyMembers.id),
                 cents: sum(partyMembers.priceCents),
+                /* The unpaid part of a paid booking — see party_members.paymentDue. */
+                dueCents: amountDueSum(),
             })
             .from(registrations)
             .leftJoin(partyMembers, eq(partyMembers.registrationId, registrations.id))
@@ -65,11 +68,15 @@ export async function getEventSummaries(): Promise<EventSummary[]> {
     return events.map((event) => {
         const rows = rollup.filter((row) => row.eventId === event.id)
         const of = (...statuses: string[]) => rows.filter((row) => statuses.includes(row.status))
-        const total = (picked: typeof rows, field: 'parties' | 'people' | 'cents'): number =>
-            picked.reduce((sum, row) => sum + Number(row[field] ?? 0), 0)
+        const total = (
+            picked: typeof rows,
+            field: 'parties' | 'people' | 'cents' | 'dueCents',
+        ): number => picked.reduce((sum, row) => sum + Number(row[field] ?? 0), 0)
 
         const attending = of('paid', 'waived')
         const pending = of('pending')
+        /* Owed places exist only on paid bookings — leaving 'paid' clears the flag. */
+        const owedOnPaid = total(rows, 'dueCents')
 
         return {
             ...event,
@@ -77,8 +84,8 @@ export async function getEventSummaries(): Promise<EventSummary[]> {
             attendingParties: total(attending, 'parties'),
             pendingPeople: total(pending, 'people'),
             pendingParties: total(pending, 'parties'),
-            paidCents: total(of('paid'), 'cents'),
-            outstandingCents: total(pending, 'cents'),
+            paidCents: total(of('paid'), 'cents') - owedOnPaid,
+            outstandingCents: total(pending, 'cents') + owedOnPaid,
         }
     })
 }

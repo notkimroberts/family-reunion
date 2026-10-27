@@ -60,6 +60,7 @@ vi.mock('$lib/server/email', () => ({
 }))
 
 const { POST } = await import('./+server')
+const { markRegistrationRefunded } = await import('$lib/server/registrations/lifecycle')
 
 let db: Awaited<ReturnType<typeof resetTestDb>>
 
@@ -403,6 +404,9 @@ describe('POST /api/webhooks/stripe', () => {
             expect(added).toMatchObject({
                 tierLabel: 'Adult',
                 priceCents: 10300,
+                /* The session carried only the gross, so the fee inside it is recovered at the write:
+                   10300 is the gross-up of 9971. */
+                cardFeeCents: 329,
                 stripeCheckoutSessionId: 'cs_test_addmember_1',
                 vegetarianMeal: true,
             })
@@ -673,6 +677,211 @@ describe('POST /api/webhooks/stripe', () => {
             expect((await donationRow(donationId)).paidAt).toEqual(firstPaidAt)
             /* And no gift receipt: the confirmation email names the gift instead. */
             expect(mockSendReceipt).not.toHaveBeenCalled()
+        })
+    })
+
+    /* A card payment from /register/pay for people an organizer added to a paid booking. Idempotent
+       by a conditional UPDATE on payment_due = true, so a redelivery settles nobody, adds no fee
+       and sends no email. */
+    describe('member_payment', () => {
+        const CHILD_NET = 10000
+        const CHILD_GROSS = 10330
+
+        async function seedOwedBooking() {
+            return seedRegistration(db, {
+                members: [
+                    { name: 'Alice Patterson', priceCents: 16509, stripePaymentIntentId: 'pi_1' },
+                    {
+                        name: 'Jada Patterson',
+                        priceCents: CHILD_NET,
+                        tierLabel: 'Child',
+                        paymentDue: true,
+                    },
+                ],
+            })
+        }
+
+        function memberPaymentSession(
+            registrationId: string,
+            memberCharges: string,
+            extra: Record<string, unknown> = {},
+        ) {
+            return {
+                id: 'cs_test_member_payment',
+                payment_intent: 'pi_2',
+                metadata: {
+                    type: 'member_payment',
+                    registrationId,
+                    viewToken: 'plaintext-tok',
+                    memberCharges,
+                },
+                ...extra,
+            }
+        }
+
+        async function memberRow(id: string) {
+            const [row] = await db.select().from(partyMembers).where(eq(partyMembers.id, id))
+            return row
+        }
+
+        /* The gross is what the card paid, and the intent is what cancellation refunds — both must
+           land on the member row. */
+        it('settles the owed member at the gross, on its own payment intent', async () => {
+            const seeded = await seedOwedBooking()
+            const owedId = seeded.memberIds[1]
+
+            const res = await deliver(
+                memberPaymentSession(seeded.registrationId, `${owedId}:${CHILD_GROSS}`),
+            )
+
+            expect(res.status).toBe(200)
+            expect(await memberRow(owedId)).toMatchObject({
+                paymentDue: false,
+                priceCents: CHILD_GROSS,
+                /* The gross less the net that was stored — the fee inside the new price. */
+                cardFeeCents: CHILD_GROSS - CHILD_NET,
+                stripePaymentIntentId: 'pi_2',
+            })
+            /* The people who paid before are untouched. */
+            expect(await memberRow(seeded.memberIds[0])).toMatchObject({
+                priceCents: 16509,
+                stripePaymentIntentId: 'pi_1',
+            })
+        })
+
+        it('adds its fee to the one already recorded', async () => {
+            const seeded = await seedOwedBooking()
+            await db
+                .update(registrations)
+                .set({ stripeFeeCents: 509 })
+                .where(eq(registrations.id, seeded.registrationId))
+
+            await deliver(
+                memberPaymentSession(
+                    seeded.registrationId,
+                    `${seeded.memberIds[1]}:${CHILD_GROSS}`,
+                ),
+            )
+
+            expect((await registrationRow(seeded.registrationId)).stripeFeeCents).toBe(1018)
+        })
+
+        it('confirms by email, keyed on the session', async () => {
+            const seeded = await seedOwedBooking()
+
+            await deliver(
+                memberPaymentSession(
+                    seeded.registrationId,
+                    `${seeded.memberIds[1]}:${CHILD_GROSS}`,
+                ),
+            )
+
+            expect(mockSendEmail).toHaveBeenCalledWith(
+                'alice@example.com',
+                expect.objectContaining({
+                    status: 'paid',
+                    viewUrl: expect.stringContaining('token=plaintext-tok'),
+                    /* Nothing is owed any more, so the email does not ask for money. */
+                    amountDue: undefined,
+                    totalCents: 16509 + CHILD_GROSS,
+                }),
+                'member-payment/cs_test_member_payment',
+            )
+        })
+
+        it('settles once, counts the fee once and emails once when Stripe redelivers', async () => {
+            const seeded = await seedOwedBooking()
+            const session = memberPaymentSession(
+                seeded.registrationId,
+                `${seeded.memberIds[1]}:${CHILD_GROSS}`,
+            )
+
+            await deliver(session)
+            await deliver(session)
+
+            expect((await registrationRow(seeded.registrationId)).stripeFeeCents).toBe(509)
+            expect(mockSendEmail).toHaveBeenCalledTimes(1)
+            /* A redelivery is routine, not a double payment. */
+            expect(mockReportError).not.toHaveBeenCalled()
+        })
+
+        /* The organizer recorded a check while the payer was on Stripe's page. The money is
+           captured, so the only useful thing is to say so loudly. */
+        it('reports a payment for someone already settled by hand, and changes nothing', async () => {
+            const seeded = await seedOwedBooking()
+            const owedId = seeded.memberIds[1]
+            await db
+                .update(partyMembers)
+                .set({ paymentDue: false })
+                .where(eq(partyMembers.id, owedId))
+
+            const res = await deliver(
+                memberPaymentSession(seeded.registrationId, `${owedId}:${CHILD_GROSS}`),
+            )
+
+            expect(res.status).toBe(200)
+            expect(mockReportError).toHaveBeenCalledWith(
+                expect.stringContaining('refund their share by hand'),
+                expect.any(Error),
+                expect.objectContaining({ memberIds: owedId, paymentIntentId: 'pi_2' }),
+            )
+            expect(await memberRow(owedId)).toMatchObject({
+                priceCents: CHILD_NET,
+                stripePaymentIntentId: null,
+            })
+            expect((await registrationRow(seeded.registrationId)).stripeFeeCents).toBeNull()
+            expect(mockSendEmail).not.toHaveBeenCalled()
+        })
+
+        it('settles who is still owed and reports who is not', async () => {
+            const seeded = await seedRegistration(db, {
+                members: [
+                    { name: 'Alice Patterson', priceCents: 16509, stripePaymentIntentId: 'pi_1' },
+                    { name: 'Jada', priceCents: CHILD_NET, paymentDue: true },
+                    { name: 'Marcus', priceCents: CHILD_NET, paymentDue: false },
+                ],
+            })
+            const [, jadaId, marcusId] = seeded.memberIds
+
+            await deliver(
+                memberPaymentSession(
+                    seeded.registrationId,
+                    `${jadaId}:${CHILD_GROSS},${marcusId}:${CHILD_GROSS}`,
+                ),
+            )
+
+            expect((await memberRow(jadaId)).paymentDue).toBe(false)
+            expect((await memberRow(marcusId)).priceCents).toBe(CHILD_NET)
+            expect(mockReportError).toHaveBeenCalledWith(
+                expect.any(String),
+                expect.any(Error),
+                expect.objectContaining({ memberIds: marcusId }),
+            )
+            expect((await registrationRow(seeded.registrationId)).stripeFeeCents).toBe(509)
+            expect(mockSendEmail).toHaveBeenCalledTimes(1)
+        })
+
+        /* Cancelled while the payer was on Stripe's page: settling someone on a refunded booking
+           would revive a place nobody is catering for. */
+        it('reports a payment on a booking cancelled meanwhile, and settles nobody', async () => {
+            const seeded = await seedOwedBooking()
+            /* What cancelling does to an owed place: no flag, nothing charged. */
+            await markRegistrationRefunded(seeded.registrationId)
+
+            await deliver(
+                memberPaymentSession(
+                    seeded.registrationId,
+                    `${seeded.memberIds[1]}:${CHILD_GROSS}`,
+                ),
+            )
+
+            expect(mockReportError).toHaveBeenCalledWith(
+                expect.stringContaining('refund their share by hand'),
+                expect.any(Error),
+                expect.objectContaining({ registrationId: seeded.registrationId }),
+            )
+            expect((await memberRow(seeded.memberIds[1])).priceCents).toBe(0)
+            expect(mockSendEmail).not.toHaveBeenCalled()
         })
     })
 })

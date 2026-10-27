@@ -14,4 +14,7 @@ export type RegistrationActionFeedback = {
     reissueError?: string
     cancelled?: boolean
     cancelError?: string
+    /* What an organizer settled for one owed person, as a sentence for the toast. */
+    settled?: string
+    settleError?: string
 }

@@ -1,7 +1,7 @@
 <script lang="ts">
 import { ExternalLink } from '@lucide/svelte'
 import type { RegistrationSummary } from '$lib/server/registrations'
-import { getPaymentState, stripePaymentUrl } from '$lib/utils'
+import { formatPrice, getPaymentState, stripePaymentUrl } from '$lib/utils'
 
 /* The note under a booking's name: what to do about it, or what already happened.
 
@@ -63,6 +63,13 @@ let paymentUrl = $derived(stripePaymentUrl(registration.stripePaymentIntentId, s
         {/if}
     </p>
 {:else if isPaid}
+    <!-- Paid, but someone was added afterwards and has not paid. The booking stays green for the
+         people who did; this is the follow-up for the rest. -->
+    {#if registration.amountDueCents > 0}
+        <p class="text-xs text-amber-700 dark:text-amber-400">
+            Owes ${formatPrice(registration.amountDueCents)} for people added after paying
+        </p>
+    {/if}
     <p class="flex flex-wrap items-center gap-x-1.5 text-xs text-green-700 dark:text-green-400">
         {#if registration.paidAt}
             <!-- The machine-readable instant is always right, and carries the value until the page's

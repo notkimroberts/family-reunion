@@ -34,7 +34,7 @@ import YourInformationCard from './YourInformationCard.svelte'
 import { contactSaveProblems } from './contactSaveProblems'
 import { isContactComplete } from './isContactComplete'
 import { saveRegistrationDraft } from './saveRegistrationDraft'
-import { registrationSchema, type RegistrationFormData } from './schema'
+import { publicRegistrationSchema, type RegistrationFormData } from './schema'
 import { takeRegistrationDraft } from './takeRegistrationDraft'
 import type { FormMember, PersonDetails } from './types'
 
@@ -56,7 +56,7 @@ let { data } = $props()
    The contact's own scalar fields bind straight to $form — top-level `$form.x = v` compiles to a
    store update, which is reactive. Only nested mutation is not. */
 const { form, errors, message, submitting, enhance } = superForm(data.form, {
-    validators: zodClient(registrationSchema),
+    validators: zodClient(publicRegistrationSchema),
     dataType: 'json',
     /* Superforms swallows a failed submit into $errors and, for a transport/server error, into
        onError. Neither was surfaced, so every failure looked like an inert button. FormErrorSummary
@@ -109,6 +109,8 @@ let donationCents = $state(0)
 let contactSaved = $state(false)
 /* For CheckoutBar, whose button runs the card's own Save. */
 let informationCard = $state<ReturnType<typeof YourInformationCard>>()
+/* For CheckoutBar too, whose button brings the notice's checkbox into view. */
+let safetyNotice = $state<ReturnType<typeof CheckoutSafetyNotice>>()
 
 let contactName = $derived(
     `${$form.contactFirstName.trim()} ${$form.contactLastName.trim()}`.trim(),
@@ -347,8 +349,17 @@ let notYetOpen = $derived(isBeforeRegistrationOpens(opensAt) && !data.preview)
                         submitting={$submitting}
                         placeholderText="Fill in your details, then press “Save your details” at the bottom of the screen."
                         submitFootnote={STRIPE_CHECKOUT_NOTE}
-                        submitError={$message} />
-                    <CheckoutSafetyNotice />
+                        submitError={$message}
+                        submitBlockedReason={$form.paymentSafetyAcknowledged
+                            ? undefined
+                            : 'Read the safety notice below and tick the box to pay.'} />
+                    <!-- Required before paying, and refused by the server without it: the notice
+                         protects only someone who has read it. -->
+                    <CheckoutSafetyNotice
+                        bind:this={safetyNotice}
+                        requireAcknowledgment
+                        bind:acknowledged={$form.paymentSafetyAcknowledged}
+                        error={$errors.paymentSafetyAcknowledged?.[0]} />
                     <p class="text-muted-foreground text-center text-xs">
                         Already registered? <a class="underline" href="/register/recover"
                             >Resend your registration link</a>
@@ -361,8 +372,10 @@ let notYetOpen = $derived(isBeforeRegistrationOpens(opensAt) && !data.preview)
                 peopleCount={1 + members.length}
                 hasGift={quote.donationCents > 0}
                 {canSubmit}
+                acknowledged={$form.paymentSafetyAcknowledged}
                 submitting={$submitting}
-                onsave={() => informationCard?.save()} />
+                onsave={() => informationCard?.save()}
+                onacknowledge={() => safetyNotice?.reveal()} />
         </form>
     {/if}
 {/if}

@@ -37,3 +37,16 @@ export type DonationCheckoutParams = {
     successUrl: () => string
     cancelUrl: () => string
 }
+
+// Params for createMemberPaymentCheckout
+export type MemberPaymentCheckoutParams = {
+    registrationId: string
+    /* Plaintext view token, carried in Stripe metadata so the webhook can link the confirmation. */
+    viewToken: string
+    /* One per person still owed, priced at the gross the card is charged. */
+    lines: { memberId: string; name: string; grossCents: number }[]
+    description: string
+    customerEmail?: string
+    successUrl: string
+    cancelUrl: string
+}

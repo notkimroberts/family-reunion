@@ -1,6 +1,6 @@
-import { eq } from 'drizzle-orm'
+import { and, eq } from 'drizzle-orm'
 import { db } from '$lib/server/db'
-import { registrations } from '$lib/server/db/schema'
+import { partyMembers, registrations } from '$lib/server/db/schema'
 
 /* The only writer of status 'refunded'.
 
@@ -18,8 +18,23 @@ import { registrations } from '$lib/server/db/schema'
    aborted loudly if any failed — see _performCancellation, which does exactly that, and the tests
    that pin it. */
 export async function markRegistrationRefunded(registrationId: string): Promise<void> {
-    await db
-        .update(registrations)
-        .set({ status: 'refunded', updatedAt: new Date() })
-        .where(eq(registrations.id, registrationId))
+    await db.transaction(async (tx) => {
+        await tx
+            .update(registrations)
+            .set({ status: 'refunded', updatedAt: new Date() })
+            .where(eq(registrations.id, registrationId))
+
+        /* A place still owed was never charged, so nothing went back for it and it cost nothing.
+           Recorded as such, and the owed flag — which means "owed now" — cleared: a cancelled booking
+           owes nothing. */
+        await tx
+            .update(partyMembers)
+            .set({ paymentDue: false, priceCents: 0, cardFeeCents: 0 })
+            .where(
+                and(
+                    eq(partyMembers.registrationId, registrationId),
+                    eq(partyMembers.paymentDue, true),
+                ),
+            )
+    })
 }

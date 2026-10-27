@@ -30,6 +30,12 @@ const REFUND_COPY: Record<RefundRoute, { lead: string; note?: string; showsRefun
         note: 'Nothing has been refunded through this website. Please get in touch if you have not heard from us. We never ask for your bank login, a card number or a fee to send a refund.',
         showsRefund: true,
     },
+    /* Paid by check, with someone added later who paid by card. Only the card part refunds itself. */
+    mixed: {
+        lead: 'Your registration has been cancelled. The part you paid by card has been refunded to that card. The part you paid the organizers directly will be refunded by them.',
+        note: 'Card refunds usually appear on a statement within 5 to 10 business days. Please get in touch if you have not heard from us about the rest. We never ask for your bank login, a card number or a fee to send a refund.',
+        showsRefund: true,
+    },
     nothing_paid: {
         lead: 'Your registration has been cancelled. No payment had been received, so there is nothing to refund.',
         showsRefund: false,
@@ -54,6 +60,16 @@ export function renderCancellationEmail(data: CancellationEmailData): {
     const copy = REFUND_COPY[data.refundRoute]
     const { insetBackground, border, text: textColor, muted, fontStack } = emailThemeValue
     const amountLabel = data.refundRoute === 'by_hand' ? 'Amount to refund' : 'Refunded'
+    /* The money lines under the party: one total, or on a mixed refund the card part and the part
+       still to come by hand, so neither is mistaken for the whole. */
+    const cardRefundCents = data.cardRefundCents ?? 0
+    const amountLines: [string, number][] =
+        data.refundRoute === 'mixed'
+            ? [
+                  ['Refunded to your card', cardRefundCents],
+                  ['To be refunded by the organizers', data.totalCents - cardRefundCents],
+              ]
+            : [[amountLabel, data.totalCents]]
 
     /* A kept gift is stated only where a refund is being talked about at all. On an unpaid or waived
        cancellation there is no refund to distinguish it from, so the sentence would answer a
@@ -78,7 +94,9 @@ export function renderCancellationEmail(data: CancellationEmailData): {
                 ? `  - ${member.name} (${member.tierLabel})  $${formatPrice(member.priceCents)}`
                 : `  - ${member.name}`,
         ),
-        ...(copy.showsRefund ? ['', `${amountLabel}: $${formatPrice(data.totalCents)}`] : []),
+        ...(copy.showsRefund
+            ? ['', ...amountLines.map(([label, cents]) => `${label}: $${formatPrice(cents)}`)]
+            : []),
         ...(keptGiftLine ? ['', keptGiftLine] : []),
         ...(copy.note ? ['', copy.note] : []),
         '',
@@ -118,10 +136,14 @@ export function renderCancellationEmail(data: CancellationEmailData): {
         .join('\n')
 
     const amountRow = copy.showsRefund
-        ? `  <tr>
-    <td style="padding:12px 0 0 0;font-family:${fontStack};font-size:15px;font-weight:700;color:${textColor};">${escapeHtml(amountLabel)}</td>
-    <td align="right" style="padding:12px 0 0 0;font-family:${fontStack};font-size:15px;font-weight:700;color:${textColor};white-space:nowrap;">$${formatPrice(data.totalCents)}</td>
-  </tr>`
+        ? amountLines
+              .map(
+                  ([label, cents]) => `  <tr>
+    <td style="padding:12px 0 0 0;font-family:${fontStack};font-size:15px;font-weight:700;color:${textColor};">${escapeHtml(label)}</td>
+    <td align="right" style="padding:12px 0 0 0;font-family:${fontStack};font-size:15px;font-weight:700;color:${textColor};white-space:nowrap;">$${formatPrice(cents)}</td>
+  </tr>`,
+              )
+              .join('\n')
         : ''
 
     const partyTable = `<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin:0 0 8px 0;">

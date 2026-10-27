@@ -10,13 +10,16 @@ import { Separator } from '$lib/components/ui/separator'
 import * as Table from '$lib/components/ui/table'
 import { Tooltip, TooltipContent, TooltipTrigger } from '$lib/components/ui/tooltip'
 import { HOST_HOTEL } from '$lib/general/constants'
+import { REGISTRATION_STATUS_STYLES } from '$lib/general/constants/REGISTRATION_STATUS_STYLES'
 import type { EventPerson } from '$lib/server/registrations'
 import {
     cn,
     formatPrice,
     formatReunionDateTime,
     formatViewerDateTime,
-    type RegistrationStatus,
+    getBookingDisplayStatus,
+    getPersonDisplayStatus,
+    type DisplayStatus,
 } from '$lib/utils'
 import { formatBirthDate } from '$lib/utils/age'
 import { groupPeopleByBooking } from '../checkin/groupPeopleByBooking'
@@ -38,7 +41,6 @@ import { filterBookings } from './filterBookings'
 import { filterDonations } from './filterDonations'
 import { filterPeople } from './filterPeople'
 import { getPeopleSummary } from './peopleSummary'
-import { REGISTRATION_STATUS_STYLES } from './registrationStatusStyles'
 import { getRegistrationTotals } from './registrationTotals'
 import { lensFromUrl, type RegistrationsLens } from './registrationsViewUrl'
 import { getRoomSummary } from './roomSummary'
@@ -65,10 +67,13 @@ import { urlForLens } from './urlForLens'
    which is the only thing that still reads when four buttons are already four different colors.
 
    Spelled out rather than derived from the style map's keys, because the order is a decision — money in,
-   money owed, comped, cancelled — and Object.keys would also widen the union back to string. */
-const STATUS_FILTERS: (RegistrationStatus | undefined)[] = [
+   money owed, comped, cancelled — and Object.keys would also widen the union back to string. Partly
+   paid is a shown status, not a stored one (getBookingDisplayStatus), and sits between the two it is
+   made of. */
+const STATUS_FILTERS: (DisplayStatus | undefined)[] = [
     undefined,
     'paid',
+    'partly_paid',
     'pending',
     'waived',
     'refunded',
@@ -167,9 +172,9 @@ let showDonations = $derived(lens === 'donations')
 let showPhotos = $derived(lens === 'photos')
 
 let search = $state('')
-/* undefined is unfiltered. Holding the database's own value rather than a display label also retires the
+/* undefined is unfiltered. Holding a status key rather than a display label also retires the
    `filter.toLowerCase()` the comparison used to need. */
-let statusFilter = $state<RegistrationStatus | undefined>(undefined)
+let statusFilter = $state<DisplayStatus | undefined>(undefined)
 
 function setView(next: RegistrationsLens) {
     goto(urlForLens(page.url, next), { replaceState: true, keepFocus: true, noScroll: true })
@@ -182,6 +187,11 @@ function setView(next: RegistrationsLens) {
    none until it was extracted and every state had to be decided. */
 let visibleBookings = $derived(filterBookings(data.registrations, { search, status: statusFilter }))
 let visiblePeople = $derived(filterPeople(data.people, { search }))
+/* People added to a paid booking whom nobody has paid for. They are in the People lens — they have a
+   place — but the line above it says everyone here is paid or covered, so it names them. */
+let owedPeopleCount = $derived(
+    data.people.filter((person) => getPersonDisplayStatus(person) === 'payment_due').length,
+)
 let visibleDonations = $derived(filterDonations(data.donations, { search }))
 
 /* Payment dates in the READER's timezone, filled in after mount.
@@ -515,6 +525,14 @@ $effect(() => {
             <p class="text-muted-foreground text-xs">
                 Everyone with a place — paid or covered. {data.people.length}
                 {data.people.length === 1 ? 'person' : 'people'}. Unpaid parties are in Bookings.
+                {#if owedPeopleCount > 0}
+                    <span class="text-amber-700 dark:text-amber-400">
+                        {owedPeopleCount} added to a paid party
+                        {owedPeopleCount === 1
+                            ? 'still owes for their place'
+                            : 'still owe for theirs'}.
+                    </span>
+                {/if}
             </p>
 
             {#if data.people.length === 0}
@@ -537,7 +555,8 @@ $effect(() => {
                                                 {person.tierLabel}
                                             </p>
                                         </div>
-                                        <RegistrationStatusBadge status={person.status} />
+                                        <RegistrationStatusBadge
+                                            status={getPersonDisplayStatus(person)} />
                                     </div>
 
                                     <!-- The same three editable fields as the table, stacked. The card is
@@ -600,7 +619,17 @@ $effect(() => {
                             <Table.Body>
                                 {#each visiblePeople as person (person.id)}
                                     <Table.Row>
-                                        <Table.Cell class="font-medium">{person.name}</Table.Cell>
+                                        <Table.Cell class="font-medium">
+                                            <!-- Only for someone nobody has paid for. Everyone else
+                                                 here is paid or covered, so a badge on every row
+                                                 would say nothing. -->
+                                            <div class="flex flex-wrap items-center gap-2">
+                                                {person.name}
+                                                {#if getPersonDisplayStatus(person) === 'payment_due'}
+                                                    <RegistrationStatusBadge status="payment_due" />
+                                                {/if}
+                                            </div>
+                                        </Table.Cell>
                                         <Table.Cell class="text-muted-foreground">
                                             {person.tierLabel}
                                         </Table.Cell>
@@ -688,7 +717,8 @@ $effect(() => {
                                             {registration.contactEmail}
                                         </p>
                                     </div>
-                                    <RegistrationStatusBadge status={registration.status} />
+                                    <RegistrationStatusBadge
+                                        status={getBookingDisplayStatus(registration)} />
                                 </div>
                                 <p
                                     class="text-muted-foreground mt-2 flex items-center gap-2 text-xs">
@@ -774,7 +804,8 @@ $effect(() => {
                                         </div>
                                     </Table.Cell>
                                     <Table.Cell>
-                                        <RegistrationStatusBadge status={registration.status} />
+                                        <RegistrationStatusBadge
+                                            status={getBookingDisplayStatus(registration)} />
                                     </Table.Cell>
                                     <Table.Cell>
                                         <PaymentChannel

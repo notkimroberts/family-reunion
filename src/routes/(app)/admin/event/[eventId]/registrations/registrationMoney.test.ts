@@ -16,6 +16,7 @@ function reg(overrides: Partial<RegistrationMoneyInput> = {}): RegistrationMoney
         stripeFeeCents: null,
         paidAt: new Date('2026-08-10T00:00:00Z'),
         totalCents: ADULT_GROSS,
+        amountDueCents: 0,
         ...overrides,
     }
 }
@@ -155,6 +156,33 @@ describe('getRegistrationMoney', () => {
             const money = getRegistrationMoney(reg({ status: 'refunded', stripeSessionId: null }))
 
             expect(money.lostFeeCents).toBe(0)
+        })
+    })
+
+    /* People added after the booking was paid, whom nobody has paid for. */
+    describe('unpaid places', () => {
+        it('keeps them out of what the reunion keeps, and names them', () => {
+            const money = getRegistrationMoney(
+                reg({
+                    totalCents: ADULT_GROSS + 10000,
+                    amountDueCents: 10000,
+                    stripeFeeCents: 509,
+                }),
+            )
+
+            expect(money).toMatchObject({
+                totalCents: ADULT_GROSS + 10000,
+                unpaidCents: 10000,
+                netCents: ADULT_GROSS - 509,
+            })
+        })
+
+        it('estimates the fee on what was charged, not on the unpaid places', () => {
+            const money = getRegistrationMoney(
+                reg({ totalCents: ADULT_GROSS + 10000, amountDueCents: 10000 }),
+            )
+
+            expect(money.feeCents).toBe(stripeFeeOnChargeCents(ADULT_GROSS))
         })
     })
 })
