@@ -4,9 +4,9 @@ import { db } from '$lib/server/db'
 import { partyMembers, registrations } from '$lib/server/db/schema'
 import { dbg } from '$lib/server/debug'
 import { fulfillDonation, markDonationPaid } from '$lib/server/donations'
-import { decodeSessionMetadata, retrievePaymentFee } from '$lib/server/payments'
+import { settlePaymentFee } from '$lib/server/fees'
+import { decodeSessionMetadata } from '$lib/server/payments'
 import { netBeforeGrossUp } from '$lib/utils/stripeFee'
-import { addedChargeFee } from './_addedChargeFee'
 import { fulfillMemberPayment } from './_fulfillMemberPayment'
 import { sendConfirmation } from './_sendConfirmation'
 import { buildPartyMemberRow } from './buildPartyMemberRow'
@@ -85,9 +85,6 @@ export async function fulfillCheckout(
            Transition note: add_member rows created before this column existed have it NULL, so
            a redelivery of one of those is not deduped by this key. Stripe only redelivers within
            a few days and no live add_member charges predate this change. */
-        /* Read before the transaction: it is a network call to Stripe and must not hold a DB
-           transaction open. Undefined when the fee could not be read, which leaves the column alone. */
-        const feeCents = paymentIntentId ? await retrievePaymentFee(paymentIntentId) : undefined
         const inserted = await db.transaction(async (tx) => {
             const rows = await tx
                 .insert(partyMembers)
@@ -126,18 +123,12 @@ export async function fulfillCheckout(
                 .returning({ id: partyMembers.id })
 
             /* Only touch the parent when a row was actually added — on a redelivery nothing
-               about the registration has changed.
-
-               The fee is ADDED here rather than assigned: this is a second charge on a registration
-               that already paid one fee for its initial checkout. coalesce covers the rows that
-               predate the column, so the first add_member on an old registration still lands a value
-               instead of adding to null. Inside the same guard as updatedAt, so the unique index on
-               stripe_checkout_session_id — which is what rejects a redelivered insert — is also what
-               stops the fee being counted twice. */
+               about the registration has changed. Stripe's fee for this second charge is recorded
+               after the transaction (settlePaymentFee), once per payment intent. */
             if (rows.length > 0) {
                 await tx
                     .update(registrations)
-                    .set(addedChargeFee(feeCents))
+                    .set({ updatedAt: new Date() })
                     .where(eq(registrations.id, registrationId))
             }
             return rows
@@ -150,6 +141,9 @@ export async function fulfillCheckout(
             )
         } else {
             dbg.stripe('add_member inserted party_member id=%s', inserted[0].id)
+            if (paymentIntentId) {
+                await settlePaymentFee(paymentIntentId)
+            }
         }
         return
     }
@@ -163,12 +157,6 @@ export async function fulfillCheckout(
        confirmation email is sent. An unconditional update would re-send on every redelivery.
        'pending' is the only legal source state — a waived or refunded registration must not
        be flipped by a stray webhook. */
-    /* Read before the update for the same reason as above, and because the update is the conditional
-       transition that must stay a single statement. */
-    const registrationFeeCents = paymentIntentId
-        ? await retrievePaymentFee(paymentIntentId)
-        : undefined
-
     const updated = await db
         .update(registrations)
         .set({
@@ -181,10 +169,6 @@ export async function fulfillCheckout(
                Stripe dashboard with. party_members gets its own copy below, but that one is per-member
                and null for anyone who did not pay online. */
             stripePaymentIntentId: paymentIntentId,
-            /* Assigned, not accumulated: this is the registration's first charge, and the conditional
-               pending -> paid transition below means exactly one redelivery can reach this line.
-               Later add_member charges accumulate on top of it. */
-            ...(registrationFeeCents === undefined ? {} : { stripeFeeCents: registrationFeeCents }),
             updatedAt: new Date(),
         })
         .where(and(eq(registrations.id, registrationId), eq(registrations.status, 'pending')))
@@ -221,13 +205,17 @@ export async function fulfillCheckout(
             .set({ stripePaymentIntentId: paymentIntentId })
             .where(eq(partyMembers.registrationId, registrationId))
         dbg.stripe('backfilled payment_intent on party members for registration %s', registrationId)
+        /* Usually 'unavailable' here: Stripe attaches the balance transaction about three seconds
+           after this event, and charge.updated records it then. Tried now as well, because
+           charge.updated can arrive first and find no booking with this intent yet. */
+        await settlePaymentFee(paymentIntentId)
     }
 
     /* A gift paid on the same checkout. Inside the branch that only a successful pending -> paid
        transition reaches, so a redelivery cannot mark it twice.
 
-       No feeCents: this charge has ONE balance transaction, already recorded on the registration
-       above. Writing it here too would count Stripe's cut twice across the two admin figures.
+       No fee on the gift: this charge has ONE balance transaction, and recordPaymentFee puts it on
+       the registration. Writing it here too would count Stripe's cut twice across the two figures.
 
        No separate receipt either — the confirmation email names the gift. */
     if (metadata.donationId) {

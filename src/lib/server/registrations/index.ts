@@ -16,6 +16,7 @@ export {
     removeAdminMember,
     recordRegistrationAudit,
     notifyRegistrationUpdated,
+    neverConfirmed,
     describeRegistrationChange,
     setMemberCheckedIn,
     setShirtGiven,

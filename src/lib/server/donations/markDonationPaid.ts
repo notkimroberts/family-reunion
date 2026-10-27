@@ -17,13 +17,11 @@ export type PaidDonation = {
    receipt is sent. An unconditional update would thank the donor again on every redelivery. Same
    shape as the registration transition in fulfillCheckout, and for the same reason.
 
-   feeCents is left alone when undefined. That is the gift-added-to-a-registration case: both line
-   items were paid in one charge with one balance transaction, and the fee is recorded on the
-   registration — writing it here as well would count it twice. */
+   Writes no fee: recordPaymentFee does, once per payment intent — on a standalone gift here, and
+   for a gift added to a registration on the registration, since both shared one charge. */
 export async function markDonationPaid(params: {
     donationId: string
     stripePaymentIntentId?: string | null
-    feeCents?: number
 }): Promise<PaidDonation | undefined> {
     const [updated] = await db
         .update(donations)
@@ -31,7 +29,6 @@ export async function markDonationPaid(params: {
             status: 'paid',
             paidAt: new Date(),
             stripePaymentIntentId: params.stripePaymentIntentId ?? null,
-            ...(params.feeCents === undefined ? {} : { stripeFeeCents: params.feeCents }),
             updatedAt: new Date(),
         })
         .where(and(eq(donations.id, params.donationId), eq(donations.status, 'pending')))
