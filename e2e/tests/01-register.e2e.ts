@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test'
 import { cancelOnStripeCheckout, payOnStripeCheckout } from '../support/checkout'
 import { E2E_BASE_URL } from '../support/env'
+import { recordedFee } from '../support/flows'
 import { cardPrice, usd } from '../support/money'
 import { readOutbox, waitForEmails } from '../support/outbox'
 import { recordOutcome } from '../support/outcome'
@@ -21,7 +22,8 @@ test('one adult pays by card', async ({ page }) => {
     await expectRegistered(page)
 
     const booking = await onlyBooking()
-    await expect.poll(async () => (await onlyBooking()).stripeFeeCents).not.toBeNull()
+    await expect.poll(async () => (await onlyBooking()).status).toBe('paid')
+    const recorded = await recordedFee()
     const settled = await onlyBooking()
     const [ada] = await membersOf(booking.id)
     const charge = await chargeFacts(settled.stripePaymentIntentId ?? '')
@@ -31,7 +33,7 @@ test('one adult pays by card', async ({ page }) => {
     expect(charge.amountCents).toBe(expectedCharge)
     expect(ada.priceCents).toBe(expectedCharge)
     expect(ada.cardFeeCents).toBe(expectedCharge - ADULT_CENTS)
-    expect(settled.stripeFeeCents).toBe(charge.feeCents)
+    expect.soft(recorded, 'stripe_fee_cents records Stripe’s actual fee').toBe(charge.feeCents)
 
     const [email] = await waitForEmails(1)
     expect(email.to).toBe('ada@example.com')
@@ -46,7 +48,7 @@ test('one adult pays by card', async ({ page }) => {
         storedPriceCents: ada.priceCents,
         storedCardFeeCents: ada.cardFeeCents,
         stripeFeeCents: charge.feeCents,
-        recordedStripeFeeCents: settled.stripeFeeCents,
+        recordedStripeFeeCents: recorded,
         emailSubject: email.subject,
     })
 })
@@ -64,7 +66,8 @@ test('adult, child and a gift on one charge', async ({ page }) => {
     await payOnStripeCheckout(page, 'Bea Family')
     await expectRegistered(page)
 
-    await expect.poll(async () => (await onlyBooking()).stripeFeeCents).not.toBeNull()
+    await expect.poll(async () => (await onlyBooking()).status).toBe('paid')
+    const recorded = await recordedFee()
     const booking = await onlyBooking()
     const members = await membersOf(booking.id)
     const [gift] = await gifts()
@@ -76,7 +79,7 @@ test('adult, child and a gift on one charge', async ({ page }) => {
     )
     expect(charge.amountCents).toBe(places + 5000)
     expect(gift).toMatchObject({ status: 'paid', amountCents: 5000, registrationId: booking.id })
-    expect(booking.stripeFeeCents).toBe(charge.feeCents)
+    expect.soft(recorded, 'stripe_fee_cents records Stripe’s actual fee').toBe(charge.feeCents)
 
     const emails = await waitForEmails(1)
     expect(emails[0].text).toContain(usd(places + 5000))
@@ -87,7 +90,7 @@ test('adult, child and a gift on one charge', async ({ page }) => {
         giftCents: 5000,
         stripeChargeCents: charge.amountCents,
         stripeFeeCents: charge.feeCents,
-        recordedStripeFeeCents: booking.stripeFeeCents,
+        recordedStripeFeeCents: recorded,
         giftStatus: gift.status,
         emailsSent: emails.length,
     })
@@ -122,7 +125,7 @@ test('a redelivered webhook sends nothing twice', async ({ page }) => {
     await payOnStripeCheckout(page, 'Eve Twice')
     await expectRegistered(page)
     await waitForEmails(1)
-    await expect.poll(async () => (await onlyBooking()).stripeFeeCents).not.toBeNull()
+    const feeBefore = await recordedFee()
     const before = await onlyBooking()
 
     const status = await redeliverEvent(
@@ -133,7 +136,7 @@ test('a redelivered webhook sends nothing twice', async ({ page }) => {
 
     const after = await onlyBooking()
     expect((await readOutbox()).length).toBe(1)
-    expect(after.stripeFeeCents).toBe(before.stripeFeeCents)
+    expect(after.stripeFeeCents).toBe(feeBefore)
 
     await recordOutcome({
         redeliveryStatus: status,

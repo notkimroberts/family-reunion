@@ -8,7 +8,7 @@ import {
     settleOwedPlace,
 } from '../support/admin'
 import { payOnStripeCheckout } from '../support/checkout'
-import { bookByCard } from '../support/flows'
+import { bookByCard, recordedFee } from '../support/flows'
 import { cardPrice, usd } from '../support/money'
 import { waitForEmails } from '../support/outbox'
 import { recordOutcome } from '../support/outcome'
@@ -28,7 +28,7 @@ test.beforeEach(async () => {
    is ADDED to the booking's, and they are emailed again. */
 test('person added to a paid booking pays the rest by card', async ({ page, browser }) => {
     const booking = await bookByCard(page, { first: 'Gus', last: 'Owe', email: 'gus@example.com' })
-    const firstFee = booking.stripeFeeCents ?? 0
+    const firstFee = await recordedFee()
 
     const admin = await adminPage(browser)
     await openBooking(admin, seeded.eventId, booking.id)
@@ -63,7 +63,9 @@ test('person added to a paid booking pays the rest by card', async ({ page, brow
         cardFeeCents: cardPrice(CHILD_CENTS) - CHILD_CENTS,
     })
     expect(after.status).toBe('paid')
-    expect(after.stripeFeeCents).toBe(firstCharge.feeCents + secondCharge.feeCents)
+    expect
+        .soft(after.stripeFeeCents, 'both charges’ fees are added to the booking')
+        .toBe(firstCharge.feeCents + secondCharge.feeCents)
     expect(emails[2].text).not.toContain('PAYMENT NEEDED')
 
     await recordOutcome({

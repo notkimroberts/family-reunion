@@ -40,6 +40,7 @@ export async function fillParty(page: Page, party: Party, saveVia: 'bar' | 'card
         await page.locator('#new-last').fill(guest.last)
         await page.locator('#new-tier').selectOption({ label: guest.tier })
         await page.locator('#new-shirt').selectOption(guest.shirt)
+        await page.locator('#new-attended2025').selectOption('no')
         await page
             .locator('[data-slot="card"]', { has: page.locator('#new-first') })
             .getByRole('button', { name: 'Save', exact: true })

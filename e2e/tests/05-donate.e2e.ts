@@ -22,14 +22,17 @@ test('a standalone gift is charged at face value', async ({ page }) => {
     await payOnStripeCheckout(page, 'Flo Giver')
     await expect(page.getByRole('heading', { name: 'Thank you' })).toBeVisible()
 
-    await expect.poll(async () => (await gifts())[0]?.stripeFeeCents ?? null).not.toBeNull()
+    await expect.poll(async () => (await gifts())[0]?.status).toBe('paid')
+    await new Promise((resolve) => setTimeout(resolve, 10_000))
     const [gift] = await gifts()
     const charge = await chargeFacts(gift.stripePaymentIntentId ?? '')
     const [receipt] = await waitForEmails(1)
 
     expect(gift).toMatchObject({ status: 'paid', amountCents: 10000, registrationId: null })
     expect(charge.amountCents).toBe(10000)
-    expect(gift.stripeFeeCents).toBe(charge.feeCents)
+    expect
+        .soft(gift.stripeFeeCents, 'donations.stripe_fee_cents records Stripe’s fee')
+        .toBe(charge.feeCents)
     expect(receipt.text).toContain(usd(10000))
     expect(receipt.idempotencyKey).toBe(`donation/${gift.id}`)
 
