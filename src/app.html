@@ -13,10 +13,13 @@
         <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
         <meta name="apple-mobile-web-app-title" content="Pattersons" />
         <link rel="manifest" href="/site.webmanifest" />
+        <!-- data-domains is APP_DOMAIN, so dev and preview visits are not counted. appHtml.test.ts
+             fails if the two drift apart. -->
         <script
             defer
             src="https://cloud.umami.is/script.js"
-            data-website-id="f59cdcab-9be9-453a-9e7e-5b433ccd3467"></script>
+            data-website-id="f59cdcab-9be9-453a-9e7e-5b433ccd3467"
+            data-domains="pattersonfamilyreunion.com"></script>
         %sveltekit.head%
     </head>
 
