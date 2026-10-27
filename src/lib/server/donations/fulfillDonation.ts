@@ -3,7 +3,7 @@ import { db } from '$lib/server/db'
 import { reunionEvents } from '$lib/server/db/schema'
 import { dbg } from '$lib/server/debug'
 import { sendDonationReceipt } from '$lib/server/email'
-import { retrievePaymentFee } from '$lib/server/payments'
+import { settlePaymentFee } from '$lib/server/fees'
 import { reportError } from '$lib/server/reportError'
 import { markDonationPaid } from './markDonationPaid'
 
@@ -12,10 +12,8 @@ import { markDonationPaid } from './markDonationPaid'
 const UNATTACHED_EVENT_TITLE = 'the family reunion'
 
 /* Webhook fulfillment for a standalone gift: mark it paid, record what Stripe took, thank the donor.
-
-   The fee is read BEFORE the update because it is a network call to Stripe and must not hold a
-   transaction open, and because the update has to stay the single conditional statement that makes
-   redeliveries idempotent. */
+   The fee is usually not readable yet — Stripe attaches it about three seconds later, and
+   charge.updated records it then — so settlePaymentFee tries now as well and counts it once. */
 export async function fulfillDonation(
     donationId: string,
     paymentIntentId: string | null,
@@ -23,17 +21,15 @@ export async function fulfillDonation(
        email's links come from. */
     origin: string,
 ): Promise<void> {
-    const feeCents = paymentIntentId ? await retrievePaymentFee(paymentIntentId) : undefined
-
-    const donation = await markDonationPaid({
-        donationId,
-        stripePaymentIntentId: paymentIntentId,
-        feeCents,
-    })
+    const donation = await markDonationPaid({ donationId, stripePaymentIntentId: paymentIntentId })
 
     if (!donation) {
         dbg.stripe('donation %s not pending; already fulfilled or missing, ignoring', donationId)
         return
+    }
+
+    if (paymentIntentId) {
+        await settlePaymentFee(paymentIntentId)
     }
 
     let eventTitle = UNATTACHED_EVENT_TITLE

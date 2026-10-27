@@ -369,6 +369,18 @@ export const partyMembers = pgTable(
 
 export const donationStatusEnum = pgEnum('donation_status', ['pending', 'paid', 'refunded'])
 
+/* One row per Stripe payment whose fee has been counted, keyed by payment intent. It is what makes
+   recording a fee idempotent across the two moments it can be read: Stripe attaches a charge's
+   balance transaction about three seconds AFTER checkout.session.completed, so the fee usually
+   arrives with charge.updated, and occasionally is already there at fulfillment. Whichever path
+   reads it first inserts this row and adds the fee to the booking or the gift; the other inserts
+   nothing and adds nothing. See recordPaymentFee. */
+export const stripeFees = pgTable('stripe_fees', {
+    paymentIntentId: text('payment_intent_id').primaryKey(),
+    feeCents: integer('fee_cents').notNull(),
+    recordedAt: timestamp('recorded_at', { withTimezone: true }).notNull().defaultNow(),
+})
+
 /* Gifts to the reunion, from both places one can be given: added to a registration checkout, or
    made on its own at /donate.
 

@@ -35,6 +35,10 @@ export async function notifyRegistrationUpdated(params: {
     registrationId: string
     changeSummary: RegistrationChange[]
     viewUrl: (token: string) => string
+    /* The registrant has never been sent a confirmation (neverConfirmed): send this as one — its
+       heading and lead — rather than "Registration updated" with a list of changes to an original
+       they never saw. The changes still key the idempotency fingerprint. */
+    firstNotice?: boolean
 }): Promise<{ sent: boolean }> {
     if (params.changeSummary.length === 0) {
         return { sent: false }
@@ -58,7 +62,11 @@ export async function notifyRegistrationUpdated(params: {
 
             await sendRegistrationConfirmation(
                 payload.to,
-                { ...payload.data, isUpdate: true, changeSummary: params.changeSummary },
+                {
+                    ...payload.data,
+                    isUpdate: !params.firstNotice,
+                    changeSummary: params.changeSummary,
+                },
                 `update/${params.registrationId}/${changeFingerprint(params.changeSummary)}`,
             )
             return 'sent'
