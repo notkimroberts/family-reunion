@@ -20,6 +20,7 @@ bun run db:reseed        # Always truncate all app tables and re-seed
 bun run db:studio        # Drizzle Studio GUI
 
 bun run stripe:dev       # Forward Stripe webhooks to the running dev server
+bun run e2e              # Stripe registration scenarios end to end (Playwright; see e2e/ below)
 bun run email:preview    # Render every email variant to email-previews/ (add `-- --send <address>` to send them; `--from-domain <domain>` sends from a domain other than APP_DOMAIN)
 ```
 
@@ -482,6 +483,16 @@ the same three groups it always had, with `<BUILTIN_MODULES>` and `<THIRD_PARTY_
 explicitly because @ianvs requires them, and `importOrderCaseSensitive: true` to preserve the
 existing ordering. @ianvs additionally sorts named specifiers and merges duplicate type imports from
 one module, which is what the one-time 162-file reformat was.
+
+#### End-to-end scenarios (`e2e/`, `bun run e2e`)
+
+Playwright drives every Stripe registration path through the real site: a production build (`node build`) on 127.0.0.1:4173 against its own database `family_reunion_e2e` (created and migrated by `e2e/run.ts`; `family_reunion` is never touched), Stripe's real hosted Checkout page in test mode with the 4242 card, and `stripe listen` forwarding webhooks. Each scenario checks what Stripe charged, its fee and every refund (read back through the API) against the rows, against an independent copy of the gross-up rule (`e2e/support/money.ts`, deliberately not the app's), against the admin money panel's identity, and against the exact email text.
+
+- **Emails go to an outbox, not Resend.** `EMAIL_OUTBOX_DIR` makes `send()` write each email as JSON (`_writeToOutbox`); it throws if `RAILWAY_ENVIRONMENT` is set, because a container that writes emails to disk delivers none.
+- **The organizer signs in with real 2FA.** The runner recreates `e2e-owner@example.com` with `admin:create`, and `globalSetup` enrolls it through Better Auth's own endpoints and saves the browser state; TOTP codes come from `e2e/support/totp.ts`.
+- **Run it from a normal terminal.** `.env` must hold a `sk_test_` key (the runner refuses any other). Behind a TLS-intercepting network set `NODE_EXTRA_CA_CERTS` (or `NODE_TLS_REJECT_UNAUTHORIZED=0`, test mode only). `--no-build` skips the build when only test files changed; `E2E_DEBUG=1` turns the server's query logging back on. Inside the Claude sandbox the Stripe domains must be allowlisted, and Playwright is started with `node` rather than `bunx`, under which the server could not open its port.
+- **Results:** `e2e/results/outcomes.md` (what each scenario saw), `e2e/report/` (HTML), traces of failures in `e2e/.artifacts/`. `e2e/FINDINGS.md` lists what the suite has found and how it was fixed.
+- Vitest excludes `e2e/**`; scenario files are `*.e2e.ts`.
 
 #### `bun test` is not this project's test runner
 

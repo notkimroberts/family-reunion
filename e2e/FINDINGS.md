@@ -24,7 +24,7 @@ and the status of a fix. Fixes go in their own PR after the run is complete.
 - **Fix:** branch `fix/stripe-fee-and-first-email` — the webhook handles `charge.updated`;
   `recordPaymentFee` counts each payment's fee once (`stripe_fees`, keyed by payment intent). Needs
   `charge.updated` enabled on both Stripe webhook endpoints (test and live).
-- **Status:** fixed on the branch; the scenarios now assert the fee strictly. Verify in run 3.
+- **Status:** fixed in PR #120. **Verified in run 3 (2026-10-27, 20/20 passed):** recorded fee = Stripe's on every path — 524, 968, 854 (524 + 330 across two charges), 320 for a standalone gift.
 
 ## 2. The estimated fee for a cancelled booking with a gift leaves out the gift's share
 
@@ -34,7 +34,7 @@ and the status of a fix. Fixes go in their own PR after the run is complete.
   and Stripe kept the fee on all of it: 896. So In the bank reads 73¢ high for every such cancellation.
 - **Effect:** only while issue 1 stands — a recorded fee is the whole charge's, so fixing issue 1 fixes
   this. Worth a unit test on the estimate path either way.
-- **Status:** resolves with issue 1 (a recorded fee is the whole charge's). Verify in run 3.
+- **Status:** fixed with issue 1. **Verified in run 3:** Lost to refunds 896 = Stripe's fee on the whole charge.
 
 ## 3. A registrant's first email can be titled "Registration updated" (observation)
 
@@ -45,10 +45,9 @@ and the status of a fix. Fixes go in their own PR after the run is complete.
   "updated" may confuse someone who never saw an original.
 - **Fix:** same branch — `neverConfirmed` (a public checkout abandoned at Stripe) makes the organizer's
   save send the confirmation wording (`firstNotice`).
-- **Status:** fixed on the branch; the scenario asserts the subject "Registration confirmed". Verify in
-  run 3.
+- **Status:** fixed in PR #120. **Verified in run 3:** the email is "Registration confirmed: …".
 
-## Checked and correct (run 2)
+## Checked and correct (runs 2 and 3)
 
 Charge = tier price grossed up (16500 → 17024; 10000 → 10330); a gift is charged at face value; the
 owed email asks for the net (10000 → "$100.00") and the card then charges 10330; Zelle/check keeps the
