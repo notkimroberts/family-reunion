@@ -67,7 +67,8 @@ export default defineConfig({
             OWNER_EMAIL: E2E_ADMIN_EMAIL,
             REGISTRATION_PREVIEW_KEY: E2E_PREVIEW_KEY,
             BODY_SIZE_LIMIT: '20M',
-            DEBUG: 'reunion:*',
+            /* Off unless asked for: reunion:db prints every query, tokens included. */
+            DEBUG: process.env.E2E_DEBUG ? 'reunion:*' : '',
             ...(proxyServer
                 ? {
                       HTTPS_PROXY: proxyServer,
