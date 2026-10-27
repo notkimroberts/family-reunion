@@ -73,9 +73,12 @@ export type RegistrationChange = {
    family "a refund has been issued" would be a straightforward lie followed by a phone call. A
    pending registration never paid, and a waived place never had anything to return.
 
+   'mixed' is a booking paid by check with someone added later who paid by card: that card part goes
+   back through Stripe, the rest by hand, and the email has to say both.
+
    Derived from the registration itself rather than passed in by a caller's guess — see
    cancelRegistrationAsAdmin. */
-export type RefundRoute = 'stripe' | 'by_hand' | 'nothing_paid' | 'waived'
+export type RefundRoute = 'stripe' | 'by_hand' | 'mixed' | 'nothing_paid' | 'waived'
 
 export type CancellationEmailData = {
     name: string
@@ -92,6 +95,9 @@ export type CancellationEmailData = {
        for money that is not coming. Zero or absent when there was no gift. */
     keptDonationCents?: number
     refundRoute: RefundRoute
+    /* On a 'mixed' cancellation, the part of totalCents refunded to a card. The rest is returned by
+       hand. Absent on every other route. */
+    cardRefundCents?: number
     /* Where to start again. A cancellation is often a change of plan rather than a decision never to
        come, and the view link is dead by this point. */
     registerUrl: string

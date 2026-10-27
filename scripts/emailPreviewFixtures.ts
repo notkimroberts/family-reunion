@@ -179,6 +179,15 @@ export function emailPreviewFixtures(
             render: () => renderCancellationEmail({ ...cancellation, refundRoute: 'by_hand' }),
         },
         {
+            name: 'cancellation-mixed',
+            render: () =>
+                renderCancellationEmail({
+                    ...cancellation,
+                    refundRoute: 'mixed',
+                    cardRefundCents: 17030,
+                }),
+        },
+        {
             name: 'cancellation-nothing-paid',
             render: () => renderCancellationEmail({ ...cancellation, refundRoute: 'nothing_paid' }),
         },

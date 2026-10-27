@@ -98,7 +98,14 @@ export async function _performCancellation(
         }
     }
 
-    const refundRoute = getRefundRoute(registration)
+    /* A check-paid booking can still hold a card charge: someone added later who paid at
+       /register/pay. That part goes back through Stripe below, so the email must not call the whole
+       refund one to arrange by hand. */
+    const baseRoute = getRefundRoute(registration)
+    const refundRoute = baseRoute === 'by_hand' && uniqueIntents.size > 0 ? 'mixed' : baseRoute
+    const cardRefundCents = sumMemberPrices(
+        members.filter((member) => member.stripePaymentIntentId !== null),
+    )
 
     /* Money definitely arrived through Stripe and we cannot find it. Cancelling now would mark the
        registration refunded with no refund issued anywhere — silent, and unrecoverable without
@@ -195,6 +202,7 @@ export async function _performCancellation(
                    charge that was actually refunded — a paper entry refunds nothing here. */
                 keptDonationCents: gifts.reduce((sum, gift) => sum + gift.amountCents, 0),
                 refundRoute,
+                cardRefundCents: refundRoute === 'mixed' ? cardRefundCents : undefined,
                 registerUrl,
             },
             `cancel/${registrationId}`,

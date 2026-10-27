@@ -164,6 +164,31 @@ describe('cancelRegistrationAsAdmin', () => {
         expect(mockSendCancellation.mock.calls[0][1].totalCents).toBe(16509 + 10330)
     })
 
+    /* Paid by check, then someone added who paid by card at /register/pay. Stripe refunds that
+       part; only the rest is arranged by hand, and the email says so. */
+    it('refunds the card part of a check-paid booking and tells them the rest is by hand', async () => {
+        const seeded = await seedRegistration(db, {
+            ...PAPER_PAID,
+            members: [
+                { name: 'Wanda', priceCents: 16000, stripePaymentIntentId: null },
+                { name: 'Jada', priceCents: 10330, stripePaymentIntentId: 'pi_2' },
+            ],
+        })
+
+        await cancelRegistrationAsAdmin({
+            registrationId: seeded.registrationId,
+            eventId: seeded.eventId,
+            registerUrl: REGISTER_URL,
+        })
+
+        expect(mockRefund).toHaveBeenCalledWith('pi_2', undefined, expect.any(String))
+        expect(mockSendCancellation.mock.calls[0][1]).toMatchObject({
+            refundRoute: 'mixed',
+            totalCents: 26330,
+            cardRefundCents: 10330,
+        })
+    })
+
     /* The pairing invariant, enforced at the write rather than trusted from the route: a URL naming one
        year must not cancel another year's registration. */
     it('404s when the registration belongs to a different event', async () => {

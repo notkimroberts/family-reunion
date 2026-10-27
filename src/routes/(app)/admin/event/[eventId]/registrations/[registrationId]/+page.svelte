@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/car
 import { Separator } from '$lib/components/ui/separator'
 import * as Table from '$lib/components/ui/table'
 import { Tooltip, TooltipContent, TooltipTrigger } from '$lib/components/ui/tooltip'
+import { sumMemberPrices } from '$lib/general/pricing'
 import {
     formatPrice,
     getBookingDisplayStatus,
@@ -383,6 +384,9 @@ async function handleCopyEmail() {
         contactName={data.registration.contactName}
         paymentState={payment}
         totalCents={money.collectedCents}
+        cardRefundCents={sumMemberPrices(
+            data.members.filter((member) => member.stripePaymentIntentId !== null),
+        )}
         memberCount={data.members.length}
         bind:open={cancelDialogOpen} />
 {/if}

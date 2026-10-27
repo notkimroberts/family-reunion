@@ -35,12 +35,16 @@ let {
     contactName,
     paymentState,
     totalCents,
+    cardRefundCents,
     memberCount,
     open = $bindable(false),
 }: {
     contactName: string
     paymentState: PaymentState
     totalCents: number
+    /* The part paid by card on a booking otherwise paid by hand — someone added later who paid at
+       /register/pay. Stripe refunds that part; the rest still has to be returned by hand. */
+    cardRefundCents: number
     memberCount: number
     open: boolean
 } = $props()
@@ -48,7 +52,11 @@ let {
 /* formatUsd carries the currency symbol, because a dollar sign written in a script block is
    corrupted by `bun run format` — which is how this dialog came to offer to refund "165.09".
    See formatUsd and the formatting note in CLAUDE.md. */
-let consequence = $derived(CONSEQUENCE[paymentState](formatUsd(totalCents)))
+let consequence = $derived(
+    paymentState === 'paid_offline' && cardRefundCents > 0
+        ? `${formatUsd(cardRefundCents)} was paid by card and will be refunded to that card now, through Stripe. The other ${formatUsd(totalCents - cardRefundCents)} was paid directly, so you will need to return it yourself.`
+        : CONSEQUENCE[paymentState](formatUsd(totalCents)),
+)
 </script>
 
 <AlertDialog bind:open>
