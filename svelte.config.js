@@ -20,6 +20,7 @@ const SENTRY_CSP_REPORT_URI = `https://o4506248569946112.ingest.us.sentry.io/api
    - script-src 'self': SvelteKit adds a nonce for its inline hydration script (mode 'auto').
    - style-src 'unsafe-inline': SSR style="" attributes, app.html's included. With it, SvelteKit adds
      no style nonce, which would otherwise make the browser ignore 'unsafe-inline'.
+   - Umami: script from cloud.umami.is; Umami Cloud sends events to api-gateway.umami.dev.
    - worker-src blob:: Sentry session replay compresses in a worker built from a blob.
    - frame-src: the Google My Maps embed (MAP_EMBED_URL).
    - form-action Stripe: /register and /donate answer with a 303 to Checkout. When the form posts
@@ -27,10 +28,15 @@ const SENTRY_CSP_REPORT_URI = `https://o4506248569946112.ingest.us.sentry.io/api
 /** @type {NonNullable<import('@sveltejs/kit').KitConfig['csp']>['reportOnly']} */
 const cspReportOnlyValue = {
     'default-src': ['self'],
-    'script-src': ['self'],
+    'script-src': ['self', 'https://cloud.umami.is'],
     'style-src': ['self', 'unsafe-inline'],
     'img-src': ['self', 'data:'],
-    'connect-src': ['self', 'https://o4506248569946112.ingest.us.sentry.io'],
+    'connect-src': [
+        'self',
+        'https://o4506248569946112.ingest.us.sentry.io',
+        'https://cloud.umami.is',
+        'https://api-gateway.umami.dev',
+    ],
     'worker-src': ['self', 'blob:'],
     'frame-src': ['https://www.google.com'],
     'form-action': ['self', 'https://checkout.stripe.com'],

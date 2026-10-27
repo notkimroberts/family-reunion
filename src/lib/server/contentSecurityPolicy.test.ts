@@ -43,6 +43,11 @@ describe('report-only Content Security Policy', () => {
         expect(reportOnly['worker-src']).toContain('blob:')
     })
 
+    it('lets Umami load its script and send events', () => {
+        expect(reportOnly['script-src']).toContain('https://cloud.umami.is')
+        expect(reportOnly['connect-src']).toContain('https://api-gateway.umami.dev')
+    })
+
     it('lets the program page frame the map', () => {
         expect(reportOnly['frame-src']).toContain(new URL(MAP_EMBED_URL).origin)
     })
