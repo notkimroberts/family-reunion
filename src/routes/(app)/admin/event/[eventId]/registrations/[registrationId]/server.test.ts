@@ -206,6 +206,28 @@ describe('POST .../registrations/[registrationId] save', () => {
         expect(mockSendConfirmation).toHaveBeenCalledOnce()
     })
 
+    /* The seeded booking is a public checkout abandoned at Stripe: nothing has emailed its
+       registrant. Marking it paid must send a confirmation, not "Registration updated". */
+    it('sends a first email as a confirmation when the registrant was never confirmed', async () => {
+        await save(editForm({ status: 'paid' }))
+
+        const [, data] = mockSendConfirmation.mock.calls[0]
+        expect(data.isUpdate).toBe(false)
+    })
+
+    /* A paper entry was emailed when it was entered, so a later change is an update. */
+    it('sends an update to a registrant who was already emailed', async () => {
+        await db
+            .update(registrations)
+            .set({ stripeSessionId: null })
+            .where(eq(registrations.id, seeded.registrationId))
+
+        await save(editForm({ status: 'paid' }))
+
+        const [, data] = mockSendConfirmation.mock.calls[0]
+        expect(data.isUpdate).toBe(true)
+    })
+
     it('builds the view URL from the request origin', async () => {
         await save(editForm({ status: 'paid' }))
 

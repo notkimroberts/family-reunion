@@ -391,6 +391,95 @@ describe('POST /api/webhooks/stripe', () => {
         })
     })
 
+    /* What a real payment looks like (the e2e run, 2026-10-27): at checkout.session.completed the
+       charge has no balance transaction yet; Stripe attaches it about three seconds later and sends
+       charge.updated. The fee must be recorded then — and once, whichever event reads it first. */
+    describe('the fee arriving with charge.updated', () => {
+        const NO_BALANCE_TRANSACTION = { latest_charge: { balance_transaction: null } }
+
+        function deliverChargeUpdated(
+            paymentIntent: string,
+            balanceTransaction: string | null = 'txn_1',
+        ) {
+            mockConstructEvent.mockReturnValue({
+                type: 'charge.updated',
+                data: {
+                    object: {
+                        payment_intent: paymentIntent,
+                        balance_transaction: balanceTransaction,
+                    },
+                },
+            })
+            return POST(makeRequest('{}', 'sig'))
+        }
+
+        it('records the fee when it was not there at fulfillment', async () => {
+            const seeded = await seedRegistration(db, { status: 'pending' })
+            mockPaymentIntentRetrieve.mockResolvedValueOnce(NO_BALANCE_TRANSACTION)
+            await deliver(registrationSession(seeded.registrationId, { payment_intent: 'pi_1' }))
+            expect((await registrationRow(seeded.registrationId)).stripeFeeCents).toBeNull()
+
+            const res = await deliverChargeUpdated('pi_1')
+
+            expect(res.status).toBe(200)
+            expect((await registrationRow(seeded.registrationId)).stripeFeeCents).toBe(509)
+        })
+
+        it('does not count it twice when charge.updated is redelivered or repeats', async () => {
+            const seeded = await seedRegistration(db, { status: 'pending' })
+            mockPaymentIntentRetrieve.mockResolvedValueOnce(NO_BALANCE_TRANSACTION)
+            await deliver(registrationSession(seeded.registrationId, { payment_intent: 'pi_1' }))
+
+            await deliverChargeUpdated('pi_1')
+            await deliverChargeUpdated('pi_1')
+
+            expect((await registrationRow(seeded.registrationId)).stripeFeeCents).toBe(509)
+        })
+
+        it('does not add it again when fulfillment had already recorded it', async () => {
+            const seeded = await seedRegistration(db, { status: 'pending' })
+            await deliver(registrationSession(seeded.registrationId, { payment_intent: 'pi_1' }))
+
+            await deliverChargeUpdated('pi_1')
+
+            expect((await registrationRow(seeded.registrationId)).stripeFeeCents).toBe(509)
+        })
+
+        /* Events are not ordered. charge.updated first finds no booking with the intent; the
+           fulfillment that follows reads the fee itself. */
+        it('records it at fulfillment when charge.updated arrived first', async () => {
+            /* An unpaid booking carries no intent anywhere yet — the seed's default member has one. */
+            const seeded = await seedRegistration(db, {
+                status: 'pending',
+                members: [
+                    { name: 'Alice Patterson', priceCents: 16509, stripePaymentIntentId: null },
+                ],
+            })
+
+            await deliverChargeUpdated('pi_1')
+            expect((await registrationRow(seeded.registrationId)).stripeFeeCents).toBeNull()
+            await deliver(registrationSession(seeded.registrationId, { payment_intent: 'pi_1' }))
+
+            expect((await registrationRow(seeded.registrationId)).stripeFeeCents).toBe(509)
+        })
+
+        it('asks Stripe nothing while the charge has no balance transaction', async () => {
+            await deliverChargeUpdated('pi_1', null)
+
+            expect(mockPaymentIntentRetrieve).not.toHaveBeenCalled()
+        })
+
+        it('records a standalone gift’s fee on the gift', async () => {
+            const donationId = await seedDonation()
+            mockPaymentIntentRetrieve.mockResolvedValueOnce(NO_BALANCE_TRANSACTION)
+            await deliver(donationSession(donationId, { payment_intent: 'pi_gift' }))
+
+            await deliverChargeUpdated('pi_gift')
+
+            expect((await donationRow(donationId)).stripeFeeCents).toBe(509)
+        })
+    })
+
     describe('add_member', () => {
         it('inserts the member keyed on the checkout session id', async () => {
             const seeded = await seedRegistration(db)

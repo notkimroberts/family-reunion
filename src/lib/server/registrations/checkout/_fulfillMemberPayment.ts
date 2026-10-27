@@ -3,15 +3,16 @@ import type Stripe from 'stripe'
 import { db } from '$lib/server/db'
 import { partyMembers, registrations } from '$lib/server/db/schema'
 import { dbg } from '$lib/server/debug'
-import { retrievePaymentFee, type MemberPaymentSessionMetadata } from '$lib/server/payments'
+import { settlePaymentFee } from '$lib/server/fees'
+import { type MemberPaymentSessionMetadata } from '$lib/server/payments'
 import { reportError } from '$lib/server/reportError'
-import { addedChargeFee } from './_addedChargeFee'
 import { sendConfirmation } from './_sendConfirmation'
 
 /* Webhook branch for a card payment of the places still owed on a paid booking (/register/pay).
 
    Each member is settled by a conditional UPDATE on payment_due = true, which is what makes a Stripe
-   redelivery harmless: the second delivery matches no row, so it adds no fee and sends no email. The
+   redelivery harmless: the second delivery matches no row, so it sends no email. Stripe's fee is
+   recorded once per payment intent by settlePaymentFee, whichever event reads it first. The
    rows are updated in a fixed order inside one transaction, so two concurrent deliveries lock them in
    the same order and the second finds nothing left to settle.
 
@@ -35,10 +36,6 @@ export async function fulfillMemberPayment(params: {
     const context = { registrationId, stripeSessionId: session.id, paymentIntentId }
 
     dbg.stripe('member_payment registrationId=%s members=%d', registrationId, charges.length)
-
-    /* Read before the transaction: a network call to Stripe must not hold one open. Undefined when
-       the fee could not be read, which leaves the column alone. */
-    const feeCents = paymentIntentId ? await retrievePaymentFee(paymentIntentId) : undefined
 
     const ordered = [...charges].sort((a, b) => a.memberId.localeCompare(b.memberId))
 
@@ -65,12 +62,10 @@ export async function fulfillMemberPayment(params: {
             settled.push(...rows.map((row) => row.id))
         }
 
-        /* Inside the same guard as the settlement, so a redelivery that settles nobody cannot
-           count the fee twice. */
         if (settled.length > 0) {
             await tx
                 .update(registrations)
-                .set(addedChargeFee(feeCents))
+                .set({ updatedAt: new Date() })
                 .where(eq(registrations.id, registrationId))
         }
         return settled
@@ -107,6 +102,10 @@ export async function fulfillMemberPayment(params: {
     if (settledIds.length === 0) {
         dbg.stripe('member_payment for session %s settled nobody; not emailing', session.id)
         return
+    }
+
+    if (paymentIntentId) {
+        await settlePaymentFee(paymentIntentId)
     }
 
     dbg.stripe('member_payment settled %d member(s) on %s', settledIds.length, registrationId)

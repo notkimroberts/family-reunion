@@ -14,6 +14,7 @@ import {
     describeRegistrationChange,
     getRegistrationMembers,
     getRegistrationWithEvent,
+    neverConfirmed,
     notifyRegistrationUpdated,
     recordRegistrationAudit,
     reissueViewLink,
@@ -145,6 +146,8 @@ export const actions: Actions = {
         }
 
         const previousStatus = found.registration.status
+        /* Read before the save changes the status: whether this email is the registrant's first. */
+        const firstNotice = neverConfirmed(found.registration)
         /* Drives the "what changed" block in the email, so only things the registrant would care
            about belong in here. Edited values carry before → after. */
         const changes: RegistrationChange[] = []
@@ -287,6 +290,7 @@ export const actions: Actions = {
                 registrationId: event.params.registrationId,
                 changeSummary: changes,
                 viewUrl: (token) => `${event.url.origin}/register/view?token=${token}`,
+                firstNotice,
             })
         } catch (err) {
             reportError('registration update notification failed', err, {
