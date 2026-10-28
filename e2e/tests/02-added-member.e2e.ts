@@ -52,7 +52,15 @@ test('person added to a paid booking pays the rest by card', async ({ page, brow
         )
         .toBe(false)
     const paid = (await membersOf(booking.id)).find((member) => member.name === 'Hal Owe')
-    const secondCharge = await chargeFacts(paid?.stripePaymentIntentId ?? '')
+    /* chargeFacts reads -1 until Stripe attaches the balance transaction, a few seconds after
+       payment; an expected total computed before then can never be reached. */
+    let secondCharge = await chargeFacts(paid?.stripePaymentIntentId ?? '')
+    await expect
+        .poll(async () => {
+            secondCharge = await chargeFacts(paid?.stripePaymentIntentId ?? '')
+            return secondCharge.feeCents
+        })
+        .toBeGreaterThanOrEqual(0)
     const firstCharge = await chargeFacts(booking.stripePaymentIntentId ?? '')
     const after = await onlyBooking()
     const emails = await waitForEmails(3)
