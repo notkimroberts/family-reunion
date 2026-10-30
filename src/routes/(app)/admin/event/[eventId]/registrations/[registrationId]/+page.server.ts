@@ -7,14 +7,16 @@ import { requireAdmin } from '$lib/server/auth/guards'
 import { db } from '$lib/server/db'
 import { registrationAudit, user as userTable } from '$lib/server/db/schema'
 import { dbg } from '$lib/server/debug'
-import { getPaidGiftsForRegistration } from '$lib/server/donations'
+import { getDonationsForEvent, getPaidGiftsForRegistration } from '$lib/server/donations'
 import type { RegistrationChange } from '$lib/server/email'
 import {
     addAdminMember,
     cancelRegistrationAsAdmin,
     describeRegistrationChange,
+    getEventPeople,
     getRegistrationMembers,
     getRegistrationWithEvent,
+    getRegistrationsForEvent,
     neverConfirmed,
     notifyRegistrationUpdated,
     recordRegistrationAudit,
@@ -63,29 +65,35 @@ export const load: PageServerLoad = async (event) => {
 
     const found = await loadPairedRegistration(event.params)
 
-    const [members, tiers, gifts, history] = await Promise.all([
-        getRegistrationMembers(event.params.registrationId),
-        getTiersForEvent(found.registration.eventId),
-        getPaidGiftsForRegistration(event.params.registrationId),
-        db
-            .select({
-                id: registrationAudit.id,
-                action: registrationAudit.action,
-                detail: registrationAudit.detail,
-                createdAt: registrationAudit.createdAt,
-                /* The snapshot is the reliable one; the join is only a fallback for rows written
+    /* The last three feed the event status panel beside the booking, the same one the list shows, so
+       the year's figures stay in view while a booking is worked. */
+    const [members, tiers, gifts, history, eventRegistrations, eventPeople, eventDonations] =
+        await Promise.all([
+            getRegistrationMembers(event.params.registrationId),
+            getTiersForEvent(found.registration.eventId),
+            getPaidGiftsForRegistration(event.params.registrationId),
+            db
+                .select({
+                    id: registrationAudit.id,
+                    action: registrationAudit.action,
+                    detail: registrationAudit.detail,
+                    createdAt: registrationAudit.createdAt,
+                    /* The snapshot is the reliable one; the join is only a fallback for rows written
                    before actor_name existed. See recordRegistrationAudit. */
-                actorName: registrationAudit.actorName,
-                joinedActorName: userTable.name,
-            })
-            .from(registrationAudit)
-            /* Left join: a row whose organizer account was deleted has a null actorUserId, and the
+                    actorName: registrationAudit.actorName,
+                    joinedActorName: userTable.name,
+                })
+                .from(registrationAudit)
+                /* Left join: a row whose organizer account was deleted has a null actorUserId, and the
                change still has to appear in the history. */
-            .leftJoin(userTable, eq(registrationAudit.actorUserId, userTable.id))
-            .where(eq(registrationAudit.registrationId, event.params.registrationId))
-            .orderBy(desc(registrationAudit.createdAt))
-            .limit(AUDIT_HISTORY_LIMIT),
-    ])
+                .leftJoin(userTable, eq(registrationAudit.actorUserId, userTable.id))
+                .where(eq(registrationAudit.registrationId, event.params.registrationId))
+                .orderBy(desc(registrationAudit.createdAt))
+                .limit(AUDIT_HISTORY_LIMIT),
+            getRegistrationsForEvent(event.params.eventId),
+            getEventPeople(event.params.eventId),
+            getDonationsForEvent(event.params.eventId),
+        ])
 
     /* defaults() rather than superValidate() so opening the editor shows the current values with no
        errors on them; the action validates on submit. members/removedMemberIds start empty because the
@@ -121,6 +129,9 @@ export const load: PageServerLoad = async (event) => {
         /* Gifts given with this booking. Kept apart from totalCents: a gift buys no place, and
            getRegistrationMoney feeds the panel, which adds gifts on its own. */
         giftCents: gifts.reduce((sum, gift) => sum + gift.amountCents, 0),
+        eventRegistrations,
+        eventPeople,
+        eventDonations,
     }
 }
 
