@@ -18,6 +18,7 @@ import {
     getPaymentState,
 } from '$lib/utils'
 import { formatPartialBirthDate } from '$lib/utils/age'
+import EventStatusPanel from '../EventStatusPanel.svelte'
 import RegistrationStatusBadge from '../RegistrationStatusBadge.svelte'
 import { getRegistrationMoney } from '../registrationMoney'
 import AdminCancelDialog from './AdminCancelDialog.svelte'
@@ -159,227 +160,246 @@ async function handleCopyEmail() {
     <title>{data.registration.contactName} — Registrations</title>
 </svelte:head>
 
-<section class="col-span-12 flex flex-col gap-6">
-    <div class="flex flex-wrap items-start justify-between gap-3">
-        <div class="flex flex-col gap-1">
-            <a
-                href="/admin/event/{data.event.id}/registrations"
-                class="text-muted-foreground hover:text-foreground text-sm">← Registrations</a>
-            <div class="flex flex-wrap items-center gap-3">
-                <h1>{data.registration.contactName}</h1>
-                <RegistrationStatusBadge
-                    status={getBookingDisplayStatus({
-                        status: data.registration.status,
-                        amountDueCents: data.amountDueCents,
-                    })} />
-            </div>
-            <!-- Contact details live here rather than in a card of their own: an email and a phone
+<section class="col-span-12 grid grid-cols-1 gap-6 lg:grid-cols-[20rem_1fr]">
+    <!-- The list's status panel, so leaving the list does not lose the year's figures. Under the
+         booking on a phone, where the booking is what was opened. -->
+    <div class="order-last lg:order-first">
+        <EventStatusPanel
+            event={data.event}
+            isOwner={data.isOwner}
+            registrations={data.eventRegistrations}
+            people={data.eventPeople}
+            donations={data.eventDonations}
+            headingTag="h2" />
+    </div>
+
+    <div class="flex min-w-0 flex-col gap-6">
+        <div class="flex flex-wrap items-start justify-between gap-3">
+            <div class="flex flex-col gap-1">
+                <a
+                    href="/admin/event/{data.event.id}/registrations"
+                    class="text-muted-foreground hover:text-foreground text-sm">← Registrations</a>
+                <div class="flex flex-wrap items-center gap-3">
+                    <h1>{data.registration.contactName}</h1>
+                    <RegistrationStatusBadge
+                        status={getBookingDisplayStatus({
+                            status: data.registration.status,
+                            amountDueCents: data.amountDueCents,
+                        })} />
+                </div>
+                <!-- Contact details live here rather than in a card of their own: an email and a phone
                  number are not worth a titled panel, and reading them next to the name is how an
                  organizer actually uses them. -->
-            <div class="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
-                <span class="font-medium">{data.registration.contactEmail}</span>
-                <Button type="button" variant="ghost" size="sm" onclick={handleCopyEmail}>
-                    {#if copiedEmail}
-                        <Check class="size-3" /> Copied
-                    {:else}
-                        <Copy class="size-3" /> Copy
+                <div class="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
+                    <span class="font-medium">{data.registration.contactEmail}</span>
+                    <Button type="button" variant="ghost" size="sm" onclick={handleCopyEmail}>
+                        {#if copiedEmail}
+                            <Check class="size-3" /> Copied
+                        {:else}
+                            <Copy class="size-3" /> Copy
+                        {/if}
+                    </Button>
+                    {#if data.registration.contactPhone}
+                        <span class="text-muted-foreground">·</span>
+                        <span class="font-medium">{data.registration.contactPhone}</span>
                     {/if}
-                </Button>
-                {#if data.registration.contactPhone}
                     <span class="text-muted-foreground">·</span>
-                    <span class="font-medium">{data.registration.contactPhone}</span>
+                    <span class="text-muted-foreground">
+                        Party of {data.members.length} · ${formatPrice(data.totalCents)}
+                    </span>
+                </div>
+                {#if pendingReason}
+                    <p class="text-muted-foreground text-xs">{pendingReason}</p>
                 {/if}
-                <span class="text-muted-foreground">·</span>
-                <span class="text-muted-foreground">
-                    Party of {data.members.length} · ${formatPrice(data.totalCents)}
-                </span>
             </div>
-            {#if pendingReason}
-                <p class="text-muted-foreground text-xs">{pendingReason}</p>
-            {/if}
-        </div>
-        {#if !editing}
-            <div class="flex flex-wrap items-center gap-2">
-                <Tooltip>
-                    <!-- `child` rather than the default trigger: bits-ui's trigger renders its own
+            {#if !editing}
+                <div class="flex flex-wrap items-center gap-2">
+                    <Tooltip>
+                        <!-- `child` rather than the default trigger: bits-ui's trigger renders its own
                          <button>, and a <form> inside a button is invalid markup.
 
                          type="submit" comes AFTER the spread, deliberately. bits-ui defaults its
                          trigger to type="button" and merges that into these props, so spreading them
                          last would leave a button that opens a tooltip and never submits — a failure
                          nothing but clicking it would reveal. -->
-                    <TooltipTrigger>
-                        {#snippet child({ props })}
-                            <form method="POST" action="?/reissue_link" use:enhance>
-                                <Button {...props} type="submit" variant="outline" size="sm">
-                                    <Mail class="size-4" />
-                                    Email new link
-                                </Button>
-                            </form>
-                        {/snippet}
-                    </TooltipTrigger>
-                    <!-- Written for an organizer, not an engineer. "Only a hash is stored" says
+                        <TooltipTrigger>
+                            {#snippet child({ props })}
+                                <form method="POST" action="?/reissue_link" use:enhance>
+                                    <Button {...props} type="submit" variant="outline" size="sm">
+                                        <Mail class="size-4" />
+                                        Email new link
+                                    </Button>
+                                </form>
+                            {/snippet}
+                        </TooltipTrigger>
+                        <!-- Written for an organizer, not an engineer. "Only a hash is stored" says
                          nothing to the person deciding whether to press this; what they need to know
                          is that it is safe and what the registrant ends up with. -->
-                    <TooltipContent class="max-w-xs">
-                        Emails them a new link to view their registration. We can't look up the link
-                        they already have, so this makes a fresh one — their old link still works
-                        for another week.
-                    </TooltipContent>
-                </Tooltip>
-                {#if !isCancelled}
-                    <!-- Outline rather than destructive: it sits beside the primary action an
+                        <TooltipContent class="max-w-xs">
+                            Emails them a new link to view their registration. We can't look up the
+                            link they already have, so this makes a fresh one — their old link still
+                            works for another week.
+                        </TooltipContent>
+                    </Tooltip>
+                    {#if !isCancelled}
+                        <!-- Outline rather than destructive: it sits beside the primary action an
                          organizer actually came here for, and the dialog behind it is where the
                          weight belongs. -->
-                    <Button variant="outline" size="sm" onclick={() => (cancelDialogOpen = true)}>
-                        <Ban class="size-4" />
-                        Cancel registration
-                    </Button>
-                    <Button onclick={() => (editing = true)}>
-                        <Pencil class="size-4" />
-                        Edit registration
-                    </Button>
-                {/if}
-            </div>
-        {/if}
-    </div>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onclick={() => (cancelDialogOpen = true)}>
+                            <Ban class="size-4" />
+                            Cancel registration
+                        </Button>
+                        <Button onclick={() => (editing = true)}>
+                            <Pencil class="size-4" />
+                            Edit registration
+                        </Button>
+                    {/if}
+                </div>
+            {/if}
+        </div>
 
-    <!-- Cancellation is the one status that changes what an organizer may DO here, so it keeps an
+        <!-- Cancellation is the one status that changes what an organizer may DO here, so it keeps an
          alert. The rest is said once, by the badge.
 
          What it says about the money depends on whether any arrived. A checkout the payer abandoned
          is cancelled with no refund issued — _performCancellation returns without calling Stripe —
          and telling an organizer "the money has gone back" there sends them looking for a refund
          that does not exist, or worse, reassures a registrant who was never charged. -->
-    {#if isCancelled}
-        <Alert variant="destructive">
-            <TriangleAlert class="size-4" />
-            <AlertTitle>{money.wasCharged ? 'Cancelled and refunded' : 'Cancelled'}</AlertTitle>
-            <AlertDescription>
-                {#if money.wasCharged}
-                    The money has gone back. This cannot be added to or reinstated — ask them to
-                    register again.
-                {:else}
-                    Nothing was ever charged, so there was nothing to refund. This cannot be added
-                    to or reinstated — ask them to register again.
-                {/if}
-            </AlertDescription>
-        </Alert>
-    {/if}
+        {#if isCancelled}
+            <Alert variant="destructive">
+                <TriangleAlert class="size-4" />
+                <AlertTitle>{money.wasCharged ? 'Cancelled and refunded' : 'Cancelled'}</AlertTitle>
+                <AlertDescription>
+                    {#if money.wasCharged}
+                        The money has gone back. This cannot be added to or reinstated — ask them to
+                        register again.
+                    {:else}
+                        Nothing was ever charged, so there was nothing to refund. This cannot be
+                        added to or reinstated — ask them to register again.
+                    {/if}
+                </AlertDescription>
+            </Alert>
+        {/if}
 
-    {#if editing}
-        <RegistrationEditForm
-            form={data.form}
-            members={data.members}
-            tiers={data.tiers}
-            {isPaid}
-            onCancel={() => (editing = false)}
-            onSaved={() => (editing = false)} />
-    {:else}
-        <Card>
-            <CardHeader class="pb-3">
-                <CardTitle class="text-base">Party</CardTitle>
-            </CardHeader>
-            <CardContent>
-                <AdminDataView>
-                    {#snippet mobileCards()}
-                        <div class="flex flex-col gap-3">
-                            {#each data.members as member, index (member.id)}
-                                {@const born = formatPartialBirthDate(
-                                    member.birthYear,
-                                    member.birthMonth,
-                                    member.birthDay,
-                                )}
-                                <div class="rounded-lg border p-3">
-                                    <div class="flex items-start justify-between gap-2">
-                                        <p class="font-medium">{member.name}</p>
-                                        <PriceWithCardFee
-                                            priceCents={member.priceCents}
-                                            cardFeeCents={member.cardFeeCents} />
-                                    </div>
-                                    <p class="text-muted-foreground mt-0.5 text-xs">
-                                        {member.tierLabel}{#if born}
-                                            · b. {born}{/if}{#if member.shirtSize}
-                                            · shirt {member.shirtSize}{/if}
-                                    </p>
-                                    {#if origins[index] === 'payment_due'}
-                                        <div class="mt-2">
-                                            <SettleMemberPayment
-                                                memberId={member.id}
-                                                name={member.name}
-                                                priceCents={member.priceCents}
-                                                contactEmail={data.registration.contactEmail} />
-                                        </div>
-                                    {:else}
-                                        <p class="text-muted-foreground mt-1 text-xs">
-                                            {originCopyValue[origins[index]]}
-                                        </p>
-                                    {/if}
-                                </div>
-                            {/each}
-                        </div>
-                    {/snippet}
-
-                    {#snippet desktopTable()}
-                        <Table.Root>
-                            <Table.Header>
-                                <Table.Row>
-                                    <Table.Head>Name</Table.Head>
-                                    <Table.Head>Registration Tier</Table.Head>
-                                    <Table.Head>Born</Table.Head>
-                                    <Table.Head>Shirt</Table.Head>
-                                    <Table.Head>Payment</Table.Head>
-                                    <Table.Head class="text-right">Price</Table.Head>
-                                </Table.Row>
-                            </Table.Header>
-                            <Table.Body>
+        {#if editing}
+            <RegistrationEditForm
+                form={data.form}
+                members={data.members}
+                tiers={data.tiers}
+                {isPaid}
+                onCancel={() => (editing = false)}
+                onSaved={() => (editing = false)} />
+        {:else}
+            <Card>
+                <CardHeader class="pb-3">
+                    <CardTitle class="text-base">Party</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <AdminDataView>
+                        {#snippet mobileCards()}
+                            <div class="flex flex-col gap-3">
                                 {#each data.members as member, index (member.id)}
-                                    <Table.Row>
-                                        <Table.Cell class="font-medium">{member.name}</Table.Cell>
-                                        <Table.Cell>{member.tierLabel}</Table.Cell>
-                                        <Table.Cell class="text-muted-foreground">
-                                            {formatPartialBirthDate(
-                                                member.birthYear,
-                                                member.birthMonth,
-                                                member.birthDay,
-                                            ) || '—'}
-                                        </Table.Cell>
-                                        <Table.Cell class="text-muted-foreground">
-                                            {member.shirtSize ?? '—'}
-                                        </Table.Cell>
-                                        <Table.Cell class="text-muted-foreground">
-                                            {#if origins[index] === 'payment_due'}
+                                    {@const born = formatPartialBirthDate(
+                                        member.birthYear,
+                                        member.birthMonth,
+                                        member.birthDay,
+                                    )}
+                                    <div class="rounded-lg border p-3">
+                                        <div class="flex items-start justify-between gap-2">
+                                            <p class="font-medium">{member.name}</p>
+                                            <PriceWithCardFee
+                                                priceCents={member.priceCents}
+                                                cardFeeCents={member.cardFeeCents} />
+                                        </div>
+                                        <p class="text-muted-foreground mt-0.5 text-xs">
+                                            {member.tierLabel}{#if born}
+                                                · b. {born}{/if}{#if member.shirtSize}
+                                                · shirt {member.shirtSize}{/if}
+                                        </p>
+                                        {#if origins[index] === 'payment_due'}
+                                            <div class="mt-2">
                                                 <SettleMemberPayment
                                                     memberId={member.id}
                                                     name={member.name}
                                                     priceCents={member.priceCents}
                                                     contactEmail={data.registration.contactEmail} />
-                                            {:else}
+                                            </div>
+                                        {:else}
+                                            <p class="text-muted-foreground mt-1 text-xs">
                                                 {originCopyValue[origins[index]]}
-                                            {/if}
-                                        </Table.Cell>
-                                        <Table.Cell class="text-right tabular-nums">
-                                            <PriceWithCardFee
-                                                priceCents={member.priceCents}
-                                                cardFeeCents={member.cardFeeCents} />
-                                        </Table.Cell>
-                                    </Table.Row>
+                                            </p>
+                                        {/if}
+                                    </div>
                                 {/each}
-                            </Table.Body>
-                        </Table.Root>
-                    {/snippet}
-                </AdminDataView>
+                            </div>
+                        {/snippet}
 
-                <Separator class="my-4" />
-                <RegistrationMoneyCard
-                    {money}
-                    status={data.registration.status}
-                    giftCents={data.giftCents} />
-            </CardContent>
-        </Card>
+                        {#snippet desktopTable()}
+                            <Table.Root>
+                                <Table.Header>
+                                    <Table.Row>
+                                        <Table.Head>Name</Table.Head>
+                                        <Table.Head>Registration Tier</Table.Head>
+                                        <Table.Head>Born</Table.Head>
+                                        <Table.Head>Shirt</Table.Head>
+                                        <Table.Head>Payment</Table.Head>
+                                        <Table.Head class="text-right">Price</Table.Head>
+                                    </Table.Row>
+                                </Table.Header>
+                                <Table.Body>
+                                    {#each data.members as member, index (member.id)}
+                                        <Table.Row>
+                                            <Table.Cell class="font-medium"
+                                                >{member.name}</Table.Cell>
+                                            <Table.Cell>{member.tierLabel}</Table.Cell>
+                                            <Table.Cell class="text-muted-foreground">
+                                                {formatPartialBirthDate(
+                                                    member.birthYear,
+                                                    member.birthMonth,
+                                                    member.birthDay,
+                                                ) || '—'}
+                                            </Table.Cell>
+                                            <Table.Cell class="text-muted-foreground">
+                                                {member.shirtSize ?? '—'}
+                                            </Table.Cell>
+                                            <Table.Cell class="text-muted-foreground">
+                                                {#if origins[index] === 'payment_due'}
+                                                    <SettleMemberPayment
+                                                        memberId={member.id}
+                                                        name={member.name}
+                                                        priceCents={member.priceCents}
+                                                        contactEmail={data.registration
+                                                            .contactEmail} />
+                                                {:else}
+                                                    {originCopyValue[origins[index]]}
+                                                {/if}
+                                            </Table.Cell>
+                                            <Table.Cell class="text-right tabular-nums">
+                                                <PriceWithCardFee
+                                                    priceCents={member.priceCents}
+                                                    cardFeeCents={member.cardFeeCents} />
+                                            </Table.Cell>
+                                        </Table.Row>
+                                    {/each}
+                                </Table.Body>
+                            </Table.Root>
+                        {/snippet}
+                    </AdminDataView>
 
-        <RegistrationHistory history={data.history} />
-    {/if}
+                    <Separator class="my-4" />
+                    <RegistrationMoneyCard
+                        {money}
+                        status={data.registration.status}
+                        giftCents={data.giftCents} />
+                </CardContent>
+            </Card>
+
+            <RegistrationHistory history={data.history} />
+        {/if}
+    </div>
 </section>
 
 {#if !isCancelled}

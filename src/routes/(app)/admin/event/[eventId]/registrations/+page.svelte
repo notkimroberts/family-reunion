@@ -1,5 +1,5 @@
 <script lang="ts">
-import { ClipboardCheck, Gift, Images, Plus, Search, Settings, Users } from '@lucide/svelte'
+import { Gift, Images, Plus, Search, Users } from '@lucide/svelte'
 import { SvelteMap } from 'svelte/reactivity'
 import { goto } from '$app/navigation'
 import { page } from '$app/state'
@@ -8,7 +8,6 @@ import { Button } from '$lib/components/ui/button'
 import { Input } from '$lib/components/ui/input'
 import { Separator } from '$lib/components/ui/separator'
 import * as Table from '$lib/components/ui/table'
-import { Tooltip, TooltipContent, TooltipTrigger } from '$lib/components/ui/tooltip'
 import { HOST_HOTEL } from '$lib/general/constants'
 import { REGISTRATION_STATUS_STYLES } from '$lib/general/constants/REGISTRATION_STATUS_STYLES'
 import type { EventPerson } from '$lib/server/registrations'
@@ -24,9 +23,7 @@ import {
 import { formatBirthDate } from '$lib/utils/age'
 import { groupPeopleByBooking } from '../checkin/groupPeopleByBooking'
 import ArrivalToggle from './ArrivalToggle.svelte'
-import HeadcountPanel from './HeadcountPanel.svelte'
-import MoneyPanel from './MoneyPanel.svelte'
-import OrderSheet from './OrderSheet.svelte'
+import EventStatusPanel from './EventStatusPanel.svelte'
 import PartyArrivalCell from './PartyArrivalCell.svelte'
 import PaymentChannel from './PaymentChannel.svelte'
 import PaymentNote from './PaymentNote.svelte'
@@ -35,15 +32,10 @@ import PhotoQueue from './PhotoQueue.svelte'
 import PublishedPhotos from './PublishedPhotos.svelte'
 import RegistrationStatusBadge from './RegistrationStatusBadge.svelte'
 import ShirtGivenToggle from './ShirtGivenToggle.svelte'
-import { getDonationTotals } from './donationTotals'
-import { getEventMoney } from './eventMoney'
 import { filterBookings } from './filterBookings'
 import { filterDonations } from './filterDonations'
 import { filterPeople } from './filterPeople'
-import { getPeopleSummary } from './peopleSummary'
-import { getRegistrationTotals } from './registrationTotals'
 import { lensFromUrl, type RegistrationsLens } from './registrationsViewUrl'
-import { getRoomSummary } from './roomSummary'
 import { rowAccent } from './rowAccent'
 import { urlForLens } from './urlForLens'
 
@@ -147,20 +139,6 @@ const PERSON_FIELDS = [
 
 let { data } = $props()
 
-let totals = $derived(getRegistrationTotals(data.registrations))
-let donationTotals = $derived(getDonationTotals(data.donations))
-/* Registration money and gift money added into the one figure the panel leads with. See
-   eventMoney.ts — the rows it renders beneath that figure have to sum to it. */
-let money = $derived(getEventMoney(totals, donationTotals))
-/* The order sheet — shirt sizes per tier and the meal split. Derived from the same people the People
-   lens lists, and only shown there. */
-let summary = $derived(getPeopleSummary(data.people))
-/* The room block, off the bookings rather than the people: a household books rooms together. */
-let rooms = $derived(getRoomSummary(data.registrations))
-/* How many of those people are actually here, off the same rows the People lens lists. Counted here
-   rather than in getRegistrationTotals: that derives from bookings, and its figures are pinned by the
-   money identity — an arrival belongs to neither side of it. */
-let arrivedCount = $derived(data.people.filter((person) => person.checkedInAt !== null).length)
 /* Each booking's arrivals and shirts, for the Bookings lens. Off the same people, so a booking with no
    places (pending, refunded) has no group and shows a dash. */
 let doorGroups = $derived(
@@ -227,62 +205,12 @@ $effect(() => {
 </svelte:head>
 
 <section class="col-span-12 grid grid-cols-1 gap-6 lg:grid-cols-[20rem_1fr]">
-    <!-- Stays on screen while you work the list, rather than being a dashboard you navigate away from. -->
-    <aside class="bg-card flex flex-col gap-4 self-start rounded-lg border p-4 lg:sticky lg:top-6">
-        <!-- No year picker. Switching years is what /admin is for — it lists every reunion with its
-             numbers on it, which is more use for choosing between them than a select showing only
-             years. The picker also had to be hidden when there was one event, so it was a control that
-             sometimes existed. -->
-        <div class="flex items-start justify-between gap-2">
-            <div class="flex flex-col gap-1.5">
-                <h1 class="text-base font-semibold">{data.event.title}</h1>
-                <p class="text-muted-foreground text-xs">Reunion year {data.event.year}</p>
-            </div>
-            <!-- Top-right, as an icon: it is the only thing on this card that leaves the page, and it
-                 is not what the card is for. Hidden for anyone who is not the owner — hiding is not the
-                 protection, the settings route guards its own load and every action; this only stops
-                 advertising a door that will not open. -->
-            {#if data.isOwner}
-                <Tooltip>
-                    <TooltipTrigger>
-                        {#snippet child({ props })}
-                            <Button
-                                {...props}
-                                href="/admin/event/{data.event.id}/settings"
-                                variant="ghost"
-                                size="icon"
-                                class="size-8 shrink-0">
-                                <Settings class="size-4" />
-                                <span class="sr-only">Event settings</span>
-                            </Button>
-                        {/snippet}
-                    </TooltipTrigger>
-                    <TooltipContent>Event settings</TooltipContent>
-                </Tooltip>
-            {/if}
-        </div>
-
-        <Separator />
-
-        <MoneyPanel {money} />
-
-        <Separator />
-
-        <!-- The way to the door. A full-width button rather than the icon Settings uses: on the day this
-             is the most-used link in the admin area, and it is found on a phone in a hall. -->
-        <Button href="/admin/event/{data.event.id}/checkin" variant="outline" class="w-full">
-            <ClipboardCheck class="size-4" />
-            Check in arrivals
-        </Button>
-
-        <Separator />
-
-        <HeadcountPanel {totals} {arrivedCount} />
-
-        <Separator />
-
-        <OrderSheet {summary} attendingCount={totals.attendingCount} {rooms} />
-    </aside>
+    <EventStatusPanel
+        event={data.event}
+        isOwner={data.isOwner}
+        registrations={data.registrations}
+        people={data.people}
+        donations={data.donations} />
 
     <div class="flex min-w-0 flex-col gap-3">
         <div class="flex flex-wrap items-center gap-2">
