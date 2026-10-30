@@ -109,7 +109,9 @@ let donationCents = $state(0)
 let contactSaved = $state(false)
 /* For CheckoutBar, whose button runs the card's own Save. */
 let informationCard = $state<ReturnType<typeof YourInformationCard>>()
-/* For CheckoutBar too, whose button brings the notice's checkbox into view. */
+/* For CheckoutBar too, whose button brings the hotel question, then the notice's checkbox, into
+   view. */
+let hotelCard = $state<ReturnType<typeof HostHotelStayCard>>()
 let safetyNotice = $state<ReturnType<typeof CheckoutSafetyNotice>>()
 
 let contactName = $derived(
@@ -271,8 +273,6 @@ let notYetOpen = $derived(isBeforeRegistrationOpens(opensAt) && !data.preview)
         </div>
     </section>
 
-    <MerchCards class="col-span-12" />
-
     {#if notYetOpen && opensAt}
         <RegistrationOpensNotice {opensAt} />
     {:else if isLocked}
@@ -328,12 +328,15 @@ let notYetOpen = $derived(isBeforeRegistrationOpens(opensAt) && !data.preview)
                         error={$errors.members?._errors?.[0]} />
 
                     <HostHotelStayCard
+                        bind:this={hotelCard}
                         bind:stayingAtHostHotel={$form.stayingAtHostHotel}
                         error={$errors.stayingAtHostHotel?.[0]} />
 
                     {#key draftGeneration}
                         <DonationCard bind:donationCents error={$errors.donationCents?.[0]} />
                     {/key}
+
+                    <MerchCards />
                 </div>
 
                 <!-- Right: order summary, then the scam notice. Not sticky: CheckoutBar keeps the
@@ -352,9 +355,11 @@ let notYetOpen = $derived(isBeforeRegistrationOpens(opensAt) && !data.preview)
                         placeholderText="Fill in your details, then press “Save your details” at the bottom of the screen."
                         submitFootnote={STRIPE_CHECKOUT_NOTE}
                         submitError={$message}
-                        submitBlockedReason={$form.paymentSafetyAcknowledged
-                            ? undefined
-                            : 'Read the safety notice below and tick the box to pay.'} />
+                        submitBlockedReason={!$form.stayingAtHostHotel
+                            ? 'Answer whether your party will stay at the host hotel.'
+                            : !$form.paymentSafetyAcknowledged
+                              ? 'Read the safety notice below and tick the box to pay.'
+                              : undefined} />
                     <!-- Required before paying, and refused by the server without it: the notice
                          protects only someone who has read it. -->
                     <CheckoutSafetyNotice
@@ -374,9 +379,11 @@ let notYetOpen = $derived(isBeforeRegistrationOpens(opensAt) && !data.preview)
                 peopleCount={1 + members.length}
                 hasGift={quote.donationCents > 0}
                 {canSubmit}
+                hotelAnswered={!!$form.stayingAtHostHotel}
                 acknowledged={$form.paymentSafetyAcknowledged}
                 submitting={$submitting}
                 onsave={() => informationCard?.save()}
+                onhotel={() => hotelCard?.reveal()}
                 onacknowledge={() => safetyNotice?.reveal()} />
         </form>
     {/if}

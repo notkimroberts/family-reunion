@@ -16,14 +16,19 @@ import { cn } from '$lib/utils.js'
    selectable value. */
 let {
     value = $bindable(),
+    ref = $bindable(),
     id,
     name,
+    invalid,
     class: className,
     children,
 }: {
     value: T
+    ref?: HTMLSelectElement
     id?: string
     name?: string
+    /* Sets aria-invalid, which superforms' scrollToError looks for on a failed submit. */
+    invalid?: boolean
     class?: string
     children: Snippet
 } = $props()
@@ -33,7 +38,9 @@ let {
     <select
         {id}
         {name}
+        bind:this={ref}
         bind:value
+        aria-invalid={invalid ? true : undefined}
         data-slot="native-select"
         class={cn(
             'dark:bg-input/30 border-input focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:border-destructive aria-invalid:ring-destructive/20 h-9 w-full appearance-none rounded-md border bg-transparent py-1 pr-8 pl-2.5 text-base shadow-xs transition-[color,box-shadow] outline-none focus-visible:ring-3 disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:ring-3 md:text-sm',
