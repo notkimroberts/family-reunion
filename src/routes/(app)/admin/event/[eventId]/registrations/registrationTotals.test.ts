@@ -200,15 +200,15 @@ describe('getRegistrationTotals', () => {
             expect(totals.bankedCents).toBe(58000)
         })
 
-        /* The gross-up is designed so the org nets the tier price. That is the sum this must reproduce:
-           charge $165.09, Stripe keeps $5.09, $160 lands. */
-        it('lands the intended net on a single card payment', () => {
+        /* The gross-up covers the processing fee but not Radar's 5¢. That is the sum this must
+           reproduce: charge $165.09, Stripe keeps $5.14, $159.95 lands. */
+        it('lands the intended net less Radar on a single card payment', () => {
             const totals = getRegistrationTotals([
                 reg({ stripeSessionId: 'cs_1', totalCents: ADULT_GROSS }),
             ])
 
             expect(totals.paidCents).toBe(ADULT_GROSS)
-            expect(totals.bankedCents).toBe(16000)
+            expect(totals.bankedCents).toBe(15995)
         })
 
         /* 30¢ is charged once per PAYMENT. Deducting it once from the summed total instead would

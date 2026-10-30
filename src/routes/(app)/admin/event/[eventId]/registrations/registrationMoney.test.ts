@@ -124,9 +124,9 @@ describe('getRegistrationMoney', () => {
     })
 
     describe('what the reunion keeps', () => {
-        it('nets the tier price on a card payment', () => {
-            /* The gross-up is designed so the org nets the tier price: charge $165.09, keep $160. */
-            expect(getRegistrationMoney(reg()).netCents).toBe(16000)
+        it('nets the tier price less Radar on a card payment', () => {
+            /* The gross-up covers the processing fee, not Radar's 5¢: charge $165.09, keep $159.95. */
+            expect(getRegistrationMoney(reg()).netCents).toBe(15995)
         })
 
         it('keeps a check in full', () => {

@@ -100,8 +100,8 @@ describe('getDonationTotals', () => {
     it('estimates a standalone gift with no recorded fee and says so', () => {
         const totals = getDonationTotals([gift({ amountCents: 5000, stripeFeeCents: null })])
 
-        /* 2.9% of $50 plus 30¢. */
-        expect(totals.feeCents).toBe(175)
+        /* 2.9% of $50, plus 30¢, plus Radar's 5¢. */
+        expect(totals.feeCents).toBe(180)
         expect(totals.feesAreExact).toBe(false)
     })
 
