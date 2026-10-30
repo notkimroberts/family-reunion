@@ -1,7 +1,7 @@
 import { stringify } from 'devalue'
 import { eq } from 'drizzle-orm'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { partyMembers, registrationAudit, registrations } from '$lib/server/db/schema'
+import { donations, partyMembers, registrationAudit, registrations } from '$lib/server/db/schema'
 import { resetTestDb } from '$lib/server/db/testing/resetTestDb'
 import { hashViewToken } from '$lib/server/registrations/hashViewToken'
 import { seedEvent } from '$lib/server/testing/seedEvent'
@@ -31,7 +31,7 @@ vi.mock('$lib/server/email', () => ({
 }))
 vi.mock('$lib/server/reportError', () => ({ reportError: mockReportError }))
 
-const { actions } = await import('./+page.server')
+const { actions, load } = await import('./+page.server')
 
 const ADMIN = { id: 'admin-1', name: 'Kim Roberts', role: 'admin' }
 
@@ -557,5 +557,39 @@ describe('the event in the URL must own the registration', () => {
 
         expect(mockSendRecovery).not.toHaveBeenCalled()
         expect((await registrationRow()).viewToken).toBe(hashViewToken(seeded.viewToken))
+    })
+})
+
+describe('load: gifts given with the booking', () => {
+    async function seedGift(amountCents: number, status: 'pending' | 'paid' | 'refunded') {
+        await db.insert(donations).values({
+            eventId,
+            registrationId: seeded.registrationId,
+            donorName: 'Alice Patterson',
+            donorEmail: 'alice@example.com',
+            amountCents,
+            status,
+        })
+    }
+
+    async function loadedGiftCents() {
+        const result = await load(makeEvent(undefined) as unknown as Parameters<typeof load>[0])
+        return (result as { giftCents: number }).giftCents
+    }
+
+    it('sums the paid gifts and leaves them out of the party total', async () => {
+        await seedGift(2500, 'paid')
+        await seedGift(1000, 'paid')
+
+        const result = await load(makeEvent(undefined) as unknown as Parameters<typeof load>[0])
+
+        expect(result).toMatchObject({ giftCents: 3500, totalCents: 25000 })
+    })
+
+    it('counts no gift that is pending or refunded', async () => {
+        await seedGift(2500, 'pending')
+        await seedGift(1000, 'refunded')
+
+        expect(await loadedGiftCents()).toBe(0)
     })
 })
