@@ -34,7 +34,9 @@ const methodIconValue = {
 
    The Zelle address is the reunion email, filled in after mount like the home page's contact
    details, so plain HTML scrapers never see it. */
-let { class: className = '' }: { class?: string } = $props()
+/* showHeading is off where the page already titles the notice with its own section heading. */
+let { class: className = '', showHeading = true }: { class?: string; showHeading?: boolean } =
+    $props()
 
 let zelleRecipient = $state(ZELLE_RECIPIENT_PLACEHOLDER)
 
@@ -47,16 +49,18 @@ let methods = $derived(paymentMethods(zelleRecipient))
 
 <Card class={className}>
     <CardContent class="flex flex-col gap-5">
-        <div class="flex items-start gap-3">
-            <div
-                class="bg-primary/10 text-primary flex size-10 shrink-0 items-center justify-center rounded-full">
-                <ShieldCheck class="size-5" />
+        {#if showHeading}
+            <div class="flex items-start gap-3">
+                <div
+                    class="bg-primary/10 text-primary flex size-10 shrink-0 items-center justify-center rounded-full">
+                    <ShieldCheck class="size-5" />
+                </div>
+                <div class="flex flex-col gap-1">
+                    <h3>{paymentSafetyCopyValue.heading}</h3>
+                    <p class="text-muted-foreground text-base">{paymentSafetyCopyValue.lede}</p>
+                </div>
             </div>
-            <div class="flex flex-col gap-1">
-                <h3>{paymentSafetyCopyValue.heading}</h3>
-                <p class="text-muted-foreground text-base">{paymentSafetyCopyValue.lede}</p>
-            </div>
-        </div>
+        {/if}
 
         <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div

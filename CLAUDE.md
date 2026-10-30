@@ -315,6 +315,8 @@ A public gallery at `/photos`, with public contribution and organizer moderation
 ### Styling
 
 - **Tailwind CSS v4 + shadcn-svelte** (vega preset, neutral base color). No DaisyUI.
+- **The palette is "Mint & Ink", from the reunion's brand board**: mint cream `#efe5cf`, cobalt ink `#506276`, mood `#182632`, dusk `#6d6f73`. It lives only in the `:root` / `.dark` tokens in `src/app.css` — components use the semantic classes, never the hex values. Muted text is a darkened dusk (`#5c5e62`), because dusk itself is under 4.5:1 on the mint surfaces.
+- **Brand artwork is in `static/brand/`**, cut from the designer's Canva exports: `logo-wordmark.png` (the header), `logo-wordmark-dark.png` (the same with light outlines — on navy the dark-outlined magnolia disappears), `tree-mark-ink.png` (the tree recolored cobalt for light backgrounds; the original cream tree disappears on mint), and the shirt and tote mockups. The recolored cuts are ours, not the designer's.
 - Dark mode via `.dark` class on `<html>` (not `data-theme` attribute)
 - Theme constants (`LIGHT_THEME = 'light'`, `DARK_THEME = 'dark'`) in `$lib/general/constants/THEMES.ts`
 - Theme toggle persisted in localStorage via `$lib/stores/theme`

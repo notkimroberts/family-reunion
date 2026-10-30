@@ -1,6 +1,7 @@
 <script lang="ts">
 import {
     BedDouble,
+    ChevronDown,
     ExternalLink,
     Hotel,
     Info,
@@ -8,7 +9,7 @@ import {
     Navigation,
     SquareParking,
 } from '@lucide/svelte'
-import { InstagramIcon, LocationDisclosure, ParkingList } from '$lib/components'
+import { InstagramIcon, ParkingList } from '$lib/components'
 import { Badge } from '$lib/components/ui/badge'
 import { Button } from '$lib/components/ui/button'
 import { Card, CardContent } from '$lib/components/ui/card'
@@ -24,128 +25,139 @@ let mapEmbedUrl = $derived(
 let directionsUrl = $derived(
     `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(location.mapQuery)}`,
 )
+
+let hasDetails = $derived(location.details.length > 0 || Boolean(location.bookingDeadline))
+let detailsLabel = $derived(location.kind === 'hotel' ? 'Room rates' : 'Details')
+// Names what the fold holds, e.g. "Map, room rates & parking".
+let moreLabel = $derived.by(() => {
+    const parts = [
+        'Map',
+        ...(hasDetails ? [detailsLabel.toLowerCase()] : []),
+        ...(location.parking?.length ? ['parking'] : []),
+    ]
+    return parts.length > 1 ? `${parts.slice(0, -1).join(', ')} & ${parts.at(-1)}` : parts[0]
+})
 </script>
 
-<!-- Four rows on the parent grid's SUBGRID — photo, heading, map, actions — so each row is as tall
-     as the taller card's and lines up across the pair. As two independent flex columns they drifted:
-     the hotel has a Room rates section the venue does not, which pushed its map a row lower, and the
-     venue's buttons sat under a gap. ReunionLocations' parent must be the grid, which it is on /.
-     Without subgrid support (iOS < 16) the rows just stack, unaligned but intact.
-
-     gap-5 on the card, and no top padding on the content: the card's own gap already separates the
-     photo from the heading, and adding pt-6 on top of it doubled the space. -->
-<Card class="row-span-4 grid grid-rows-subgrid gap-5">
-    {#if location.imageUrl}
-        <img
-            src={location.imageUrl}
-            alt={location.name}
-            loading="lazy"
-            class="aspect-video w-full object-cover" />
-    {:else}
-        <!-- Flat placeholder until a photo is added; no gradient, matching the app's surfaces. -->
-        <div class="bg-muted flex aspect-video w-full items-center justify-center border-b">
-            {#if location.kind === 'hotel'}
-                <Hotel class="text-muted-foreground size-10" />
-            {:else}
-                <MapPin class="text-muted-foreground size-10" />
+<!-- Compact on first load: photo thumbnail, name, address and the one action that runs out (the room
+     block). The map, rates, parking and links sit in one native <details> below, so the section is a
+     few lines tall until someone wants more. The map iframe is lazy, so a closed card loads no map. -->
+<Card size="sm">
+    <CardContent class="flex gap-4">
+        {#if location.imageUrl}
+            <img
+                src={location.imageUrl}
+                alt={location.name}
+                loading="lazy"
+                class="size-24 shrink-0 rounded-lg object-cover sm:size-28" />
+        {:else}
+            <div
+                class="bg-muted flex size-24 shrink-0 items-center justify-center rounded-lg sm:size-28">
+                {#if location.kind === 'hotel'}
+                    <Hotel class="text-muted-foreground size-8" />
+                {:else}
+                    <MapPin class="text-muted-foreground size-8" />
+                {/if}
+            </div>
+        {/if}
+        <div class="flex min-w-0 flex-col gap-1">
+            <div class="flex items-center gap-2">
+                <Badge variant="secondary" class="w-fit">{location.badge}</Badge>
+                {#if location.instagramUrl}
+                    <a
+                        href={location.instagramUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="text-muted-foreground hover:text-foreground transition-colors"
+                        aria-label="{location.name} on Instagram">
+                        <InstagramIcon class="size-4" />
+                    </a>
+                {/if}
+            </div>
+            <h3>{location.name}</h3>
+            {#if location.address}
+                <p class="text-sm font-medium">{location.address}</p>
             {/if}
+            <p class="text-muted-foreground text-sm">{location.tagline}</p>
         </div>
+    </CardContent>
+
+    {#if location.bookingUrl}
+        <CardContent class="flex flex-col gap-1">
+            <Button
+                href={location.bookingUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                class="font-semibold">
+                <BedDouble class="size-4" />
+                Book the room block
+                <ExternalLink class="size-4" />
+            </Button>
+            {#if location.bookingDeadline}
+                <p class="text-muted-foreground text-center text-xs">
+                    Our rate holds until {location.bookingDeadline}
+                </p>
+            {/if}
+        </CardContent>
     {/if}
 
-    <CardContent class="flex flex-col gap-2">
-        <div class="flex items-center justify-between gap-2">
-            <Badge variant="secondary" class="w-fit">{location.badge}</Badge>
-            {#if location.instagramUrl}
-                <a
-                    href={location.instagramUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    class="text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5 text-xs transition-colors"
-                    aria-label="{location.name} on Instagram">
-                    <InstagramIcon class="size-4" />
-                    Instagram
-                </a>
-            {/if}
-        </div>
-        <h3>{location.name}</h3>
-        {#if location.address}
-            <p class="inline-flex items-center gap-1.5 text-sm font-medium">
-                <MapPin class="text-muted-foreground size-4 shrink-0" />
-                {location.address}
-            </p>
-        {/if}
-        <p class="text-muted-foreground text-sm">{location.tagline}</p>
-    </CardContent>
+    <details class="group border-t">
+        <summary
+            class="flex cursor-pointer list-none items-center justify-between gap-2 px-4 pt-3 text-sm font-medium [&::-webkit-details-marker]:hidden">
+            {moreLabel}
+            <ChevronDown
+                class="text-muted-foreground size-4 transition-transform group-open:rotate-180" />
+        </summary>
+        <div class="flex flex-col gap-4 px-4 pt-4">
+            <div class="aspect-video w-full overflow-hidden rounded-lg border">
+                <iframe
+                    src={mapEmbedUrl}
+                    title="Map of {location.name}"
+                    loading="lazy"
+                    referrerpolicy="no-referrer-when-downgrade"
+                    class="h-full w-full border-0"></iframe>
+            </div>
 
-    <!-- Above the collapsible sections, so opening one never moves the map. -->
-    <CardContent>
-        <div class="aspect-video w-full overflow-hidden rounded-lg border">
-            <iframe
-                src={mapEmbedUrl}
-                title="Map of {location.name}"
-                loading="lazy"
-                referrerpolicy="no-referrer-when-downgrade"
-                class="h-full w-full border-0"></iframe>
-        </div>
-    </CardContent>
-
-    <!-- Sections at the top of the row, buttons pinned to its foot with mt-auto: the hotel has one
-         more section and one more button than the venue, and this keeps both cards' buttons on the
-         same baseline with any difference as one gap between. Sections start collapsed so the gap
-         stays small. -->
-    <CardContent class="flex flex-col gap-4">
-        {#if location.details.length > 0 || location.bookingDeadline}
-            <LocationDisclosure
-                label={location.kind === 'hotel' ? 'Room rates' : 'Details'}
-                icon={location.kind === 'hotel' ? BedDouble : Info}>
-                <dl class="flex flex-col gap-2 text-sm">
-                    {#each location.details as detail (detail.label)}
-                        <div class="flex items-baseline justify-between gap-3">
-                            <dt class="text-muted-foreground">{detail.label}</dt>
-                            <dd class="font-medium">{detail.value}</dd>
-                        </div>
-                    {/each}
-                    <!-- Last, directly under the rates: the price and its expiry are one fact. -->
-                    {#if location.bookingDeadline}
-                        <div class="flex items-baseline justify-between gap-3">
-                            <dt class="text-muted-foreground">Rate holds until</dt>
-                            <dd class="font-medium">{location.bookingDeadline}</dd>
-                        </div>
-                    {/if}
-                </dl>
-            </LocationDisclosure>
-        {/if}
-
-        {#if location.parking?.length}
-            <LocationDisclosure label="Parking" icon={SquareParking}>
-                <ParkingList options={location.parking} />
-            </LocationDisclosure>
-        {/if}
-
-        <div class="mt-auto flex flex-col gap-2">
-            <!-- A row of its own, not a third sibling below: three buttons on one row overflow at
-                 375px. The ONE filled button across both cards, taller and heavier than the rest:
-                 rooms are what runs out, and the deadline under it is the reason to act now rather
-                 than file it. -->
-            {#if location.bookingUrl}
-                <Button
-                    href={location.bookingUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    size="lg"
-                    class="h-12 text-base font-semibold">
-                    <BedDouble class="size-5" />
-                    Book the room block
-                    <ExternalLink class="size-4" />
-                </Button>
-                {#if location.bookingDeadline}
-                    <p class="text-muted-foreground text-center text-xs">
-                        Our rate holds until {location.bookingDeadline}
+            {#if hasDetails}
+                <div class="flex flex-col gap-2">
+                    <p class="inline-flex items-center gap-1.5 text-sm font-medium">
+                        {#if location.kind === 'hotel'}
+                            <BedDouble class="text-muted-foreground size-4" />
+                        {:else}
+                            <Info class="text-muted-foreground size-4" />
+                        {/if}
+                        {detailsLabel}
                     </p>
-                {/if}
+                    <dl class="flex flex-col gap-2 text-sm">
+                        {#each location.details as detail (detail.label)}
+                            <div class="flex items-baseline justify-between gap-3">
+                                <dt class="text-muted-foreground">{detail.label}</dt>
+                                <dd class="font-medium">{detail.value}</dd>
+                            </div>
+                        {/each}
+                        <!-- Last, directly under the rates: the price and its expiry are one fact. -->
+                        {#if location.bookingDeadline}
+                            <div class="flex items-baseline justify-between gap-3">
+                                <dt class="text-muted-foreground">Rate holds until</dt>
+                                <dd class="font-medium">{location.bookingDeadline}</dd>
+                            </div>
+                        {/if}
+                    </dl>
+                </div>
             {/if}
+
+            {#if location.parking?.length}
+                <div class="flex flex-col gap-2">
+                    <p class="inline-flex items-center gap-1.5 text-sm font-medium">
+                        <SquareParking class="text-muted-foreground size-4" />
+                        Parking
+                    </p>
+                    <ParkingList options={location.parking} />
+                </div>
+            {/if}
+
+            <!-- Outline, so booking stays the only filled button in the section. -->
             <div class="flex flex-col gap-2 sm:flex-row">
-                <!-- Outline on both cards, so booking is the only filled button in the section. -->
                 <Button
                     href={location.websiteUrl}
                     target="_blank"
@@ -166,5 +178,5 @@ let directionsUrl = $derived(
                 </Button>
             </div>
         </div>
-    </CardContent>
+    </details>
 </Card>
