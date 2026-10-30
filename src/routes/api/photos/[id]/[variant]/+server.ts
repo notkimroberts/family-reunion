@@ -1,6 +1,5 @@
 import { error } from '@sveltejs/kit'
 import { isUuid } from '$lib/general/ids'
-import { photoFilename } from '$lib/general/photos'
 import { getPhotoKey, getServablePhotoKey, type PhotoVariant } from '$lib/server/photos'
 import { getObjectBody } from '$lib/server/storage'
 import type { RequestHandler } from './$types'
@@ -52,10 +51,9 @@ export const GET: RequestHandler = async ({ params, url, locals, request }) => {
 
     /* ?download turns a view into a save. Set explicitly rather than relying on the anchor's
        `download` attribute, which iOS Safari has historically ignored for cross-document
-       navigations. iOS saves an attachment to Files, never Photos; the photo page's Save button
-       reaches Photos through the share sheet instead. */
+       navigations — the header is what actually reaches Files or Photos. */
     const isDownload = url.searchParams.has('download')
-    const filename = photoFilename(params.id)
+    const filename = `patterson-reunion-${params.id.slice(0, 8)}.jpg`
 
     const headers: Record<string, string> = {
         'content-type': object.contentType,

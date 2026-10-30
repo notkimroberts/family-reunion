@@ -12,9 +12,9 @@ const SHIRT_IMAGES = [
     <CardHeader class="flex flex-col gap-2">
         <CardTitle>Oakland x Mississippi Reunion Shirt</CardTitle>
         <CardDescription>
-            Sneak peek! Buy one on-site at the reunion. The shirt size you choose for each person on
-            the form helps us order enough of each size, but we cannot promise your size will be
-            available.
+            Shirts are not included in registration. They will be sold at the reunion. The shirt
+            size you choose for each person on the form helps us order enough of each size, but we
+            cannot promise your size will be available.
         </CardDescription>
     </CardHeader>
     <CardContent>

@@ -1,1 +1,0 @@
-export { photoFilename } from './photoFilename'

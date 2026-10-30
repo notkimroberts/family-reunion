@@ -1,11 +1,10 @@
 <script lang="ts">
-import { ArrowLeft, ChevronLeft, ChevronRight } from '@lucide/svelte'
+import { ArrowLeft, ChevronLeft, ChevronRight, Download } from '@lucide/svelte'
 import { goto, preloadData } from '$app/navigation'
 import { page } from '$app/state'
 import { Button } from '$lib/components/ui/button'
 import { APP_NAME } from '$lib/general/constants'
 import type { PageData } from './$types'
-import PhotoSaveButton from './PhotoSaveButton.svelte'
 
 type Props = { data: PageData }
 let { data }: Props = $props()
@@ -139,7 +138,10 @@ function handleTouchEnd(event: TouchEvent) {
             Previous
         </Button>
 
-        <PhotoSaveButton photoId={data.photo.id} />
+        <Button href="/api/photos/{data.photo.id}/display?download" size="sm">
+            <Download class="size-4" />
+            Download
+        </Button>
 
         <Button
             href={nextHref}
