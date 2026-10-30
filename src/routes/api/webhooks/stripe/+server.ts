@@ -2,7 +2,7 @@ import type Stripe from 'stripe'
 import { env } from '$env/dynamic/private'
 import { dbg } from '$lib/server/debug'
 import { settlePaymentFee } from '$lib/server/fees'
-import { fulfillCheckout } from '$lib/server/registrations'
+import { fulfillCheckout, handleExpiredCheckout } from '$lib/server/registrations'
 import { getStripe } from '$lib/server/stripe'
 import type { RequestHandler } from './$types'
 
@@ -27,6 +27,13 @@ export const POST: RequestHandler = async ({ request, url }) => {
 
     if (event.type === 'checkout.session.completed') {
         await fulfillCheckout(event.data.object as Stripe.Checkout.Session, url.origin)
+    }
+
+    /* A registration checkout nobody paid, now beyond paying: removes it if the same email has paid
+       on another try. Needs checkout.session.expired enabled on the Stripe webhook endpoint, in test
+       and live mode — without it the duplicates simply stay. */
+    if (event.type === 'checkout.session.expired') {
+        await handleExpiredCheckout(event.data.object as Stripe.Checkout.Session)
     }
 
     /* Stripe attaches the balance transaction — the fee — to a charge about three seconds AFTER

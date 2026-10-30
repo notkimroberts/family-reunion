@@ -14,8 +14,12 @@ import { seedTier } from '$lib/server/testing/seedTier'
    actually looks like in the database a second after they press the button. */
 
 const mockCreateCheckout = vi.fn()
+const mockExpireCheckout = vi.fn()
 
-vi.mock('$lib/server/payments', () => ({ createRegistrationCheckout: mockCreateCheckout }))
+vi.mock('$lib/server/payments', () => ({
+    createRegistrationCheckout: mockCreateCheckout,
+    expireCheckoutSession: mockExpireCheckout,
+}))
 
 const { actions, load } = await import('./+page.server')
 const { env } = await import('$env/dynamic/private')
@@ -59,7 +63,11 @@ const SELF = {
    FormData carrying one `__superform_json` field of devalue-encoded data — not a JSON body. Building
    it any other way makes superValidate ignore the payload entirely and validate a blank form, which
    fails as a 400 that looks like a schema problem. */
-function submit(overrides: Record<string, unknown> = {}, sentCookies: Record<string, string> = {}) {
+function submit(
+    overrides: Record<string, unknown> = {},
+    sentCookies: Record<string, string> = {},
+    jar = fakeCookies(sentCookies),
+) {
     const body = {
         eventId,
         contactFirstName: 'Alice',
@@ -78,7 +86,7 @@ function submit(overrides: Record<string, unknown> = {}, sentCookies: Record<str
     return actions.register({
         request,
         url: new URL('http://localhost/register'),
-        cookies: fakeCookies(sentCookies).cookies,
+        cookies: jar.cookies,
     } as unknown as Parameters<typeof actions.register>[0])
 }
 
@@ -122,6 +130,44 @@ describe('POST /register?/register', () => {
             expect(mockCreateCheckout).not.toHaveBeenCalled()
         },
     )
+
+    /* Pay, Back, Pay again. The cookie the first press set names the booking the second replaces,
+       so one row is left, on the second session. */
+    it('replaces the booking this browser opened on its last Pay', async () => {
+        mockCreateCheckout
+            .mockResolvedValueOnce({ url: 'https://checkout.stripe.test/1', sessionId: 'cs_first' })
+            .mockResolvedValueOnce({
+                url: 'https://checkout.stripe.test/2',
+                sessionId: 'cs_second',
+            })
+        mockExpireCheckout.mockResolvedValue('expired')
+        const firstPress = fakeCookies()
+        await expect(submit({}, {}, firstPress)).rejects.toMatchObject({ status: 303 })
+        const [pendingCookie] = firstPress.set.filter((cookie) => cookie.name === 'reg_pending')
+
+        await expect(submit({}, { reg_pending: pendingCookie.value })).rejects.toMatchObject({
+            status: 303,
+        })
+
+        expect(mockExpireCheckout).toHaveBeenCalledWith('cs_first')
+        const rows = await db.select().from(registrations)
+        expect(rows.map((row) => row.stripeSessionId)).toEqual(['cs_second'])
+    })
+
+    /* Without the cookie — another browser — nothing is replaced, even for the same email. */
+    it('keeps the earlier booking when the browser sends no cookie', async () => {
+        mockCreateCheckout
+            .mockResolvedValueOnce({ url: 'https://checkout.stripe.test/1', sessionId: 'cs_first' })
+            .mockResolvedValueOnce({
+                url: 'https://checkout.stripe.test/2',
+                sessionId: 'cs_second',
+            })
+        await expect(submit()).rejects.toMatchObject({ status: 303 })
+        await expect(submit()).rejects.toMatchObject({ status: 303 })
+
+        expect(mockExpireCheckout).not.toHaveBeenCalled()
+        expect(await db.select().from(registrations)).toHaveLength(2)
+    })
 
     it('creates the party with the contact flagged first', async () => {
         await expect(

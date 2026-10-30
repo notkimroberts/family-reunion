@@ -1004,4 +1004,26 @@ describe('POST /api/webhooks/stripe', () => {
             expect(mockSendEmail).not.toHaveBeenCalled()
         })
     })
+
+    /* Routing only; what the handler deletes is pinned in handleExpiredCheckout.test.ts. */
+    describe('checkout.session.expired', () => {
+        it('removes an expired duplicate of a booking the same email paid', async () => {
+            const paid = await seedRegistration(db, { status: 'paid' })
+            const abandoned = await seedRegistration(db, {
+                eventId: paid.eventId,
+                status: 'pending',
+                stripeSessionId: 'cs_test_registration',
+            })
+            mockConstructEvent.mockReturnValue({
+                type: 'checkout.session.expired',
+                data: { object: registrationSession(abandoned.registrationId) },
+            })
+
+            const response = await POST(makeRequest('{}', 'sig'))
+
+            expect(response.status).toBe(200)
+            expect(await registrationRow(abandoned.registrationId)).toBeUndefined()
+            expect(await registrationRow(paid.registrationId)).toBeDefined()
+        })
+    })
 })
