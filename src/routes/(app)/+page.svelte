@@ -84,6 +84,9 @@ let registrationClosed = $derived(
 let opensAt = $derived(data.event?.registrationOpensAt ?? null)
 let registrationNotYetOpen = $derived(isBeforeRegistrationOpens(opensAt, now))
 
+// The home card drops the smallest preset to fit one row with Donate; /donate still offers all.
+const HOME_PRESET_CENTS = DONATION_PRESET_CENTS.slice(1)
+
 const FAMILY_STATS = [
     { value: '1819', label: 'Nelly arrives at the Port of New Orleans' },
     { value: '1890', label: 'William & Roxie Married' },
@@ -235,18 +238,19 @@ const FAMILY_STATS = [
                         totalCents={data.raised.totalCents}
                         giftCount={data.raised.giftCount} />
                     <!-- LINKS, not the shared picker: this section must not post. The figure travels
-                     to /donate in ?amount= and the picker there receives it. -->
-                    <div class="grid w-full grid-cols-2 gap-2">
-                        {#each DONATION_PRESET_CENTS as cents (cents)}
+                     to /donate in ?amount= and the picker there receives it. Donate shares the row
+                     with the presets to keep the card short. -->
+                    <div class="grid w-full grid-cols-2 gap-2 sm:grid-cols-4">
+                        {#each HOME_PRESET_CENTS as cents (cents)}
                             <Button href="/donate?amount={cents}" variant="outline">
                                 ${formatPrice(cents)}
                             </Button>
                         {/each}
+                        <Button href="/donate">
+                            <HeartHandshake class="size-4" />
+                            Donate
+                        </Button>
                     </div>
-                    <Button href="/donate" size="lg" class="w-full sm:w-fit">
-                        <HeartHandshake class="size-4" />
-                        Donate
-                    </Button>
                 </CardContent>
             </Card>
         </section>
@@ -257,13 +261,6 @@ const FAMILY_STATS = [
          under it. The address is printed too: a mailto: link opens nothing on a desktop with no mail
          client. -->
         <section id="contact" class="flex scroll-mt-24 flex-col">
-            <div class="mx-auto mb-8 max-w-xl text-center">
-                <h2>Get in Touch</h2>
-                <p class="text-muted-foreground mt-2">
-                    Have a question about the reunion? Email is the best way to reach the
-                    organizers.
-                </p>
-            </div>
             <Card>
                 <CardContent class="flex flex-col items-center gap-4 text-center">
                     {#if contactEmail}
