@@ -1,8 +1,10 @@
 <script lang="ts">
-import { HeartHandshake, Mail } from '@lucide/svelte'
+import { ArrowRight, HeartHandshake, Mail } from '@lucide/svelte'
 import { onDestroy, onMount } from 'svelte'
 import {
     DonationRaisedTotal,
+    FamilyRootsCard,
+    MerchCards,
     PaymentSafetyNotice,
     RegistrationDeadline,
     ReunionLocations,
@@ -19,6 +21,7 @@ import {
     FACEBOOK_GROUP_URL,
 } from '$lib/general/constants'
 import { isBeforeRegistrationOpens, isRegistrationClosed } from '$lib/general/registration'
+import { paymentSafetyCopyValue } from '$lib/general/scamSafety'
 import { formatDateRange, formatPrice, formatReunionDateTime, toE164 } from '$lib/utils'
 
 let { data } = $props()
@@ -60,48 +63,6 @@ let eventState = $derived.by(() => {
     return 'past' as const
 })
 
-let countdown = $derived.by(() => {
-    if (!data.event?.startDate || eventState !== 'upcoming') {
-        return { years: 0, months: 0, days: 0, hours: 0, withinOneDay: false }
-    }
-
-    const nowDate = new Date(now)
-    const startDate = new Date(data.event.startDate)
-    const nowMidnight = new Date(nowDate.getFullYear(), nowDate.getMonth(), nowDate.getDate())
-    const startMidnight = new Date(
-        startDate.getFullYear(),
-        startDate.getMonth(),
-        startDate.getDate(),
-    )
-    const totalDays = Math.round(
-        (startMidnight.getTime() - nowMidnight.getTime()) / (1000 * 60 * 60 * 24),
-    )
-    const withinOneDay = totalDays <= 1
-
-    if (withinOneDay) {
-        const hours = Math.floor((startDate.getTime() - now) / (1000 * 60 * 60))
-        return { years: 0, months: 0, days: totalDays, hours, withinOneDay: true }
-    }
-
-    let months =
-        (startDate.getFullYear() - nowDate.getFullYear()) * 12 +
-        (startDate.getMonth() - nowDate.getMonth())
-    const dateAfterMonths = new Date(
-        nowDate.getFullYear(),
-        nowDate.getMonth() + months,
-        nowDate.getDate(),
-    )
-    if (dateAfterMonths > startMidnight) {
-        months--
-    }
-    const baseDate = new Date(nowDate.getFullYear(), nowDate.getMonth() + months, nowDate.getDate())
-    const days = Math.round((startMidnight.getTime() - baseDate.getTime()) / (1000 * 60 * 60 * 24))
-    const years = Math.floor(months / 12)
-    const remainingMonths = months % 12
-
-    return { years, months: remainingMonths, days, hours: 0, withinOneDay: false }
-})
-
 /* formatDateRange pins the reunion's zone, so the server and the browser print the same day. */
 let dateRange = $derived(
     data.event?.startDate
@@ -112,11 +73,9 @@ let dateRange = $derived(
         : '',
 )
 
-let totalMonths = $derived(countdown.years * 12 + countdown.months)
-
 /* Once the lock date passes the Register button leads to a form that refuses; say so here instead.
-   Same predicate the server enforces with — and passed `now`, the countdown's clock, so the button
-   and the deadline pill beside it cannot disagree by a tick. */
+   Same predicate the server enforces with — and passed `now`, the page's ticking clock, so the
+   button and the deadline line under it cannot disagree by a tick. */
 let registrationClosed = $derived(
     isRegistrationClosed(data.event?.registrationLockDate ?? null, now),
 )
@@ -147,212 +106,188 @@ const FAMILY_STATS = [
         </div>
     </section>
 {:else}
-    <section class="col-span-12">
-        <div class="bg-card rounded-xl border p-4 md:p-6">
-            <div class="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,22rem)_1fr] lg:items-center">
-                <!-- Framed portraits -->
-                <div class="grid grid-cols-2 gap-3">
-                    <div class="bg-background flex flex-col gap-2 rounded-md p-3 shadow-sm">
-                        <img
-                            src="/will_portrait.png"
-                            alt="Will Patterson"
-                            class="w-full rounded-sm" />
-                        <div class="text-center">
-                            <p class="text-sm font-medium">Will Patterson</p>
-                            <p class="text-muted-foreground text-xs">b. 1869</p>
-                        </div>
-                    </div>
-                    <div class="bg-background flex flex-col gap-2 rounded-md p-3 shadow-sm">
-                        <img
-                            src="/roxie_portrait.png"
-                            alt="Roxie Patterson"
-                            class="w-full rounded-sm" />
-                        <div class="text-center">
-                            <p class="text-sm font-medium">Roxie Patterson</p>
-                            <p class="text-muted-foreground text-xs">b. 1872</p>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Content -->
-                <div class="flex flex-col gap-4 text-center lg:text-left">
-                    <h1 class="text-4xl font-bold tracking-tight md:text-6xl">
-                        {data.event.title}
-                    </h1>
-
-                    {#if dateRange && eventState !== 'past'}
-                        <p class="text-muted-foreground text-lg">{dateRange}</p>
-                    {/if}
-
-                    {#if eventState === 'upcoming'}
-                        <!-- Before registration opens, the hero says only when it opens: a countdown,
-                             a head count and a closing date all invite an action nobody can take yet. -->
-                        {#if !registrationNotYetOpen}
-                            <p class="text-2xl font-bold tabular-nums">
-                                {#if countdown.withinOneDay}
-                                    {countdown.days}
-                                    {countdown.days === 1 ? 'day' : 'days'}, {countdown.hours}
-                                    {countdown.hours === 1 ? 'hour' : 'hours'} until we gather
-                                {:else if totalMonths > 0}
-                                    {totalMonths}
-                                    {totalMonths === 1 ? 'month' : 'months'} until we gather
-                                {:else}
-                                    {countdown.days}
-                                    {countdown.days === 1 ? 'day' : 'days'} until we gather
-                                {/if}
-                            </p>
-                        {/if}
-
-                        <div
-                            class="mt-2 flex flex-col items-center gap-3 sm:flex-row sm:justify-center lg:justify-start">
-                            {#if registrationClosed}
-                                <p class="text-sm">
-                                    Registration is closed. To ask about a late place, contact
-                                    {#if contactEmail}
-                                        <a class="underline" href="mailto:{contactEmail}"
-                                            >{contactEmail}</a>
-                                        or text
-                                        <a class="underline" href="sms:{toE164(contactPhone)}"
-                                            >{contactPhone}</a
-                                        >.
-                                    {:else}
-                                        the reunion organizers.
-                                    {/if}
-                                </p>
-                                <!-- Gifts outlive the lock date — see isPublicPath — and this
-                                     branch is exactly where someone who cannot get a place lands. -->
-                                <Button href="/donate" variant="outline" size="lg">
-                                    <HeartHandshake class="size-4" />
-                                    Donate instead
-                                </Button>
-                            {:else if registrationNotYetOpen && opensAt}
-                                <p class="text-base">
-                                    Registration opens
-                                    <span class="font-semibold"
-                                        >{formatReunionDateTime(opensAt, 'day')}</span
-                                    >.
-                                </p>
-                            {:else}
-                                <Button
-                                    href="/register"
-                                    size="lg"
-                                    class="animate-register-pulse px-14 py-7 text-lg transition-transform duration-150 hover:scale-[1.03]">
-                                    Register Now
-                                </Button>
-                            {/if}
-                        </div>
-
-                        {#if data.registrantCount > 0 && !registrationNotYetOpen}
-                            <p class="text-muted-foreground text-sm">
-                                Join {data.registrantCount}
-                                {data.registrantCount === 1 ? 'person' : 'people'} already registered
-                            </p>
-                        {/if}
-                    {:else if eventState === 'happening'}
-                        <div>
-                            <p class="text-primary mb-2 text-3xl font-bold">It's happening!</p>
-                            <p class="text-muted-foreground">Enjoy every moment with the family.</p>
-                        </div>
-                    {:else if eventState === 'past'}
-                        <div>
-                            <p class="mb-4 text-2xl font-bold">Thanks for an amazing reunion!</p>
-                        </div>
-                    {:else}
-                        <p class="text-muted-foreground">Stay tuned for the next reunion!</p>
-                    {/if}
-
-                    <!-- Outside the eventState branches on purpose: the deadline is the one date a
-                         visitor has to act on, so it is stated whatever the reunion's phase — before
-                         it, during it, and after, where it explains why registration has stopped.
-                         The one exception is before registration opens, when the opening date is
-                         the only date that matters. -->
-                    {#if !registrationNotYetOpen}
-                        <RegistrationDeadline
-                            lockDate={data.event.registrationLockDate}
-                            class="self-center lg:self-start" />
-                    {/if}
-                </div>
+    <!-- No card around the hero: the type sits on the page, and Will and Roxie — the couple every
+         family here descends from — are two overlapping prints beside it. -->
+    <section
+        class="col-span-12 grid grid-cols-1 items-center gap-10 pt-2 md:pt-8 lg:grid-cols-2 lg:gap-16">
+        <div class="flex flex-col items-start gap-6">
+            <div class="flex items-center gap-3">
+                <img src="/brand/tree-mark-ink.png" alt="" class="w-12" />
+                <p class="text-primary text-sm font-semibold tracking-[0.18em] uppercase">
+                    {dateRange} · Oakland, CA
+                </p>
             </div>
+            <h1 class="text-5xl leading-[1.02] font-bold tracking-tight text-balance md:text-7xl">
+                {data.event.title}
+            </h1>
+            <p class="text-muted-foreground max-w-lg text-lg md:text-xl">
+                Descendants of William &amp; Roxie Patterson, married December 26, 1890.
+                <a href="#story" class="text-primary font-medium underline underline-offset-4"
+                    >Read our family story.</a>
+            </p>
+
+            <div class="flex flex-wrap items-center gap-x-6 gap-y-3">
+                {#if eventState === 'upcoming'}
+                    {#if registrationClosed}
+                        <p class="text-sm">
+                            Registration is closed. To ask about a late place, contact
+                            {#if contactEmail}
+                                <a class="underline" href="mailto:{contactEmail}">{contactEmail}</a>
+                                or text
+                                <a class="underline" href="sms:{toE164(contactPhone)}"
+                                    >{contactPhone}</a
+                                >.
+                            {:else}
+                                the reunion organizers.
+                            {/if}
+                        </p>
+                        <!-- Gifts outlive the lock date — see isPublicPath — and this branch is
+                             exactly where someone who cannot get a place lands. -->
+                        <Button href="/donate" variant="outline" size="lg">
+                            <HeartHandshake class="size-4" />
+                            Donate instead
+                        </Button>
+                    {:else if registrationNotYetOpen && opensAt}
+                        <p class="text-base">
+                            Registration opens
+                            <span class="font-semibold"
+                                >{formatReunionDateTime(opensAt, 'day')}</span
+                            >.
+                        </p>
+                    {:else}
+                        <Button
+                            href="/register"
+                            size="lg"
+                            class="animate-register-pulse h-12 px-8 text-base">
+                            Register Now
+                            <ArrowRight class="size-4" />
+                        </Button>
+                    {/if}
+                {:else if eventState === 'happening'}
+                    <p class="text-2xl font-semibold">It's happening! Enjoy every moment.</p>
+                {:else if eventState === 'past'}
+                    <p class="text-2xl font-semibold">Thanks for an amazing reunion!</p>
+                {/if}
+            </div>
+
+            <!-- Outside the eventState branches on purpose: the deadline is the one date a visitor
+                 has to act on, so it is stated whatever the reunion's phase. The one exception is
+                 before registration opens, when the opening date is the only date that matters. -->
+            {#if !registrationNotYetOpen}
+                <RegistrationDeadline lockDate={data.event.registrationLockDate} />
+            {/if}
+        </div>
+
+        <!-- Absolute so the two prints can overlap; the square box reserves their space. -->
+        <div class="relative mx-auto aspect-square w-full max-w-md">
+            <figure
+                class="bg-card absolute top-0 left-0 flex w-[52%] flex-col gap-2 rounded-2xl p-2 shadow-lg">
+                <img src="/will_portrait.png" alt="Will Patterson" class="w-full rounded-xl" />
+                <figcaption class="px-1 pb-1 text-xs">
+                    <span class="font-semibold">Will Patterson</span>
+                    <span class="text-muted-foreground">· b. 1869</span>
+                </figcaption>
+            </figure>
+            <figure
+                class="bg-card absolute right-0 bottom-0 flex w-[52%] flex-col gap-2 rounded-2xl p-2 shadow-lg">
+                <img src="/roxie_portrait.png" alt="Roxie Patterson" class="w-full rounded-xl" />
+                <figcaption class="px-1 pb-1 text-xs">
+                    <span class="font-semibold">Roxie Patterson</span>
+                    <span class="text-muted-foreground">· b. 1872</span>
+                </figcaption>
+            </figure>
         </div>
     </section>
 {/if}
 
-<!-- Venue & Hotel.
+<!-- Every section below is col-span-12 with no max-w of its own: main is already max-w-6xl, and the
+     one block of long body copy — Our Family Story — keeps its own max-w-3xl inside its card. -->
 
-     No max-w on the card grids in this section or the ones below it. Every section here is col-span-12,
-     so they were already the same width — but Venue, Stay Connected and Get in Touch each constrained
-     their cards further, to 64rem, 48rem and 42rem, against a page container of 72rem. Four different
-     card widths down one page, none of them deliberate.
-
-     The reading measure that motivated those is already handled: main is max-w-6xl for public pages,
-     and the one block of long body copy — Our Family Story — keeps its own max-w-3xl INSIDE a
-     full-width card, which is the right place for it. Cards holding a two-column grid of short items
-     do not need it. -->
-<!-- id="venue" is linked from the confirmation email's parking line. -->
-<section id="venue" class="col-span-12 mt-8 scroll-mt-20 md:mt-12">
+<!-- Venue & Hotel. The cards are compact, with map, rates and parking folded away. No top margin:
+     the grid's own row gap is enough under a hero with no box around it.
+     id="venue" is linked from the confirmation email's parking line. -->
+<section id="venue" class="col-span-12 scroll-mt-20">
     <div class="mx-auto mb-8 max-w-xl text-center">
         <h2>Venue &amp; Where to Stay</h2>
         <p class="text-muted-foreground mt-2">
             Both are in Uptown Oakland, a short walk from each other.
         </p>
     </div>
-    <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+    <div class="grid grid-cols-1 items-start gap-6 md:grid-cols-2">
         <ReunionLocations />
     </div>
 </section>
 
-<!-- Support the Reunion.
+<!-- Support the Reunion beside Stay Connected: two short asks, one row. The preset buttons carry
+     their figure to /donate in ?amount=, so a visitor who has already chosen does not choose twice. -->
+<div class="col-span-12 mt-8 grid grid-cols-1 gap-8 md:mt-12 md:grid-cols-2 md:gap-6">
+    <section id="donate" class="flex scroll-mt-24 flex-col">
+        <div class="mx-auto mb-8 max-w-xl text-center">
+            <h2>Support the Reunion</h2>
+            <p class="text-muted-foreground mt-2">{DONATION_LEDE}</p>
+        </div>
+        <Card class="flex-1">
+            <CardContent class="flex flex-col items-center gap-5 pt-6">
+                <DonationRaisedTotal
+                    totalCents={data.raised.totalCents}
+                    giftCount={data.raised.giftCount} />
+                <!-- LINKS, not the shared picker: this section must not post. The figure travels
+                     to /donate in ?amount= and the picker there receives it. -->
+                <div class="grid w-full grid-cols-2 gap-2">
+                    {#each DONATION_PRESET_CENTS as cents (cents)}
+                        <Button href="/donate?amount={cents}" variant="outline">
+                            ${formatPrice(cents)}
+                        </Button>
+                    {/each}
+                </div>
+                <Button href="/donate" size="lg" class="w-full sm:w-fit">
+                    <HeartHandshake class="size-4" />
+                    Donate
+                </Button>
+            </CardContent>
+        </Card>
+    </section>
 
-     Straight after Venue, ahead of Stay Connected: once a visitor knows where and when, giving is the
-     next thing the page can ask for, and below the community links it was easy to scroll past. The
-     preset buttons carry their figure to /donate in ?amount=, so a visitor who has already chosen
-     does not choose twice. -->
-<section id="donate" class="col-span-12 mt-8 scroll-mt-24 md:mt-12">
-    <div class="mx-auto mb-8 max-w-xl text-center">
-        <h2>Support the Reunion</h2>
-        <p class="text-muted-foreground mt-2">{DONATION_LEDE}</p>
-    </div>
-    <Card>
-        <CardContent class="flex flex-col items-center gap-5 pt-6">
-            <DonationRaisedTotal
-                totalCents={data.raised.totalCents}
-                giftCount={data.raised.giftCount} />
-            <!-- LINKS, not the shared picker: this section must not post. The picker is a form
-                 control that carries an amount into a checkout, and there is no form here — the
-                 figure travels to /donate in ?amount= and the picker there receives it. -->
-            <div class="grid w-full grid-cols-2 gap-2 sm:grid-cols-4">
-                {#each DONATION_PRESET_CENTS as cents (cents)}
-                    <Button href="/donate?amount={cents}" variant="outline">
-                        ${formatPrice(cents)}
-                    </Button>
-                {/each}
-            </div>
-            <Button href="/donate" size="lg" class="w-full sm:w-fit">
-                <HeartHandshake class="size-4" />
-                Donate
-            </Button>
-        </CardContent>
-    </Card>
-</section>
+    <section class="flex flex-col">
+        <div class="mx-auto mb-8 max-w-xl text-center">
+            <h2>Stay Connected</h2>
+            <p class="text-muted-foreground mt-2">
+                Join the family online between now and the reunion.
+            </p>
+        </div>
+        <!-- Not stretched to the gift column's height: a stretched card is empty space. -->
+        <div class="flex flex-col gap-6">
+            <StayConnected />
+            <FamilyRootsCard />
+        </div>
+    </section>
+</div>
 
-<!-- Stay Connected -->
+<!-- The shirt and the tote, both sold on site and neither part of registration. -->
 <section class="col-span-12 mt-8 md:mt-12">
     <div class="mx-auto mb-8 max-w-xl text-center">
-        <h2>Stay Connected</h2>
+        <h2>The Reunion Shirt &amp; Tote</h2>
         <p class="text-muted-foreground mt-2">
-            Join the family online between now and the reunion.
+            T-shirts and the tote will be available for purchase at the reunion.
         </p>
     </div>
-    <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
-        <StayConnected />
+    <MerchCards />
+</section>
+
+<!-- The scam notice under a section heading like the rest, so its own heading is turned off. -->
+<section class="col-span-12 mt-8 md:mt-12">
+    <div class="mx-auto mb-8 max-w-xl text-center">
+        <h2>{paymentSafetyCopyValue.heading}</h2>
+        <p class="text-muted-foreground mt-2">{paymentSafetyCopyValue.lede}</p>
     </div>
+    <PaymentSafetyNotice showHeading={false} />
 </section>
 
 <!-- Get in Touch.
 
      Email is the channel the organizers want, so it is the filled button; the phone is a muted line
-     under it. They were two equal tiles, which gave no hint which one the organizers prefer.
-     The address is printed too: a mailto: link opens nothing on a desktop with no mail client. -->
+     under it. The address is printed too: a mailto: link opens nothing on a desktop with no mail
+     client. -->
 <section id="contact" class="col-span-12 mt-8 scroll-mt-24 md:mt-12">
     <div class="mx-auto mb-8 max-w-xl text-center">
         <h2>Get in Touch</h2>
@@ -379,11 +314,10 @@ const FAMILY_STATS = [
             {/if}
         </CardContent>
     </Card>
-    <PaymentSafetyNotice class="mt-6" />
 </section>
 
 <!-- Family Story -->
-<section class="col-span-12 mt-8 mb-8 md:mt-12">
+<section id="story" class="col-span-12 mt-8 mb-8 scroll-mt-24 md:mt-12">
     <div class="bg-card rounded-xl border px-6 py-10 md:px-10 md:py-14">
         <div class="mx-auto max-w-3xl">
             <h2>Our Family Story</h2>

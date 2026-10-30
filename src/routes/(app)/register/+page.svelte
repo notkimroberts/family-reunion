@@ -6,7 +6,7 @@ import { superForm } from 'sveltekit-superforms'
 import { zod4Client as zodClient } from 'sveltekit-superforms/adapters'
 import { replaceState } from '$app/navigation'
 import { page } from '$app/state'
-import { RegistrationDeadline } from '$lib/components'
+import { MerchCards, RegistrationDeadline } from '$lib/components'
 import { APP_NAME, CONTACT_EMAIL, CONTACT_PHONE } from '$lib/general/constants'
 import { quotePartyTotal } from '$lib/general/pricing'
 import { isBeforeRegistrationOpens, isRegistrationClosed } from '$lib/general/registration'
@@ -270,6 +270,8 @@ let notYetOpen = $derived(isBeforeRegistrationOpens(opensAt) && !data.preview)
             </div>
         </div>
     </section>
+
+    <MerchCards class="col-span-12" />
 
     {#if notYetOpen && opensAt}
         <RegistrationOpensNotice {opensAt} />

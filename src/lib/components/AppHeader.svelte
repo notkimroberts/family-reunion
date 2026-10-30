@@ -49,10 +49,9 @@ let mobileMenuOpen = $state(false)
                 src="/will_and_roxie_favicon_64.png"
                 alt={APP_NAME}
                 class="ring-primary ring-offset-background group-hover:shadow-primary/30 h-10 w-10 rounded-full object-cover ring-2 ring-offset-2 transition-all duration-300 group-hover:scale-105 group-hover:shadow-lg group-hover:ring-4" />
-            <span
-                class="text-foreground/80 group-hover:text-foreground text-sm font-semibold tracking-wide transition-colors">
-                {APP_NAME}
-            </span>
+            <!-- Two cuts of the wordmark: the dark-mode one has light outlines, or the magnolia vanishes. -->
+            <img src="/brand/logo-wordmark.png" alt="" class="h-8 w-auto dark:hidden" />
+            <img src="/brand/logo-wordmark-dark.png" alt="" class="hidden h-8 w-auto dark:block" />
         </a>
 
         <nav class="flex items-center gap-2">
@@ -132,7 +131,8 @@ let mobileMenuOpen = $state(false)
                 src="/will_and_roxie_favicon_64.png"
                 alt={APP_NAME}
                 class="h-9 w-9 rounded-full object-cover" />
-            <span class="text-foreground/80 text-sm font-semibold">{APP_NAME}</span>
+            <img src="/brand/logo-wordmark.png" alt="" class="h-6 w-auto dark:hidden" />
+            <img src="/brand/logo-wordmark-dark.png" alt="" class="hidden h-6 w-auto dark:block" />
         </a>
         <div class="flex items-center gap-1">
             <ThemeToggle size="sm" />

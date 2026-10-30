@@ -26,8 +26,8 @@ let { donationCents = $bindable(0), error }: Props = $props()
     </CardHeader>
     <CardContent class="flex flex-col gap-3">
         <p class="text-muted-foreground text-sm">
-            Optional. Gifts help cover the venue, the food and the shirts, and keep the price of a
-            place down for everyone.
+            Optional. Gifts help cover the venue and the food, and keep the price of a place down
+            for everyone.
         </p>
         <DonationAmountPicker
             bind:value={donationCents}
