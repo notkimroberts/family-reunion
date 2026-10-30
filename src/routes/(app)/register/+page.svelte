@@ -40,6 +40,8 @@ import type { FormMember, PersonDetails } from './types'
 
 /* The lock date passing while the form was open — see assertRegistrationNotClosed. */
 const FORBIDDEN = 403
+/* Where Stripe's cancel link lands — the cancelUrl in +page.server.ts. */
+const CANCELLED_URL = '/register?cancelled=true'
 
 let { data } = $props()
 
@@ -201,6 +203,17 @@ onMount(() => {
     }
 })
 
+/* The browser's Back button from Stripe restores this page from the back/forward cache, frozen as it
+   was when it left: superforms still mid-submit, its spinner up, and with multipleSubmits 'prevent'
+   a second Pay does nothing. superforms clears that state only when the navigation ends, which a
+   redirect to another site never does here. superforms has no reset, so reload as Stripe's own
+   cancel link would: ?cancelled restores the draft onResult saved. */
+function handlePageShow(event: PageTransitionEvent) {
+    if (event.persisted && $submitting) {
+        location.replace(CANCELLED_URL)
+    }
+}
+
 /* Same predicate the server applies in createPendingRegistration. Without it the form renders,
    accepts a full party, and only fails with a 403 at submit — after the registrant has done all the
    work. */
@@ -211,6 +224,8 @@ let isLocked = $derived(isRegistrationClosed(data.event?.registrationLockDate ??
 let opensAt = $derived(data.event?.registrationOpensAt ?? null)
 let notYetOpen = $derived(isBeforeRegistrationOpens(opensAt) && !data.preview)
 </script>
+
+<svelte:window onpageshow={handlePageShow} />
 
 <svelte:head>
     <title>Register — {APP_NAME}</title>

@@ -24,6 +24,14 @@ let awaitingWebhook = $derived(data.confirming && isOwed)
 let timedOut = $state(false)
 let submitting = $state(false)
 
+/* The enhance callback never resumes after a redirect to another site, so the browser's Back button
+   from Stripe restores this page from the back/forward cache with the spinner still up. */
+function handlePageShow(event: PageTransitionEvent) {
+    if (event.persisted) {
+        submitting = false
+    }
+}
+
 /* Re-runs the load until the webhook settles the places, as /register/view polls for a new booking.
    The load rather than a status endpoint, since it already answers "what is still owed" — and only
    this load, through its dependency key, not the layouts above it. */
@@ -43,6 +51,8 @@ $effect(() => {
     return () => clearInterval(interval)
 })
 </script>
+
+<svelte:window onpageshow={handlePageShow} />
 
 <svelte:head>
     <title>Pay for your party — {APP_NAME}</title>

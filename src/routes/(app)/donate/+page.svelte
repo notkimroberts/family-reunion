@@ -14,6 +14,9 @@ import { STRIPE_CHECKOUT_NOTE } from '$lib/general/scamSafety'
 import { checkoutErrorMessage, formatPrice } from '$lib/utils'
 import { donationSchema } from './schema'
 
+/* Where Stripe's cancel link lands — the cancelUrl in +page.server.ts. */
+const CANCELLED_URL = '/donate?cancelled=true'
+
 let { data } = $props()
 
 /* dataType 'form', not 'json': every field here is a real input, so the ordinary FormData post is
@@ -34,8 +37,19 @@ const { form, errors, message, submitting, enhance } = superForm(data.form, {
 })
 
 let cancelled = $derived(page.url.searchParams.get('cancelled') === 'true')
+
+/* The browser's Back button from Stripe restores this page from the back/forward cache still
+   mid-submit: spinner up, and multipleSubmits 'prevent' blocks a second press. superforms has no
+   reset, so reload as Stripe's own cancel link would. */
+function handlePageShow(event: PageTransitionEvent) {
+    if (event.persisted && $submitting) {
+        location.replace(CANCELLED_URL)
+    }
+}
 let heading = $derived(data.event ? `Support ${data.event.title}` : 'Support the reunion')
 </script>
+
+<svelte:window onpageshow={handlePageShow} />
 
 <svelte:head>
     <title>Donate — {APP_NAME}</title>
