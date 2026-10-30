@@ -8,11 +8,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '$lib/
         <CardTitle>Oakland x Mississippi Reunion Tote</CardTitle>
         <CardDescription>Sneak peek! Buy one on site at the reunion.</CardDescription>
     </CardHeader>
-    <CardContent>
-        <!-- The sage fill is the photo's own backdrop, so object-contain shows no seam. -->
+    <!-- Beside the shirt card the photo fills whatever height the row gives it, so neither card
+         ends in empty space. The sage fill is the photo's own backdrop, so object-contain shows no
+         seam. -->
+    <CardContent class="flex flex-1">
         <img
             src="/brand/tote.jpg"
             alt="Reunion tote bag"
-            class="aspect-[4/5] w-full rounded-lg bg-[#c7c9bc] object-contain" />
+            class="aspect-[4/5] min-h-0 w-full rounded-lg bg-[#c7c9bc] object-contain md:aspect-auto md:h-full" />
     </CardContent>
 </Card>

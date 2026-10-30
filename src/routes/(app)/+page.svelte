@@ -218,35 +218,74 @@ const FAMILY_STATS = [
     </div>
 </section>
 
-<!-- Support the Reunion beside Stay Connected: two short asks, one row. The preset buttons carry
+<!-- Support the Reunion and Get in Touch beside Stay Connected. The preset buttons carry
      their figure to /donate in ?amount=, so a visitor who has already chosen does not choose twice. -->
 <div class="col-span-12 mt-8 grid grid-cols-1 gap-8 md:mt-12 md:grid-cols-2 md:gap-6">
-    <section id="donate" class="flex scroll-mt-24 flex-col">
-        <div class="mx-auto mb-8 max-w-xl text-center">
-            <h2>Support the Reunion</h2>
-            <p class="text-muted-foreground mt-2">{DONATION_LEDE}</p>
-        </div>
-        <Card class="flex-1">
-            <CardContent class="flex flex-col items-center gap-5 pt-6">
-                <DonationRaisedTotal
-                    totalCents={data.raised.totalCents}
-                    giftCount={data.raised.giftCount} />
-                <!-- LINKS, not the shared picker: this section must not post. The figure travels
+    <!-- Left column: giving, then how to reach the organizers. -->
+    <div class="flex flex-col gap-8">
+        <section id="donate" class="flex scroll-mt-24 flex-col">
+            <div class="mx-auto mb-8 max-w-xl text-center">
+                <h2>Support the Reunion</h2>
+                <p class="text-muted-foreground mt-2">{DONATION_LEDE}</p>
+            </div>
+            <!-- Sized to its content, not stretched to the Stay Connected column. -->
+            <Card>
+                <CardContent class="flex flex-col items-center gap-5">
+                    <DonationRaisedTotal
+                        totalCents={data.raised.totalCents}
+                        giftCount={data.raised.giftCount} />
+                    <!-- LINKS, not the shared picker: this section must not post. The figure travels
                      to /donate in ?amount= and the picker there receives it. -->
-                <div class="grid w-full grid-cols-2 gap-2">
-                    {#each DONATION_PRESET_CENTS as cents (cents)}
-                        <Button href="/donate?amount={cents}" variant="outline">
-                            ${formatPrice(cents)}
-                        </Button>
-                    {/each}
-                </div>
-                <Button href="/donate" size="lg" class="w-full sm:w-fit">
-                    <HeartHandshake class="size-4" />
-                    Donate
-                </Button>
-            </CardContent>
-        </Card>
-    </section>
+                    <div class="grid w-full grid-cols-2 gap-2">
+                        {#each DONATION_PRESET_CENTS as cents (cents)}
+                            <Button href="/donate?amount={cents}" variant="outline">
+                                ${formatPrice(cents)}
+                            </Button>
+                        {/each}
+                    </div>
+                    <Button href="/donate" size="lg" class="w-full sm:w-fit">
+                        <HeartHandshake class="size-4" />
+                        Donate
+                    </Button>
+                </CardContent>
+            </Card>
+        </section>
+
+        <!-- Get in Touch.
+
+         Email is the channel the organizers want, so it is the filled button; the phone is a muted line
+         under it. The address is printed too: a mailto: link opens nothing on a desktop with no mail
+         client. -->
+        <section id="contact" class="flex scroll-mt-24 flex-col">
+            <div class="mx-auto mb-8 max-w-xl text-center">
+                <h2>Get in Touch</h2>
+                <p class="text-muted-foreground mt-2">
+                    Have a question about the reunion? Email is the best way to reach the
+                    organizers.
+                </p>
+            </div>
+            <Card>
+                <CardContent class="flex flex-col items-center gap-4 text-center">
+                    {#if contactEmail}
+                        <div class="flex w-full flex-col items-center gap-2">
+                            <Button href="mailto:{contactEmail}" size="lg" class="w-full sm:w-fit">
+                                <Mail class="size-4" />
+                                Email the organizers
+                            </Button>
+                            <p class="text-sm font-medium break-all">{contactEmail}</p>
+                        </div>
+                    {/if}
+                    {#if contactPhone}
+                        <p class="text-muted-foreground text-sm">
+                            Or text
+                            <a class="underline" href="sms:{toE164(contactPhone)}"
+                                >{contactPhone}</a>
+                        </p>
+                    {/if}
+                </CardContent>
+            </Card>
+        </section>
+    </div>
 
     <section class="flex flex-col">
         <div class="mx-auto mb-8 max-w-xl text-center">
@@ -281,39 +320,6 @@ const FAMILY_STATS = [
         <p class="text-muted-foreground mt-2">{paymentSafetyCopyValue.lede}</p>
     </div>
     <PaymentSafetyNotice showHeading={false} />
-</section>
-
-<!-- Get in Touch.
-
-     Email is the channel the organizers want, so it is the filled button; the phone is a muted line
-     under it. The address is printed too: a mailto: link opens nothing on a desktop with no mail
-     client. -->
-<section id="contact" class="col-span-12 mt-8 scroll-mt-24 md:mt-12">
-    <div class="mx-auto mb-8 max-w-xl text-center">
-        <h2>Get in Touch</h2>
-        <p class="text-muted-foreground mt-2">
-            Have a question about the reunion? Email is the best way to reach the organizers.
-        </p>
-    </div>
-    <Card>
-        <CardContent class="flex flex-col items-center gap-4 pt-6 text-center">
-            {#if contactEmail}
-                <div class="flex w-full flex-col items-center gap-2">
-                    <Button href="mailto:{contactEmail}" size="lg" class="w-full sm:w-fit">
-                        <Mail class="size-4" />
-                        Email the organizers
-                    </Button>
-                    <p class="text-sm font-medium break-all">{contactEmail}</p>
-                </div>
-            {/if}
-            {#if contactPhone}
-                <p class="text-muted-foreground text-sm">
-                    Or text
-                    <a class="underline" href="sms:{toE164(contactPhone)}">{contactPhone}</a>
-                </p>
-            {/if}
-        </CardContent>
-    </Card>
 </section>
 
 <!-- Family Story -->

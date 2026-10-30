@@ -6,7 +6,7 @@ import ToteCard from './ToteCard.svelte'
 let { class: className = '' }: { class?: string } = $props()
 </script>
 
-<div class="grid grid-cols-1 items-start gap-6 md:grid-cols-3 {className}">
+<div class="grid grid-cols-1 gap-6 md:grid-cols-3 {className}">
     <ShirtCard />
     <ToteCard />
 </div>

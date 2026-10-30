@@ -20,12 +20,16 @@ const SHIRT_IMAGES = [
     <CardContent>
         <div class="flex gap-4">
             {#each SHIRT_IMAGES as image (image.label)}
-                <figure class="flex min-w-0 flex-1 flex-col gap-2">
+                <!-- Label on the photo, not under it, so this card is no taller than the tote's. -->
+                <figure class="relative min-w-0 flex-1">
                     <img
                         src={image.src}
                         alt="Reunion shirt, {image.label.toLowerCase()}"
                         class="aspect-[4/5] w-full rounded-lg object-cover" />
-                    <figcaption class="text-muted-foreground text-sm">{image.label}</figcaption>
+                    <figcaption
+                        class="bg-card/90 absolute bottom-2 left-2 rounded-md px-2 py-0.5 text-xs font-medium">
+                        {image.label}
+                    </figcaption>
                 </figure>
             {/each}
         </div>
