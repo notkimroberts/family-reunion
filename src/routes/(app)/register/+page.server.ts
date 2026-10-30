@@ -6,6 +6,7 @@ import { HOST_HOTEL } from '$lib/general/constants'
 import { isBeforeRegistrationOpens } from '$lib/general/registration'
 import { dbg } from '$lib/server/debug'
 import {
+    PENDING_CHECKOUT_COOKIE,
     REGISTRATION_PREVIEW_COOKIE,
     REGISTRATION_PREVIEW_PARAM,
     createPendingRegistration,
@@ -22,6 +23,8 @@ import { toRegistrationIntake } from './toRegistrationIntake'
 
 /* Long enough for a round of testing; deleting REGISTRATION_PREVIEW_KEY ends it sooner. */
 const PREVIEW_COOKIE_MAX_AGE = 60 * 60 * 24 * 14 // 14 days
+/* A Checkout session's lifetime: after it the booking cannot be paid, so there is nothing to replace. */
+const PENDING_CHECKOUT_COOKIE_MAX_AGE = 60 * 60 * 24 // 24 hours
 
 export const load: PageServerLoad = async ({ locals, url, cookies }) => {
     /* The preview link: a correct key is moved into a cookie, and the key leaves the address bar
@@ -110,7 +113,7 @@ export const actions: Actions = {
             intake.members.length,
         )
 
-        const { checkoutUrl } = await createPendingRegistration({
+        const { checkoutUrl, viewToken } = await createPendingRegistration({
             ...intake,
             eventId: form.data.eventId,
             donationCents: form.data.donationCents,
@@ -119,6 +122,16 @@ export const actions: Actions = {
                the pending booking, kept by browser history and sent in referrers. */
             cancelUrl: () => `${event.url.origin}/register?cancelled=true`,
             allowBeforeOpening: hasRegistrationPreview(event.cookies),
+            /* Pay, Back, Pay again replaces the booking the first press opened. */
+            previousViewToken: event.cookies.get(PENDING_CHECKOUT_COOKIE),
+        })
+
+        event.cookies.set(PENDING_CHECKOUT_COOKIE, viewToken, {
+            path: '/register',
+            httpOnly: true,
+            sameSite: 'lax',
+            secure: !event.url.hostname.includes('localhost'),
+            maxAge: PENDING_CHECKOUT_COOKIE_MAX_AGE,
         })
 
         throw redirect(303, checkoutUrl)

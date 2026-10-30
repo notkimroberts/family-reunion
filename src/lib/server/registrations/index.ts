@@ -4,6 +4,7 @@ export {
     createAdminRegistration,
     createMemberPayment,
     fulfillCheckout,
+    handleExpiredCheckout,
 } from './checkout'
 
 export {
@@ -25,6 +26,7 @@ export {
 export type { AdminSettableStatus, RegistrationAuditAction } from './management'
 
 export { VIEW_TOKEN_COOKIE } from './VIEW_TOKEN_COOKIE'
+export { PENDING_CHECKOUT_COOKIE } from './PENDING_CHECKOUT_COOKIE'
 export { rememberViewToken } from './rememberViewToken'
 
 export { rotateViewToken } from './rotateViewToken'

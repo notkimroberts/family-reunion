@@ -12,6 +12,7 @@ import { generateViewToken } from '../hashViewToken'
 import type { MemberInput } from './MemberInput'
 import { assertContactTierIsAdult } from './_assertContactTierIsAdult'
 import { getCheckoutEvent } from './_getCheckoutEvent'
+import { retirePendingCheckout } from './_retirePendingCheckout'
 import { buildCheckoutLineItems } from './buildCheckoutLineItems'
 import { buildPartyMemberRow } from './buildPartyMemberRow'
 
@@ -23,8 +24,9 @@ import { buildPartyMemberRow } from './buildPartyMemberRow'
 
    We deliberately do NOT delete prior pending rows for this contactEmail — that would be
    an unauthenticated DOS vector (any visitor could submit the form with a victim's email
-   and clobber their in-flight checkout). Stale pendings expire naturally with the Stripe
-   session (24h) and only create harmless DB clutter. */
+   and clobber their in-flight checkout). Only THIS BROWSER's previous pending booking is
+   replaced, named by previousViewToken (see retirePendingCheckout); an expired duplicate of a
+   paid booking is removed by handleExpiredCheckout. */
 export async function createPendingRegistration(params: {
     contactName: string
     contactEmail: string
@@ -44,6 +46,9 @@ export async function createPendingRegistration(params: {
     /* True only for a tester holding the preview link (hasRegistrationPreview). Skips the opening
        date and nothing else: the lock date, tier prices and the contact's tier still apply. */
     allowBeforeOpening?: boolean
+    /* The view token of the booking this browser opened on its last Pay, from its own cookie.
+       Replaced once the new session exists, so the new checkout is never lost to a failure here. */
+    previousViewToken?: string
 }): Promise<{ registrationId: string; viewToken: string; checkoutUrl: string }> {
     /* Freeze new registrations once the lock date passes, not just changes to existing ones.
        Without this the add/edit/remove/cancel paths are closed while the front door stays
@@ -155,5 +160,10 @@ export async function createPendingRegistration(params: {
     }
 
     dbg.register('stripe session=%s created', sessionId)
+
+    if (params.previousViewToken) {
+        await retirePendingCheckout(params.previousViewToken, params.eventId)
+    }
+
     return { registrationId: registration.id, viewToken, checkoutUrl }
 }
