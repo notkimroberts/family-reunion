@@ -30,6 +30,15 @@ let {
     stayingAtHostHotel: HotelStayAnswer | ''
     error?: string
 } = $props()
+
+let select = $state<HTMLSelectElement>()
+
+/* Brings the question into view and focuses it, for CheckoutBar's "Answer the hotel question" — on
+   a phone the card can be a screen away from the bar. */
+export function reveal() {
+    select?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    select?.focus({ preventScroll: true })
+}
 </script>
 
 {#if HOST_HOTEL}
@@ -46,7 +55,11 @@ let {
                     Will your party stay at {HOST_HOTEL.name}?
                     <span class="text-destructive">*</span>
                 </label>
-                <NativeSelect id="stayingAtHostHotel" bind:value={stayingAtHostHotel}>
+                <NativeSelect
+                    id="stayingAtHostHotel"
+                    bind:ref={select}
+                    bind:value={stayingAtHostHotel}
+                    invalid={!!error}>
                     <!-- Disabled prompt, not a selectable blank: the answer is required, and
                          'undecided' is already the honest choice for someone who does not know. -->
                     <option value="" disabled>Select…</option>

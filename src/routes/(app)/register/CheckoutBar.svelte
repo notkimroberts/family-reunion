@@ -7,8 +7,10 @@ import { formatUsd } from '$lib/utils'
    view. Registrants watched filling in the form could not find the small Save at the foot of Your
    Information, and Pay does not exist until it is pressed. So until the contact is saved this button
    saves it from wherever the reader is (the card scrolls up to its problem list if anything is
-   missing); then it brings the scam notice's checkbox into view until that is ticked; after, it is
-   the Pay button. The button leaves the amount out because the total is beside it, and
+   missing); then it brings the hotel question into view until it is answered; then the scam notice's
+   checkbox until that is ticked; after, it is the Pay button. Each step is named because the cards
+   they point at can be a screen away on a phone, and a Pay the client refuses scrolls nowhere the
+   reader is looking. The button leaves the amount out because the total is beside it, and
    "Pay $1,320.72 & Register" would crowd that total off a 375px screen.
 
    Sticky, not fixed: past the end of the form it comes to rest there instead of covering the
@@ -19,20 +21,26 @@ let {
     peopleCount,
     hasGift,
     canSubmit,
+    hotelAnswered,
     acknowledged,
     submitting,
     onsave,
+    onhotel,
     onacknowledge,
 }: {
     totalCents: number
     peopleCount: number
     hasGift: boolean
     canSubmit: boolean
+    /* Whether the host-hotel question has an answer. Required by the schema, and below the cards a
+       registrant fills in first. */
+    hotelAnswered: boolean
     /* Whether the scam notice has been confirmed. Between Save and Pay there is this one more step,
        and the bar names it rather than offering a Pay the server would refuse. */
     acknowledged: boolean
     submitting: boolean
     onsave: () => void
+    onhotel: () => void
     onacknowledge: () => void
 } = $props()
 </script>
@@ -46,7 +54,11 @@ let {
             {peopleCount === 1 ? 'person' : 'people'}{hasGift ? ' + gift' : ''}
         </span>
     </div>
-    {#if canSubmit && !acknowledged}
+    {#if canSubmit && !hotelAnswered}
+        <Button type="button" size="lg" class="text-base" onclick={onhotel}>
+            Answer the hotel question
+        </Button>
+    {:else if canSubmit && !acknowledged}
         <Button type="button" size="lg" class="text-base" onclick={onacknowledge}>
             Read the safety notice
         </Button>

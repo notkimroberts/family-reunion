@@ -1,5 +1,6 @@
 <script lang="ts">
 import { TriangleAlert, UserCircle } from '@lucide/svelte'
+import { tick } from 'svelte'
 import { DatePicker } from '$lib/components'
 import { Alert, AlertDescription, AlertTitle } from '$lib/components/ui/alert'
 import { Button } from '$lib/components/ui/button'
@@ -65,13 +66,15 @@ function handleSave() {
 
 let card = $state<HTMLDivElement | null>(null)
 
-/* Save from outside the card — CheckoutBar's button, which may be a screen away. When something is
-   missing, scrolls the card's top (and the problem list just under it) into view. */
-export function save() {
+/* Both Save buttons: the card's own, and CheckoutBar's, which may be a screen away. Either way the
+   card's top comes into view once it has re-rendered: the problem list if something is missing, else
+   the saved summary with the cards after it. Saving collapses a long card, and without the scroll a
+   reader at its foot was left a screen further down — on a phone past the hotel question and the gift,
+   which they never saw. */
+export async function save() {
     handleSave()
-    if (!saved) {
-        card?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-    }
+    await tick()
+    card?.scrollIntoView({ behavior: 'smooth', block: 'start' })
 }
 </script>
 
@@ -123,43 +126,21 @@ export function save() {
                 <p class="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
                     Contact Info
                 </p>
-                <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                    <div class="space-y-1.5">
-                        <label for="contactEmail" class="text-sm font-medium">
-                            Email <span class="text-destructive">*</span>
-                        </label>
-                        <Input
-                            id="contactEmail"
-                            name="contactEmail"
-                            type="email"
-                            bind:value={email}
-                            placeholder="you@example.com"
-                            autocomplete="email"
-                            required />
-                        {#if errors?.email}
-                            <p class="text-destructive text-sm">{errors.email}</p>
-                        {/if}
-                    </div>
-                    <div class="space-y-1.5">
-                        <label for="contactPhone" class="text-sm font-medium">
-                            Phone
-                            <span class="text-muted-foreground text-xs font-normal"
-                                >(optional)</span>
-                        </label>
-                        <Input
-                            id="contactPhone"
-                            name="contactPhone"
-                            type="tel"
-                            value={phone}
-                            oninput={(e) => (phone = formatPhoneInput(e.currentTarget.value))}
-                            placeholder="(555) 555-5555"
-                            autocomplete="tel" />
-                        {#if phone.trim() && !phoneValid}
-                            <p class="text-destructive text-sm">
-                                Please enter a valid phone number
-                            </p>
-                        {/if}
-                    </div>
+                <div class="space-y-1.5">
+                    <label for="contactEmail" class="text-sm font-medium">
+                        Email <span class="text-destructive">*</span>
+                    </label>
+                    <Input
+                        id="contactEmail"
+                        name="contactEmail"
+                        type="email"
+                        bind:value={email}
+                        placeholder="you@example.com"
+                        autocomplete="email"
+                        required />
+                    {#if errors?.email}
+                        <p class="text-destructive text-sm">{errors.email}</p>
+                    {/if}
                 </div>
                 <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     <div class="space-y-1.5">
@@ -190,9 +171,9 @@ export function save() {
                         {/if}
                     </div>
                 </div>
-                <!-- Birthday sits with the name and email it belongs to, not down in Registration
-                     Details beside the tier and the shirt size. It is a fact about the person; those
-                     are facts about their place at the reunion. -->
+                <!-- Birthday sits with the name it belongs to, not down in Registration Details beside
+                     the tier and the shirt size. It is a fact about the person; those are facts about
+                     their place at the reunion. Phone shares its row: both are optional. -->
                 <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     <div class="space-y-1.5">
                         <label for="selfBirthDate" class="text-sm font-medium">
@@ -204,6 +185,26 @@ export function save() {
                             id="selfBirthDate"
                             bind:value={info.birthDate}
                             placeholder="Your birthday" />
+                    </div>
+                    <div class="space-y-1.5">
+                        <label for="contactPhone" class="text-sm font-medium">
+                            Phone
+                            <span class="text-muted-foreground text-xs font-normal"
+                                >(optional)</span>
+                        </label>
+                        <Input
+                            id="contactPhone"
+                            name="contactPhone"
+                            type="tel"
+                            value={phone}
+                            oninput={(e) => (phone = formatPhoneInput(e.currentTarget.value))}
+                            placeholder="(555) 555-5555"
+                            autocomplete="tel" />
+                        {#if phone.trim() && !phoneValid}
+                            <p class="text-destructive text-sm">
+                                Please enter a valid phone number
+                            </p>
+                        {/if}
                     </div>
                 </div>
             </div>
@@ -260,7 +261,7 @@ export function save() {
             </div>
 
             <div class="flex justify-end">
-                <Button type="button" size="sm" onclick={handleSave}>Save</Button>
+                <Button type="button" size="sm" onclick={save}>Save</Button>
             </div>
         {/if}
     </CardContent>
