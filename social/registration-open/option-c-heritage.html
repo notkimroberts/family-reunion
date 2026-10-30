@@ -1,0 +1,186 @@
+<!doctype html>
+<html>
+    <head>
+        <meta charset="utf-8" />
+        <link rel="stylesheet" href="shared.css" />
+        <style>
+            body {
+                background: #efe5cf;
+                color: #182632;
+                display: flex;
+                flex-direction: column;
+            }
+            .band {
+                background: #506276;
+                color: #efe5cf;
+                padding: 56px 72px 60px;
+                display: flex;
+                gap: 36px;
+                align-items: center;
+                position: relative;
+                overflow: hidden;
+            }
+            .tree {
+                position: absolute;
+                right: -80px;
+                bottom: -40px;
+                width: 620px;
+                opacity: 0.16;
+                filter: brightness(3);
+            }
+            .portrait {
+                width: 180px;
+                height: 180px;
+                border-radius: 999px;
+                border: 6px solid #efe5cf;
+                object-fit: cover;
+                flex-shrink: 0;
+                filter: grayscale(1);
+            }
+            .band-text {
+                display: flex;
+                flex-direction: column;
+                gap: 14px;
+                position: relative;
+            }
+            .kicker {
+                font-size: 22px;
+                font-weight: 700;
+                color: #e7d6ab;
+            }
+            .headline {
+                font-size: 64px;
+                font-weight: 800;
+                line-height: 1;
+                white-space: nowrap;
+            }
+            .when {
+                font-size: 28px;
+                font-weight: 600;
+            }
+            .body {
+                padding: 44px 72px 40px;
+                display: flex;
+                flex-direction: column;
+                gap: 30px;
+                flex: 1;
+            }
+            .wordmark {
+                width: 520px;
+                align-self: center;
+            }
+            .facts {
+                display: flex;
+                justify-content: space-between;
+                text-align: center;
+            }
+            .fact {
+                display: flex;
+                flex-direction: column;
+                gap: 4px;
+                flex: 1;
+            }
+            .fact + .fact {
+                border-left: 2px solid #50627633;
+            }
+            .fact .label {
+                font-size: 17px;
+                font-weight: 700;
+                color: #506276;
+            }
+            .fact .value {
+                font-size: 30px;
+                font-weight: 800;
+            }
+            .fact .sub {
+                font-size: 20px;
+                color: #5c5e62;
+            }
+            .merch {
+                display: grid;
+                grid-template-columns: 1fr 1fr 1fr;
+                gap: 14px;
+                background: #fff8e8;
+                padding: 18px;
+                border-radius: 22px;
+            }
+            .merch img {
+                width: 100%;
+                height: 395px;
+                object-fit: cover;
+                border-radius: 14px;
+            }
+            .merch-title {
+                font-size: 20px;
+                font-weight: 700;
+                color: #506276;
+                text-align: center;
+            }
+            .notes {
+                display: flex;
+                justify-content: space-between;
+                font-size: 19px;
+                color: #5c5e62;
+            }
+            .cta {
+                margin-top: auto;
+                background: #182632;
+                color: #efe5cf;
+                border-radius: 999px;
+                padding: 30px 40px;
+                text-align: center;
+                font-size: 34px;
+                font-weight: 800;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="band">
+            <img class="tree" src="../../static/brand/tree-mark-ink.png" alt="" />
+            <img class="portrait" src="../../static/will_and_roxie.png" alt="" />
+            <div class="band-text">
+                <div class="kicker caps">The family is coming home to Oakland</div>
+                <div class="headline">Registration is open</div>
+                <div class="when">Sign up the whole family today</div>
+            </div>
+        </div>
+
+        <div class="body">
+            <img class="wordmark" src="../../static/brand/logo-wordmark.png" alt="" />
+
+            <div class="facts">
+                <div class="fact">
+                    <span class="label caps">When</span><span class="value">July 23–25</span
+                    ><span class="sub">2027 · Fri–Sun</span>
+                </div>
+                <div class="fact">
+                    <span class="label caps">Where</span><span class="value">Oakstop</span
+                    ><span class="sub">2323 Broadway</span>
+                </div>
+                <div class="fact">
+                    <span class="label caps">Stay</span><span class="value">Kissel Uptown</span
+                    ><span class="sub">From $189 · by June 20</span>
+                </div>
+            </div>
+
+            <div class="merch-title caps">Reunion merch*</div>
+            <div class="merch">
+                <img
+                    src="../../static/brand/shirt-front.jpg"
+                    alt=""
+                    style="object-position: center 38%" />
+                <img
+                    src="../../static/brand/shirt-back.jpg"
+                    alt=""
+                    style="object-position: center 40%" />
+                <img src="../../static/brand/tote.jpg" alt="" style="object-position: center 60%" />
+            </div>
+
+            <div class="cta">Visit pattersonfamilyreunion.com to register</div>
+            <div class="notes">
+                <span>*Tees and totes will be for sale at the reunion</span>
+                <span>Questions? organizers@pattersonfamilyreunion.com</span>
+            </div>
+        </div>
+    </body>
+</html>
