@@ -30,7 +30,7 @@ let { money }: { money: EventMoney } = $props()
 let notes = $derived([
     money.feesAreExact
         ? 'Fees are as charged by Stripe.'
-        : 'Fees are estimated at 2.9% + 30¢ per payment. The exact figure is recorded as each one settles.',
+        : 'Fees are estimated at 2.9% + 30¢ plus Radar’s 5¢ per payment. The exact figure is recorded as each one settles.',
     ...(money.toDepositCents > 0
         ? [
               /* formatUsd, because a literal dollar sign written anywhere in a script block —

@@ -371,7 +371,10 @@ async function handleCopyEmail() {
                 </AdminDataView>
 
                 <Separator class="my-4" />
-                <RegistrationMoneyCard {money} status={data.registration.status} />
+                <RegistrationMoneyCard
+                    {money}
+                    status={data.registration.status}
+                    giftCents={data.giftCents} />
             </CardContent>
         </Card>
 

@@ -7,6 +7,7 @@ import { requireAdmin } from '$lib/server/auth/guards'
 import { db } from '$lib/server/db'
 import { registrationAudit, user as userTable } from '$lib/server/db/schema'
 import { dbg } from '$lib/server/debug'
+import { getPaidGiftsForRegistration } from '$lib/server/donations'
 import type { RegistrationChange } from '$lib/server/email'
 import {
     addAdminMember,
@@ -62,9 +63,10 @@ export const load: PageServerLoad = async (event) => {
 
     const found = await loadPairedRegistration(event.params)
 
-    const [members, tiers, history] = await Promise.all([
+    const [members, tiers, gifts, history] = await Promise.all([
         getRegistrationMembers(event.params.registrationId),
         getTiersForEvent(found.registration.eventId),
+        getPaidGiftsForRegistration(event.params.registrationId),
         db
             .select({
                 id: registrationAudit.id,
@@ -116,6 +118,9 @@ export const load: PageServerLoad = async (event) => {
         /* The part of it nobody has paid, for people added after the booking was paid. Counted on a
            paid booking only — getRegistrationMoney decides. */
         amountDueCents: sumAmountDue(members),
+        /* Gifts given with this booking. Kept apart from totalCents: a gift buys no place, and
+           getRegistrationMoney feeds the panel, which adds gifts on its own. */
+        giftCents: gifts.reduce((sum, gift) => sum + gift.amountCents, 0),
     }
 }
 

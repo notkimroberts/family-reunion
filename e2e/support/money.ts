@@ -2,6 +2,8 @@
    an independent copy of the rule, not against the app's own grossUpForStripe. */
 const FEE_PERCENT = 0.029
 const FEE_FIXED_CENTS = 30
+/* Radar Standard, billed per card payment outside the charge's balance transaction. */
+export const RADAR_FEE_CENTS = 5
 
 /* What a card is charged for a place whose tier price is `netCents`, so the reunion nets the tier
    price after Stripe's cut. Rounded up: a cent short leaves the reunion short. */

@@ -1,4 +1,5 @@
 import Stripe from 'stripe'
+import { RADAR_FEE_CENTS } from './money'
 
 /* The same test-mode account the server uses, to read back what Stripe actually charged, the fee on
    it, and every refund. */
@@ -11,8 +12,8 @@ export type ChargeFacts = {
     refundedCents: number
 }
 
-/* What Stripe holds for one PaymentIntent: the amount charged, the fee on its balance transaction,
-   and the total refunded so far. */
+/* What Stripe holds for one PaymentIntent: the amount charged, the fee (its balance transaction's plus
+   Radar's, which Stripe bills separately), and the total refunded so far. */
 export async function chargeFacts(paymentIntentId: string): Promise<ChargeFacts> {
     const intent = await stripe.paymentIntents.retrieve(paymentIntentId, {
         expand: ['latest_charge.balance_transaction'],
@@ -25,7 +26,7 @@ export async function chargeFacts(paymentIntentId: string): Promise<ChargeFacts>
     return {
         paymentIntentId,
         amountCents: charge.amount,
-        feeCents: balance && typeof balance !== 'string' ? balance.fee : -1,
+        feeCents: balance && typeof balance !== 'string' ? balance.fee + RADAR_FEE_CENTS : -1,
         refundedCents: charge.amount_refunded,
     }
 }

@@ -4,6 +4,7 @@ import { donations, partyMembers, registrations } from '$lib/server/db/schema'
 import { resetTestDb } from '$lib/server/db/testing/resetTestDb'
 import { seedEvent } from '$lib/server/testing/seedEvent'
 import { seedRegistration } from '$lib/server/testing/seedRegistration'
+import { STRIPE_RADAR_FEE_CENTS } from '$lib/utils/stripeFee'
 
 /* The Stripe webhook, against a real Postgres.
 
@@ -58,6 +59,11 @@ vi.mock('$lib/server/email', () => ({
     sendRegistrationConfirmation: mockSendEmail,
     sendDonationReceipt: mockSendReceipt,
 }))
+
+/* What the charge's balance transaction says Stripe took on the $165.09 an adult place is grossed up
+   to, and what the app records: that plus Radar's fee, which Stripe bills outside it. */
+const PROCESSING_FEE_CENTS = 509
+const RECORDED_FEE_CENTS = PROCESSING_FEE_CENTS + STRIPE_RADAR_FEE_CENTS
 
 const { POST } = await import('./+server')
 const { markRegistrationRefunded } = await import('$lib/server/registrations/lifecycle')
@@ -152,9 +158,8 @@ describe('POST /api/webhooks/stripe', () => {
         vi.clearAllMocks()
         mockSendEmail.mockResolvedValue(undefined)
         mockSendReceipt.mockResolvedValue(undefined)
-        /* 509 cents — what Stripe takes on the $165.09 an adult place is grossed up to. */
         mockPaymentIntentRetrieve.mockResolvedValue({
-            latest_charge: { balance_transaction: { fee: 509 } },
+            latest_charge: { balance_transaction: { fee: PROCESSING_FEE_CENTS } },
         })
         db = await resetTestDb()
     })
@@ -311,7 +316,9 @@ describe('POST /api/webhooks/stripe', () => {
 
             await deliver(registrationSession(seeded.registrationId, { payment_intent: 'pi_1' }))
 
-            expect((await registrationRow(seeded.registrationId)).stripeFeeCents).toBe(509)
+            expect((await registrationRow(seeded.registrationId)).stripeFeeCents).toBe(
+                RECORDED_FEE_CENTS,
+            )
         })
 
         it('asks Stripe about the payment intent from the session', async () => {
@@ -335,7 +342,9 @@ describe('POST /api/webhooks/stripe', () => {
             await deliver(session)
             await deliver(session)
 
-            expect((await registrationRow(seeded.registrationId)).stripeFeeCents).toBe(509)
+            expect((await registrationRow(seeded.registrationId)).stripeFeeCents).toBe(
+                RECORDED_FEE_CENTS,
+            )
         })
 
         /* A fee that cannot be read must not blank a stored one, and must not stop the registration
@@ -366,7 +375,9 @@ describe('POST /api/webhooks/stripe', () => {
 
             await deliver(addMemberSession(seeded.registrationId, { payment_intent: 'pi_2' }))
 
-            expect((await registrationRow(seeded.registrationId)).stripeFeeCents).toBe(1018)
+            expect((await registrationRow(seeded.registrationId)).stripeFeeCents).toBe(
+                509 + RECORDED_FEE_CENTS,
+            )
         })
 
         /* coalesce covers the rows that predate the column: the first add_member on an old
@@ -376,7 +387,9 @@ describe('POST /api/webhooks/stripe', () => {
 
             await deliver(addMemberSession(seeded.registrationId, { payment_intent: 'pi_2' }))
 
-            expect((await registrationRow(seeded.registrationId)).stripeFeeCents).toBe(509)
+            expect((await registrationRow(seeded.registrationId)).stripeFeeCents).toBe(
+                RECORDED_FEE_CENTS,
+            )
         })
 
         /* The unique index rejects the duplicate insert, and the fee sits inside the same guard. */
@@ -387,7 +400,9 @@ describe('POST /api/webhooks/stripe', () => {
             await deliver(session)
             await deliver(session)
 
-            expect((await registrationRow(seeded.registrationId)).stripeFeeCents).toBe(509)
+            expect((await registrationRow(seeded.registrationId)).stripeFeeCents).toBe(
+                RECORDED_FEE_CENTS,
+            )
         })
     })
 
@@ -422,7 +437,9 @@ describe('POST /api/webhooks/stripe', () => {
             const res = await deliverChargeUpdated('pi_1')
 
             expect(res.status).toBe(200)
-            expect((await registrationRow(seeded.registrationId)).stripeFeeCents).toBe(509)
+            expect((await registrationRow(seeded.registrationId)).stripeFeeCents).toBe(
+                RECORDED_FEE_CENTS,
+            )
         })
 
         it('does not count it twice when charge.updated is redelivered or repeats', async () => {
@@ -433,7 +450,9 @@ describe('POST /api/webhooks/stripe', () => {
             await deliverChargeUpdated('pi_1')
             await deliverChargeUpdated('pi_1')
 
-            expect((await registrationRow(seeded.registrationId)).stripeFeeCents).toBe(509)
+            expect((await registrationRow(seeded.registrationId)).stripeFeeCents).toBe(
+                RECORDED_FEE_CENTS,
+            )
         })
 
         it('does not add it again when fulfillment had already recorded it', async () => {
@@ -442,7 +461,9 @@ describe('POST /api/webhooks/stripe', () => {
 
             await deliverChargeUpdated('pi_1')
 
-            expect((await registrationRow(seeded.registrationId)).stripeFeeCents).toBe(509)
+            expect((await registrationRow(seeded.registrationId)).stripeFeeCents).toBe(
+                RECORDED_FEE_CENTS,
+            )
         })
 
         /* Events are not ordered. charge.updated first finds no booking with the intent; the
@@ -460,7 +481,9 @@ describe('POST /api/webhooks/stripe', () => {
             expect((await registrationRow(seeded.registrationId)).stripeFeeCents).toBeNull()
             await deliver(registrationSession(seeded.registrationId, { payment_intent: 'pi_1' }))
 
-            expect((await registrationRow(seeded.registrationId)).stripeFeeCents).toBe(509)
+            expect((await registrationRow(seeded.registrationId)).stripeFeeCents).toBe(
+                RECORDED_FEE_CENTS,
+            )
         })
 
         it('asks Stripe nothing while the charge has no balance transaction', async () => {
@@ -476,7 +499,7 @@ describe('POST /api/webhooks/stripe', () => {
 
             await deliverChargeUpdated('pi_gift')
 
-            expect((await donationRow(donationId)).stripeFeeCents).toBe(509)
+            expect((await donationRow(donationId)).stripeFeeCents).toBe(RECORDED_FEE_CENTS)
         })
     })
 
@@ -582,7 +605,7 @@ describe('POST /api/webhooks/stripe', () => {
             const row = await donationRow(donationId)
             expect(row.status).toBe('paid')
             expect(row.paidAt).toBeInstanceOf(Date)
-            expect(row.stripeFeeCents).toBe(509)
+            expect(row.stripeFeeCents).toBe(RECORDED_FEE_CENTS)
             expect(mockSendReceipt).toHaveBeenCalledWith(
                 'ruth@example.com',
                 {
@@ -691,7 +714,9 @@ describe('POST /api/webhooks/stripe', () => {
                 }),
             )
 
-            expect((await registrationRow(seeded.registrationId)).stripeFeeCents).toBe(509)
+            expect((await registrationRow(seeded.registrationId)).stripeFeeCents).toBe(
+                RECORDED_FEE_CENTS,
+            )
             expect((await donationRow(donationId)).stripeFeeCents).toBeNull()
         })
 
@@ -852,7 +877,9 @@ describe('POST /api/webhooks/stripe', () => {
                 ),
             )
 
-            expect((await registrationRow(seeded.registrationId)).stripeFeeCents).toBe(1018)
+            expect((await registrationRow(seeded.registrationId)).stripeFeeCents).toBe(
+                509 + RECORDED_FEE_CENTS,
+            )
         })
 
         it('confirms by email, keyed on the session', async () => {
@@ -888,7 +915,9 @@ describe('POST /api/webhooks/stripe', () => {
             await deliver(session)
             await deliver(session)
 
-            expect((await registrationRow(seeded.registrationId)).stripeFeeCents).toBe(509)
+            expect((await registrationRow(seeded.registrationId)).stripeFeeCents).toBe(
+                RECORDED_FEE_CENTS,
+            )
             expect(mockSendEmail).toHaveBeenCalledTimes(1)
             /* A redelivery is routine, not a double payment. */
             expect(mockReportError).not.toHaveBeenCalled()
@@ -946,7 +975,9 @@ describe('POST /api/webhooks/stripe', () => {
                 expect.any(Error),
                 expect.objectContaining({ memberIds: marcusId }),
             )
-            expect((await registrationRow(seeded.registrationId)).stripeFeeCents).toBe(509)
+            expect((await registrationRow(seeded.registrationId)).stripeFeeCents).toBe(
+                RECORDED_FEE_CENTS,
+            )
             expect(mockSendEmail).toHaveBeenCalledTimes(1)
         })
 

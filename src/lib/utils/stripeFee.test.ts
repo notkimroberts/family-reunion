@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
     STRIPE_FEE_FIXED_CENTS,
     STRIPE_FEE_PERCENT,
+    STRIPE_RADAR_FEE_CENTS,
     grossUpForStripe,
     netBeforeGrossUp,
     stripeFeeCents,
@@ -57,19 +58,20 @@ describe('stripeFeeOnChargeCents', () => {
         expect(stripeFeeOnChargeCents(-500)).toBe(0)
     })
 
-    it('is 2.9% of the charge plus 30¢', () => {
-        expect(stripeFeeOnChargeCents(10000)).toBe(290 + 30)
+    it('is 2.9% of the charge plus 30¢ plus Radar', () => {
+        expect(stripeFeeOnChargeCents(10000)).toBe(290 + 30 + 5)
     })
 
-    /* Round-trips with the gross-up, which is the property the panel depends on: charge the grossed-up
-       amount, and what lands is the tier price the organizer set. */
+    /* Round-trips with the gross-up, which covers the processing fee and not Radar: charge the
+       grossed-up amount, and what lands is the tier price less Radar's 5¢. */
     it.each([100, 5000, 10000, 16000, 26000, 58000])(
-        'leaves the intended net of %d cents after the fee',
+        'leaves the intended net of %d cents less Radar after the fee',
         (net) => {
             const gross = grossUpForStripe(net)
-            expect(gross - stripeFeeOnChargeCents(gross)).toBeGreaterThanOrEqual(net)
+            const landed = gross - stripeFeeOnChargeCents(gross) + STRIPE_RADAR_FEE_CENTS
+            expect(landed).toBeGreaterThanOrEqual(net)
             /* Rounding up on the gross means the org may net a cent more, never less. */
-            expect(gross - stripeFeeOnChargeCents(gross)).toBeLessThanOrEqual(net + 1)
+            expect(landed).toBeLessThanOrEqual(net + 1)
         },
     )
 
@@ -83,15 +85,17 @@ describe('stripeFeeOnChargeCents', () => {
 
     /* Per charge, not per amount: splitting the same money across more payments costs more in fixed
        fees. This is why the panel sums the fee per registration. */
-    it('costs 30¢ more for each additional payment', () => {
+    it('costs 30¢ plus Radar more for each additional payment', () => {
         const one = stripeFeeOnChargeCents(30000)
         const two = stripeFeeOnChargeCents(15000) * 2
-        expect(two - one).toBe(STRIPE_FEE_FIXED_CENTS)
+        expect(two - one).toBe(STRIPE_FEE_FIXED_CENTS + STRIPE_RADAR_FEE_CENTS)
     })
 
     it('uses the same rate constants as the gross-up', () => {
         expect(stripeFeeOnChargeCents(100000)).toBe(
-            Math.round(100000 * STRIPE_FEE_PERCENT) + STRIPE_FEE_FIXED_CENTS,
+            Math.round(100000 * STRIPE_FEE_PERCENT) +
+                STRIPE_FEE_FIXED_CENTS +
+                STRIPE_RADAR_FEE_CENTS,
         )
     })
 })

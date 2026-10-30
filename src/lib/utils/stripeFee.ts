@@ -2,6 +2,10 @@
    Single source of truth for any code that needs to gross up a net amount before sending it to Stripe so the org receives the intended net after Stripe takes its cut. */
 export const STRIPE_FEE_PERCENT = 0.029
 export const STRIPE_FEE_FIXED_CENTS = 30
+/* Radar Standard's fraud screening, billed per card payment as its own line, outside the charge's
+   balance transaction. Counted in the fee the admin records and estimates; deliberately NOT grossed
+   up, so a card place nets this much less than its tier price. */
+export const STRIPE_RADAR_FEE_CENTS = 5
 
 /* Returns the gross amount (in cents) the customer must be charged so that, after Stripe's
    2.9% + 30¢ fee, the org nets `netCents`. Always rounds up: undercharging by a cent leaves
@@ -41,7 +45,8 @@ export function stripeFeeCents(netCents: number): number {
     return grossUpForStripe(netCents) - netCents
 }
 
-/* Stripe's fee on an amount ALREADY charged — 2.9% of the charge plus 30¢, once per charge.
+/* Stripe's fee on an amount ALREADY charged — 2.9% of the charge plus 30¢ plus Radar's 5¢, once per
+   charge.
 
    The inverse direction to the two above, and needed because the admin panel starts from
    registrations.totalCents (what the card was actually charged) rather than from a tier price. Do not
@@ -61,5 +66,9 @@ export function stripeFeeOnChargeCents(grossCents: number): number {
     if (grossCents <= 0) {
         return 0
     }
-    return Math.round(grossCents * STRIPE_FEE_PERCENT) + STRIPE_FEE_FIXED_CENTS
+    return (
+        Math.round(grossCents * STRIPE_FEE_PERCENT) +
+        STRIPE_FEE_FIXED_CENTS +
+        STRIPE_RADAR_FEE_CENTS
+    )
 }

@@ -14,14 +14,22 @@ import type { RegistrationMoney } from '../registrationMoney'
 let {
     money,
     status,
+    giftCents,
 }: {
     money: RegistrationMoney
     status: 'pending' | 'paid' | 'waived' | 'refunded'
+    /* Paid gifts given with this booking. Outside money because the panel adds gifts separately. */
+    giftCents: number
 } = $props()
+
+/* A gift shares the booking's charge, so the recorded fee already covers it; without adding the gift
+   back, "Reunion keeps" would be the places less a fee partly charged on the gift. */
+let keptCents = $derived(money.netCents + (status === 'paid' ? giftCents : 0))
 
 const FEE_NOTE = {
     exact: 'As charged by Stripe.',
-    estimated: 'Estimated at 2.9% + 30¢ — Stripe has not reported the actual fee for this charge.',
+    estimated:
+        'Estimated at 2.9% + 30¢ plus Radar’s 5¢ — Stripe has not reported the actual fee for this charge.',
 }
 </script>
 
@@ -45,6 +53,16 @@ const FEE_NOTE = {
         </div>
     {/if}
 
+    <!-- A cancelled booking keeps its gift: planRefunds refunds only the places. -->
+    {#if giftCents > 0}
+        <div class="flex items-baseline justify-between gap-3">
+            <span class="text-muted-foreground">
+                {status === 'refunded' ? 'Gift to the reunion (kept)' : 'Gift to the reunion'}
+            </span>
+            <span class="tabular-nums">+${formatPrice(giftCents)}</span>
+        </div>
+    {/if}
+
     {#if money.wasCharged}
         <div class="flex items-baseline justify-between gap-3">
             <span class="text-amber-700 dark:text-amber-400">Stripe fee</span>
@@ -61,7 +79,7 @@ const FEE_NOTE = {
                 {#if status === 'refunded'}
                     −${formatPrice(money.lostFeeCents)}
                 {:else}
-                    ${formatPrice(money.netCents)}
+                    ${formatPrice(keptCents)}
                 {/if}
             </span>
         </div>
@@ -76,7 +94,7 @@ const FEE_NOTE = {
         <div class="flex items-baseline justify-between gap-3 font-semibold">
             <span>{status === 'paid' ? 'Reunion keeps' : 'Taken so far'}</span>
             <span class="tabular-nums">
-                ${formatPrice(status === 'paid' ? money.netCents : 0)}
+                ${formatPrice(status === 'paid' ? keptCents : 0)}
             </span>
         </div>
         <!-- Each of these is a genuinely different reason for "no fee", and reading the wrong one
