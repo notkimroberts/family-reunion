@@ -339,35 +339,42 @@ let notYetOpen = $derived(isBeforeRegistrationOpens(opensAt) && !data.preview)
                     <MerchCards />
                 </div>
 
-                <!-- Right: order summary, then the scam notice. Not sticky: CheckoutBar keeps the
-                     total and the next action on screen, and with the notice under it this column
-                     can be taller than a laptop screen, so a sticky one hid its own bottom. -->
+                <!-- Right: order summary, then the scam notice; on a phone, where this column
+                     follows the form, the notice comes first so it is read before the total and Pay.
+                     DOM order is the phone's, so reading and Tab order match what is seen. Not
+                     sticky: CheckoutBar keeps the total and the next action on screen, and with the
+                     notice in it this column can be taller than a laptop screen, so a sticky one hid
+                     its own bottom. -->
                 <div class="flex flex-col gap-3 self-start">
-                    <OrderSummaryCard
-                        {contactName}
-                        selfTierId={self.tierId}
-                        {members}
-                        {tiers}
-                        {quote}
-                        {canSubmit}
-                        submitLabel={payLabel}
-                        submitting={$submitting}
-                        placeholderText="Fill in your details, then press “Save your details” at the bottom of the screen."
-                        submitFootnote={STRIPE_CHECKOUT_NOTE}
-                        submitError={$message}
-                        submitBlockedReason={!$form.stayingAtHostHotel
-                            ? 'Answer whether your party will stay at the host hotel.'
-                            : !$form.paymentSafetyAcknowledged
-                              ? 'Read the safety notice below and tick the box to pay.'
-                              : undefined} />
-                    <!-- Required before paying, and refused by the server without it: the notice
-                         protects only someone who has read it. -->
-                    <CheckoutSafetyNotice
-                        bind:this={safetyNotice}
-                        requireAcknowledgment
-                        bind:acknowledged={$form.paymentSafetyAcknowledged}
-                        error={$errors.paymentSafetyAcknowledged?.[0]} />
-                    <p class="text-muted-foreground text-center text-xs">
+                    <div class="lg:order-2">
+                        <!-- Required before paying, and refused by the server without it: the notice
+                             protects only someone who has read it. -->
+                        <CheckoutSafetyNotice
+                            bind:this={safetyNotice}
+                            requireAcknowledgment
+                            bind:acknowledged={$form.paymentSafetyAcknowledged}
+                            error={$errors.paymentSafetyAcknowledged?.[0]} />
+                    </div>
+                    <div class="lg:order-1">
+                        <OrderSummaryCard
+                            {contactName}
+                            selfTierId={self.tierId}
+                            {members}
+                            {tiers}
+                            {quote}
+                            {canSubmit}
+                            submitLabel={payLabel}
+                            submitting={$submitting}
+                            placeholderText="Fill in your details, then press “Save your details” at the bottom of the screen."
+                            submitFootnote={STRIPE_CHECKOUT_NOTE}
+                            submitError={$message}
+                            submitBlockedReason={!$form.stayingAtHostHotel
+                                ? 'Answer whether your party will stay at the host hotel.'
+                                : !$form.paymentSafetyAcknowledged
+                                  ? 'Read the safety notice and tick the box to pay.'
+                                  : undefined} />
+                    </div>
+                    <p class="text-muted-foreground text-center text-xs lg:order-3">
                         Already registered? <a class="underline" href="/register/recover"
                             >Resend your registration link</a>
                     </p>
