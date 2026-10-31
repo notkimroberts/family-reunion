@@ -33,6 +33,14 @@ function createAuthInstance() {
            never asks to trust the device: there are few admins and they sign in rarely, so a code
            every time costs little, and a stolen laptop stays a password-plus-phone problem. */
         plugins: [admin(), twoFactor({ issuer: REUNION_NAME }), sveltekitCookies(getRequestEvent)],
+        /* Railway's edge sets X-Real-IP to the client. The default, X-Forwarded-For, is refused
+           when it holds more than one hop, and then every client shares one rate-limit bucket —
+           three sign-in attempts in 10s from anyone lock out every admin. */
+        advanced: {
+            ipAddress: {
+                ipAddressHeaders: ['x-real-ip'],
+            },
+        },
         session: {
             cookieCache: {
                 enabled: true,
