@@ -5,8 +5,10 @@ import { SvelteMap, SvelteSet } from 'svelte/reactivity'
 import { invalidateAll } from '$app/navigation'
 import { Button } from '$lib/components/ui/button'
 import { Input } from '$lib/components/ui/input'
+import { isBeforeCheckinOpens } from '$lib/general/registration'
 import { matchesSearch } from '$lib/general/search'
 import type { EventPerson } from '$lib/server/registrations'
+import { formatReunionDateTime } from '$lib/utils'
 import type { PageData } from './$types'
 import CheckinGroupCard from './CheckinGroup.svelte'
 import UnlistedMatches from './UnlistedMatches.svelte'
@@ -23,6 +25,10 @@ import { setShirtHandedOver } from './setShirtHandedOver.remote'
 let { data }: { data: PageData } = $props()
 
 let search = $state('')
+
+/* No new arrivals before the reunion day; setMemberCheckedIn refuses them too. The list still shows,
+   so the desk can rehearse a search, and shirts can still be recorded. */
+const locked = $derived(isBeforeCheckinOpens(data.event.startDate))
 
 /* Arrivals ticked in this session, keyed by member id. An OVERLAY on the loaded rows rather than a mutable
    copy of them: a copy would either be re-initialized on every reload — throwing away a tick that was
@@ -198,6 +204,13 @@ function handleFocus() {
         {/if}
     </div>
 
+    {#if locked && data.event.startDate}
+        <p class="bg-muted rounded-md px-3 py-2 text-sm">
+            Check-in opens on {formatReunionDateTime(data.event.startDate, 'day')}, the first day of
+            the reunion.
+        </p>
+    {/if}
+
     <!-- Sticky, because the list is long and the next name is always a search away. -->
     <div class="bg-background sticky top-0 z-10 flex items-center gap-2 py-2">
         <div class="relative flex-1">
@@ -222,6 +235,7 @@ function handleFocus() {
                 expanded={isExpanded(group)}
                 pendingIds={inFlight}
                 shirtPendingIds={shirtInFlight}
+                {locked}
                 onToggleExpanded={handleToggleExpanded}
                 onToggle={handleToggle}
                 onToggleParty={handleToggleParty}

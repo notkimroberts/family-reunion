@@ -13,6 +13,7 @@ type Props = {
     expanded: boolean
     pendingIds: ReadonlySet<string>
     shirtPendingIds: ReadonlySet<string>
+    locked: boolean
     onToggleExpanded: (registrationId: string) => void
     onToggle: (person: EventPerson) => void
     onToggleParty: (group: CheckinGroup) => void
@@ -24,6 +25,7 @@ let {
     expanded,
     pendingIds,
     shirtPendingIds,
+    locked,
     onToggleExpanded,
     onToggle,
     onToggleParty,
@@ -68,7 +70,7 @@ const allArrived = $derived(group.arrivedCount === group.members.length)
         <!-- The one-tap case, which is the common one. Un-checking a whole party is deliberately NOT
              offered: undoing is a per-person correction, and a stray tap here would wipe an arrival
              somebody else recorded. -->
-        {#if !allArrived}
+        {#if !locked && !allArrived}
             <Button variant="outline" size="sm" onclick={() => onToggleParty(group)}>
                 Check in all
             </Button>
@@ -84,6 +86,7 @@ const allArrived = $derived(group.arrivedCount === group.members.length)
                     shirtGiven={member.shirtGivenAt !== null}
                     pending={pendingIds.has(member.id)}
                     shirtPending={shirtPendingIds.has(member.id)}
+                    {locked}
                     {onToggle}
                     {onToggleShirt} />
             {/each}

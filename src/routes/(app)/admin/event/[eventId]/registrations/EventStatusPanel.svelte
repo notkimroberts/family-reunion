@@ -1,10 +1,11 @@
 <script lang="ts">
-import { ClipboardCheck, Settings } from '@lucide/svelte'
+import { ChevronDown, ClipboardCheck, Settings } from '@lucide/svelte'
 import { Button } from '$lib/components/ui/button'
 import { Separator } from '$lib/components/ui/separator'
 import { Tooltip, TooltipContent, TooltipTrigger } from '$lib/components/ui/tooltip'
 import type { DonationSummary } from '$lib/server/donations'
 import type { EventPerson, RegistrationSummary } from '$lib/server/registrations'
+import { cn } from '$lib/utils'
 import HeadcountPanel from './HeadcountPanel.svelte'
 import MoneyPanel from './MoneyPanel.svelte'
 import OrderSheet from './OrderSheet.svelte'
@@ -38,6 +39,14 @@ let rooms = $derived(getRoomSummary(registrations))
 /* Counted here rather than in getRegistrationTotals: that derives from bookings, and its figures are
    pinned by the money identity — an arrival belongs to neither side of it. */
 let arrivedCount = $derived(people.filter((person) => person.checkedInAt !== null).length)
+/* Below lg the panel stacks ABOVE the list, and opened in full it was a screen and a half of scrolling
+   before the first booking. Money and the check-in link stay; the rest waits behind a tap. Ignored at
+   lg, where the panel is a sidebar and always open. */
+let showDetails = $state(false)
+
+function handleToggleDetails() {
+    showDetails = !showDetails
+}
 </script>
 
 <!-- Stays on screen while you work the list or a booking, rather than being a dashboard you navigate
@@ -88,11 +97,24 @@ let arrivedCount = $derived(people.filter((person) => person.checkedInAt !== nul
         Check in arrivals
     </Button>
 
-    <Separator />
+    <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        class="text-muted-foreground lg:hidden"
+        aria-expanded={showDetails}
+        onclick={handleToggleDetails}>
+        {totals.attendingCount} coming · {showDetails ? 'Hide' : 'Show'} people and orders
+        <ChevronDown class={cn('size-4 transition-transform', showDetails && 'rotate-180')} />
+    </Button>
 
-    <HeadcountPanel {totals} {arrivedCount} />
+    <div class={cn('flex-col gap-4 lg:flex', showDetails ? 'flex' : 'hidden')}>
+        <Separator />
 
-    <Separator />
+        <HeadcountPanel {totals} {arrivedCount} />
 
-    <OrderSheet {summary} attendingCount={totals.attendingCount} {rooms} />
+        <Separator />
+
+        <OrderSheet {summary} attendingCount={totals.attendingCount} {rooms} />
+    </div>
 </aside>

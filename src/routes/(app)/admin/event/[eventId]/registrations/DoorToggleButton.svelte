@@ -17,6 +17,7 @@ let {
     offIcon: OffIcon,
     ariaLabel,
     errorMessage,
+    disabled = false,
     onToggle,
 }: {
     isOn: boolean
@@ -25,6 +26,7 @@ let {
     offIcon: Component
     ariaLabel: string
     errorMessage: string
+    disabled?: boolean
     onToggle: (next: boolean) => Promise<unknown>
 } = $props()
 
@@ -49,7 +51,7 @@ async function handleClick() {
     variant={isOn ? 'secondary' : 'outline'}
     aria-pressed={isOn}
     aria-label={ariaLabel}
-    disabled={isPending}
+    disabled={disabled || isPending}
     onclick={handleClick}>
     {#if isOn}
         <Check class="size-4" />

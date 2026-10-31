@@ -1,6 +1,8 @@
+import { error } from '@sveltejs/kit'
 import { eq } from 'drizzle-orm'
+import { isBeforeCheckinOpens } from '$lib/general/registration'
 import { db } from '$lib/server/db'
-import { partyMembers } from '$lib/server/db/schema'
+import { partyMembers, reunionEvents } from '$lib/server/db/schema'
 import { dbg } from '$lib/server/debug'
 import { _assertMemberInEvent } from './_assertMemberInEvent'
 
@@ -18,7 +20,10 @@ import { _assertMemberInEvent } from './_assertMemberInEvent'
 
    NOT gated on the registration's status: only paid and waived attendees reach the check-in list in
    the first place (getEventPeople), and touchRegistration is skipped too — arriving is not an edit to
-   the booking, and bumping updatedAt would make the admin list look like it changed. */
+   the booking, and bumping updatedAt would make the admin list look like it changed.
+
+   Refused before the reunion's first day (isBeforeCheckinOpens). The disabled buttons are a courtesy;
+   this is the guard. Only the tick: clearing stays open so a stray arrival can always be undone. */
 export async function setMemberCheckedIn(params: {
     memberId: string
     /* The reunion the caller's URL claims. */
@@ -27,6 +32,16 @@ export async function setMemberCheckedIn(params: {
     adminId: string
 }): Promise<{ name: string; checkedInAt: Date | null }> {
     const member = await _assertMemberInEvent(params.memberId, params.eventId)
+
+    if (params.checkedIn) {
+        const [event] = await db
+            .select({ startDate: reunionEvents.startDate })
+            .from(reunionEvents)
+            .where(eq(reunionEvents.id, params.eventId))
+        if (isBeforeCheckinOpens(event.startDate)) {
+            throw error(403, 'Check-in opens on the first day of the reunion')
+        }
+    }
 
     const checkedInAt = params.checkedIn ? new Date() : null
 

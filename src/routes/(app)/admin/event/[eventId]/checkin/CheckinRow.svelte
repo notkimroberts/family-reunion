@@ -9,11 +9,13 @@ type Props = {
     shirtGiven: boolean
     pending: boolean
     shirtPending: boolean
+    /* Before the reunion day. Blocks a new arrival only; an existing one can still be undone. */
+    locked: boolean
     onToggle: (person: EventPerson) => void
     onToggleShirt: (person: EventPerson) => void
 }
 
-let { person, arrived, shirtGiven, pending, shirtPending, onToggle, onToggleShirt }: Props =
+let { person, arrived, shirtGiven, pending, shirtPending, locked, onToggle, onToggleShirt }: Props =
     $props()
 
 /* Added to a paid booking and not paid for. Said at the door because that is where the money can be
@@ -34,9 +36,10 @@ let owes = $derived(getPersonDisplayStatus(person) === 'payment_due')
         type="button"
         onclick={() => onToggle(person)}
         aria-pressed={arrived}
+        disabled={locked && !arrived}
         class={cn(
-            'flex min-w-0 flex-1 items-center gap-3 px-3 py-2 text-left',
-            pending && 'opacity-60',
+            'flex min-w-0 flex-1 items-center gap-3 px-3 py-2 text-left disabled:cursor-not-allowed',
+            (pending || (locked && !arrived)) && 'opacity-60',
         )}>
         <span
             class={cn(

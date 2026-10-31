@@ -29,6 +29,7 @@ export const load: LayoutServerLoad = async (event) => {
                 year: reunionEvents.year,
                 title: reunionEvents.title,
                 status: reunionEvents.status,
+                startDate: reunionEvents.startDate,
                 registrationLockDate: reunionEvents.registrationLockDate,
             })
             .from(reunionEvents)
