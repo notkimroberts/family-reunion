@@ -1,3 +1,4 @@
+import { getIP } from '@better-auth/core/utils/ip'
 import { describe, expect, it, vi } from 'vitest'
 
 /* Better Auth is constructed lazily against a real DB adapter, so this asserts the options
@@ -23,5 +24,20 @@ describe('better-auth configuration', () => {
 
     it('still allows email + password sign-in', () => {
         expect(auth.options.emailAndPassword?.enabled).toBe(true)
+    })
+
+    /* Railway's edge sets X-Real-IP to the client. X-Forwarded-For can hold several hops (a
+       corporate proxy appends one), and Better Auth refuses a multi-entry XFF without
+       trustedProxies — every sign-in then shares one rate-limit bucket, so three attempts in
+       10s by anyone lock every admin out of sign-in. */
+    it('reads the client IP from X-Real-IP', () => {
+        const request = new Request('http://localhost:5173/api/auth/sign-in/email', {
+            headers: {
+                'x-real-ip': '203.0.113.7',
+                'x-forwarded-for': '198.51.100.1, 203.0.113.7',
+            },
+        })
+
+        expect(getIP(request, auth.options)).toBe('203.0.113.7')
     })
 })
