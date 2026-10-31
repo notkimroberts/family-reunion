@@ -10,7 +10,16 @@ import { setCheckedIn } from '../checkin/setCheckedIn.remote'
    Only members not yet arrived are written, as on the check-in page, so it cannot undo an arrival
    recorded at the door. Un-checking stays per person, on the People lens. `group` is undefined for a
    booking with no places — pending or refunded — which has nobody to check in. */
-let { group, eventId }: { group: CheckinGroup | undefined; eventId: string } = $props()
+let {
+    group,
+    eventId,
+    locked,
+}: {
+    group: CheckinGroup | undefined
+    eventId: string
+    /* Before the reunion day: the count shows, the button does not. */
+    locked: boolean
+} = $props()
 
 let isPending = $state(false)
 
@@ -35,7 +44,7 @@ async function handleCheckInAll() {
 {#if group}
     <div class="flex items-center justify-end gap-2">
         <span class="text-sm tabular-nums">{group.arrivedCount}/{group.members.length}</span>
-        {#if group.arrivedCount < group.members.length}
+        {#if !locked && group.arrivedCount < group.members.length}
             <Button
                 type="button"
                 size="sm"

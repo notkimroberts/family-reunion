@@ -1,6 +1,6 @@
 import { eq } from 'drizzle-orm'
 import { beforeEach, describe, expect, it } from 'vitest'
-import { partyMembers } from '$lib/server/db/schema'
+import { partyMembers, reunionEvents } from '$lib/server/db/schema'
 import { resetTestDb } from '$lib/server/db/testing/resetTestDb'
 import { seedEvent } from '$lib/server/testing/seedEvent'
 import { seedRegistration } from '$lib/server/testing/seedRegistration'
@@ -14,6 +14,7 @@ import { seedRegistration } from '$lib/server/testing/seedRegistration'
 const { setMemberCheckedIn } = await import('./setMemberCheckedIn')
 
 const DOOR_ADMIN = 'user_door'
+const DAY_MS = 24 * 60 * 60 * 1000
 
 let db: Awaited<ReturnType<typeof resetTestDb>>
 let seeded: Awaited<ReturnType<typeof seedRegistration>>
@@ -114,5 +115,45 @@ describe('setMemberCheckedIn', () => {
                 adminId: DOOR_ADMIN,
             }),
         ).rejects.toMatchObject({ status: 404 })
+    })
+
+    /* Before the first day nobody can have arrived, so a tick is a mis-tap or a test. */
+    describe('before the reunion day', () => {
+        beforeEach(async () => {
+            await db
+                .update(reunionEvents)
+                .set({ startDate: new Date(Date.now() + 7 * DAY_MS) })
+                .where(eq(reunionEvents.id, seeded.eventId))
+        })
+
+        it('refuses an arrival and writes nothing', async () => {
+            await expect(
+                setMemberCheckedIn({
+                    memberId,
+                    eventId: seeded.eventId,
+                    checkedIn: true,
+                    adminId: DOOR_ADMIN,
+                }),
+            ).rejects.toMatchObject({ status: 403 })
+
+            expect(await memberRow()).toMatchObject({ checkedInAt: null })
+        })
+
+        /* An arrival recorded before the gate existed must stay undoable. */
+        it('still clears one', async () => {
+            await db
+                .update(partyMembers)
+                .set({ checkedInAt: new Date(), checkedInBy: DOOR_ADMIN })
+                .where(eq(partyMembers.id, memberId))
+
+            await setMemberCheckedIn({
+                memberId,
+                eventId: seeded.eventId,
+                checkedIn: false,
+                adminId: DOOR_ADMIN,
+            })
+
+            expect(await memberRow()).toMatchObject({ checkedInAt: null })
+        })
     })
 })

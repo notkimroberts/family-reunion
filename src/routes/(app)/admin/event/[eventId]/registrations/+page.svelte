@@ -1,5 +1,5 @@
 <script lang="ts">
-import { FilePlus, Gift, Images, Search, Users } from '@lucide/svelte'
+import { ChevronRight, FilePlus, Gift, Images, Search, Users } from '@lucide/svelte'
 import { SvelteMap } from 'svelte/reactivity'
 import { goto } from '$app/navigation'
 import { page } from '$app/state'
@@ -9,6 +9,7 @@ import { Input } from '$lib/components/ui/input'
 import { Separator } from '$lib/components/ui/separator'
 import * as Table from '$lib/components/ui/table'
 import { HOST_HOTEL } from '$lib/general/constants'
+import { isBeforeCheckinOpens } from '$lib/general/registration'
 import type { EventPerson } from '$lib/server/registrations'
 import {
     cn,
@@ -124,6 +125,9 @@ let { data } = $props()
 let doorGroups = $derived(
     new SvelteMap(groupPeopleByBooking(data.people).map((group) => [group.registrationId, group])),
 )
+/* No new arrivals before the reunion day. setMemberCheckedIn refuses them too; this only hides the
+   buttons that would be refused. */
+let checkinLocked = $derived(isBeforeCheckinOpens(data.event.startDate))
 let lens = $derived(lensFromUrl(page.url))
 let showPeople = $derived(lens === 'people')
 let showDonations = $derived(lens === 'donations')
@@ -261,7 +265,8 @@ $effect(() => {
                 </button>
             </div>
 
-            <div class="relative min-w-48 flex-1">
+            <!-- Its own row on a phone: beside the lens tabs it had room for "Search name or emai". -->
+            <div class="relative w-full sm:w-auto sm:min-w-48 sm:flex-1">
                 <Search
                     class="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2" />
                 <Input
@@ -472,7 +477,10 @@ $effect(() => {
                                     </div>
 
                                     <div>
-                                        <ArrivalToggle {person} eventId={data.event.id} />
+                                        <ArrivalToggle
+                                            {person}
+                                            eventId={data.event.id}
+                                            locked={checkinLocked} />
                                     </div>
 
                                     <a
@@ -548,7 +556,10 @@ $effect(() => {
                                              fixing a mis-tap or recording the day afterwards without
                                              opening the door list. -->
                                         <Table.Cell>
-                                            <ArrivalToggle {person} eventId={data.event.id} />
+                                            <ArrivalToggle
+                                                {person}
+                                                eventId={data.event.id}
+                                                locked={checkinLocked} />
                                         </Table.Cell>
                                         <Table.Cell>
                                             <a
@@ -578,16 +589,18 @@ $effect(() => {
                     <div class="flex flex-col gap-3">
                         {#each visibleBookings as registration (registration.id)}
                             {@const group = doorGroups.get(registration.id)}
-                            <!-- Not a link, though it was one. PaymentNote now renders a "View in
-                                 Stripe" anchor, and an <a> inside an <a> is invalid HTML: the browser
-                                 hoists the inner one out during parsing, the hydrated tree no longer
-                                 matches the server's, and Svelte throws — which took down the whole
-                                 page, desktop included, because BOTH branches of AdminDataView are in
-                                 the DOM at every width and only one of them is display:none. The name
-                                 carries the link instead, the same shape the People card uses. -->
+                            <!-- Not one <a>, though it was one. PaymentNote renders a "View in Stripe"
+                                 anchor, and an <a> inside an <a> is invalid HTML: the browser hoists the
+                                 inner one out during parsing, the hydrated tree no longer matches the
+                                 server's, and Svelte throws — which took down the whole page, desktop
+                                 included, because BOTH branches of AdminDataView are in the DOM at every
+                                 width. So the name is the link, and its ::after stretches over the card
+                                 to make all of it the tap target; the Stripe link and Check in all sit
+                                 above that overlay with relative z-10. This replaced a full-width
+                                 Manage button on every card that went to the same place. -->
                             <div
                                 class={cn(
-                                    'bg-card rounded-lg border p-4',
+                                    'bg-card relative flex flex-col gap-1.5 rounded-lg border p-4',
                                     rowAccent(registration),
                                 )}>
                                 <div class="flex items-start justify-between gap-2">
@@ -595,18 +608,21 @@ $effect(() => {
                                         <a
                                             href="/admin/event/{data.event
                                                 .id}/registrations/{registration.id}"
-                                            class="block truncate font-medium hover:underline">
+                                            class="block truncate font-medium after:absolute after:inset-0 after:rounded-lg">
                                             {registration.contactName}
                                         </a>
-                                        <p class="text-muted-foreground mt-0.5 truncate text-xs">
+                                        <p class="text-muted-foreground truncate text-xs">
                                             {registration.contactEmail}
                                         </p>
                                     </div>
-                                    <RegistrationStatusBadge
-                                        status={getBookingDisplayStatus(registration)} />
+                                    <div class="flex shrink-0 items-center gap-1">
+                                        <RegistrationStatusBadge
+                                            status={getBookingDisplayStatus(registration)} />
+                                        <ChevronRight class="text-muted-foreground size-4" />
+                                    </div>
                                 </div>
                                 <p
-                                    class="text-muted-foreground mt-2 flex items-center gap-2 text-xs">
+                                    class="text-muted-foreground flex flex-wrap items-center gap-x-2 text-xs">
                                     <span>
                                         {registration.memberCount}
                                         {registration.memberCount === 1 ? 'person' : 'people'} · ${formatPrice(
@@ -625,31 +641,27 @@ $effect(() => {
                                         </span>
                                     {/if}
                                 </p>
-                                <div class="mt-1.5">
+                                <div class="relative z-10 w-fit">
                                     <PaymentNote
                                         {registration}
                                         stripeTestMode={data.stripeTestMode}
                                         paidLabel={paidLabels.get(registration.id)} />
                                 </div>
                                 {#if group}
-                                    <div class="mt-3 flex items-center justify-between gap-2">
-                                        <span class="text-muted-foreground text-xs">
-                                            Arrived · shirts {group.shirtsGivenCount}/{group.members
-                                                .length}
+                                    <div
+                                        class="text-muted-foreground flex items-center justify-between gap-2 text-xs">
+                                        <span>
+                                            Shirts {group.shirtsGivenCount}/{group.members.length}
                                         </span>
-                                        <PartyArrivalCell {group} eventId={data.event.id} />
+                                        <div class="relative z-10 flex items-center gap-2">
+                                            <span>Arrived</span>
+                                            <PartyArrivalCell
+                                                {group}
+                                                eventId={data.event.id}
+                                                locked={checkinLocked} />
+                                        </div>
                                     </div>
                                 {/if}
-                                <div class="mt-3">
-                                    <Button
-                                        href="/admin/event/{data.event
-                                            .id}/registrations/{registration.id}"
-                                        variant="outline"
-                                        size="sm"
-                                        class="w-full">
-                                        Manage
-                                    </Button>
-                                </div>
                             </div>
                         {/each}
                     </div>
@@ -707,7 +719,10 @@ $effect(() => {
                                         {registration.memberCount}
                                     </Table.Cell>
                                     <Table.Cell class="text-right">
-                                        <PartyArrivalCell {group} eventId={data.event.id} />
+                                        <PartyArrivalCell
+                                            {group}
+                                            eventId={data.event.id}
+                                            locked={checkinLocked} />
                                     </Table.Cell>
                                     <Table.Cell
                                         class="text-muted-foreground text-right tabular-nums">
