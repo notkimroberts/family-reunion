@@ -1,5 +1,5 @@
 <script lang="ts">
-import { Gift, Images, Plus, Search, Users } from '@lucide/svelte'
+import { FilePlus, Gift, Images, Search, Users } from '@lucide/svelte'
 import { SvelteMap } from 'svelte/reactivity'
 import { goto } from '$app/navigation'
 import { page } from '$app/state'
@@ -9,7 +9,6 @@ import { Input } from '$lib/components/ui/input'
 import { Separator } from '$lib/components/ui/separator'
 import * as Table from '$lib/components/ui/table'
 import { HOST_HOTEL } from '$lib/general/constants'
-import { REGISTRATION_STATUS_STYLES } from '$lib/general/constants/REGISTRATION_STATUS_STYLES'
 import type { EventPerson } from '$lib/server/registrations'
 import {
     cn,
@@ -32,6 +31,7 @@ import PhotoQueue from './PhotoQueue.svelte'
 import PublishedPhotos from './PublishedPhotos.svelte'
 import RegistrationStatusBadge from './RegistrationStatusBadge.svelte'
 import ShirtGivenToggle from './ShirtGivenToggle.svelte'
+import StatusFilterMenu from './StatusFilterMenu.svelte'
 import { filterBookings } from './filterBookings'
 import { filterDonations } from './filterDonations'
 import { filterPeople } from './filterPeople'
@@ -50,26 +50,6 @@ import { urlForLens } from './urlForLens'
    The year picker and the way into Setup live in the status card rather than in a header of their own.
    Which reunion these numbers describe is a property of the numbers; and the app's own nav already
    carries the theme toggle, sign out and the avatar, so an admin header duplicated all three. */
-
-/* The filter buttons wear the same badge each status wears in the rows, from the same palette — click the
-   green one to see the green ones. `undefined` is the unfiltered chip, because "All" is not a status.
-
-   Color on every button rather than only the selected one: the row doubles as the legend, so an organizer
-   can learn what amber means without hunting for a pending row. The selection is marked by a ring instead,
-   which is the only thing that still reads when four buttons are already four different colors.
-
-   Spelled out rather than derived from the style map's keys, because the order is a decision — money in,
-   money owed, comped, cancelled — and Object.keys would also widen the union back to string. Partly
-   paid is a shown status, not a stored one (getBookingDisplayStatus), and sits between the two it is
-   made of. */
-const STATUS_FILTERS: (DisplayStatus | undefined)[] = [
-    undefined,
-    'paid',
-    'partly_paid',
-    'pending',
-    'waived',
-    'refunded',
-]
 
 /* The form value for a nullable yes/no: '' when unanswered, which the select renders as a disabled dash
    and the action reads as "leave this field alone". */
@@ -295,33 +275,7 @@ $effect(() => {
             </div>
 
             {#if lens === 'bookings'}
-                <div class="flex flex-wrap gap-1.5">
-                    {#each STATUS_FILTERS as status (status ?? 'all')}
-                        {@const style = status ? REGISTRATION_STATUS_STYLES[status] : undefined}
-                        {@const Icon = style?.icon}
-                        {@const selected = statusFilter === status}
-                        <button
-                            type="button"
-                            onclick={() => (statusFilter = status)}
-                            aria-pressed={selected}
-                            class={cn(
-                                'inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-xs font-medium transition-all',
-                                /* Same border/background/text triple the row badge wears, so the chip and
-                                   the rows it selects are visibly the same thing. */
-                                style?.class ?? 'text-muted-foreground bg-muted border-transparent',
-                                /* Selection is a ring, not a color change — four buttons are already
-                                   four colors, so there is no color left to mean "chosen". */
-                                selected
-                                    ? 'ring-ring ring-offset-background ring-2 ring-offset-1'
-                                    : 'opacity-70 hover:opacity-100',
-                            )}>
-                            {#if Icon}
-                                <Icon class="size-3" />
-                            {/if}
-                            {style?.label ?? 'All'}
-                        </button>
-                    {/each}
-                </div>
+                <StatusFilterMenu bind:value={statusFilter} />
             {/if}
 
             <!-- Paper entry sits at the end of the control row rather than in the sidebar, so the one
@@ -334,9 +288,12 @@ $effect(() => {
                  control in the row that navigates. -->
             <div class="ml-auto flex items-center gap-2">
                 <Separator orientation="vertical" class="hidden h-6 sm:block" />
-                <Button href="/admin/event/{data.event.id}/registrations/new" size="sm">
-                    <Plus class="size-4" />
-                    Add paper registration
+                <Button
+                    href="/admin/event/{data.event.id}/registrations/new"
+                    size="sm"
+                    title="Add paper registration">
+                    <FilePlus class="size-4" />
+                    Paper entry
                 </Button>
             </div>
         </div>
