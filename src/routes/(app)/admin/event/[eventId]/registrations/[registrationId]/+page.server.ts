@@ -11,10 +11,12 @@ import { getDonationsForEvent, getPaidGiftsForRegistration } from '$lib/server/d
 import type { RegistrationChange } from '$lib/server/email'
 import {
     addAdminMember,
+    addRegistrationNote,
     cancelRegistrationAsAdmin,
     describeRegistrationChange,
     getEventPeople,
     getRegistrationMembers,
+    getRegistrationNotes,
     getRegistrationWithEvent,
     getRegistrationsForEvent,
     neverConfirmed,
@@ -32,7 +34,7 @@ import { getTiersForEvent } from '$lib/server/tiers'
 import { parseYesNo } from '$lib/utils'
 import type { Actions, PageServerLoad } from './$types'
 import type { RegistrationActionFeedback } from './registrationActionFeedback'
-import { adminEditRegistrationSchema, settleMemberSchema } from './schema'
+import { adminEditRegistrationSchema, registrationNoteSchema, settleMemberSchema } from './schema'
 
 const AUDIT_HISTORY_LIMIT = 50
 
@@ -67,7 +69,7 @@ export const load: PageServerLoad = async (event) => {
 
     /* The last three feed the event status panel beside the booking, the same one the list shows, so
        the year's figures stay in view while a booking is worked. */
-    const [members, tiers, gifts, history, eventRegistrations, eventPeople, eventDonations] =
+    const [members, tiers, gifts, history, notes, eventRegistrations, eventPeople, eventDonations] =
         await Promise.all([
             getRegistrationMembers(event.params.registrationId),
             getTiersForEvent(found.registration.eventId),
@@ -90,6 +92,7 @@ export const load: PageServerLoad = async (event) => {
                 .where(eq(registrationAudit.registrationId, event.params.registrationId))
                 .orderBy(desc(registrationAudit.createdAt))
                 .limit(AUDIT_HISTORY_LIMIT),
+            getRegistrationNotes(event.params.registrationId),
             getRegistrationsForEvent(event.params.eventId),
             getEventPeople(event.params.eventId),
             getDonationsForEvent(event.params.eventId),
@@ -121,6 +124,7 @@ export const load: PageServerLoad = async (event) => {
         members,
         tiers,
         history,
+        notes,
         /* Sum of the price snapshots, so a later tier reprice never rewrites this total. */
         totalCents: sumMemberPrices(members),
         /* The part of it nobody has paid, for people added after the booking was paid. Counted on a
@@ -398,6 +402,32 @@ export const actions: Actions = {
         }
 
         const feedback: RegistrationActionFeedback = { settled: summary }
+        return feedback
+    },
+
+    /* Appends an organizer note. Paired like every action, so a note cannot land on a booking from
+       another year through a hand-edited URL. Not audited: a note changes nothing about the booking. */
+    add_note: async (event) => {
+        const admin = requireAdmin(event)
+        await loadPairedRegistration(event.params)
+
+        const parsed = registrationNoteSchema.safeParse({
+            body: (await event.request.formData()).get('body') ?? '',
+        })
+        if (!parsed.success) {
+            const feedback: RegistrationActionFeedback = {
+                noteError: parsed.error.issues[0]?.message ?? 'Could not save the note',
+            }
+            return fail(400, feedback)
+        }
+
+        await addRegistrationNote({
+            registrationId: event.params.registrationId,
+            author: admin,
+            body: parsed.data.body,
+        })
+
+        const feedback: RegistrationActionFeedback = { noteAdded: true }
         return feedback
     },
 

@@ -25,6 +25,7 @@ import AdminCancelDialog from './AdminCancelDialog.svelte'
 import RegistrationEditForm from './RegistrationEditForm.svelte'
 import RegistrationHistory from './RegistrationHistory.svelte'
 import RegistrationMoneyCard from './RegistrationMoneyCard.svelte'
+import RegistrationNotes from './RegistrationNotes.svelte'
 import SettleMemberPayment from './SettleMemberPayment.svelte'
 
 /* The one thing the status badge cannot say. 'pending' covers both a paper form awaiting a check and
@@ -397,6 +398,7 @@ async function handleCopyEmail() {
                 </CardContent>
             </Card>
 
+            <RegistrationNotes notes={data.notes} error={actionData?.noteError} />
             <RegistrationHistory history={data.history} />
         {/if}
     </div>

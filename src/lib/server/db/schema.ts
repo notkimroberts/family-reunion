@@ -472,6 +472,27 @@ export const registrationAudit = pgTable(
     (t) => [index('registration_audit_registration_id_idx').on(t.registrationId)],
 )
 
+/* What an organizer was told or agreed on a call, written by organizers for organizers.
+
+   Append-only, like registration_audit: a later note corrects an earlier one rather than editing it,
+   so two organizers never overwrite each other and every note keeps its author and time. Never shown
+   to the registrant and never put in an email. author_user_id and author_name follow the audit
+   table, and for the same reasons: the FK is set null on delete, and the dev user has no row. */
+export const registrationNotes = pgTable(
+    'registration_notes',
+    {
+        id: uuid('id').primaryKey().defaultRandom(),
+        registrationId: uuid('registration_id')
+            .notNull()
+            .references(() => registrations.id, { onDelete: 'cascade' }),
+        authorUserId: text('author_user_id').references(() => user.id, { onDelete: 'set null' }),
+        authorName: text('author_name'),
+        body: text('body').notNull(),
+        createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    },
+    (t) => [index('registration_notes_registration_id_idx').on(t.registrationId)],
+)
+
 export const photoStatusEnum = pgEnum('photo_status', ['pending', 'approved', 'rejected'])
 
 /* Contributed images in the family gallery. See ADR 0009, which amends ADR 0005 — this table and
