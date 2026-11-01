@@ -75,6 +75,7 @@ describe('isPublicPath', () => {
         '/donate/thanks',
         '/photos',
         '/photos/contribute',
+        '/faq',
     ])('allows %s', (pathname) => {
         expect(isPublicPath(pathname)).toBe(true)
     })
@@ -105,6 +106,7 @@ describe('isPublicPath', () => {
         '/donate-now',
         '/photosphere',
         '/photos-admin',
+        '/faqs',
     ])('does not treat %s as public', (pathname) => {
         expect(isPublicPath(pathname)).toBe(false)
     })

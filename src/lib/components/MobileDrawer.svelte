@@ -1,5 +1,13 @@
 <script lang="ts">
-import { ClipboardPen, HeartHandshake, Home, Images, LayoutDashboard, LogOut } from '@lucide/svelte'
+import {
+    CircleHelp,
+    ClipboardPen,
+    HeartHandshake,
+    Home,
+    Images,
+    LayoutDashboard,
+    LogOut,
+} from '@lucide/svelte'
 import { page } from '$app/state'
 import { authClient } from '$lib/auth-client'
 import { Avatar, AvatarFallback } from '$lib/components/ui/avatar'
@@ -7,6 +15,7 @@ import { Sheet, SheetContent } from '$lib/components/ui/sheet'
 import {
     APP_NAME,
     DONATE_NAV_LINK,
+    FAQ_NAV_LINK,
     PHOTOS_NAV_LINK,
     REGISTER_NAV_LINK,
 } from '$lib/general/constants'
@@ -60,6 +69,13 @@ const linkClass = (active: boolean) =>
                 class={linkClass(isActive(PHOTOS_NAV_LINK.href))}>
                 <Images class="h-4 w-4" />
                 {PHOTOS_NAV_LINK.label}
+            </a>
+            <a
+                href={FAQ_NAV_LINK.href}
+                onclick={onClose}
+                class={linkClass(isActive(FAQ_NAV_LINK.href))}>
+                <CircleHelp class="h-4 w-4" />
+                {FAQ_NAV_LINK.label}
             </a>
             <a
                 href={DONATE_NAV_LINK.href}

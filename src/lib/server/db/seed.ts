@@ -124,7 +124,8 @@ async function seed() {
 	`)
 
     const ADULT_PRICE_CENTS = 16500
-    const CHILD_PRICE_CENTS = 10000
+    const SENIOR_PRICE_CENTS = 15000
+    const CHILD_PRICE_CENTS = 12000
 
     dbg.seed('Seeding reunion events...')
     const events = await db
@@ -208,13 +209,14 @@ async function seed() {
     dbg.seed('Seeding tiers...')
     await db.insert(schema.tiers).values(
         events.flatMap((event) => [
-            { eventId: event.id, label: 'Adult', priceCents: ADULT_PRICE_CENTS },
-            { eventId: event.id, label: 'Child', priceCents: CHILD_PRICE_CENTS },
+            { eventId: event.id, label: 'Adult (15+)', priceCents: ADULT_PRICE_CENTS },
+            { eventId: event.id, label: 'Senior (75+)', priceCents: SENIOR_PRICE_CENTS },
+            { eventId: event.id, label: 'Child (4–14)', priceCents: CHILD_PRICE_CENTS },
         ]),
     )
 
     dbg.seed('Seeding registrations...')
-    const ADULT_AGE_CUTOFF = 18
+    const ADULT_AGE_CUTOFF = 15
     for (const event of events) {
         const numRegistrations =
             event.status === 'open'
@@ -240,7 +242,7 @@ async function seed() {
                     birthYear,
                     birthMonth,
                     birthDay,
-                    tierLabel: isAdult ? 'Adult' : 'Child',
+                    tierLabel: isAdult ? 'Adult (15+)' : 'Child (4–14)',
                     priceCents: isAdult ? ADULT_PRICE_CENTS : CHILD_PRICE_CENTS,
                 }
             })

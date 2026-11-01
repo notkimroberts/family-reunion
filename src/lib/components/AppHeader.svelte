@@ -14,6 +14,7 @@ import { Separator } from '$lib/components/ui/separator'
 import {
     APP_NAME,
     DONATE_NAV_LINK,
+    FAQ_NAV_LINK,
     PHOTOS_NAV_LINK,
     REGISTER_NAV_LINK,
 } from '$lib/general/constants'
@@ -60,6 +61,10 @@ let mobileMenuOpen = $state(false)
                  three visual weights side by side and made the bar read as clutter. -->
             <a href={PHOTOS_NAV_LINK.href} class={TEXT_LINK_CLASS}>
                 {PHOTOS_NAV_LINK.label}
+            </a>
+
+            <a href={FAQ_NAV_LINK.href} class={TEXT_LINK_CLASS}>
+                {FAQ_NAV_LINK.label}
             </a>
 
             <a href={DONATE_NAV_LINK.href} class={TEXT_LINK_CLASS}>
