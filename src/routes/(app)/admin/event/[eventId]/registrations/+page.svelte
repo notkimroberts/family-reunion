@@ -1,5 +1,14 @@
 <script lang="ts">
-import { ChevronRight, Download, FilePlus, Gift, Images, Search, Users } from '@lucide/svelte'
+import {
+    ChevronRight,
+    Download,
+    FilePlus,
+    Gift,
+    Images,
+    PhoneCall,
+    Search,
+    Users,
+} from '@lucide/svelte'
 import { SvelteMap } from 'svelte/reactivity'
 import { goto } from '$app/navigation'
 import { page } from '$app/state'
@@ -10,6 +19,7 @@ import { Separator } from '$lib/components/ui/separator'
 import * as Table from '$lib/components/ui/table'
 import { HOST_HOTEL } from '$lib/general/constants'
 import { isBeforeCheckinOpens } from '$lib/general/registration'
+import { matchesSearch } from '$lib/general/search'
 import type { EventPerson } from '$lib/server/registrations'
 import {
     cn,
@@ -24,6 +34,7 @@ import { formatBirthDate } from '$lib/utils/age'
 import { groupPeopleByBooking } from '../checkin/groupPeopleByBooking'
 import ArrivalToggle from './ArrivalToggle.svelte'
 import EventStatusPanel from './EventStatusPanel.svelte'
+import FollowUpList from './FollowUpList.svelte'
 import PartyArrivalCell from './PartyArrivalCell.svelte'
 import PaymentChannel from './PaymentChannel.svelte'
 import PaymentNote from './PaymentNote.svelte'
@@ -36,6 +47,7 @@ import StatusFilterMenu from './StatusFilterMenu.svelte'
 import { filterBookings } from './filterBookings'
 import { filterDonations } from './filterDonations'
 import { filterPeople } from './filterPeople'
+import { getFollowUps } from './followUps'
 import { lensFromUrl, type RegistrationsLens } from './registrationsViewUrl'
 import { rowAccent } from './rowAccent'
 import { urlForLens } from './urlForLens'
@@ -132,6 +144,7 @@ let lens = $derived(lensFromUrl(page.url))
 let showPeople = $derived(lens === 'people')
 let showDonations = $derived(lens === 'donations')
 let showPhotos = $derived(lens === 'photos')
+let showFollowUps = $derived(lens === 'followups')
 
 let search = $state('')
 /* undefined is unfiltered. Holding a status key rather than a display label also retires the
@@ -155,6 +168,22 @@ let owedPeopleCount = $derived(
     data.people.filter((person) => getPersonDisplayStatus(person) === 'payment_due').length,
 )
 let visibleDonations = $derived(filterDonations(data.donations, { search }))
+/* Every booking to ring, and why. `now` is read once per load: a booking crossing the three-day line
+   while the page is open can wait for the next visit. */
+let followUps = $derived(
+    getFollowUps(data.registrations, data.people, {
+        now: new Date(),
+        askHotel: HOST_HOTEL !== undefined,
+    }),
+)
+let visibleFollowUps = $derived(
+    followUps.filter((followUp) =>
+        matchesSearch(search, [
+            followUp.registration.contactName,
+            followUp.registration.contactEmail,
+        ]),
+    ),
+)
 
 /* Payment dates in the READER's timezone, filled in after mount.
 
@@ -203,7 +232,7 @@ $effect(() => {
                  guessing what the off state shows. -->
             <!-- Centered on its own row on a phone; beside search from sm up. -->
             <div class="flex w-full justify-center sm:w-auto">
-                <div class="bg-muted flex gap-1 rounded-full p-1">
+                <div class="bg-muted flex max-w-full gap-1 overflow-x-auto rounded-full p-1">
                     <button
                         type="button"
                         onclick={() => setView('bookings')}
@@ -262,6 +291,26 @@ $effect(() => {
                             <span
                                 class="bg-primary text-primary-foreground rounded-full px-1.5 text-[10px] leading-4">
                                 {data.pendingPhotos.length}
+                            </span>
+                        {/if}
+                    </button>
+                    <!-- The families to ring. Computed from rows already loaded, so it costs no query. -->
+                    <button
+                        type="button"
+                        onclick={() => setView('followups')}
+                        aria-pressed={showFollowUps}
+                        class={cn(
+                            'flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium whitespace-nowrap transition-colors',
+                            showFollowUps
+                                ? 'bg-background text-foreground shadow-sm'
+                                : 'text-muted-foreground',
+                        )}>
+                        <PhoneCall class="size-3.5" />
+                        Follow up
+                        {#if followUps.length > 0}
+                            <span
+                                class="bg-primary text-primary-foreground rounded-full px-1.5 text-[10px] leading-4">
+                                {followUps.length}
                             </span>
                         {/if}
                     </button>
@@ -329,6 +378,12 @@ $effect(() => {
             {#if data.eventPhotos.length > 0}
                 <PublishedPhotos photos={data.eventPhotos} />
             {/if}
+        {:else if showFollowUps}
+            <p class="text-muted-foreground text-xs">
+                Bookings that owe money, stopped partway, or are missing an answer the organizers
+                need.
+            </p>
+            <FollowUpList followUps={visibleFollowUps} eventId={data.event.id} />
         {:else if showDonations}
             <p class="text-muted-foreground text-xs">
                 Every gift recorded for this year, including the checkouts nobody finished. {data
