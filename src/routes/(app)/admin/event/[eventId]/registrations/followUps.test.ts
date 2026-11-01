@@ -74,30 +74,22 @@ describe('getFollowUps', () => {
         expect(reasonsOf([reg({ amountDueCents: 16500 })])).toEqual([['reg-1', ['payment_due']]])
     })
 
-    it('tells an abandoned card checkout from a check not received, once three days old', () => {
+    it('flags a check not received once three days old', () => {
         expect(
             reasonsOf([
-                reg({ id: 'card', status: 'pending', contactEmail: 'a@x.com' }),
-                reg({
-                    id: 'check',
-                    status: 'pending',
-                    stripeSessionId: null,
-                    contactEmail: 'b@x.com',
-                }),
-                reg({ id: 'fresh', status: 'pending', createdAt: RECENT, contactEmail: 'c@x.com' }),
+                reg({ id: 'check', status: 'pending', stripeSessionId: null }),
+                reg({ id: 'fresh', status: 'pending', stripeSessionId: null, createdAt: RECENT }),
             ]),
-        ).toEqual([
-            ['card', ['checkout_abandoned']],
-            ['check', ['awaiting_check']],
-        ])
+        ).toEqual([['check', ['awaiting_check']]])
     })
 
-    it('skips a pending booking whose email already has a paid one, in any case', () => {
+    /* Still on Stripe's page, or about to be deleted when its session expires. */
+    it('never lists an unpaid card checkout, whatever else it lacks', () => {
         expect(
-            reasonsOf([
-                reg({ id: 'paid', contactEmail: 'Alice@Example.com' }),
-                reg({ id: 'dup', status: 'pending' }),
-            ]),
+            reasonsOf(
+                [reg({ status: 'pending', stayingAtHostHotel: null })],
+                [person({ shirtSize: null })],
+            ),
         ).toEqual([])
     })
 
