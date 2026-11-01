@@ -23,8 +23,10 @@
      /api/registration/status (polled while payment settles), /api/auth/* (Better Auth),
      and /api/health (Railway's health check).
 
+   '/faq' is the answers to what families ask before they register, so it is read on the way in.
+
    To reopen a page after the reunion, add its prefix back here. */
-const PUBLIC_PATH_PREFIXES = ['/', '/register', '/donate', '/photos']
+const PUBLIC_PATH_PREFIXES = ['/', '/register', '/donate', '/photos', '/faq']
 
 export function isPublicPath(pathname: string): boolean {
     return PUBLIC_PATH_PREFIXES.some(
