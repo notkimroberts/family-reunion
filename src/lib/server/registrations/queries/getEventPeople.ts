@@ -11,6 +11,10 @@ export type EventPerson = {
     tierLabel: string
     priceCents: number
     shirtSize: string | null
+    /* Where they live, for the CSV export. */
+    addressCity: string | null
+    addressState: string | null
+    addressZip: string | null
     vegetarianMeal: boolean | null
     attendedReunion2025: boolean | null
     isContact: boolean
@@ -49,6 +53,9 @@ export async function getEventPeople(eventId: string): Promise<EventPerson[]> {
             tierLabel: partyMembers.tierLabel,
             priceCents: partyMembers.priceCents,
             shirtSize: partyMembers.shirtSize,
+            addressCity: partyMembers.addressCity,
+            addressState: partyMembers.addressState,
+            addressZip: partyMembers.addressZip,
             vegetarianMeal: partyMembers.vegetarianMeal,
             attendedReunion2025: partyMembers.attendedReunion2025,
             isContact: partyMembers.isContact,

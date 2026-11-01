@@ -1,5 +1,6 @@
 import { CircleCheck, CircleDotDashed, CircleX, Clock, Gift, HandCoins } from '@lucide/svelte'
 import type { DisplayStatus } from '$lib/utils'
+import { REGISTRATION_STATUS_LABELS } from './REGISTRATION_STATUS_LABELS'
 import { WARNING_SURFACE_CLASS } from './WARNING_SURFACE_CLASS'
 
 /* One vocabulary for payment status, and now one palette too.
@@ -29,32 +30,32 @@ import { WARNING_SURFACE_CLASS } from './WARNING_SURFACE_CLASS'
    ambers — roughly one man in twelve. Color and shape say the same thing rather than color alone. */
 export const REGISTRATION_STATUS_STYLES = {
     paid: {
-        label: 'Paid',
+        label: REGISTRATION_STATUS_LABELS.paid,
         icon: CircleCheck,
         class: 'border-green-300 bg-green-50 text-green-800 dark:border-green-800 dark:bg-green-950 dark:text-green-200',
     },
     partly_paid: {
-        label: 'Partly paid',
+        label: REGISTRATION_STATUS_LABELS.partly_paid,
         icon: CircleDotDashed,
         class: WARNING_SURFACE_CLASS,
     },
     payment_due: {
-        label: 'Payment due',
+        label: REGISTRATION_STATUS_LABELS.payment_due,
         icon: HandCoins,
         class: WARNING_SURFACE_CLASS,
     },
     pending: {
-        label: 'Pending',
+        label: REGISTRATION_STATUS_LABELS.pending,
         icon: Clock,
         class: WARNING_SURFACE_CLASS,
     },
     waived: {
-        label: 'Waived',
+        label: REGISTRATION_STATUS_LABELS.waived,
         icon: Gift,
         class: 'border-sky-300 bg-sky-50 text-sky-800 dark:border-sky-800 dark:bg-sky-950 dark:text-sky-200',
     },
     refunded: {
-        label: 'Refunded',
+        label: REGISTRATION_STATUS_LABELS.refunded,
         icon: CircleX,
         class: 'border-destructive/40 bg-destructive/10 text-destructive',
     },
