@@ -51,8 +51,7 @@ describe('handleExpiredCheckout', () => {
         expect(await db.select().from(donations)).toHaveLength(0)
     })
 
-    /* Someone to ring, and possibly settled by check against this very row. */
-    it('keeps an expired booking when that email has not paid', async () => {
+    it('deletes an expired booking when that email never paid', async () => {
         const abandoned = await seedRegistration(db, {
             status: 'pending',
             stripeSessionId: 'cs_gone',
@@ -62,10 +61,10 @@ describe('handleExpiredCheckout', () => {
             expiredSession('cs_gone', abandoned.registrationId, abandoned.viewToken),
         )
 
-        expect(await registrationExists(abandoned.registrationId)).toBe(true)
+        expect(await registrationExists(abandoned.registrationId)).toBe(false)
     })
 
-    it('ignores a paid booking under another email', async () => {
+    it('leaves a paid booking under another email alone', async () => {
         const paid = await seedRegistration(db, {
             status: 'paid',
             contactEmail: 'bob@example.com',
@@ -80,14 +79,13 @@ describe('handleExpiredCheckout', () => {
             expiredSession('cs_gone', abandoned.registrationId, abandoned.viewToken),
         )
 
-        expect(await registrationExists(abandoned.registrationId)).toBe(true)
+        expect(await registrationExists(abandoned.registrationId)).toBe(false)
+        expect(await registrationExists(paid.registrationId)).toBe(true)
     })
 
     /* An organizer marked it paid by check after the checkout was abandoned. */
     it('never deletes a booking that is no longer pending', async () => {
-        const first = await seedRegistration(db, { status: 'paid' })
         const settled = await seedRegistration(db, {
-            eventId: first.eventId,
             status: 'paid',
             stripeSessionId: 'cs_gone',
         })
@@ -100,9 +98,7 @@ describe('handleExpiredCheckout', () => {
     })
 
     it('never deletes a booking that has moved to another session', async () => {
-        const paid = await seedRegistration(db, { status: 'paid' })
         const moved = await seedRegistration(db, {
-            eventId: paid.eventId,
             status: 'pending',
             stripeSessionId: 'cs_current',
         })
