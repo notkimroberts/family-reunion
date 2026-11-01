@@ -240,6 +240,13 @@ Everything an organizer does concerns one reunion, and the reunion is named in t
 - **A check-paid booking can still hold a card charge** — someone added later who paid at `/register/pay`. Cancelling refunds that charge through Stripe, so the refund route is `mixed`: the email states "Refunded to your card" and "To be refunded by the organizers" separately (`cardRefundCents`), and `AdminCancelDialog` tells the organizer the same split. Calling it all "by hand" would have promised them money Stripe was already returning.
 - Refund flows pass a stable Stripe idempotency key (`cancel-registration-<id>-<intent>`) so retries cannot double-refund
 
+### Organizer tools
+
+- **CSV export** is `/admin/event/[eventId]/registrations/export/{people,bookings}`, a `+server.ts`, so **its `requireAdmin` is the whole protection** — no layout load runs for it. `toCsv` (`$lib/utils`) prefixes a cell that starts with `= + - @` (or tab, CR) with an apostrophe, because names are typed by the public and a spreadsheet runs such a cell as a formula. Status words come from `REGISTRATION_STATUS_LABELS`, split out of `REGISTRATION_STATUS_STYLES` because the styles import icons, which are `.svelte` files node cannot load.
+- **Follow up** is a fifth `?view=` lens, computed by `getFollowUps` from rows the page already loads: owes for someone added, a card checkout or check pending over three days, a person with no shirt size, a hotel answer unsure or never asked. Refunded bookings and a pending duplicate of a paid booking (same email) never appear.
+- **Notes** (`registration_notes`) are append-only, like `registration_audit`: a correction is a new note. They are never read by `/register/**` or by any email, and `notes.test.ts` asserts it by source.
+- **Email families** (`/admin/event/[eventId]/email`) is owner-only — `requireOwner` in the load and every action. The recipient list is fixed on the `announcements` row when it is sent, and batches go out 100 at a time keyed `announcement/<id>/<index>`, so **Send to the rest** after a failure resumes from the last batch Resend accepted, to the same list, without emailing anyone twice. Send also requires the count the owner ticked to equal the current count. The owner's text is escaped and the safety notice is added as on every email.
+
 ### Donations
 
 Gifts to the reunion, from `/donate` or added to a registration checkout. Presented amounts come from `DONATION_PRESET_CENTS`, bounded by `DONATION_MIN_CENTS` / `DONATION_MAX_CENTS` — all three in `$lib/general/constants`, and enforced by the zod schemas so the client and the server cannot disagree.

@@ -1,5 +1,5 @@
 <script lang="ts">
-import { ChevronDown, ClipboardCheck, Settings } from '@lucide/svelte'
+import { ChevronDown, ClipboardCheck, Mail, Settings } from '@lucide/svelte'
 import { Button } from '$lib/components/ui/button'
 import { Separator } from '$lib/components/ui/separator'
 import { Tooltip, TooltipContent, TooltipTrigger } from '$lib/components/ui/tooltip'
@@ -61,26 +61,44 @@ function handleToggleDetails() {
             </svelte:element>
             <p class="text-muted-foreground text-xs">Reunion year {event.year}</p>
         </div>
-        <!-- Hidden for anyone who is not the owner — hiding is not the protection, the settings route
-             guards its own load and every action; this only stops advertising a door that will not
+        <!-- Hidden for anyone who is not the owner — hiding is not the protection, the settings and
+             email routes guard their own load and every action; this only stops advertising a door that will not
              open. -->
         {#if isOwner}
-            <Tooltip>
-                <TooltipTrigger>
-                    {#snippet child({ props })}
-                        <Button
-                            {...props}
-                            href="/admin/event/{event.id}/settings"
-                            variant="ghost"
-                            size="icon"
-                            class="size-8 shrink-0">
-                            <Settings class="size-4" />
-                            <span class="sr-only">Event settings</span>
-                        </Button>
-                    {/snippet}
-                </TooltipTrigger>
-                <TooltipContent>Event settings</TooltipContent>
-            </Tooltip>
+            <div class="flex shrink-0 gap-1">
+                <Tooltip>
+                    <TooltipTrigger>
+                        {#snippet child({ props })}
+                            <Button
+                                {...props}
+                                href="/admin/event/{event.id}/email"
+                                variant="ghost"
+                                size="icon"
+                                class="size-8 shrink-0">
+                                <Mail class="size-4" />
+                                <span class="sr-only">Email families</span>
+                            </Button>
+                        {/snippet}
+                    </TooltipTrigger>
+                    <TooltipContent>Email families</TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                    <TooltipTrigger>
+                        {#snippet child({ props })}
+                            <Button
+                                {...props}
+                                href="/admin/event/{event.id}/settings"
+                                variant="ghost"
+                                size="icon"
+                                class="size-8 shrink-0">
+                                <Settings class="size-4" />
+                                <span class="sr-only">Event settings</span>
+                            </Button>
+                        {/snippet}
+                    </TooltipTrigger>
+                    <TooltipContent>Event settings</TooltipContent>
+                </Tooltip>
+            </div>
         {/if}
     </div>
 

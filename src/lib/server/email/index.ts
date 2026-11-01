@@ -3,6 +3,7 @@ export {
     renderRecoveryEmail,
     renderCancellationEmail,
     renderDonationReceipt,
+    renderAnnouncement,
 } from './templates'
 export type {
     ConfirmationStatus,
@@ -11,6 +12,7 @@ export type {
     RefundRoute,
     CancellationEmailData,
     DonationReceiptData,
+    AnnouncementEmailData,
     RegistrationChange,
 } from './templates'
 export {
@@ -18,5 +20,6 @@ export {
     sendRecoveryEmail,
     sendCancellationEmail,
     sendDonationReceipt,
+    sendAnnouncement,
 } from './send'
 export { verifyWebhookEvent } from './webhooks'

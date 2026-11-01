@@ -114,3 +114,12 @@ export type DonationReceiptData = {
        already carry; a receipt carries none. */
     siteOrigin: string
 }
+
+export type AnnouncementEmailData = {
+    eventTitle: string
+    subject: string
+    /* Plain text as the owner typed it; a blank line starts a new paragraph. */
+    body: string
+    /* The site's origin, for the header image and the link back to the site. */
+    siteOrigin: string
+}

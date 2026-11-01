@@ -73,3 +73,45 @@ export async function send(params: {
         throw new Error(`Resend rejected the email to ${params.to}: ${error.message}`)
     }
 }
+
+/* Resend's ceiling on one batch call. */
+export const BATCH_SIZE_LIMIT = 100
+
+/* Sends up to BATCH_SIZE_LIMIT emails in one call, with the same From, Reply-To, outbox and
+   throw-on-error contract as send(). Resend validates a batch strictly by default, so one rejected
+   address fails the whole call and none of it is delivered — which is what lets a retry under the
+   same idempotencyKey resend the batch as a unit. */
+export async function sendBatch(
+    messages: { to: string; subject: string; text: string; html: string }[],
+    idempotencyKey: string,
+): Promise<void> {
+    if (messages.length > BATCH_SIZE_LIMIT) {
+        throw new Error(`A batch holds at most ${BATCH_SIZE_LIMIT} emails, got ${messages.length}`)
+    }
+    const from = `${REUNION_NAME} <${EMAIL_FROM_ADDRESS}>`
+    if (env.EMAIL_OUTBOX_DIR) {
+        for (const message of messages) {
+            await writeToOutbox(
+                env.EMAIL_OUTBOX_DIR,
+                { from, replyTo: CONTACT_EMAIL, idempotencyKey, ...message },
+                env.RAILWAY_ENVIRONMENT,
+            )
+        }
+        return
+    }
+
+    const resend = getResend()
+    if (!resend) {
+        return
+    }
+
+    const { error } = await resend.batch.send(
+        messages.map((message) => ({ from, replyTo: CONTACT_EMAIL, ...message })),
+        { idempotencyKey },
+    )
+
+    if (error) {
+        dbg.email('batch send failed key=%s: %o', idempotencyKey, error)
+        throw new Error(`Resend rejected the batch ${idempotencyKey}: ${error.message}`)
+    }
+}
