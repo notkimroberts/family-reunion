@@ -184,6 +184,10 @@ describe('the lens in the URL', () => {
         )
     })
 
+    it('reads followups from the parameter', () => {
+        expect(lensFromUrl(new URL('http://x/r?view=followups'))).toBe('followups')
+    })
+
     /* Anything else is not a lens. Falling back to bookings beats rendering nothing. */
     it('falls back to bookings for an unrecognized value', () => {
         expect(lensFromUrl(new URL('http://x/r?view=chairs'))).toBe('bookings')

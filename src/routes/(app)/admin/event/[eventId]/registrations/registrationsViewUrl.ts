@@ -1,4 +1,4 @@
-export type RegistrationsLens = 'bookings' | 'people' | 'donations' | 'photos'
+export type RegistrationsLens = 'bookings' | 'people' | 'donations' | 'photos' | 'followups'
 
 /* The lens lives in the URL so it survives a reload and a trip into a registration and back.
 
@@ -17,6 +17,9 @@ export function lensFromUrl(url: URL): RegistrationsLens {
     }
     if (view === 'photos') {
         return 'photos'
+    }
+    if (view === 'followups') {
+        return 'followups'
     }
     return 'bookings'
 }
