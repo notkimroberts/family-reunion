@@ -201,68 +201,71 @@ $effect(() => {
             <!-- Leftmost, ahead of the search box and the chips, because the lens decides what those two
                  even mean. Two labeled halves rather than a switch: "Show people" as a switch leaves you
                  guessing what the off state shows. -->
-            <div class="bg-muted flex gap-1 rounded-full p-1">
-                <button
-                    type="button"
-                    onclick={() => setView('bookings')}
-                    aria-pressed={lens === 'bookings'}
-                    class={cn(
-                        'rounded-full px-3 py-1 text-xs font-medium transition-colors',
-                        lens === 'bookings'
-                            ? 'bg-background text-foreground shadow-sm'
-                            : 'text-muted-foreground',
-                    )}>
-                    Bookings
-                </button>
-                <button
-                    type="button"
-                    onclick={() => setView('people')}
-                    aria-pressed={showPeople}
-                    class={cn(
-                        'flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-colors',
-                        showPeople
-                            ? 'bg-background text-foreground shadow-sm'
-                            : 'text-muted-foreground',
-                    )}>
-                    <Users class="size-3.5" />
-                    People
-                </button>
-                <!-- Gifts is a third lens rather than a page of its own, for the reason People is:
+            <!-- Centered on its own row on a phone; beside search from sm up. -->
+            <div class="flex w-full justify-center sm:w-auto">
+                <div class="bg-muted flex gap-1 rounded-full p-1">
+                    <button
+                        type="button"
+                        onclick={() => setView('bookings')}
+                        aria-pressed={lens === 'bookings'}
+                        class={cn(
+                            'rounded-full px-3 py-1 text-xs font-medium transition-colors',
+                            lens === 'bookings'
+                                ? 'bg-background text-foreground shadow-sm'
+                                : 'text-muted-foreground',
+                        )}>
+                        Bookings
+                    </button>
+                    <button
+                        type="button"
+                        onclick={() => setView('people')}
+                        aria-pressed={showPeople}
+                        class={cn(
+                            'flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-colors',
+                            showPeople
+                                ? 'bg-background text-foreground shadow-sm'
+                                : 'text-muted-foreground',
+                        )}>
+                        <Users class="size-3.5" />
+                        People
+                    </button>
+                    <!-- Gifts is a third lens rather than a page of its own, for the reason People is:
                      it is the same year's money, read a different way. -->
-                <button
-                    type="button"
-                    onclick={() => setView('donations')}
-                    aria-pressed={showDonations}
-                    class={cn(
-                        'flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-colors',
-                        showDonations
-                            ? 'bg-background text-foreground shadow-sm'
-                            : 'text-muted-foreground',
-                    )}>
-                    <Gift class="size-3.5" />
-                    Gifts
-                </button>
-                <!-- Photos is the moderation queue, not a year's photos: contributed rows carry a
+                    <button
+                        type="button"
+                        onclick={() => setView('donations')}
+                        aria-pressed={showDonations}
+                        class={cn(
+                            'flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-colors',
+                            showDonations
+                                ? 'bg-background text-foreground shadow-sm'
+                                : 'text-muted-foreground',
+                        )}>
+                        <Gift class="size-3.5" />
+                        Gifts
+                    </button>
+                    <!-- Photos is the moderation queue, not a year's photos: contributed rows carry a
                      nullable event_id and the recovered archive has none, so there is one queue. -->
-                <button
-                    type="button"
-                    onclick={() => setView('photos')}
-                    aria-pressed={showPhotos}
-                    class={cn(
-                        'flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-colors',
-                        showPhotos
-                            ? 'bg-background text-foreground shadow-sm'
-                            : 'text-muted-foreground',
-                    )}>
-                    <Images class="size-3.5" />
-                    Photos
-                    {#if data.pendingPhotos.length > 0}
-                        <span
-                            class="bg-primary text-primary-foreground rounded-full px-1.5 text-[10px] leading-4">
-                            {data.pendingPhotos.length}
-                        </span>
-                    {/if}
-                </button>
+                    <button
+                        type="button"
+                        onclick={() => setView('photos')}
+                        aria-pressed={showPhotos}
+                        class={cn(
+                            'flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-colors',
+                            showPhotos
+                                ? 'bg-background text-foreground shadow-sm'
+                                : 'text-muted-foreground',
+                        )}>
+                        <Images class="size-3.5" />
+                        Photos
+                        {#if data.pendingPhotos.length > 0}
+                            <span
+                                class="bg-primary text-primary-foreground rounded-full px-1.5 text-[10px] leading-4">
+                                {data.pendingPhotos.length}
+                            </span>
+                        {/if}
+                    </button>
+                </div>
             </div>
 
             <!-- Its own row on a phone: beside the lens tabs it had room for "Search name or emai". -->
@@ -586,7 +589,7 @@ $effect(() => {
         {:else}
             <AdminDataView>
                 {#snippet mobileCards()}
-                    <div class="flex flex-col gap-3">
+                    <div class="flex flex-col gap-2">
                         {#each visibleBookings as registration (registration.id)}
                             {@const group = doorGroups.get(registration.id)}
                             <!-- Not one <a>, though it was one. PaymentNote renders a "View in Stripe"
@@ -597,24 +600,23 @@ $effect(() => {
                                  width. So the name is the link, and its ::after stretches over the card
                                  to make all of it the tap target; the Stripe link and Check in all sit
                                  above that overlay with relative z-10. This replaced a full-width
-                                 Manage button on every card that went to the same place. -->
+                                 Manage button on every card that went to the same place.
+
+                                 Two lines in the common case: no email (search still finds it, and the
+                                 booking shows it), no hotel until answered, no green paid line under a
+                                 green Paid badge, no door row before check-in opens. -->
                             <div
                                 class={cn(
-                                    'bg-card relative flex flex-col gap-1.5 rounded-lg border p-4',
+                                    'bg-card relative flex flex-col gap-1 rounded-lg border px-3 py-2.5',
                                     rowAccent(registration),
                                 )}>
-                                <div class="flex items-start justify-between gap-2">
-                                    <div class="min-w-0">
-                                        <a
-                                            href="/admin/event/{data.event
-                                                .id}/registrations/{registration.id}"
-                                            class="block truncate font-medium after:absolute after:inset-0 after:rounded-lg">
-                                            {registration.contactName}
-                                        </a>
-                                        <p class="text-muted-foreground truncate text-xs">
-                                            {registration.contactEmail}
-                                        </p>
-                                    </div>
+                                <div class="flex items-center justify-between gap-2">
+                                    <a
+                                        href="/admin/event/{data.event
+                                            .id}/registrations/{registration.id}"
+                                        class="min-w-0 truncate font-medium after:absolute after:inset-0 after:rounded-lg">
+                                        {registration.contactName}
+                                    </a>
                                     <div class="flex shrink-0 items-center gap-1">
                                         <RegistrationStatusBadge
                                             status={getBookingDisplayStatus(registration)} />
@@ -632,22 +634,23 @@ $effect(() => {
                                     <span aria-hidden="true">·</span>
                                     <PaymentChannel
                                         stripeSessionId={registration.stripeSessionId} />
-                                    {#if HOST_HOTEL}
+                                    {#if HOST_HOTEL && registration.stayingAtHostHotel}
                                         <span aria-hidden="true">·</span>
                                         <span>
                                             Hotel: {HOTEL_STAY_LABELS[
-                                                registration.stayingAtHostHotel ?? 'unasked'
+                                                registration.stayingAtHostHotel
                                             ]}
                                         </span>
                                     {/if}
                                 </p>
-                                <div class="relative z-10 w-fit">
+                                <div class="relative z-10 w-fit empty:hidden">
                                     <PaymentNote
                                         {registration}
                                         stripeTestMode={data.stripeTestMode}
-                                        paidLabel={paidLabels.get(registration.id)} />
+                                        paidLabel={paidLabels.get(registration.id)}
+                                        showPaid={false} />
                                 </div>
-                                {#if group}
+                                {#if group && !checkinLocked}
                                     <div
                                         class="text-muted-foreground flex items-center justify-between gap-2 text-xs">
                                         <span>

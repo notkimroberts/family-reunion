@@ -29,11 +29,15 @@ let {
     registration,
     stripeTestMode,
     paidLabel,
+    showPaid = true,
 }: {
     registration: RegistrationSummary
     stripeTestMode: boolean
     /* Undefined until the page's effect has run, and for a row with no recorded date. */
     paidLabel: string | undefined
+    /* False on the mobile card, where the green badge already says paid and the line cost a row.
+       Only the plain paid line: what is owed after paying still shows. */
+    showPaid?: boolean
 } = $props()
 
 let paymentState = $derived(getPaymentState(registration))
@@ -70,28 +74,30 @@ let paymentUrl = $derived(stripePaymentUrl(registration.stripePaymentIntentId, s
             Owes ${formatPrice(registration.amountDueCents)} for people added after paying
         </p>
     {/if}
-    <p class="flex flex-wrap items-center gap-x-1.5 text-xs text-green-700 dark:text-green-400">
-        {#if registration.paidAt}
-            <!-- The machine-readable instant is always right, and carries the value until the page's
+    {#if showPaid}
+        <p class="flex flex-wrap items-center gap-x-1.5 text-xs text-green-700 dark:text-green-400">
+            {#if registration.paidAt}
+                <!-- The machine-readable instant is always right, and carries the value until the page's
                  effect fills in the reader's own zone. -->
-            <span>
-                Paid <time datetime={new Date(registration.paidAt).toISOString()}>
-                    {paidLabel ?? ''}
-                </time>
-            </span>
-        {:else}
-            <span>Paid — date not recorded</span>
-        {/if}
-        {#if paymentUrl}
-            <!-- Opens Stripe, so it says so, and does not hand over the referrer. -->
-            <a
-                href={paymentUrl}
-                target="_blank"
-                rel="noreferrer noopener"
-                class="inline-flex items-center gap-1 underline underline-offset-2 hover:no-underline">
-                View in Stripe
-                <ExternalLink class="size-3" />
-            </a>
-        {/if}
-    </p>
+                <span>
+                    Paid <time datetime={new Date(registration.paidAt).toISOString()}>
+                        {paidLabel ?? ''}
+                    </time>
+                </span>
+            {:else}
+                <span>Paid — date not recorded</span>
+            {/if}
+            {#if paymentUrl}
+                <!-- Opens Stripe, so it says so, and does not hand over the referrer. -->
+                <a
+                    href={paymentUrl}
+                    target="_blank"
+                    rel="noreferrer noopener"
+                    class="inline-flex items-center gap-1 underline underline-offset-2 hover:no-underline">
+                    View in Stripe
+                    <ExternalLink class="size-3" />
+                </a>
+            {/if}
+        </p>
+    {/if}
 {/if}
