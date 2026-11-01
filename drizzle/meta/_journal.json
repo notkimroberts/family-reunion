@@ -204,6 +204,13 @@
       "when": 1793135228353,
       "tag": "0028_jazzy_marvel_boy",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1793497174727,
+      "tag": "0029_bent_blue_blade",
+      "breakpoints": true
     }
   ]
 }

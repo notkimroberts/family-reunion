@@ -4,6 +4,7 @@ import { AdminDataView } from '$lib/components'
 import { Badge } from '$lib/components/ui/badge'
 import * as Table from '$lib/components/ui/table'
 import { WARNING_SURFACE_CLASS } from '$lib/general/constants'
+import type { RegistrationNote } from '$lib/server/registrations'
 import { FOLLOW_UP_REASON_LABELS } from './FOLLOW_UP_REASON_LABELS'
 import type { FollowUp } from './followUps'
 
@@ -11,10 +12,12 @@ import type { FollowUp } from './followUps'
    call; the row links to the booking for anything the call changes. */
 interface Props {
     followUps: FollowUp[]
+    /* Newest note per booking id, so the caller can see what was said last time. */
+    latestNotes: Record<string, RegistrationNote>
     eventId: string
 }
 
-let { followUps, eventId }: Props = $props()
+let { followUps, latestNotes, eventId }: Props = $props()
 </script>
 
 {#snippet reasons(followUp: FollowUp)}
@@ -28,6 +31,12 @@ let { followUps, eventId }: Props = $props()
     {#if followUp.missingShirtNames.length > 0}
         <p class="text-muted-foreground text-xs">
             Shirt size for {followUp.missingShirtNames.join(', ')}
+        </p>
+    {/if}
+    {#if latestNotes[followUp.registration.id]}
+        {@const note = latestNotes[followUp.registration.id]}
+        <p class="text-muted-foreground line-clamp-2 text-xs italic">
+            Last note: {note.body}{note.authorName ? ` — ${note.authorName}` : ''}
         </p>
     {/if}
 {/snippet}

@@ -22,6 +22,7 @@ export {
     setMemberCheckedIn,
     setShirtGiven,
     settleMemberPayment,
+    addRegistrationNote,
 } from './management'
 export type { AdminSettableStatus, RegistrationAuditAction } from './management'
 
@@ -38,6 +39,7 @@ export type { RegistrationSummary } from './queries'
 export type { EventPerson } from './queries'
 export type { EventSummary } from './queries'
 export type { UnlistedAttendee } from './queries'
+export type { RegistrationNote } from './queries'
 export {
     getAmountDueByToken,
     getConfirmationEmailData,
@@ -51,6 +53,8 @@ export {
     getRegistrationMembers,
     getRegistrationStatus,
     searchEventAttendees,
+    getRegistrationNotes,
+    getLatestNotesForEvent,
 } from './queries'
 
 export {

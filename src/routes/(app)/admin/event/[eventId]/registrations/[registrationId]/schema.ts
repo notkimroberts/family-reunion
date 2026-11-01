@@ -60,3 +60,15 @@ export const settleMemberSchema = z.object({
     memberId: z.string().min(1),
     settlement: z.enum(MEMBER_SETTLEMENTS),
 })
+
+/* Bounds an organizer note: long enough for a call's worth, short enough to read in the list. */
+export const NOTE_MAX_LENGTH = 2000
+
+/* One organizer note. Trimmed, so a note of only spaces is refused rather than stored blank. */
+export const registrationNoteSchema = z.object({
+    body: z
+        .string()
+        .trim()
+        .min(1, 'Write the note first')
+        .max(NOTE_MAX_LENGTH, `Keep it under ${NOTE_MAX_LENGTH} characters`),
+})

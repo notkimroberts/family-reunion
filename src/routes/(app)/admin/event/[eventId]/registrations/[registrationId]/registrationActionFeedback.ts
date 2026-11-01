@@ -17,4 +17,6 @@ export type RegistrationActionFeedback = {
     /* What an organizer settled for one owed person, as a sentence for the toast. */
     settled?: string
     settleError?: string
+    noteAdded?: boolean
+    noteError?: string
 }

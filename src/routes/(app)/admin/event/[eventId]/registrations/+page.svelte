@@ -383,7 +383,10 @@ $effect(() => {
                 Bookings that owe money, stopped partway, or are missing an answer the organizers
                 need.
             </p>
-            <FollowUpList followUps={visibleFollowUps} eventId={data.event.id} />
+            <FollowUpList
+                followUps={visibleFollowUps}
+                latestNotes={data.latestNotes}
+                eventId={data.event.id} />
         {:else if showDonations}
             <p class="text-muted-foreground text-xs">
                 Every gift recorded for this year, including the checkouts nobody finished. {data
