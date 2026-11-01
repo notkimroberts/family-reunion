@@ -1,5 +1,5 @@
 <script lang="ts">
-import { ChevronRight, FilePlus, Gift, Images, Search, Users } from '@lucide/svelte'
+import { ChevronRight, Download, FilePlus, Gift, Images, Search, Users } from '@lucide/svelte'
 import { SvelteMap } from 'svelte/reactivity'
 import { goto } from '$app/navigation'
 import { page } from '$app/state'
@@ -296,6 +296,19 @@ $effect(() => {
                  control in the row that navigates. -->
             <div class="ml-auto flex items-center gap-2">
                 <Separator orientation="vertical" class="hidden h-6 sm:block" />
+                {#if lens === 'bookings' || lens === 'people'}
+                    <!-- A plain download, not a navigation: SvelteKit leaves an anchor with `download` to
+                         the browser. -->
+                    <Button
+                        href="/admin/event/{data.event.id}/registrations/export/{lens}"
+                        download
+                        variant="outline"
+                        size="sm"
+                        title="Download this list as a spreadsheet">
+                        <Download class="size-4" />
+                        CSV
+                    </Button>
+                {/if}
                 <Button
                     href="/admin/event/{data.event.id}/registrations/new"
                     size="sm"
