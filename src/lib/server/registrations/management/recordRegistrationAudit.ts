@@ -1,7 +1,7 @@
+import { resolveActorUserId } from '$lib/server/auth/resolveActorUserId'
 import { db } from '$lib/server/db'
 import { registrationAudit, registrationAuditActionEnum } from '$lib/server/db/schema'
 import { reportError } from '$lib/server/reportError'
-import { resolveActorUserId } from './_resolveActorUserId'
 
 export type RegistrationAuditAction = (typeof registrationAuditActionEnum.enumValues)[number]
 

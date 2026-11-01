@@ -1,4 +1,5 @@
 import {
+    renderAnnouncement,
     renderCancellationEmail,
     renderDonationReceipt,
     renderRecoveryEmail,
@@ -212,6 +213,16 @@ export function emailPreviewFixtures(
                 renderRecoveryEmail({
                     eventTitle: 'Patterson Family Reunion 2027',
                     viewUrl,
+                }),
+        },
+        {
+            name: 'announcement',
+            render: () =>
+                renderAnnouncement({
+                    eventTitle: 'Patterson Family Reunion 2027',
+                    subject: 'Hotel rooms: book by June 1',
+                    body: 'Hi everyone,\n\nThe hotel is holding our rooms until June 1.\nAfter that the rate goes up.\n\nSee you in Oakland!',
+                    siteOrigin,
                 }),
         },
     ]

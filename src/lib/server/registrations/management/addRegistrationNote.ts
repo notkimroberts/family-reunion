@@ -1,6 +1,6 @@
+import { resolveActorUserId } from '$lib/server/auth/resolveActorUserId'
 import { db } from '$lib/server/db'
 import { registrationNotes } from '$lib/server/db/schema'
-import { resolveActorUserId } from './_resolveActorUserId'
 
 /* Appends one organizer note to a booking. Unlike recordRegistrationAudit this throws: the note IS
    the change the organizer asked for, so a failed write must fail the save. */

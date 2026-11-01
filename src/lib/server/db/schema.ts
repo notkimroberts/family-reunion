@@ -12,7 +12,11 @@ import {
     uniqueIndex,
     uuid,
 } from 'drizzle-orm/pg-core'
-import { HOTEL_STAY_ANSWERS, MEMBER_SETTLEMENTS } from '$lib/general/constants'
+import {
+    ANNOUNCEMENT_AUDIENCES,
+    HOTEL_STAY_ANSWERS,
+    MEMBER_SETTLEMENTS,
+} from '$lib/general/constants'
 import type { ReunionMetadata } from '$lib/general/reunionMetadata'
 
 export const eventStatusEnum = pgEnum('event_status', ['draft', 'open', 'closed', 'archived'])
@@ -541,4 +545,39 @@ export const photos = pgTable(
         updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
     },
     (t) => [index('photos_status_idx').on(t.status), index('photos_event_id_idx').on(t.eventId)],
+)
+
+/* Who an announcement goes to. 'confirmed' is paid and waived bookings — the families coming.
+   'everyone_active' adds pending ones, for news a family still deciding should hear too. Refunded
+   bookings are never included: they asked to be out. */
+export const announcementAudienceEnum = pgEnum('announcement_audience', ANNOUNCEMENT_AUDIENCES)
+
+export const announcementStatusEnum = pgEnum('announcement_status', ['sending', 'sent', 'failed'])
+
+/* One email the owner sent to every family of a reunion.
+
+   recipients is the address list fixed at the moment of sending. A retry after a failure resends to
+   exactly that list, so each batch carries the same content under the same Resend idempotency key
+   and a family already emailed is not emailed twice — a list recomputed on retry would differ and
+   Resend would refuse the reused key. It is also the record of who was told. */
+export const announcements = pgTable(
+    'announcements',
+    {
+        id: uuid('id').primaryKey().defaultRandom(),
+        eventId: uuid('event_id')
+            .notNull()
+            .references(() => reunionEvents.id, { onDelete: 'cascade' }),
+        subject: text('subject').notNull(),
+        body: text('body').notNull(),
+        audience: announcementAudienceEnum('audience').notNull(),
+        recipients: jsonb('recipients').$type<string[]>().notNull(),
+        sentByUserId: text('sent_by_user_id').references(() => user.id, { onDelete: 'set null' }),
+        sentByName: text('sent_by_name'),
+        status: announcementStatusEnum('status').notNull().default('sending'),
+        /* How many recipients Resend accepted, so a partial failure says how far it got. */
+        sentCount: integer('sent_count').notNull().default(0),
+        createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+        sentAt: timestamp('sent_at', { withTimezone: true }),
+    },
+    (t) => [index('announcements_event_id_idx').on(t.eventId)],
 )
