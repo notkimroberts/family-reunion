@@ -331,7 +331,7 @@
     }
 
     [data-paper-sheet] > * + * {
-        margin-top: 0.16in;
+        margin-top: 0.12in;
     }
 
     [data-paper-sheet] > section > * + * {

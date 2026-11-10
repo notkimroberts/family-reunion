@@ -1,7 +1,7 @@
 <script lang="ts">
 import { Printer } from '@lucide/svelte'
 import { Button } from '$lib/components/ui/button'
-import { APP_NAME } from '$lib/general/constants'
+import { APP_NAME, MAILING_ADDRESS } from '$lib/general/constants'
 import { formatDateRange } from '$lib/utils'
 import PaperRegistrationSheet from './PaperRegistrationSheet.svelte'
 
@@ -55,8 +55,8 @@ let documentTitle = $derived.by(() => {
             <div>
                 <h1>Printable registration form</h1>
                 <p class="text-muted-foreground mt-1 text-sm">
-                    Two pages, sized to be filled in by hand. Print it and hand it to a committee
-                    member — or save it as a PDF from the print dialog.
+                    Two pages, sized to be filled in by hand. Print it and mail it to {MAILING_ADDRESS}
+                    — or save it as a PDF from the print dialog.
                 </p>
             </div>
             <Button onclick={handlePrint}>
@@ -74,6 +74,7 @@ let documentTitle = $derived.by(() => {
                 year={data.event.year}
                 {dateRange}
                 venueName={data.event.metadata.venue?.name}
+                lockDate={data.event.registrationLockDate}
                 tiers={data.tiers} />
         </div>
     </section>

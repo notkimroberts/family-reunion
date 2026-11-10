@@ -3,10 +3,10 @@ import { HOST_HOTEL } from '$lib/general/constants'
 import { PAPER_ATTENDEE_ROWS } from './PAPER_ATTENDEE_ROWS'
 
 /* Section numbers, derived rather than written in, because the hotel section renders only when a host
-   hotel is listed — hard-coded numbers would leave a sheet reading 1, 2, 4, 5 in that state. The
-   contact note also points at the attendee section by number, so there is one source for it. */
-const PRICES_SECTION = HOST_HOTEL ? 4 : 3
-const ATTENDEE_SECTION = PRICES_SECTION + 1
+   hotel is listed — hard-coded numbers would leave a sheet reading 1, 2, 4, 5 in that state. */
+const GIFT_SECTION = HOST_HOTEL ? 4 : 3
+const ATTENDEE_SECTION = GIFT_SECTION + 1
+const TOTAL_SECTION = ATTENDEE_SECTION + 1
 
 const ATTENDEE_NUMBERS = Array.from({ length: PAPER_ATTENDEE_ROWS }, (_, index) => index + 1)
 const SECTION = 'flex break-inside-avoid flex-col gap-1.5'
@@ -15,34 +15,52 @@ const NOTE = 'text-[9px] leading-snug text-neutral-600'
 </script>
 
 <script lang="ts">
-import { APP_NAME, CONTACT_EMAIL, CONTACT_PHONE } from '$lib/general/constants'
+import {
+    APP_NAME,
+    CHECK_PAYEE,
+    CONTACT_EMAIL,
+    CONTACT_PHONE,
+    MAILING_ADDRESS,
+} from '$lib/general/constants'
+import { isChildTierLabel } from '$lib/general/tiers'
+import { formatReunionDateTime } from '$lib/utils'
 import type { TierOption } from '../types'
+import PaperAttendeeAnswers from './PaperAttendeeAnswers.svelte'
 import PaperAttendeeBlock from './PaperAttendeeBlock.svelte'
+import PaperBirthDate from './PaperBirthDate.svelte'
 import PaperCheckbox from './PaperCheckbox.svelte'
 import PaperField from './PaperField.svelte'
-import PaperPrices from './PaperPrices.svelte'
+import PaperGiftAsk from './PaperGiftAsk.svelte'
+import PaperHowToPay from './PaperHowToPay.svelte'
 import PaperRegisterOnline from './PaperRegisterOnline.svelte'
+import PaperTotal from './PaperTotal.svelte'
 import { REGISTER_ADDRESS } from './REGISTER_ADDRESS'
 
 /* The paper form itself: a fixed Letter-width sheet that renders identically on screen and on
    paper, so what an organizer sees before pressing Print is what comes out. It runs to two pages —
    every field is sized for handwriting, and sections carry break-inside-avoid so a page break lands
-   between blocks rather than through one. Page 1 is the household and the prices, page 2 the
-   attendees, the total and the signature. Prices sit on page 1 because page 2 is full: with them
-   after the attendees, the signature spilled onto a third page by itself. */
+   between blocks rather than through one. Page 1 is the contact (with their own answers), the
+   household and the gift ask; page 2 the other attendees, the total, how to pay and the
+   signature. The gift ask sits on page 1 because page 2 has no room left for it. */
 let {
     title,
     year,
     dateRange,
     venueName,
+    lockDate,
     tiers,
 }: {
     title: string
     year: number
     dateRange: string
     venueName?: string
+    lockDate: Date | null
     tiers: TierOption[]
 } = $props()
+
+/* The contact cannot be booked on a child tier (assertContactTierIsAdult), so their boxes omit it. */
+let contactTiers = $derived(tiers.filter((tier) => !isChildTierLabel(tier.label)))
+let deadline = $derived(lockDate ? ` by ${formatReunionDateTime(lockDate, 'day')}` : '')
 </script>
 
 <!-- data-paper-sheet is the hook for the print rules in app.css, which turn these nested flex
@@ -83,24 +101,28 @@ let {
     <PaperRegisterOnline />
 
     <p class={NOTE}>
-        Please print clearly in ink and mark one box in each group. Give the completed form and your
-        payment to a reunion committee member. Questions: {CONTACT_EMAIL} or {CONTACT_PHONE}.
+        Please print clearly in ink and mark one circle in each group. Mail the completed form, with
+        your check if you pay by check, to
+        <span class="font-semibold">{CHECK_PAYEE}, {MAILING_ADDRESS}</span>{deadline}. Questions:
+        {CONTACT_EMAIL} or {CONTACT_PHONE}.
     </p>
 
     <section class={SECTION}>
-        <h2 class={SECTION_TITLE}>1 · Who to contact about this registration</h2>
+        <h2 class={SECTION_TITLE}>
+            1 · About you, the person we contact — list only the others in section {ATTENDEE_SECTION}
+        </h2>
         <div class="grid grid-cols-2 gap-x-5">
             <PaperField label="First name" />
             <PaperField label="Last name" />
         </div>
-        <div class="grid grid-cols-[1.4fr_1fr] gap-x-5">
-            <PaperField label="Email address" />
-            <PaperField label="Phone number" />
+        <!-- items-start: the date blanks carry captions under their rules, so bottom alignment would set
+             their rules above the email and phone rules. -->
+        <div class="flex items-start gap-x-5">
+            <PaperField label="Email address" class="flex-[1.4]" />
+            <PaperField label="Phone number" class="flex-1" />
+            <PaperBirthDate />
         </div>
-        <p class={NOTE}>
-            The email address is how we send your confirmation and your registration link. Your own
-            birth date, T-shirt size and meal choice go on line 1 of section {ATTENDEE_SECTION}.
-        </p>
+        <PaperAttendeeAnswers tiers={contactTiers} />
     </section>
 
     <section class={SECTION}>
@@ -135,7 +157,7 @@ let {
             </div>
             <p class={NOTE}>
                 {HOST_HOTEL.name} is half a block from the reunion. Your answer tells us how much of the
-                block to hold, so please mark a box even if you are not certain.
+                block to hold, so please mark one even if you are not certain.
                 {#if HOST_HOTEL.bookingUrl}
                     <!-- Printed as text, not linked: a paper form is typed from, not clicked. -->
                     Book our room block at {HOST_HOTEL.bookingUrl}{#if HOST_HOTEL.bookingDeadline}
@@ -146,49 +168,50 @@ let {
     {/if}
 
     <section class={SECTION}>
-        <h2 class={SECTION_TITLE}>{PRICES_SECTION} · Prices and how to pay</h2>
-        <PaperPrices {tiers} />
+        <h2 class={SECTION_TITLE}>{GIFT_SECTION} · A gift to the reunion</h2>
+        <PaperGiftAsk totalSection={TOTAL_SECTION} />
     </section>
 
-    <!-- A page of its own. Five hand-writable blocks do not fit under the contact and address
+    <!-- A page of its own. The hand-writable blocks do not fit under the contact and address
          sections, so the section began mid-page and the block straddling the boundary was cut in
-         half. Starting it on a fresh page keeps every row whole and puts all five together. -->
+         half. Starting it on a fresh page keeps every row whole and puts them all together. -->
     <section class="flex break-before-page flex-col gap-2">
         <!-- Page 2 is handed around on its own, so it repeats the address. Text only: a second QR
              code costs the height that keeps the signature off a third page. -->
         <div
-            class="flex flex-wrap items-baseline justify-center gap-x-3 border-2 border-black px-3 py-1.5">
+            class="flex flex-wrap items-baseline justify-center gap-x-3 border-2 border-black px-3 py-1">
             <span class="text-[10px] font-bold tracking-widest uppercase">
                 Register online instead
             </span>
-            <span class="text-[15px] font-bold">{REGISTER_ADDRESS}</span>
+            <span class="text-[13px] font-bold">{REGISTER_ADDRESS}</span>
         </div>
         <h2 class={SECTION_TITLE}>
-            {ATTENDEE_SECTION} · Everyone attending — write yourself on line 1 (up to {PAPER_ATTENDEE_ROWS}
-            people)
+            {ATTENDEE_SECTION} · Everyone else in your party (up to {PAPER_ATTENDEE_ROWS} more people)
         </h2>
         {#each ATTENDEE_NUMBERS as attendeeNumber (attendeeNumber)}
-            <PaperAttendeeBlock index={attendeeNumber} {tiers} isContact={attendeeNumber === 1} />
+            <PaperAttendeeBlock index={attendeeNumber} {tiers} />
         {/each}
         <p class={NOTE}>
             "At the 2025 reunion" means that person attended the 2025 New Orleans reunion. More than
-            {PAPER_ATTENDEE_ROWS} people: use a second copy of this form.
+            {PAPER_ATTENDEE_ROWS} other people: use a second copy of this form.
         </p>
     </section>
 
-    <!-- A footer, not a section: app.css flattens the sheet's sections to block layout for print,
-         which would stack these three fields. The total shares the signature row, and the
-         committee box lives in the header, because page 2 has no height to spare: with long tier
-         labels each attendee block wraps an extra line. -->
-    <footer
-        class="grid break-inside-avoid grid-cols-[1fr_2fr_1fr] items-end gap-x-5 border-t border-neutral-400 pt-2">
-        <div class="flex flex-col gap-0.5">
-            <span class="text-[10px] font-bold tracking-widest uppercase">Total enclosed</span>
-            <div class="flex items-end gap-1">
-                <span class="text-[13px] font-bold">$</span>
-                <span class="h-8.5 flex-1 border-b-2 border-black"></span>
-            </div>
+    <!-- Last, after everything it adds up: the total, and how to pay it. Four guest blocks, not five,
+         leave page 2 the room. -->
+    <section class={SECTION}>
+        <h2 class={SECTION_TITLE}>{TOTAL_SECTION} · Your total and how to pay</h2>
+        <div class="grid grid-cols-[1.2fr_1fr] gap-x-5">
+            <PaperTotal {tiers} />
+            <PaperHowToPay />
         </div>
+    </section>
+
+    <!-- A footer, not a section: app.css flattens the sheet's sections to block layout for print,
+         which would stack these fields. The committee box lives in the header, because page 2 has
+         no height to spare. -->
+    <footer
+        class="grid break-inside-avoid grid-cols-[2fr_1fr] items-end gap-x-5 border-t border-neutral-400 pt-2">
         <PaperField label="Signature" />
         <PaperField label="Date" />
     </footer>
