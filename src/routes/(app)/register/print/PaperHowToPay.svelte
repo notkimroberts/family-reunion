@@ -1,12 +1,26 @@
 <script module lang="ts">
-import { ZELLE_RECIPIENT, zelleQrCodeValue } from '$lib/general/constants'
+import {
+    CHECK_PAYEE,
+    MAILING_ADDRESS,
+    ZELLE_RECIPIENT,
+    zelleQrCodeValue,
+} from '$lib/general/constants'
 import { offlinePaymentMethods } from '$lib/general/scamSafety'
 
 const NOTE = 'text-[9px] leading-snug text-neutral-600'
 </script>
 
-<!-- The only ways to pay, beside the total they pay. Prices are in the total's worksheet. -->
+<script lang="ts">
+/* Where to send the finished form and the only ways to pay, beside the total they pay. Last on the
+   sheet because it is the last thing the reader does. `deadline` is " by <day>", or '' when the
+   event has no lock date. */
+let { deadline }: { deadline: string } = $props()
+</script>
+
 <div class="flex flex-col gap-2">
+    <p class="text-[10px] leading-snug font-semibold">
+        Mail this signed form to {CHECK_PAYEE}, {MAILING_ADDRESS}{deadline}.
+    </p>
     <p class="text-[10px] leading-snug">
         Pay {offlinePaymentMethods(ZELLE_RECIPIENT)}. Never make a check out to a person.
     </p>

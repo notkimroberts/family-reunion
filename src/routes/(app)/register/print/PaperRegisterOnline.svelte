@@ -18,9 +18,7 @@ import { REGISTER_ADDRESS } from './REGISTER_ADDRESS'
         </p>
         <p class="text-[24px] leading-tight font-bold wrap-break-word">{REGISTER_ADDRESS}</p>
         <p class="text-[11px] leading-snug">
-            Point your phone's camera at the code, or type the address into a web browser. Pay by
-            card, and your confirmation arrives by email right away. A relative can register your
-            whole party for you.
+            Point your phone's camera at the code, or type the address into a web browser.
         </p>
         <p class="text-[10px] font-semibold">
             Use this paper form only if you cannot register online.

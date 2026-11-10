@@ -15,13 +15,7 @@ const NOTE = 'text-[9px] leading-snug text-neutral-600'
 </script>
 
 <script lang="ts">
-import {
-    APP_NAME,
-    CHECK_PAYEE,
-    CONTACT_EMAIL,
-    CONTACT_PHONE,
-    MAILING_ADDRESS,
-} from '$lib/general/constants'
+import { APP_NAME, CONTACT_EMAIL, CONTACT_PHONE } from '$lib/general/constants'
 import { isChildTierLabel } from '$lib/general/tiers'
 import { formatReunionDateTime } from '$lib/utils'
 import type { TierOption } from '../types'
@@ -101,10 +95,8 @@ let deadline = $derived(lockDate ? ` by ${formatReunionDateTime(lockDate, 'day')
     <PaperRegisterOnline />
 
     <p class={NOTE}>
-        Please print clearly in ink and mark one circle in each group. Mail the completed form, with
-        your check if you pay by check, to
-        <span class="font-semibold">{CHECK_PAYEE}, {MAILING_ADDRESS}</span>{deadline}. Questions:
-        {CONTACT_EMAIL} or {CONTACT_PHONE}.
+        Please print clearly in ink and mark one circle in each group. Questions: {CONTACT_EMAIL} or
+        {CONTACT_PHONE}.
     </p>
 
     <section class={SECTION}>
@@ -192,7 +184,7 @@ let deadline = $derived(lockDate ? ` by ${formatReunionDateTime(lockDate, 'day')
             <PaperAttendeeBlock index={attendeeNumber} {tiers} />
         {/each}
         <p class={NOTE}>
-            "At the 2025 reunion" means that person attended the 2025 New Orleans reunion. More than
+            "Attended the 2025 reunion?" means the 2025 New Orleans reunion. More than
             {PAPER_ATTENDEE_ROWS} other people: use a second copy of this form.
         </p>
     </section>
@@ -201,9 +193,9 @@ let deadline = $derived(lockDate ? ` by ${formatReunionDateTime(lockDate, 'day')
          leave page 2 the room. -->
     <section class={SECTION}>
         <h2 class={SECTION_TITLE}>{TOTAL_SECTION} · Your total and how to pay</h2>
-        <div class="grid grid-cols-[1.2fr_1fr] gap-x-5">
+        <div class="grid grid-cols-[1fr_1fr] gap-x-5">
             <PaperTotal {tiers} />
-            <PaperHowToPay />
+            <PaperHowToPay {deadline} />
         </div>
     </section>
 
