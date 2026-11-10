@@ -79,7 +79,7 @@ let methods = $derived(paymentMethods(zelleRecipient))
                             </div>
                             <div class="flex min-w-0 flex-col">
                                 <span class="text-base font-semibold">{method.label}</span>
-                                <span class="text-muted-foreground text-sm break-all"
+                                <span class="text-muted-foreground text-sm wrap-anywhere"
                                     >{method.detail}</span>
                             </div>
                         </li>

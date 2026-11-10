@@ -14,11 +14,13 @@ import { Button } from '$lib/components/ui/button'
 import { Card, CardContent } from '$lib/components/ui/card'
 import {
     APP_NAME,
+    CHECK_PAYEE,
     CONTACT_EMAIL,
     CONTACT_PHONE,
     DONATION_LEDE,
     DONATION_PRESET_CENTS,
     FACEBOOK_GROUP_URL,
+    MAILING_ADDRESS,
 } from '$lib/general/constants'
 import { isBeforeRegistrationOpens, isRegistrationClosed } from '$lib/general/registration'
 import { paymentSafetyCopyValue } from '$lib/general/scamSafety'
@@ -279,6 +281,9 @@ const FAMILY_STATS = [
                                 >{contactPhone}</a>
                         </p>
                     {/if}
+                    <p class="text-muted-foreground text-sm">
+                        Or write to {CHECK_PAYEE}, {MAILING_ADDRESS}
+                    </p>
                 </CardContent>
             </Card>
         </section>

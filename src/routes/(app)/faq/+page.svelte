@@ -1,7 +1,13 @@
 <script lang="ts">
 import { Mail } from '@lucide/svelte'
 import { Button } from '$lib/components/ui/button'
-import { APP_NAME, CONTACT_EMAIL, CONTACT_PHONE } from '$lib/general/constants'
+import {
+    APP_NAME,
+    CHECK_PAYEE,
+    CONTACT_EMAIL,
+    CONTACT_PHONE,
+    MAILING_ADDRESS,
+} from '$lib/general/constants'
 import { toE164 } from '$lib/utils'
 import HelpQuestions from './HelpQuestions.svelte'
 import PaymentQuestions from './PaymentQuestions.svelte'
@@ -84,6 +90,9 @@ let { data } = $props()
             <p class="text-muted-foreground text-sm">
                 Or text
                 <a class="underline" href="sms:{toE164(CONTACT_PHONE)}">{CONTACT_PHONE}</a>
+            </p>
+            <p class="text-muted-foreground text-sm">
+                Or write to {CHECK_PAYEE}, {MAILING_ADDRESS}
             </p>
         </section>
     </div>

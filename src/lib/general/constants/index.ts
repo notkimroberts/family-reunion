@@ -43,6 +43,7 @@ export {
 export { ZELLE_RECIPIENT } from './ZELLE_RECIPIENT'
 export { zelleQrCodeValue } from './zelleQrCodeValue'
 export { CHECK_PAYEE } from './CHECK_PAYEE'
+export { MAILING_ADDRESS } from './MAILING_ADDRESS'
 export { STATEMENT_DESCRIPTOR_PREFIX } from './STATEMENT_DESCRIPTOR_PREFIX'
 export { STATEMENT_DESCRIPTOR_SUFFIXES } from './STATEMENT_DESCRIPTOR_SUFFIXES'
 export { TWO_FACTOR_SETUP_PATH } from './TWO_FACTOR_SETUP_PATH'

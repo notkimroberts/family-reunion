@@ -1,5 +1,6 @@
 <script lang="ts">
 import { ClipboardPen } from '@lucide/svelte'
+import { CHECK_PAYEE, MAILING_ADDRESS } from '$lib/general/constants'
 import { formatReunionDateTime, formatUsd } from '$lib/utils'
 import { FAQ_LINK_CLASS } from './FAQ_LINK_CLASS'
 import FaqFacts from './FaqFacts.svelte'
@@ -54,7 +55,12 @@ let priceRows = $derived(
     <FaqItem question="Can I register by mail?">
         <p>
             Yes! We will mail paper registration forms to the address we have on file for your
-            family. If it does not arrive by December, email us with your address and we will send
+            family. You can also <a class={FAQ_LINK_CLASS} href="/register/print">print one</a>.
+            Mail the completed form, with your check if you pay by check, to:
+        </p>
+        <p class="text-foreground font-medium">{CHECK_PAYEE}, {MAILING_ADDRESS}</p>
+        <p>
+            If your form does not arrive by December, email us with your address and we will send
             you another one:
         </p>
         <OrganizerEmail />
