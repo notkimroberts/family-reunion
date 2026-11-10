@@ -21,6 +21,7 @@ vi.mock('$lib/general/constants', () => ({
         scanHint: 'Scan in your banking app to pay by Zelle.',
     },
     CHECK_PAYEE: 'Roberts Family Reunion',
+    MAILING_ADDRESS: 'PO Box 1, Springfield, IL 62701',
     STATEMENT_DESCRIPTOR_PREFIX: 'PATTERSON',
     STATEMENT_DESCRIPTOR_SUFFIXES: { registration: 'REUNION', donation: 'GIFT' },
     HOST_HOTEL: {
@@ -239,7 +240,7 @@ describe('renderRegistrationConfirmation', () => {
             expect(text).toContain('not complete until payment is received')
             expect(text).toContain('Amount due: $150.00')
             expect(text).toContain(
-                'Pay by Zelle to organizer@example.com, or by check made out to "Roberts Family Reunion". Reply to this email with any questions.',
+                'Pay by Zelle to organizer@example.com, or by check made out to "Roberts Family Reunion" and mailed to PO Box 1, Springfield, IL 62701. Reply to this email with any questions.',
             )
             expect(text).not.toContain('card processing fee')
         })
@@ -249,7 +250,7 @@ describe('renderRegistrationConfirmation', () => {
         it('pending puts the payment request up front in every form', () => {
             const { text, html } = renderRegistrationConfirmation({ ...data, status: 'pending' })
             expect(text).toContain(
-                'PAYMENT NEEDED: $150.00. Pay by Zelle to organizer@example.com, or by check made out to "Roberts Family Reunion".',
+                'PAYMENT NEEDED: $150.00. Pay by Zelle to organizer@example.com, or by check made out to "Roberts Family Reunion" and mailed to PO Box 1, Springfield, IL 62701.',
             )
             expect(text.indexOf('PAYMENT NEEDED')).toBeLessThan(text.indexOf('Your party:'))
             expect(html).toContain('Payment needed: $150.00')
@@ -307,7 +308,7 @@ describe('renderRegistrationConfirmation', () => {
         it('still names Zelle and check, after the card, without the QR code', () => {
             const { text, html } = renderRegistrationConfirmation(owed)
             expect(text).toContain(
-                'Prefer not to pay by card? Pay $50.00 by Zelle to organizer@example.com, or by check made out to "Roberts Family Reunion".',
+                'Prefer not to pay by card? Pay $50.00 by Zelle to organizer@example.com, or by check made out to "Roberts Family Reunion" and mailed to PO Box 1, Springfield, IL 62701.',
             )
             expect(text.indexOf('Prefer not to pay by card')).toBeGreaterThan(
                 text.indexOf('https://example.com/register/pay'),

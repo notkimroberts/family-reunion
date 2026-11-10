@@ -102,7 +102,7 @@ let methods = $derived(paymentMethods(zelleRecipient))
                     {#each methods as method (method.kind)}
                         <li>
                             <span class="font-semibold">{method.label}</span>
-                            <span class="text-muted-foreground break-all">{method.detail}</span>
+                            <span class="text-muted-foreground wrap-anywhere">{method.detail}</span>
                         </li>
                     {/each}
                 </ul>

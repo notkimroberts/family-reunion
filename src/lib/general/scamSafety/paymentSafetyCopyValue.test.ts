@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { APP_DOMAIN, CHECK_PAYEE, ZELLE_RECIPIENT } from '$lib/general/constants'
+import { APP_DOMAIN, CHECK_PAYEE, MAILING_ADDRESS, ZELLE_RECIPIENT } from '$lib/general/constants'
 import { paymentMethods } from './paymentMethods'
 import { paymentSafetyCopyValue } from './paymentSafetyCopyValue'
 
@@ -12,7 +12,7 @@ describe('scam warning copy', () => {
         expect(lines).toEqual([
             `Card on ${APP_DOMAIN}`,
             `Zelle to ${ZELLE_RECIPIENT}`,
-            `Check made out to "${CHECK_PAYEE}"`,
+            `Check made out to "${CHECK_PAYEE}", mailed to ${MAILING_ADDRESS}`,
         ])
     })
 

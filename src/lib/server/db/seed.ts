@@ -123,7 +123,7 @@ async function seed() {
 		CASCADE
 	`)
 
-    const ADULT_PRICE_CENTS = 16500
+    const ADULT_PRICE_CENTS = 16000
     const SENIOR_PRICE_CENTS = 15000
     const CHILD_PRICE_CENTS = 12000
 

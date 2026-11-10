@@ -330,8 +330,16 @@
         display: block;
     }
 
+    /* Safari goes further: it ignores every break rule inside a flex ANCESTOR, so the root layout's
+       and the page's flex columns made it slice the sheet wherever the paper ran out — a guest block
+       cut in half and a third page. Flatten everything around the sheet too. */
+    :has(> [data-paper-sheet]),
+    :has(> * [data-paper-sheet]) {
+        display: block !important;
+    }
+
     [data-paper-sheet] > * + * {
-        margin-top: 0.16in;
+        margin-top: 0.12in;
     }
 
     [data-paper-sheet] > section > * + * {

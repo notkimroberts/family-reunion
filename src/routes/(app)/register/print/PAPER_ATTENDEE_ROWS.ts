@@ -1,5 +1,5 @@
-/* Blank attendee rows on the paper form. Each attendee gets a block with a full-width name rule and
-   labeled tick boxes, sized for a pen rather than for density, so five runs the sheet onto a second
-   page — which is the trade made deliberately: an unwritable one-pager is worse than two pages.
-   Larger parties use a second copy of the form. */
-export const PAPER_ATTENDEE_ROWS = 5
+/* Blank guest rows on the paper form, besides the contact on page 1. Each guest gets a block with a
+   full-width name rule and labeled answer circles, sized for a pen rather than for density. Four,
+   not five, so page 2 also holds the gift ask and the total worksheet. Larger parties use a second
+   copy of the form. */
+export const PAPER_ATTENDEE_ROWS = 4

@@ -34,6 +34,7 @@ vi.mock('$lib/general/constants', () => ({
     CONTACT_PHONE: '+1 555 0100',
     ZELLE_RECIPIENT: 'organizer@example.com',
     CHECK_PAYEE: 'Roberts Family Reunion',
+    MAILING_ADDRESS: 'PO Box 1, Springfield, IL 62701',
     STATEMENT_DESCRIPTOR_PREFIX: 'PATTERSON',
     STATEMENT_DESCRIPTOR_SUFFIXES: { registration: 'REUNION', donation: 'GIFT' },
     /* Undefined on purpose, and the only place that branch is covered: a year with no host hotel
