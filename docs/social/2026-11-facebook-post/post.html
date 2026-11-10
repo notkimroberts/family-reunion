@@ -1,0 +1,115 @@
+<!doctype html>
+<html>
+    <head>
+        <meta charset="utf-8" />
+        <style>
+            * {
+                margin: 0;
+                box-sizing: border-box;
+            }
+            body {
+                width: 1080px;
+                height: 1350px;
+                background: #efe5cf;
+                font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif;
+                color: #182632;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                padding: 70px 80px;
+                gap: 0;
+            }
+            .logo {
+                width: 820px;
+            }
+            .sub {
+                font-size: 44px;
+                letter-spacing: 0.32em;
+                text-transform: uppercase;
+                font-weight: 700;
+                color: #506276;
+                margin-top: 22px;
+            }
+            .portraits {
+                display: flex;
+                gap: 36px;
+                margin-top: 56px;
+                align-items: flex-end;
+            }
+            .p {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 14px;
+            }
+            .p img {
+                width: 250px;
+                height: 368px;
+                object-fit: cover;
+                border: 10px solid #fff;
+                outline: 3px solid #182632;
+                filter: grayscale(1) contrast(1.05);
+            }
+            .p span {
+                font-size: 26px;
+                font-weight: 600;
+                color: #5c5e62;
+            }
+            .tree {
+                width: 150px;
+                margin-bottom: 150px;
+            }
+            .line {
+                font-size: 34px;
+                font-weight: 500;
+                margin-top: 46px;
+                color: #5c5e62;
+                text-align: center;
+            }
+            .date {
+                font-size: 76px;
+                font-weight: 800;
+                margin-top: 56px;
+                letter-spacing: -0.01em;
+            }
+            .place {
+                font-size: 40px;
+                font-weight: 600;
+                color: #506276;
+                margin-top: 4px;
+            }
+            .cta {
+                margin-top: auto;
+                background: #182632;
+                color: #efe5cf;
+                border-radius: 22px;
+                padding: 30px 54px;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 8px;
+            }
+            .cta b {
+                font-size: 50px;
+                letter-spacing: 0.02em;
+            }
+            .cta i {
+                font-style: normal;
+                font-size: 36px;
+                color: #cfd8e2;
+            }
+        </style>
+    </head>
+    <body>
+        <img class="logo" src="../../../static/brand/logo-wordmark.png" />
+        <div class="sub">Family Reunion</div>
+        <div class="portraits">
+            <div class="p"><img src="../../../static/will_portrait.png" /><span>Will</span></div>
+            <img class="tree" src="../../../static/brand/tree-mark-ink.png" />
+            <div class="p"><img src="../../../static/roxie_portrait.png" /><span>Roxie</span></div>
+        </div>
+        <div class="date">July 23–25, 2027</div>
+        <div class="place">Oakland, California</div>
+        <div class="cta"><b>REGISTRATION IS OPEN</b><i>pattersonfamilyreunion.com</i></div>
+    </body>
+</html>
