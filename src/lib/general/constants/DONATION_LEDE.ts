@@ -1,7 +1,4 @@
-/* Why a gift is being asked for, in one sentence, wherever it is asked for.
+import { DONATION_PURPOSE } from './DONATION_PURPOSE'
 
-   The home page section and the /donate hero each had their own copy of this. They had already
-   drifted — one wrote "shirts — and keep", the other "shirts, and keep" — which is exactly how a
-   second sentence appears in one place and not the other. */
-export const DONATION_LEDE =
-    'Gifts cover the venue and the food, and keep the price of a place down for everyone. Attendance is not required to make a donation.'
+/* DONATION_PURPOSE, plus the line for people who are not coming. */
+export const DONATION_LEDE = `${DONATION_PURPOSE} Attendance is not required to make a donation.`

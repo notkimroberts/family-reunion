@@ -1,4 +1,4 @@
-import { CONTACT_EMAIL, CONTACT_PHONE } from '$lib/general/constants'
+import { CONTACT_EMAIL, CONTACT_PHONE, DONATION_PURPOSE } from '$lib/general/constants'
 import { formatPrice, formatReunionDateTime, toE164 } from '$lib/utils'
 import { emailLayout } from './_emailLayout'
 import { emailThemeValue } from './_emailThemeValue'
@@ -29,7 +29,7 @@ export function renderDonationReceipt(data: DonationReceiptData): {
         '',
         `Given on ${givenOn}.`,
         '',
-        'It goes straight into what the reunion costs to put on — the venue and the food.',
+        DONATION_PURPOSE,
         '',
         'This is a personal gift to a family reunion, not a charitable donation, so it is not tax-deductible.',
         '',
@@ -52,9 +52,7 @@ export function renderDonationReceipt(data: DonationReceiptData): {
     </td>
   </tr>
 </table>`,
-        paragraph(
-            'It goes straight into what the reunion costs to put on — the venue and the food.',
-        ),
+        paragraph(DONATION_PURPOSE),
         `<p style="margin:22px 0 0 0;padding-top:18px;border-top:1px solid ${border};font-family:${fontStack};font-size:13px;line-height:1.6;color:${muted};">This is a personal gift to a family reunion, not a charitable donation, so it is not tax-deductible. Questions? Reply to this email, or contact us at <a href="mailto:${escapeHtml(CONTACT_EMAIL)}" style="color:${textColor};">${escapeHtml(CONTACT_EMAIL)}</a> or <a href="tel:${toE164(CONTACT_PHONE)}" style="color:${textColor};">${escapeHtml(CONTACT_PHONE)}</a>.</p>`,
     ].join('\n')
 
