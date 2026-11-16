@@ -1,13 +1,14 @@
 <script lang="ts">
 import { CreditCard, PenLine, ShieldCheck, Smartphone, Wallet } from '@lucide/svelte'
 import { onMount } from 'svelte'
-import { ZELLE_RECIPIENT } from '$lib/general/constants'
+import { DONATION_LEDE, ZELLE_RECIPIENT } from '$lib/general/constants'
 import {
     ZELLE_RECIPIENT_PLACEHOLDER,
     paymentMethods,
     paymentSafetyCopyValue,
     type PaymentMethod,
 } from '$lib/general/scamSafety'
+import { FAQ_LINK_CLASS } from './FAQ_LINK_CLASS'
 import FaqItem from './FaqItem.svelte'
 import FaqSection from './FaqSection.svelte'
 
@@ -57,6 +58,13 @@ let methods = $derived(paymentMethods(zelleRecipient))
         <p class="flex gap-2">
             <ShieldCheck class="text-primary mt-1 size-4 shrink-0" />
             <span>{paymentSafetyCopyValue.verifyLine}</span>
+        </p>
+    </FaqItem>
+    <FaqItem question="Can I give to the reunion if I cannot come?">
+        <p>{DONATION_LEDE}</p>
+        <p>
+            Give any amount on the <a class={FAQ_LINK_CLASS} href="/donate">donate page</a>. If you
+            register, you can also add a gift to your registration.
         </p>
     </FaqItem>
 </FaqSection>

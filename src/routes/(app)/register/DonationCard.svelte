@@ -2,6 +2,7 @@
 import { HeartHandshake } from '@lucide/svelte'
 import { DonationAmountPicker } from '$lib/components'
 import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card'
+import { DONATION_PURPOSE } from '$lib/general/constants'
 
 /* An optional gift on top of the party's places.
 
@@ -26,8 +27,7 @@ let { donationCents = $bindable(0), error }: Props = $props()
     </CardHeader>
     <CardContent class="flex flex-col gap-3">
         <p class="text-muted-foreground text-sm">
-            Optional. Gifts help cover the venue and the food, and keep the price of a place down
-            for everyone.
+            Optional. {DONATION_PURPOSE}
         </p>
         <DonationAmountPicker
             bind:value={donationCents}
